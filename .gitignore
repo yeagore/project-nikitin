@@ -1,3 +1,15 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Godot .NET / C# build output
+.mono/
+data_*/
+bin/
+obj/
+
+# Rider / Visual Studio / VS Code
+*.user
+*.userprefs
+.idea/
+.vs/
