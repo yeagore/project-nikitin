@@ -98,6 +98,12 @@ These are set here so every session stays consistent. Change them in one place.
 Godot axis conventions (unchanged): **Y up**, right-handed, cameras look down
 **−Z**, `1 unit = 1 metre`.
 
+**`.tscn` `Transform3D` gotcha:** the text form serializes the basis
+**row-major** — the transpose of the `Transform3D(xAxis, yAxis, zAxis, origin)`
+constructor. Do not hand-author rotated bases into scene files; use identity
+(translation-only) transforms and orient cameras/lights in code (`LookAt`) or in
+the editor. `scripts/CameraRig.cs` aims itself with `LookAt` for this reason.
+
 ### Rendering an island (the current epic)
 
 Full spec: **`docs/island-generation.md`** — data model, generation pipeline,

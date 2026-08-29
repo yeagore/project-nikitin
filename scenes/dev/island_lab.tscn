@@ -49,6 +49,6 @@ MinZoomDistance = 30.0
 MaxZoomDistance = 1200.0
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
-transform = Transform3D(1, 0, 0, 0, 0.70710678, -0.70710678, 0, 0.70710678, 0.70710678, 0, 141.421, 141.421)
+transform = Transform3D(1, 0, 0, 0, 0.70710678, 0.70710678, 0, -0.70710678, 0.70710678, 0, 141.421, 141.421)
 current = true
 fov = 50.0
