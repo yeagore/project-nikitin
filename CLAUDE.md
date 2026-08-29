@@ -119,6 +119,21 @@ that into per-chunk `ArrayMesh` + trimesh colliders (only exposed faces).
 (`scenes/dev/island_lab.tscn`, `scripts/dev/IslandLab.cs`) that draws one
 scaled `MultiMesh` box per span.
 
+**Launching the island lab:**
+
+1. Open the project in the .NET Godot editor; build C# (hammer icon, or
+   `dotnet build "Project Nikitin.csproj"`).
+2. In the FileSystem dock open `scenes/dev/island_lab.tscn`, then press **F6**
+   ("Run Current Scene"). It is not the project's main scene, so F5 won't run it.
+3. Tweak generation live: with the scene running, in the **Remote** tab of the
+   Scene dock select the `IslandLab` node and edit `Seed` or the `Params`
+   resource — the island rebuilds on any change. Console prints span count + time.
+4. Camera: **WASD** move, **Q/E** or middle-mouse-drag rotate, **wheel** zoom,
+   **Shift** faster; **F** re-frames the island, **R** forces a regenerate.
+
+CLI equivalent once a `godot` path is known:
+`godot --path . scenes/dev/island_lab.tscn`.
+
 `scenes/terrain/grass_block.tscn` predates the slab decision — it is still a
 1×1×1 cube and should be reshaped to a 1×0.25×1 slab (and `main.tscn`'s camera
 pivot adjusted from 0.5 to 0.125). Low priority; not part of the generation work.
