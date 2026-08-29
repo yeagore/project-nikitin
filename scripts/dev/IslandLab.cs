@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using ProjectNikitin;
 using ProjectNikitin.Generation;
 
 namespace ProjectNikitin.Dev;
@@ -9,7 +10,11 @@ namespace ProjectNikitin.Dev;
 /// Dev harness for island generation. Open <c>scenes/dev/island_lab.tscn</c> and
 /// run it (F6). Edit the <see cref="Params"/> resource (or <see cref="Seed"/>)
 /// in the running scene's remote inspector — the island rebuilds automatically
-/// when a value changes; press <b>R</b> to force a rebuild.
+/// when a value changes.
+///
+/// Camera: WASD move, Q/E or middle-mouse-drag rotate, wheel zoom, Shift for
+/// faster pan (see <see cref="CameraRig"/>). <b>F</b> re-frames the island,
+/// <b>R</b> forces a regenerate.
 ///
 /// Renders one scaled <c>MultiMesh</c> box per span (keel → surface), in slab
 /// units — no mesher, no per-face culling; that comes later. NOT a <c>[Tool]</c>
@@ -21,18 +26,25 @@ public partial class IslandLab : Node3D
     [Export] public IslandParams Params { get; set; } = null!;
 
     private MultiMeshInstance3D _terrain = null!;
+    private CameraRig _rig = null!;
     private BoxMesh _unitBox = null!;
     private int _lastSignature;
+
+    private Vector3 _islandCenter = Vector3.Zero;
+    private float _islandRadius = 10f;
+    private bool _framedOnce;
 
     public override void _Ready()
     {
         _terrain = GetNode<MultiMeshInstance3D>("Terrain");
+        _rig = GetNode<CameraRig>("CameraRig");
         _unitBox = new BoxMesh { Size = Vector3.One };
         _unitBox.Material = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
             Roughness = 1f,
         };
+        AddControlsHint();
         Rebuild();
     }
 
@@ -44,8 +56,12 @@ public partial class IslandLab : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.R })
-            Rebuild();
+        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        switch (key.Keycode)
+        {
+            case Key.R: Rebuild(); break;
+            case Key.F: _rig.Frame(_islandCenter, _islandRadius); break;
+        }
     }
 
     private int Signature()
@@ -80,6 +96,12 @@ public partial class IslandLab : Node3D
         int spans = RenderSpans(data);
         GD.Print($"[IslandLab] seed {Seed}, {Params.Size}² -> {spans} spans "
             + $"in {(Time.GetTicksUsec() - t0) / 1000f:0.0} ms");
+
+        if (!_framedOnce)
+        {
+            _rig.Frame(_islandCenter, _islandRadius);
+            _framedOnce = true;
+        }
     }
 
     private int RenderSpans(IslandData d)
@@ -91,8 +113,8 @@ public partial class IslandLab : Node3D
 
         var xf = new List<Transform3D>();
         var col = new List<Color>();
-        int topMax = 1, topMin = 0;
 
+        int topMax = 1, topMin = 0;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
@@ -104,11 +126,14 @@ public partial class IslandLab : Node3D
                 topMin = Math.Min(topMin, s.Top);
             }
         }
-        float span = Math.Max(1, topMax - topMin);
+        float tintSpan = Math.Max(1, topMax - topMin);
 
         var low = new Color(0.24f, 0.20f, 0.13f);   // deep / dirt
         var mid = new Color(0.30f, 0.42f, 0.18f);   // grass
         var high = new Color(0.66f, 0.72f, 0.52f);  // highlands
+
+        var bbMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        var bbMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -120,14 +145,24 @@ public partial class IslandLab : Node3D
             {
                 float hWorld = s.Height * sh;
                 float yCenter = (s.Bottom + s.Top + 1) * 0.5f * sh;
-
-                var basis = Basis.Identity.Scaled(new Vector3(cs, hWorld, cs));
                 var origin = new Vector3((x - half) * cs, yCenter, (z - half) * cs);
-                xf.Add(new Transform3D(basis, origin));
 
-                float t = Mathf.Clamp((s.Top - topMin) / span, 0f, 1f);
+                xf.Add(new Transform3D(
+                    Basis.Identity.Scaled(new Vector3(cs, hWorld, cs)), origin));
+
+                float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
                 col.Add(t < 0.5f ? low.Lerp(mid, t * 2f) : mid.Lerp(high, (t - 0.5f) * 2f));
+
+                var ext = new Vector3(cs * 0.5f, hWorld * 0.5f, cs * 0.5f);
+                bbMin = bbMin.Min(origin - ext);
+                bbMax = bbMax.Max(origin + ext);
             }
+        }
+
+        if (xf.Count > 0)
+        {
+            _islandCenter = (bbMin + bbMax) * 0.5f;
+            _islandRadius = Mathf.Max(1f, (bbMax - bbMin).Length() * 0.5f);
         }
 
         var mm = new MultiMesh
@@ -144,5 +179,22 @@ public partial class IslandLab : Node3D
         }
         _terrain.Multimesh = mm;
         return xf.Count;
+    }
+
+    private void AddControlsHint()
+    {
+        var layer = new CanvasLayer();
+        AddChild(layer);
+        var label = new Label
+        {
+            Text = "WASD move   Q/E rotate   MMB-drag rotate   wheel zoom   Shift faster"
+                 + "\nF frame island   R regenerate",
+            Position = new Vector2(12, 8),
+        };
+        label.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.85f));
+        label.AddThemeColorOverride("font_shadow_color", new Color(0f, 0f, 0f, 0.6f));
+        label.AddThemeConstantOverride("shadow_offset_x", 1);
+        label.AddThemeConstantOverride("shadow_offset_y", 1);
+        layer.AddChild(label);
     }
 }

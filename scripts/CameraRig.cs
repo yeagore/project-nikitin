@@ -124,4 +124,20 @@ public partial class CameraRig : Node3D
         // Aim at the rig pivot (this node's origin) regardless of authored basis.
         _camera.LookAt(GlobalPosition, Vector3.Up);
     }
+
+    /// <summary>
+    /// Recentre the rig on <paramref name="center"/> (world space) and set the
+    /// zoom so a sphere of <paramref name="radius"/> around it fits the view.
+    /// Overrides the current pan/zoom — call on load or an explicit "frame" key,
+    /// not on every rebuild.
+    /// </summary>
+    public void Frame(Vector3 center, float radius)
+    {
+        if (_camera == null) return;
+        GlobalPosition = center;
+        float halfFov = Mathf.DegToRad(_camera.Fov) * 0.5f;
+        float fit = radius / Mathf.Tan(halfFov) * 1.4f;
+        _distance = Mathf.Clamp(fit, MinZoomDistance, MaxZoomDistance);
+        ApplyZoom();
+    }
 }
