@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://cislandlab0dev"]
+
+[ext_resource type="Script" path="res://scripts/dev/IslandLab.cs" id="1_lab"]
+[ext_resource type="Script" path="res://scripts/CameraRig.cs" id="2_rig"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+
+[sub_resource type="Sky" id="Sky_lab"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_lab"]
+background_mode = 2
+sky = SubResource("Sky_lab")
+ambient_light_source = 3
+tonemap_mode = 2
+
+[node name="IslandLab" type="Node3D"]
+script = ExtResource("1_lab")
+
+[node name="Terrain" type="MultiMeshInstance3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_lab")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8192, 0, 0.5736, 0.4056, 0.7071, -0.5792, -0.4056, 0.7071, 0.5792, 0, 0, 0)
+shadow_enabled = true
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+script = ExtResource("2_rig")
+PanSpeed = 20.0
+MinZoomDistance = 20.0
+MaxZoomDistance = 900.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.8660254, -0.5, 0, 0.5, 0.8660254, 0, 75, 129.9038)
+current = true
+fov = 55.0

@@ -1,6 +1,9 @@
 # Island Generation — technical spec
 
-Status: draft, 2026-08-29. Living document. Owns the implementation detail behind
+Status: draft, 2026-08-29. Build order §8 steps 1–3 implemented
+(`scripts/generation/`, `scenes/dev/island_lab.tscn`); morphology, keel,
+guarantees, anchors and overhangs still pending. Living document. Owns the
+implementation detail behind
 the Notion page *Mechanics and Concepts → Generation → Island Generation* (which
 stays a short requirements list). Design vocabulary and the world model are in
 `CLAUDE.md` and the Notion wiki.
@@ -306,15 +309,17 @@ All C#, namespace `ProjectNikitin.Generation` / `.Terrain`.
 
 ## 8. First implementation slice (this branch)
 
-1. `Span`, `IslandParams`, `IslandData` types; `IslandGenerator.Generate`
-   skeleton.
-2. Stages 1–4 only (mask → height → terrace → keel → one span per column). No
-   overhangs, no metadata, no guarantees.
-3. `MultiMeshInstance3D` of `grass_block`, one instance per column at
-   `SurfaceLevel` — no mesher, no culling. Just make an island appear.
-4. `scenes/dev/island_lab.tscn` with the params as `[Export]`s and a
-   regenerate-on-change button.
-5. Tune params until size/density, relief, and shelves are visibly achievable.
+1. ✅ `Span`, `IslandParams` (a `[GlobalClass]` resource), `IslandData` types;
+   `IslandGenerator.Generate`.
+2. ✅ Stages 1–3 (mask → height → terrace). Terrace snap only — the
+   morphological open for `MinShelfWidth` and the keel are not in yet, so each
+   land column is a thin one-block span.
+3. ✅ `scenes/dev/island_lab.tscn` + `IslandLab.cs`: `MultiMeshInstance3D` of a
+   unit box, one instance per column at `SurfaceLevel`, tinted by height. Params
+   authored on an `IslandParams` resource; **Regenerate** button (editor) or
+   **R** key (running). Camera rig included for fly-around.
+4. ⬜ Tune params until size/density, relief, and shelves read right.
 
-Then: Stage 4b overhangs, the chunked span-aware mesher + colliders, feature
-anchors, the §6 guarantees, settlement placement hooks.
+Then: finish Stage 3 (morphology, gentle descent), Stage 4 keel + real spans,
+Stage 1 cleanup, Stage 4b overhangs, the chunked span-aware mesher + colliders,
+feature anchors, the §6 guarantees, settlement placement hooks.
