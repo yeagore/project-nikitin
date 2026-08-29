@@ -12,9 +12,11 @@ Coverage = 0.55
 Fragmentation = 0.1
 Relief = 0.4
 Roughness = 0.5
-HeightScale = 48
+HeightScale = 80
 TerraceCount = 3
-TerraceGrip = 0.5
+TerraceGrip = 0.4
+RimDepth = 20
+RimFalloff = 0.4
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 
@@ -42,7 +44,7 @@ transform = Transform3D(0.8192, 0, 0.5736, 0.4056, 0.7071, -0.5792, -0.4056, 0.7
 shadow_enabled = true
 
 [node name="CameraRig" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
 script = ExtResource("3_rig")
 PanSpeed = 30.0
 MinZoomDistance = 30.0

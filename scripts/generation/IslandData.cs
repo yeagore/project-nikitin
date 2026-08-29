@@ -3,7 +3,9 @@ namespace ProjectNikitin.Generation;
 /// <summary>
 /// Output of <see cref="IslandGenerator"/>: terrain as a per-column list of
 /// solid <see cref="Span"/> runs over a square footprint, plus metadata that
-/// later stages fill in. See docs/island-generation.md §2.
+/// later stages fill in. All Y values are <b>slab indices</b> — multiply by
+/// <see cref="Terrain.SlabHeight"/> for world units. See
+/// docs/island-generation.md §2.
 /// </summary>
 public sealed class IslandData
 {
@@ -13,8 +15,8 @@ public sealed class IslandData
     public int Size { get; }
 
     /// <summary>
-    /// <c>[x, z]</c> → the column's spans, bottom-up, disjoint, non-touching.
-    /// <c>null</c> or empty means no land in that column.
+    /// <c>[x, z]</c> → the column's spans (bottom-up, disjoint, non-touching),
+    /// with bounds as slab indices. <c>null</c> or empty means no land.
     /// </summary>
     public Span[,][] Spans { get; }
 
@@ -34,11 +36,11 @@ public sealed class IslandData
 
     public bool HasLand(int x, int z) => Spans[x, z] is { Length: > 0 };
 
-    /// <summary>Top of the highest span, or <see cref="NoLand"/>.</summary>
+    /// <summary>Top slab of the highest span, or <see cref="NoLand"/>.</summary>
     public short SurfaceLevel(int x, int z)
         => HasLand(x, z) ? Spans[x, z][^1].Top : NoLand;
 
-    /// <summary>Bottom of the lowest span, or <see cref="NoLand"/>.</summary>
+    /// <summary>Bottom slab of the lowest span, or <see cref="NoLand"/>.</summary>
     public short KeelLevel(int x, int z)
         => HasLand(x, z) ? Spans[x, z][0].Bottom : NoLand;
 }

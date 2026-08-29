@@ -5,8 +5,8 @@ namespace ProjectNikitin.Generation;
 /// <summary>
 /// Tunable inputs to <see cref="IslandGenerator"/>. A <c>[GlobalClass]</c>
 /// resource so it can be authored in the inspector (e.g. from the island lab).
-/// Only the fields used by pipeline stages 1–3 are present for now; the rest
-/// (rim, shelf width, overhangs) arrive with their stages — see
+/// Heights are in <b>slabs</b> (see <see cref="Terrain.SlabHeight"/>). Only the
+/// fields used by pipeline stages 1–4 are present — see
 /// docs/island-generation.md §3.
 /// </summary>
 [GlobalClass]
@@ -30,12 +30,18 @@ public partial class IslandParams : Resource
     /// <summary>Smooth (0) to jagged (1) surface (noise gain).</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Roughness { get; set; } = 0.5f;
 
-    /// <summary>Peak surface height in blocks at <see cref="Relief"/> = 1.</summary>
-    [Export(PropertyHint.Range, "4,120,1")] public int HeightScale { get; set; } = 48;
+    /// <summary>Peak surface height in <b>slabs</b> at <see cref="Relief"/> = 1.</summary>
+    [Export(PropertyHint.Range, "4,512,1")] public int HeightScale { get; set; } = 80;
 
     /// <summary>Number of habitable shelf levels (0 = free slope only).</summary>
     [Export(PropertyHint.Range, "0,6,1")] public int TerraceCount { get; set; } = 3;
 
     /// <summary>How strongly the surface snaps to shelf levels vs. free slope.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float TerraceGrip { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float TerraceGrip { get; set; } = 0.4f;
+
+    /// <summary>Typical column depth at the coastline, in <b>slabs</b>.</summary>
+    [Export(PropertyHint.Range, "2,128,1")] public int RimDepth { get; set; } = 20;
+
+    /// <summary>How far the thick rim reaches inland (0 = coast only, 1 = deep).</summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float RimFalloff { get; set; } = 0.4f;
 }

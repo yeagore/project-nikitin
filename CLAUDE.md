@@ -57,33 +57,33 @@ This is the part that governs terrain, generation, and rendering code.
   suspended in aether. Visually: flying islands, like Skyblock in Minecraft, but
   the scale is coarser — **one unit's top face ≈ an orchard or a housing
   compound**, not a person.
-- The terrain unit is a **block**: a full **1×1×1** cube cell.
-  > **Divergence from the wiki (2026-08-29):** "The Ecumene" and the Glossary
-  > still describe a thin **slab** (~1/8 height) with a "one step is free, a
-  > stack is an obstacle" traversal rule, introduced so terrain could express
-  > hills rather than only sheer cliffs. That idea is being dropped in favour of
-  > full cubes. This should be written into the Notion **Decision Log** (with the
-  > cliff/hill trade-off as the noted downside) and the Glossary + "The Ecumene"
-  > updated. Until then, code follows the block model here, not the wiki.
+- The terrain unit is a **slab**: a square cell **1 wide/long and 1/4 as tall**
+  (`SLAB_HEIGHT = CELL_SIZE / 4`). The 1:4 ratio is decided (the Notion wiki says
+  a tentative "8?"); it lets terrain express hills and gentle grades in 0.25-unit
+  steps instead of only sheer cliffs. Not yet reflected in Notion.
+- **Traversal:** a **one-slab** step (0.25 u) is free; a face of two or more
+  slabs is an obstacle needing infrastructure. So a noise surface that rises ≤1
+  slab per cell is walkable everywhere; cliffs form at coastlines and at terrace
+  faces.
 - **Gravity** always points down (−Y) by default.
 - Each Domain sits inside an **invisible bounding cube** that keeps vessels from
   drifting off; it does not block Gate travel.
 - **Biome features** (forests, herds, coral/essencercoral growths, vines, fungal
-  mats) are structures that sit *on top of, on the sides of, or underneath* block
-  stacks. They are a separate layer from the blocks themselves.
-- Domain size: working target **128×128×128** block-cells (position: vasin; the
+  mats) are structures that sit *on top of, on the sides of, or underneath* slab
+  stacks. They are a separate layer from the slabs themselves.
+- Domain size: working target **128×128** cells footprint (position: vasin; the
   Notion "Ecumene" page still says 16³–64³, and Maxim favours smaller — decision
   not yet logged). 30–40 Domains per game, laid out on a plane by their position
   in the world-tree (a Domain linked "north" is found by scrolling north). Up to
   4 side Links per Domain now (maybe 6 — incl. top/bottom — later).
-- **Terrain is stored per column, not as a 3D voxel array.** Each `(x,z)` of the
-  128×128 footprint holds a short list of `Span(bottom, top)` solid runs; the air
-  gap between two spans is an overhang / arch. ~90 KB per island, no per-block
-  storage, whole island resident. Overhangs and arches are supported; branching
-  caves/tunnels are not. See `docs/island-generation.md`.
-- Performance: a naive dense 128³ is ~2M cells and per-block nodes are impossible,
-  which is why the columnar model exists. Treat a full 128² footprint as the
-  stress target for the mesher.
+- **Terrain is stored per column, not as a 3D voxel array.** Each `(x,z)` holds a
+  short list of `Span(bottom, top)` solid runs, bounds as **slab indices**; the
+  air gap between two spans is an overhang / arch. Whole island resident, no
+  per-slab storage. Overhangs and arches are supported; branching caves/tunnels
+  are not. See `docs/island-generation.md`.
+- Performance: per-node-per-slab is impossible (a 128² island is tens of
+  thousands of columns, each many slabs deep), which is why the columnar model +
+  a batched mesher exist. Treat a full 128² footprint as the stress target.
 
 ### Code conventions derived from the above
 
@@ -91,9 +91,11 @@ These are set here so every session stays consistent. Change them in one place.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `CELL_SIZE` | `1.0` | Edge length of one cube cell, in Godot units (metres). Applies to all three axes. In fiction one cell is ~an orchard. |
-| Grid → world | `Vector3(gx, gy, gz) * CELL_SIZE` | `gx, gy, gz` are integers. |
-| Block local origin | **base centre** | So placement is a bare grid→world call with no half-height offset. |
+| `CELL_SIZE` | `1.0` | X/Z size of one cell, in Godot units (metres). In fiction one cell is ~an orchard. |
+| `SLAB_HEIGHT` | `0.25` | Y size of one slab = `CELL_SIZE / 4`. Terrain Y is an integer slab index. |
+| Grid → world | `Vector3(gx * CELL_SIZE, gy * SLAB_HEIGHT, gz * CELL_SIZE)` | `gx, gy, gz` integers; `gy` is a slab index. |
+
+Defined in code as `ProjectNikitin.Generation.Terrain.CellSize` / `.SlabHeight`.
 
 Godot axis conventions (unchanged): **Y up**, right-handed, cameras look down
 **−Z**, `1 unit = 1 metre`.
@@ -111,14 +113,15 @@ parameters, rendering handoff, first implementation slice. Being built on the
 `island-generation` branch.
 
 In short: generation is a pure function `Generate(seed, IslandParams)` producing
-the columnar `IslandData`; a separate chunked mesher turns that into per-chunk
-`ArrayMesh` + trimesh colliders (only exposed faces). **Never one node per
-block.** First cut may use a `MultiMeshInstance3D` of the existing block mesh,
-one instance per surface cell, to get an island on screen before the mesher.
+the columnar `IslandData` (Y in slab indices); a separate chunked mesher turns
+that into per-chunk `ArrayMesh` + trimesh colliders (only exposed faces).
+**Never one node per slab.** Current state: stages 1–4 + a dev lab
+(`scenes/dev/island_lab.tscn`, `scripts/dev/IslandLab.cs`) that draws one
+scaled `MultiMesh` box per span.
 
-The current `scenes/terrain/grass_block.tscn` is a **single-block prototype** (its
-own `StaticBody3D` + `CollisionShape3D`); it is a visual reference and a source
-of the material look, not the pattern for the full island.
+`scenes/terrain/grass_block.tscn` predates the slab decision — it is still a
+1×1×1 cube and should be reshaped to a 1×0.25×1 slab (and `main.tscn`'s camera
+pivot adjusted from 0.5 to 0.125). Low priority; not part of the generation work.
 
 ---
 
@@ -132,7 +135,18 @@ scenes/
   main/main.tscn               Entry scene: WorldEnvironment + sun + camera rig + one block.
   terrain/grass_block.tscn     Prototype grass-topped terrain block.
 scripts/
-  CameraRig.cs                  Strategy-camera controller (attached to CameraRig in main.tscn).
+  CameraRig.cs                  Strategy camera: pan / yaw / wheel-zoom, LookAt-aimed.
+  generation/                   Namespace ProjectNikitin.Generation
+    Terrain.cs                  CellSize / SlabHeight constants.
+    Span.cs, IslandData.cs      Per-column span-list terrain model.
+    IslandParams.cs             [GlobalClass] generator inputs.
+    Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
+    IslandGenerator.cs          Generate(seed, params) — stages 1–4 so far.
+  dev/IslandLab.cs              Runtime harness for scenes/dev/island_lab.tscn.
+scenes/
+  main/main.tscn               Single-slab viewer (grass_block.tscn — still a cube).
+  terrain/grass_block.tscn     Prototype terrain block (pre-slab-decision).
+  dev/island_lab.tscn          Island generation harness.
 docs/
   island-generation.md         Terrain generation + rendering spec.
 CLAUDE.md                      This file.
@@ -141,10 +155,9 @@ CLAUDE.md                      This file.
 Planned (create as needed, keep the tree shallow):
 
 ```
-scenes/     .tscn scenes, foldered by area (terrain/, ui/, domain/, ...)
-scripts/    C# node scripts and shared classes (namespace ProjectNikitin)
-resources/  .tres data resources (block types, biomes, cultural archetypes, goods)
-addons/     third-party plugins
+scripts/terrain/  the chunked span-aware mesher (IslandData -> ArrayMesh + colliders)
+resources/        .tres data resources (biomes, cultural archetypes, goods)
+addons/           third-party plugins
 ```
 
 ### Naming
@@ -153,10 +166,10 @@ addons/     third-party plugins
 - C# files: `PascalCase`, one `public partial class` per file, file name = class
   name (e.g. `CameraRig.cs`). Namespace `ProjectNikitin` (or a sub-namespace).
 - Nodes and C# types: `PascalCase`. `[Export]` properties `PascalCase`.
-- Use the design vocabulary in code: `Domain`, `Block`, `Gate`, `Link`,
-  `Polity`, `Settlement`, `Essence` — not synonyms like "portal", "faction",
-  "town". (The wiki's term for the terrain unit is still "slab"; see the
-  divergence note under Spatial model.)
+- Use the design vocabulary in code: `Domain`, `Slab`, `Gate`, `Link`,
+  `Polity`, `Settlement`, `Essence` — not synonyms like "block", "portal",
+  "faction", "town". The terrain unit is a `Slab` (1:4 height ratio; the wiki's
+  "8?" is superseded).
 
 ---
 
@@ -168,9 +181,9 @@ addons/     third-party plugins
 - **Aether** — the space between Domains; hazardous to people.
 - **Link** — a fast, safe route through aether joining two Domains. **Gate** —
   the built structure at each end of a Link. Links form a tree (no loops).
-- **Block** — the atomic terrain unit (a 1×1×1 cube). The wiki still calls this a
-  **Slab** and describes it as ~1/8 height; that is being dropped — see the
-  divergence note under Spatial model. **Biome** — a Domain's flora/fauna/climate.
+- **Slab** — the atomic terrain unit: a cell 1×1 in footprint, 0.25 tall (1:4).
+  Terrain Y is measured in slab indices. **Biome** — a Domain's flora / fauna /
+  climate.
 - **Polity** — an NPC state ruling one or more Domains. **Metropole** — the
   Polity the player answers to.
 - **Cultural Archetype** — a people's defining template (e.g. Steelfolk,
@@ -223,14 +236,14 @@ and to answer/close the matching **Open Question**.
 
 - **Prototype 0** — Set up dev environment (git, Godot, Claude, VS Code). *In
   progress:* repo scaffolded and pushed to GitHub (`yeagore/project-nikitin`).
-- **Epic: Render an island** — in progress on branch `island-generation`. Spec
-  written (`docs/island-generation.md`). Done so far: single grass block in a lit
-  3D scene (`main.tscn`) with the strategy camera.
+- **Epic: Render an island** — in progress on branch `island-generation`. Spec:
+  `docs/island-generation.md`. Done: generation stages 1–4 (mask → height →
+  terrace → keel + spans) in slab units, plus the `island_lab.tscn` harness
+  rendering scaled `MultiMesh` boxes.
 
-Immediate direction (per the spec's §8 first slice): `IslandParams`/`IslandData`
-types → generation stages 1–4 → `MultiMeshInstance3D` of the block mesh in a
-`scenes/dev/island_lab.tscn` with exported params → then the chunked mesher,
-feature anchors, and settlement hooks.
+Next: finish Stage 3 (morphological open for shelf width, gentle descent),
+Stage 4b overhangs, the chunked span-aware mesher + colliders, feature anchors,
+guarantees, settlement hooks.
 
 ---
 
@@ -239,25 +252,22 @@ feature anchors, and settlement hooks.
 Flagged so they aren't silently hard-coded:
 
 1. *(resolved 2026-08-29)* Scripting is **C#**, not GDScript.
-2. **Slab → block.** The thin-slab terrain unit from the wiki is dropped for full
-   1×1×1 cubes (user call, 2026-08-29); half-blocks may return later. Not yet
-   reflected in Notion. Consequence carried into the island spec: no smooth
-   hills, "mountains" are stepped/mesa, and habitable shelves must be ≥3–4 cells
-   wide to matter. Needs a Decision Log entry and wiki edits.
+2. **Terrain unit = slab, 1:4.** Settled 2026-08-29 (after a detour through full
+   cubes): a slab is 1×1 footprint × 0.25 tall. The wiki's tentative "8?" is
+   superseded and Notion is not yet updated — needs a Decision Log entry.
 3. **Essence as currency.** The design leans toward Essence = money for now but
    expects to revisit (grades of Essence, per-Polity currencies).
 4. **Domains loaded at once.** Whether only the active Domain is fully simulated
    / rendered, or several. Drives the whole streaming/LOD approach.
-5. **Camera.** `main.tscn` uses a `CameraRig` (Node3D, `scripts/CameraRig.cs`)
-   with a child `Camera3D` at a fixed ~25° pitch (perspective, fov 45). The rig
-   pans on the ground plane (WASD, Shift to accelerate, pan speed scales with
-   zoom), yaws (Q/E, middle-mouse drag), and zooms by sliding the camera along
-   its fixed offset direction (mouse wheel, clamped to
-   `MinZoomDistance`..`MaxZoomDistance` = 12..360 units). Pitch is deliberately
-   locked. Still undesigned: edge-scroll, pitch adjust, orthographic option, pan
-   bounds, and moving to InputMap actions instead of polled physical keys.
-6. **Terrain representation.** Per-column list of `Span(bottom, top)` solid runs,
-   not a 3D lattice — see `docs/island-generation.md`. Supports overhangs/arches
-   (gap between spans); still rules out branching caves/tunnels.
-7. **Domain size.** 128³ working target vs 16³–64³ in Notion (Maxim favours
-   smaller). Unlogged.
+5. **Camera.** `scripts/CameraRig.cs`: fixed pitch (set by the camera's offset
+   direction), `LookAt`-aimed at the rig pivot. Pans (WASD, Shift faster, speed
+   scales with zoom), yaws (Q/E, middle-mouse drag), wheel-zooms between
+   `MinZoomDistance`/`MaxZoomDistance`. Undesigned: edge-scroll, pitch adjust,
+   orthographic, pan bounds, auto-framing, InputMap actions.
+6. **Terrain representation.** Per-column list of `Span(bottom, top)` runs
+   (slab-indexed), not a 3D lattice — see `docs/island-generation.md`. Supports
+   overhangs/arches (gap between spans); rules out branching caves/tunnels.
+7. **Domain size.** 128² footprint working target vs 16³–64³ in Notion (Maxim
+   favours smaller). Unlogged.
+8. **`grass_block.tscn`** is still a 1×1×1 cube from the block detour — reshape
+   to a 1×0.25×1 slab when convenient.
