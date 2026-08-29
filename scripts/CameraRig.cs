@@ -61,7 +61,8 @@ public partial class CameraRig : Node3D
         if (@event is InputEventMouseMotion motion
             && Input.IsMouseButtonPressed(MouseButton.Middle))
         {
-            RotateY(motion.Relative.X * MouseYawSpeed);
+            // Drag right turns the view right (grab-the-world feel).
+            RotateY(-motion.Relative.X * MouseYawSpeed);
         }
         else if (@event is InputEventMouseButton button && button.Pressed)
         {
