@@ -6,10 +6,13 @@ tree of floating-island worlds (**Domains**) connected by **Gates**. Think Anno 
 early Paradox economy sim, fantasy setting, procedurally generated worlds, an
 in-fiction Age of Exploration driven by opening links between Domains.
 
-The design lives in Notion, not in this repo. See **Design source of truth**
-below. Much of the wiki is still stubs; the core loop and economy are only
-partially specified. When a task needs a design fact that isn't written down,
-ask rather than invent — and offer to log the answer in the Notion Decision Log.
+**Documentation split:** the **Notion wiki is the general design overview**
+(premise, concepts, glossary, decisions) — see **Design source of truth** below.
+**Technical detail and specs live in this repo** — this file for orientation,
+`docs/*.md` for longer specs. Write technical write-ups locally, not in Notion.
+Much of the wiki is still stubs; when a task needs a design fact that isn't
+written down, ask rather than invent — and offer to log the answer in the Notion
+Decision Log.
 
 ---
 
@@ -68,12 +71,19 @@ This is the part that governs terrain, generation, and rendering code.
 - **Biome features** (forests, herds, coral/essencercoral growths, vines, fungal
   mats) are structures that sit *on top of, on the sides of, or underneath* block
   stacks. They are a separate layer from the blocks themselves.
-- Domain size: roughly **16×16×16 to 64×64×64** block-cells of total volume.
-  30–40 Domains per game, laid out on a plane by their position in the world-tree
-  (a Domain linked "north" is found by scrolling north). Up to 4 side Links per
-  Domain now (maybe 6 — incl. top/bottom — later).
-- Performance is an explicit unknown in the design ("not sure whether this will
-  be too much for a game to handle"). Treat a 64³ Domain as the stress target.
+- Domain size: working target **128×128×128** block-cells (position: vasin; the
+  Notion "Ecumene" page still says 16³–64³, and Maxim favours smaller — decision
+  not yet logged). 30–40 Domains per game, laid out on a plane by their position
+  in the world-tree (a Domain linked "north" is found by scrolling north). Up to
+  4 side Links per Domain now (maybe 6 — incl. top/bottom — later).
+- **Terrain is stored per column, not as a 3D voxel array.** Each `(x,z)` of the
+  128×128 footprint holds a short list of `Span(bottom, top)` solid runs; the air
+  gap between two spans is an overhang / arch. ~90 KB per island, no per-block
+  storage, whole island resident. Overhangs and arches are supported; branching
+  caves/tunnels are not. See `docs/island-generation.md`.
+- Performance: a naive dense 128³ is ~2M cells and per-block nodes are impossible,
+  which is why the columnar model exists. Treat a full 128² footprint as the
+  stress target for the mesher.
 
 ### Code conventions derived from the above
 
@@ -90,15 +100,15 @@ Godot axis conventions (unchanged): **Y up**, right-handed, cameras look down
 
 ### Rendering an island (the current epic)
 
-A 64³ Domain is up to ~260k blocks. **Do not instance one node per block** beyond
-throwaway prototypes. Plan for one of:
+Full spec: **`docs/island-generation.md`** — data model, generation pipeline,
+parameters, rendering handoff, first implementation slice. Being built on the
+`island-generation` branch.
 
-- `MultiMeshInstance3D` per block-type per chunk, or
-- a chunked, greedy-meshed surface mesh (only exposed faces), or
-- `GridMap` with a `MeshLibrary` for an early iteration.
-
-Only surface/exposed faces are ever visible — interior blocks contribute nothing.
-Collision should likewise be a merged shape per chunk, not per block.
+In short: generation is a pure function `Generate(seed, IslandParams)` producing
+the columnar `IslandData`; a separate chunked mesher turns that into per-chunk
+`ArrayMesh` + trimesh colliders (only exposed faces). **Never one node per
+block.** First cut may use a `MultiMeshInstance3D` of the existing block mesh,
+one instance per surface cell, to get an island on screen before the mesher.
 
 The current `scenes/terrain/grass_block.tscn` is a **single-block prototype** (its
 own `StaticBody3D` + `CollisionShape3D`); it is a visual reference and a source
@@ -117,6 +127,8 @@ scenes/
   terrain/grass_block.tscn     Prototype grass-topped terrain block.
 scripts/
   CameraRig.cs                  Strategy-camera controller (attached to CameraRig in main.tscn).
+docs/
+  island-generation.md         Terrain generation + rendering spec.
 CLAUDE.md                      This file.
 ```
 
@@ -205,12 +217,14 @@ and to answer/close the matching **Open Question**.
 
 - **Prototype 0** — Set up dev environment (git, Godot, Claude, VS Code). *In
   progress:* repo scaffolded and pushed to GitHub (`yeagore/project-nikitin`).
-- **Epic: Render an island** — *not started.* Current focus. First step done: a
-  single grass block in a lit 3D scene (`main.tscn`).
+- **Epic: Render an island** — in progress on branch `island-generation`. Spec
+  written (`docs/island-generation.md`). Done so far: single grass block in a lit
+  3D scene (`main.tscn`) with the strategy camera.
 
-Immediate direction: single block → small hand-placed block patch with a batched
-renderer → procedural island shape → cliffs / multiple habitable layers (per the
-Island Generation requirements).
+Immediate direction (per the spec's §8 first slice): `IslandParams`/`IslandData`
+types → generation stages 1–4 → `MultiMeshInstance3D` of the block mesh in a
+`scenes/dev/island_lab.tscn` with exported params → then the chunked mesher,
+feature anchors, and settlement hooks.
 
 ---
 
@@ -219,11 +233,11 @@ Island Generation requirements).
 Flagged so they aren't silently hard-coded:
 
 1. *(resolved 2026-08-29)* Scripting is **C#**, not GDScript.
-2. **Slab → block.** The thin-slab terrain unit from the wiki is being dropped
-   for full 1×1×1 cubes (user call, 2026-08-29). Not yet reflected in Notion, and
-   the design's original worry stands: cubes make every height change a sheer
-   cliff, so hills / gentle slopes need another mechanism (or are accepted as
-   out). Needs a Decision Log entry and wiki edits.
+2. **Slab → block.** The thin-slab terrain unit from the wiki is dropped for full
+   1×1×1 cubes (user call, 2026-08-29); half-blocks may return later. Not yet
+   reflected in Notion. Consequence carried into the island spec: no smooth
+   hills, "mountains" are stepped/mesa, and habitable shelves must be ≥3–4 cells
+   wide to matter. Needs a Decision Log entry and wiki edits.
 3. **Essence as currency.** The design leans toward Essence = money for now but
    expects to revisit (grades of Essence, per-Polity currencies).
 4. **Domains loaded at once.** Whether only the active Domain is fully simulated
@@ -236,5 +250,8 @@ Flagged so they aren't silently hard-coded:
    `MinZoomDistance`..`MaxZoomDistance` = 12..360 units). Pitch is deliberately
    locked. Still undesigned: edge-scroll, pitch adjust, orthographic option, pan
    bounds, and moving to InputMap actions instead of polled physical keys.
-6. **Grid coordinates.** Assuming a dense integer `(gx, gy, gz)` lattice with
-   `gy` counting blocks. Sparse/other representations not considered yet.
+6. **Terrain representation.** Per-column list of `Span(bottom, top)` solid runs,
+   not a 3D lattice — see `docs/island-generation.md`. Supports overhangs/arches
+   (gap between spans); still rules out branching caves/tunnels.
+7. **Domain size.** 128³ working target vs 16³–64³ in Notion (Maxim favours
+   smaller). Unlogged.
