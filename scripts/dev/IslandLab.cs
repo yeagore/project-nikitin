@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
@@ -6,26 +7,26 @@ namespace ProjectNikitin.Dev;
 
 /// <summary>
 /// Dev harness for island generation. Open <c>scenes/dev/island_lab.tscn</c> and
-/// run it (F6). Edit the <see cref="Params"/> resource in the inspector, then
-/// press the <b>Regenerate</b> button (works in the editor) or the <b>R</b> key
-/// (while running). Renders one <c>MultiMesh</c> box per land column at its
-/// surface level — no mesher, no culling; that comes later.
+/// run it (F6). Edit the <see cref="Params"/> resource (or <see cref="Seed"/>)
+/// in the running scene's remote inspector — the island rebuilds automatically
+/// when a value changes; press <b>R</b> to force a rebuild.
+///
+/// Renders one <c>MultiMesh</c> box per land column at its surface level — no
+/// mesher, no culling; that comes later. NOT a <c>[Tool]</c> script: generating
+/// in-editor would bake the MultiMesh buffer into the scene file.
 /// </summary>
-[Tool]
 public partial class IslandLab : Node3D
 {
     [Export] public int Seed { get; set; } = 1337;
     [Export] public IslandParams Params { get; set; } = null!;
 
-    [ExportToolButton("Regenerate")]
-    public Callable RegenerateButton => Callable.From(Rebuild);
-
     private MultiMeshInstance3D _terrain = null!;
     private BoxMesh _blockMesh = null!;
+    private int _lastSignature;
 
     public override void _Ready()
     {
-        _terrain = GetNodeOrNull<MultiMeshInstance3D>("Terrain");
+        _terrain = GetNode<MultiMeshInstance3D>("Terrain");
         _blockMesh = new BoxMesh { Size = Vector3.One };
         _blockMesh.Material = new StandardMaterial3D
         {
@@ -35,17 +36,42 @@ public partial class IslandLab : Node3D
         Rebuild();
     }
 
+    public override void _Process(double delta)
+    {
+        if (Signature() != _lastSignature)
+            Rebuild();
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (Engine.IsEditorHint()) return;
         if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.R })
             Rebuild();
+    }
+
+    private int Signature()
+    {
+        var h = new HashCode();
+        h.Add(Seed);
+        if (Params != null)
+        {
+            h.Add(Params.Size);
+            h.Add(Params.Radius);
+            h.Add(Params.Coverage);
+            h.Add(Params.Fragmentation);
+            h.Add(Params.Relief);
+            h.Add(Params.Roughness);
+            h.Add(Params.HeightScale);
+            h.Add(Params.TerraceCount);
+            h.Add(Params.TerraceGrip);
+        }
+        return h.ToHashCode();
     }
 
     private void Rebuild()
     {
         if (_terrain == null || _blockMesh == null) return;
         Params ??= new IslandParams();
+        _lastSignature = Signature();
 
         ulong t0 = Time.GetTicksUsec();
         IslandData data = new IslandGenerator().Generate(Seed, Params);

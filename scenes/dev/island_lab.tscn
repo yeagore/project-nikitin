@@ -1,7 +1,20 @@
-[gd_scene load_steps=6 format=3 uid="uid://cislandlab0dev"]
+[gd_scene load_steps=7 format=3 uid="uid://ddtqga4hk5p0d"]
 
-[ext_resource type="Script" path="res://scripts/dev/IslandLab.cs" id="1_lab"]
-[ext_resource type="Script" path="res://scripts/CameraRig.cs" id="2_rig"]
+[ext_resource type="Script" uid="uid://cbet6gc4qq8ga" path="res://scripts/dev/IslandLab.cs" id="1_lab"]
+[ext_resource type="Script" uid="uid://rjdpfihab1os" path="res://scripts/generation/IslandParams.cs" id="2_params"]
+[ext_resource type="Script" uid="uid://bps36woy4qpmp" path="res://scripts/CameraRig.cs" id="3_rig"]
+
+[sub_resource type="Resource" id="Resource_params"]
+script = ExtResource("2_params")
+Size = 96
+Radius = 22.0
+Coverage = 0.55
+Fragmentation = 0.1
+Relief = 0.4
+Roughness = 0.5
+HeightScale = 48
+TerraceCount = 3
+TerraceGrip = 0.5
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 
@@ -16,6 +29,8 @@ tonemap_mode = 2
 
 [node name="IslandLab" type="Node3D"]
 script = ExtResource("1_lab")
+Seed = 1337
+Params = SubResource("Resource_params")
 
 [node name="Terrain" type="MultiMeshInstance3D" parent="."]
 
@@ -27,13 +42,13 @@ transform = Transform3D(0.8192, 0, 0.5736, 0.4056, 0.7071, -0.5792, -0.4056, 0.7
 shadow_enabled = true
 
 [node name="CameraRig" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
-script = ExtResource("2_rig")
-PanSpeed = 20.0
-MinZoomDistance = 20.0
-MaxZoomDistance = 900.0
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+script = ExtResource("3_rig")
+PanSpeed = 30.0
+MinZoomDistance = 30.0
+MaxZoomDistance = 1200.0
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
-transform = Transform3D(1, 0, 0, 0, 0.8660254, -0.5, 0, 0.5, 0.8660254, 0, 75, 129.9038)
+transform = Transform3D(1, 0, 0, 0, 0.70710678, -0.70710678, 0, 0.70710678, 0.70710678, 0, 141.421, 141.421)
 current = true
-fov = 55.0
+fov = 50.0
