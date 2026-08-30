@@ -203,8 +203,10 @@ a separate concern — this spec assumes `IslandParams` arrive ready.
    largest **4-connected** component. Keeping every piece above a size threshold
    is not enough: two comparable survivors can meet only at a corner, and a corner
    is not a join you can walk. Above that threshold an archipelago is intended, so
-   pieces down to 20% of the largest are kept. Measured over 60 islands: exactly
-   60 landmasses — one each — and 0 diagonal-only joins in either land or water.
+   pieces down to 20% of the largest are kept. Audited over 60 islands: exactly
+   **60 landmasses, one each**, 0 diagonal-only joins in water — and **3** in
+   land, a small residue the component filter does not catch because both sides
+   belong to the same component. Not yet fixed.
 8. *Not yet:* hole fill.
 
 ### Stage 2 — Raw height → `float H[x,z]` in slabs, land only  *(implemented)*
@@ -340,8 +342,18 @@ for a setting of 40, and no border cell now sits below the ground it meets
 `max(neighbour surface) + MesaHeight` — measured against neighbours' plateau
 *plus* their relief amplitude, so a mesa clears the tops of anything beside it,
 not just its base. `MesaHeight` is likewise literal: a mesa is a step up, not a
-peak. Verified: 28 mesas, none level with or below a neighbour, clearance 5–6
-slabs, none touching a mountain or any non-plain.
+peak. Audited over 60 islands: 37 mesas, **none level with or below a neighbour,
+none touching a mountain or any other landform kind.** Clearance is a median of 7
+slabs — but the maximum is **22**, because a mesa placed against an already-raised
+mesa clears *that* one, and a chain of them compounds five slabs at a time. A
+stepped tableland is the intent; a tower is not. **Not yet fixed.**
+
+> **Basins are all but extinct.** The audit found **one** across 60 islands: the
+> character weights (0.20 / 0.10 / 0.07) are multiplied by both an envelope term
+> and a coastal smoothstep, and the product almost never wins the draw. The
+> landform works — the one basin measured a clean 5-slab drop — but it effectively
+> never appears, which also caps how many lakes are anything other than a flooded
+> plain.
 
 ### Stage 3 — Surface synthesis → `short SurfaceLevel[x,z]`  *(implemented)*
 
@@ -353,11 +365,26 @@ slabs, none touching a mountain or any non-plain.
    one. Blurring makes hills subside into plains instead.
 
    **Where cliffs may fall.** A rung difference between neighbours *is* a cliff,
-   so the rule — cliffs only between two plains or between two mesas — is
+   so the rule — cliffs only between two plains, two mesas or two basins — is
    enforced structurally: every other adjacent pair is unioned into a rung group,
-   and each group gets one rung. Measured over 30 islands, every cliff falls at a
-   plain-plain border (1739) or a plain-mesa one (675, the mesa's own escarpment).
-   None at hills, none at a mountain border.
+   and each group gets one rung.
+
+   Audited over 60 islands, that holds for **99.6%** of cliffs — but not all:
+
+   | border | cliffs | |
+   |---|---|---|
+   | plain-plain | 1773 | by the rule |
+   | plain-mesa | 1516 | the mesa's own escarpment |
+   | mesa-mesa | 440 | by the rule |
+   | plain-basin | 90 | the basin's own escarpment |
+   | plain-hills | **11** | *leak* |
+   | hills-hills | **3** | *leak* |
+   | mountain borders | **3** | massifs take no rung, so a steep flank is allowed |
+
+   The 14 hills leaks are not by design. Sharing a rung equalises a border's
+   *base*, but hills carry more relief than a plain; the blurred amplitude field
+   narrows that gap without closing it, so a few hills borders still reach three
+   slabs. **Not yet fixed.**
 2. **Slope limit**, applied *within* each region only: a Lipschitz projection
    from above (repeatedly lower any cell standing more than the region's limit
    above a neighbour). It only lowers, so it converges. Excluding region borders
@@ -375,9 +402,9 @@ slabs, none touching a mountain or any non-plain.
    read as a cliff — so it is neither free movement nor a deliberate obstacle.
    Three or more is left alone.
 
-Measured over 40 islands (263k adjacent land pairs): **94.2% of steps are free
-(0–1 slabs), 5.8% are cliffs (3+), and 0.1% are two-slab — none of them outside
-a mountain region.**
+Audited over 60 islands (224k adjacent pairs, real generator — see
+`scenes/dev/generation_audit.tscn`): **91.8% of steps are free (0–1 slabs), 7.8%
+are cliffs (3+), and two-slab steps outside mountains number 0 in 205,788.**
 
 *Not yet:* minimum-shelf-width enforcement, gentle descent within a plateau.
 
@@ -523,10 +550,11 @@ patch border and so is surrounded by the patch's own shore.
   pass runs once more over what they left, taught to skip lake beds and never to
   lower a shore into its own water.
 
-Measured over 60 islands: 136 lakes across 15,989 cells on 52 of the 60, depth
-2–3 slabs, 267 islet cells, 22 channels, 2 mesa tarns averaging 10 cells,
-**0 cells of dry land below a water surface, 0 water touching the void, 0
-diagonal-only joins**, and shore steps at a median of 1 slab.
+Audited over 60 islands: **67 lakes across 7,267 cells on 39 of the 60**, with
+**0 cells of dry land below a water surface, 0 water touching the void, and 0
+diagonal-only joins in water**. Shore steps are a median of 1 slab, but reach 4
+at the worst — the levelling only covers cells directly touching the pool, so an
+islet bank or a channel rim can still stand higher. Not yet fixed.
 
 ### Ramps — tried and removed
 
@@ -594,6 +622,40 @@ aether? an Essence cycle?); whether lakes should be fresh-water sites that
 settlements need, which would make them a placement constraint rather than
 decoration; and whether rivers should be cut before landform assignment so
 patches can be drawn around them instead of over them.
+
+---
+
+## 4d. Auditing the guarantees
+
+Every "measured" figure above comes from **`scenes/dev/generation_audit.tscn`**,
+which runs the real generator over 60 seeds and measures `IslandData` directly:
+
+```
+godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
+```
+
+It needs no rendering, takes about 1.4 s, and prints the step grammar, cliff
+borders by landform pair, patch sizes, mesa/basin clearances, mountain rise and
+step profile, lake containment, and landmass continuity.
+
+> **Read the numbers, don't assume them.** These figures were originally produced
+> by a stand-alone harness that re-implemented the pipeline against substitute
+> noise, because `FastNoiseLite` needs the engine. That validated the
+> *architecture* but not the shipped output, and when the real generator was
+> finally measured several claims turned out optimistic — lakes were half as
+> common, mesa clearance ran to 22 slabs rather than 6, basins had effectively
+> vanished, and the cliff rule leaked in 17 places. The audit scene measures
+> `IslandData` and so re-implements nothing; there is nothing left to drift.
+
+### Known gaps, as of the last audit
+
+| | |
+|---|---|
+| cliff rule leaks | 14 hills borders reach 3+ slabs |
+| mesa clearance | compounds to 22 slabs in a chain of stepped mesas |
+| basins | 1 in 60 islands — the weights are multiplied down to nothing |
+| lake shore | median 1 slab, but reaches 4 at islet banks and channel rims |
+| diagonal joins | 3 in land across 60 islands |
 
 ---
 

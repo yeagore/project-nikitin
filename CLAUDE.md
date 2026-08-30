@@ -33,19 +33,35 @@ or commit it.
 
 ### Building & running
 
-The C# side builds standalone: `dotnet build "Project Nikitin.csproj"`
-(`dotnet` 8.0 is available; the `Godot.NET.Sdk` NuGet restores from nuget.org).
-Do this after editing any `.cs` to catch compile errors without the editor.
+The C# side builds standalone: `dotnet build "Project Nikitin.csproj"`. The SDK
+is **10.0.400**, which builds the project's `net8.0` target fine; the
+`Godot.NET.Sdk` NuGet restores from nuget.org. Do this after editing any `.cs` to
+catch compile errors without the editor.
 
-There is no `godot` binary on `PATH` in this environment, so scene loading and
-the actual game can only be checked by running the installed .NET Godot editor.
-Once its path is known, add it here. Useful invocations:
+**Godot lives on the D: drive, not on `PATH`:**
 
 ```
-godot --path . --editor              # open the project (also triggers a C# build)
-godot --path . scenes/main/main.tscn # run a scene directly
+D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64.exe
+D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe
+```
+
+Use the `_console` variant from a shell — it writes to stdout. Quote the path.
+**It runs headless**, so scenes can be executed and their `GD.Print` output read
+without a window:
+
+```
+godot --path . --editor                              # open the project (also builds C#)
 godot --path . --headless --build-solutions --quit   # build C# + import, no window
+godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
 ```
+
+Two gotchas: headless Godot often does **not** exit on `--quit-after`, so run it
+with a timeout and kill it rather than blocking; and this machine's locale prints
+decimals with a comma (`1,02`), which breaks naive `grep`/`Select-String` patterns
+looking for `\.`.
+
+Headless gives no rendering — numbers can be verified this way, **appearance
+cannot**. Anything about how terrain *looks* still needs a human at the editor.
 
 ---
 
@@ -115,9 +131,21 @@ parameters, rendering handoff, first implementation slice. Being built on the
 In short: generation is a pure function `Generate(seed, IslandParams)` producing
 the columnar `IslandData` (Y in slab indices); a separate chunked mesher turns
 that into per-chunk `ArrayMesh` + trimesh colliders (only exposed faces).
-**Never one node per slab.** Current state: stages 1–4 + a dev lab
-(`scenes/dev/island_lab.tscn`, `scripts/dev/IslandLab.cs`) that draws one
-scaled `MultiMesh` box per span.
+**Never one node per slab.**
+
+Current state — the island is a **blanket of landform patches**, not a quantised
+height field. Regions come from a warped Voronoi; each gets a `LandformType`
+(Plain, Hills, Mountain, Mesa, Basin) and a rung on a plateau ladder, and relief
+is generated under that landform's slope limit. This is what keeps steps
+meaningful: a 1-slab step is free, so terrain is walkable by default and cliffs
+only appear where they were decided. Mountains take no rung — they rise on an
+S-curve from the ground they actually meet. Lakes sink into a patch's interior,
+the untouched rim being what holds the water. `TerrainCharacter` is the single
+landform knob; `ReliefStyle` is internal and follows from it.
+
+The dev lab (`scenes/dev/island_lab.tscn`) draws one scaled `MultiMesh` box per
+span, plus flat quads for water. Still to come: the chunked mesher, overhangs
+(stage 4b), rivers, feature anchors, settlement guarantees.
 
 **Launching the island lab:**
 
@@ -128,11 +156,21 @@ scaled `MultiMesh` box per span.
 3. Tweak generation live: with the scene running, in the **Remote** tab of the
    Scene dock select the `IslandLab` node and edit `Seed` or the `Params`
    resource — the island rebuilds on any change. Console prints span count + time.
-4. Camera: **WASD** move, **Q/E** or middle-mouse-drag rotate, **wheel** zoom,
-   **Shift** faster; **F** re-frames the island, **R** forces a regenerate.
+4. Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
+   arrows** tilt (far enough to look up at the keel), **wheel** zoom, **Shift**
+   faster. **N** new seed, **V** cycle `TerrainCharacter`, **C** cycle view
+   (height / landform / region), **F** re-frame, **R** rebuild the same island.
+   A status line on screen names the character, high-ground style, seed and lake
+   count.
 
-CLI equivalent once a `godot` path is known:
-`godot --path . scenes/dev/island_lab.tscn`.
+CLI: `godot --path . scenes/dev/island_lab.tscn`
+
+**Checking generation without looking at it:**
+`scenes/dev/generation_audit.tscn` runs the real generator over 60 seeds headless
+and prints the measured guarantees — step grammar, cliff borders, patch sizes,
+mesa/basin clearance, mountain profile, lake containment, continuity. Run it after
+any change to `IslandGenerator`. See `docs/island-generation.md` §4d, which also
+lists the gaps the last audit found.
 
 `scenes/terrain/grass_block.tscn` predates the slab decision — it is still a
 1×1×1 cube and should be reshaped to a 1×0.25×1 slab (and `main.tscn`'s camera
@@ -153,15 +191,20 @@ scripts/
   CameraRig.cs                  Strategy camera: pan / yaw / wheel-zoom, LookAt-aimed.
   generation/                   Namespace ProjectNikitin.Generation
     Terrain.cs                  CellSize / SlabHeight constants.
-    Span.cs, IslandData.cs      Per-column span-list terrain model.
+    Span.cs, IslandData.cs      Per-column span-list terrain model (+ water, regions).
     IslandParams.cs             [GlobalClass] generator inputs.
+    LandformType.cs             Plain / Hills / Mountain / Mesa / Basin.
+    TerrainCharacter.cs         Which landforms an island is built from.
+    ReliefStyle.cs              Where the high ground sits (internal, per character).
     Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
-    IslandGenerator.cs          Generate(seed, params) — stages 1–4 so far.
+    IslandGenerator.cs          Generate(seed, params) — mask, patches, relief, lakes, keel.
   dev/IslandLab.cs              Runtime harness for scenes/dev/island_lab.tscn.
+  dev/GenerationAudit.cs        Headless audit of the measured guarantees.
 scenes/
   main/main.tscn               Single-slab viewer (grass_block.tscn — still a cube).
   terrain/grass_block.tscn     Prototype terrain block (pre-slab-decision).
   dev/island_lab.tscn          Island generation harness.
+  dev/generation_audit.tscn    Headless guarantee audit (see docs §4d).
 docs/
   island-generation.md         Terrain generation + rendering spec.
 CLAUDE.md                      This file.
@@ -251,14 +294,17 @@ and to answer/close the matching **Open Question**.
 
 - **Prototype 0** — Set up dev environment (git, Godot, Claude, VS Code). *In
   progress:* repo scaffolded and pushed to GitHub (`yeagore/project-nikitin`).
-- **Epic: Render an island** — in progress on branch `island-generation`. Spec:
-  `docs/island-generation.md`. Done: generation stages 1–4 (mask → height →
-  terrace → keel + spans) in slab units, plus the `island_lab.tscn` harness
-  rendering scaled `MultiMesh` boxes.
+- **Epic: Render an island** — on branch `island-generation`, PR
+  [#2](https://github.com/yeagore/project-nikitin/pull/2). Spec:
+  `docs/island-generation.md`. Done: footprint → landform patches → relief under
+  per-landform slope limits → lakes → keel, plus the lab and the audit scene.
 
-Next: finish Stage 3 (morphological open for shelf width, gentle descent),
-Stage 4b overhangs, the chunked span-aware mesher + colliders, feature anchors,
-guarantees, settlement hooks.
+Next, in rough order: close the gaps listed in `docs/island-generation.md` §4d
+(cliff-rule leaks at hills borders, mesa clearance compounding to 22 slabs,
+basins effectively never appearing, lake shores reaching 4 slabs); then rivers
+(cut **across** patches, after the patchwork — a river that follows a border
+reads as a seam); then the chunked span-aware mesher + colliders, Stage 4b
+overhangs, feature anchors, settlement hooks.
 
 ---
 
