@@ -51,7 +51,9 @@ public partial class CameraRig : Node3D
     {
         _camera = GetNode<Camera3D>("Camera3D");
         Vector3 offset = _camera.Position;
-        _offsetDir = offset.Normalized();
+        // The child camera's authored basis is ignored: the offset *direction*
+        // sets the pitch, and ApplyZoom() re-aims it at the pivot every time.
+        _offsetDir = offset.LengthSquared() > 0.0001f ? offset.Normalized() : new Vector3(0f, 0.7071f, 0.7071f);
         _distance = Mathf.Clamp(offset.Length(), MinZoomDistance, MaxZoomDistance);
         ApplyZoom();
     }
@@ -119,5 +121,23 @@ public partial class CameraRig : Node3D
     private void ApplyZoom()
     {
         _camera.Position = _offsetDir * _distance;
+        // Aim at the rig pivot (this node's origin) regardless of authored basis.
+        _camera.LookAt(GlobalPosition, Vector3.Up);
+    }
+
+    /// <summary>
+    /// Recentre the rig on <paramref name="center"/> (world space) and set the
+    /// zoom so a sphere of <paramref name="radius"/> around it fits the view.
+    /// Overrides the current pan/zoom — call on load or an explicit "frame" key,
+    /// not on every rebuild.
+    /// </summary>
+    public void Frame(Vector3 center, float radius)
+    {
+        if (_camera == null) return;
+        GlobalPosition = center;
+        float halfFov = Mathf.DegToRad(_camera.Fov) * 0.5f;
+        float fit = radius / Mathf.Tan(halfFov) * 1.4f;
+        _distance = Mathf.Clamp(fit, MinZoomDistance, MaxZoomDistance);
+        ApplyZoom();
     }
 }
