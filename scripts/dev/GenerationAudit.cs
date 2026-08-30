@@ -300,7 +300,7 @@ public partial class GenerationAudit : Node
             // ---- what the character delivered ----------------------------------
             charIslands.TryGetValue(d.Character, out int seen);
             charIslands[d.Character] = seen + 1;
-            if (!charHas.TryGetValue(d.Character, out int[] has))
+            if (!charHas.TryGetValue(d.Character, out int[]? has) || has == null)
                 charHas[d.Character] = has = new int[5];
 
             var present = new bool[5];
