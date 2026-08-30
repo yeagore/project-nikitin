@@ -102,12 +102,22 @@ public static class Traversal
         BuildShelves(d);
     }
 
-    /// <summary>True where a column is ground you could stand on.</summary>
+    /// <summary>
+    /// True where a column is ground you could stand on — or wade across.
+    ///
+    /// A stream is one slab deep, which is the same step that makes a hillside
+    /// free, so it is <b>fordable</b>: a watercourse running the length of an
+    /// island should not cut it in two. A navigable river is two cells wide and
+    /// meant for barges, and a lake has a bed three or four slabs down; neither is
+    /// something you walk through.
+    /// </summary>
     private static bool Walkable(IslandData d, int x, int z)
     {
         int n = d.Size;
         if (x < 0 || z < 0 || x >= n || z >= n) return false;
-        return d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand;
+        if (!d.HasLand(x, z)) return false;
+        if (d.WaterLevel[x, z] == IslandData.NoLand) return true;
+        return d.River[x, z] && !d.Navigable[x, z];
     }
 
     private static void BuildWalkAreas(IslandData d)
@@ -118,9 +128,7 @@ public static class Traversal
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            d.Walk[x, z] = d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
-                ? Water
-                : -1;
+            d.Walk[x, z] = d.HasLand(x, z) && !Walkable(d, x, z) ? Water : -1;
 
         for (int sx = 0; sx < n; sx++)
         for (int sz = 0; sz < n; sz++)
@@ -195,9 +203,7 @@ public static class Traversal
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            d.Reach[x, z] = d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
-                ? Water
-                : -1;
+            d.Reach[x, z] = d.HasLand(x, z) && !Walkable(d, x, z) ? Water : -1;
 
         for (int sx = 0; sx < n; sx++)
         for (int sz = 0; sz < n; sz++)

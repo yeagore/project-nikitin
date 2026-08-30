@@ -68,6 +68,32 @@ public sealed class IslandData
     /// </summary>
     public List<(Vector2I A, Vector2I B)> Bridges { get; } = new();
 
+    /// <summary>
+    /// Columns carrying a watercourse. A river column is flooded like a lake —
+    /// <see cref="WaterLevel"/> holds its surface — but it behaves differently:
+    /// a stream is one slab deep and can be forded, where a lake cannot.
+    /// </summary>
+    public bool[,] River { get; }
+
+    /// <summary>
+    /// River columns wide and deep enough to move goods on, and by the same token
+    /// too wide to wade. Two cells across, which is still inside the bridge span.
+    /// </summary>
+    public bool[,] Navigable { get; }
+
+    /// <summary>
+    /// Drainage accumulation per column: how many cells upstream drain through
+    /// this one. What decides where a river is, and how big.
+    /// </summary>
+    public int[,] Flow { get; }
+
+    /// <summary>
+    /// Where water falls rather than runs — a drop of three slabs or more along a
+    /// channel, and every channel that reaches the rim. At the coast every river
+    /// becomes one, because there is no sea to run to.
+    /// </summary>
+    public List<Vector2I> Falls { get; } = new();
+
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
 
@@ -139,6 +165,9 @@ public sealed class IslandData
         WaterLevel = new short[size, size];
         Canyon = new bool[size, size];
         Pass = new bool[size, size];
+        River = new bool[size, size];
+        Navigable = new bool[size, size];
+        Flow = new int[size, size];
         Walk = new int[size, size];
         Reach = new int[size, size];
         ShelfId = new int[size, size];

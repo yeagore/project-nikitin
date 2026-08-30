@@ -181,6 +181,11 @@ public sealed class IslandGenerator
             moved |= ResolveAmbiguousSteps(surface, region, land, plan, water);
             if (!moved) break;
         }
+        // Rivers last: they are cut across the finished patchwork, and they only
+        // ever lower a cell by one slab, so the step grammar survives them.
+        Rivers.Carve(seed, p, land, surface, water, data.River, data.Navigable,
+                     data.Flow, data.Falls);
+
         short[,] keel = BuildKeel(seed, p, land, surface, toCoast);
 
         for (int x = 0; x < n; x++)

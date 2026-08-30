@@ -129,6 +129,13 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "3,24,1")] public int BasinDepth { get; set; } = 5;
 
+    /// <summary>
+    /// How wet the Domain is: 0 leaves it dry, 1 gives it a full drainage network.
+    /// It sets how much catchment a channel needs before it counts as a river, so
+    /// a wetter island has more of them and they start higher up.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
+
     // ---- underside / keel ---------------------------------------------------
     // The island hangs in aether as a spinning top: a thin lip at the coastline
     // thickening inland to a deep keel under the interior.

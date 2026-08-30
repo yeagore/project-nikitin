@@ -52,6 +52,11 @@ public partial class GenerationAudit : Node
         int footPairs = 0, footDrops = 0;
         var stepByBand = new Dictionary<int, List<int>>();
 
+        int riverCells = 0, navigableCells = 0, fallCells = 0, rimFalls = 0;
+        int islandsWithRiver = 0, riverIslandsReachingRim = 0;
+        int riverUphill = 0, riverDry = 0;
+        var riverPerIsland = new List<int>();
+
         int lakes = 0, lakeCells = 0, leaks = 0, waterAtVoid = 0, islandsWithLake = 0;
         var shoreSteps = new List<int>();
 
@@ -90,19 +95,31 @@ public partial class GenerationAudit : Node
 
             short Top(int x, int z) => d.SurfaceLevel(x, z);
             bool Land(int x, int z) => x >= 0 && z >= 0 && x < n && z < n && d.HasLand(x, z);
+
+            // The height you actually cross a column at. A stream's channel is cut
+            // one slab below its banks and filled to the old level, so you ford it
+            // at the water, not at the bed — measuring the bed would report a
+            // two-slab step at every bank that happened to stand a slab proud.
+            short Cross(int x, int z)
+                => d.River[x, z] && !d.Navigable[x, z] ? d.WaterLevel[x, z] : d.SurfaceLevel(x, z);
+
+            // A navigable river is not ground: two cells wide and meant for
+            // barges, it is a gap you bridge, not a step you take.
+            bool Ground(int x, int z) => Land(x, z) && !d.Navigable[x, z]
+                                         && (d.River[x, z] || d.WaterLevel[x, z] == IslandData.NoLand);
             LandformType Form(int x, int z) => (LandformType)d.Landform[x, z];
 
             // ---- step grammar, and where cliffs fall -------------------------
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
-                if (!Land(x, z)) continue;
+                if (!Ground(x, z)) continue;
                 for (int k = 0; k < 2; k++)                     // +X and +Z: each pair once
                 {
                     int nx = x + (k == 0 ? 1 : 0), nz = z + (k == 0 ? 0 : 1);
-                    if (!Land(nx, nz)) continue;
+                    if (!Ground(nx, nz)) continue;
 
-                    int diff = Math.Abs(Top(x, z) - Top(nx, nz));
+                    int diff = Math.Abs(Cross(x, z) - Cross(nx, nz));
                     if (diff <= 1) free++;
                     else if (diff == 2) ambiguous++;
                     else cliff++;
@@ -121,8 +138,13 @@ public partial class GenerationAudit : Node
                         // A canyon wall is a cliff no rule forbids: the trench is cut
                         // deliberately, and across any pair of patches. Bucket it as
                         // itself, or it reads as a leak in the landform rules.
+                        // A mountain flank is the mountain: massifs take no rung, so
+                        // the slope limiter never binds their borders and a steep
+                        // face there is the landform, not a leak.
                         string key = d.Canyon[x, z] || d.Canyon[nx, nz]
                             ? "canyon (any pair)"
+                            : a == (int)LandformType.Mountain || b == (int)LandformType.Mountain
+                            ? "mountain flank"
                             : $"{TypeName[Math.Min(a, b)]}-{TypeName[Math.Max(a, b)]}";
                         cliffByBorder.TryGetValue(key, out int c);
                         cliffByBorder[key] = c + 1;
@@ -251,7 +273,7 @@ public partial class GenerationAudit : Node
             for (int z = 0; z < n; z++)
             {
                 short w = d.WaterLevel[x, z];
-                if (w == IslandData.NoLand) continue;
+                if (w == IslandData.NoLand || d.River[x, z]) continue;
 
                 lakeCells++;
                 lakeRegions.Add(d.Region[x, z]);
@@ -320,6 +342,45 @@ public partial class GenerationAudit : Node
                 if (islandHeart >= dry) islandsFullyReachable++;
             }
             foreach (WalkArea a in d.Areas) { if (a.IsDistrict) districts++; else scraps++; }
+
+            // ---- rivers --------------------------------------------------------
+            // There is no sea, so the one thing every watercourse must do is reach
+            // the rim. A river that stops inland is water with nowhere to go.
+            int here = 0;
+            bool reachedRim = false;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.River[x, z]) continue;
+                here++;
+                riverCells++;
+                if (d.Navigable[x, z]) navigableCells++;
+
+                short level = d.WaterLevel[x, z];
+                if (Land(x, z) && Top(x, z) >= level) riverDry++;      // channel not cut
+
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!Land(nx, nz)) { reachedRim = true; continue; }
+                    // Water running uphill: a downstream cell standing above this
+                    // one by more than a slab of noise.
+                    if (d.River[nx, nz] && d.WaterLevel[nx, nz] > level + 1
+                        && d.Flow[nx, nz] > d.Flow[x, z]) riverUphill++;
+                }
+            }
+            foreach (Vector2I f in d.Falls)
+            {
+                fallCells++;
+                for (int k = 0; k < 4; k++)
+                    if (!Land(f.X + Dx[k], f.Y + Dz[k])) { rimFalls++; break; }
+            }
+            if (here > 0)
+            {
+                islandsWithRiver++;
+                riverPerIsland.Add(here);
+                if (reachedRim) riverIslandsReachingRim++;
+            }
 
             // ---- passes --------------------------------------------------------
             // Did the saddle actually do its job? A pass works when the two patches
@@ -454,6 +515,15 @@ public partial class GenerationAudit : Node
             GD.Print($"  {band / 10.0:0.0}-{(band + 1) / 10.0:0.0}   mean {list.Average(),5:0.00}   max {list.Max(),3}");
         }
         GD.Print("");
+
+        GD.Print($"rivers: {riverCells} cells on {islandsWithRiver} of {Seeds} islands, "
+            + $"{navigableCells} of them navigable");
+        Report("  river cells per island", riverPerIsland, "cells");
+        GD.Print($"  islands whose rivers reach the rim: {riverIslandsReachingRim}"
+            + $" of {islandsWithRiver}   (there is no sea; they must)");
+        GD.Print($"  falls: {fallCells}, of which {rimFalls} pour off the rim");
+        GD.Print($"  channel not cut below its own water (want 0): {riverDry}");
+        GD.Print($"  water running uphill (want 0):                {riverUphill}\n");
 
         GD.Print($"lakes: {lakes} over {lakeCells} cells, on {islandsWithLake} of {Seeds} islands");
         Report("  shore step above water", shoreSteps, "slabs");

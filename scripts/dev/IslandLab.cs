@@ -305,6 +305,14 @@ public partial class IslandLab : Node3D
 	/// one walkable piece, how much is broken ground, and how much of the flat
 	/// ground is big and wide enough to settle.
 	/// </summary>
+	private static int RiverCells(IslandData d)
+	{
+		int found = 0;
+		for (int x = 0; x < d.Size; x++)
+		for (int z = 0; z < d.Size; z++) if (d.River[x, z]) found++;
+		return found;
+	}
+
 	private static string WalkSummary(IslandData d)
 	{
 		int land = 0;
@@ -329,7 +337,8 @@ public partial class IslandLab : Node3D
 			+ $"broken {100f * broken / land:0}% in {d.Areas.Count - districts} scraps"
 			+ $"   reach: heartland {100f * heart / land:0}%"
 			+ $"   shelves: {buildable} buildable of {d.Shelves.Count}"
-			+ $"   passes: {d.Passes.Count}";
+			+ $"   passes: {d.Passes.Count}"
+			+ $"   rivers: {RiverCells(d)} cells, {d.Falls.Count} falls";
 	}
 
 	/// <summary>
@@ -360,7 +369,9 @@ public partial class IslandLab : Node3D
 			xf.Add(new Transform3D(
 				Basis.Identity,
 				new Vector3((x - half) * cs, (level + 1) * sh, (z - half) * cs)));
-			lakes.Add(d.Region[x, z]);
+			// Rivers share the water plane but are not lakes; counting them would
+			// make the tally meaningless.
+			if (!d.River[x, z]) lakes.Add(d.Region[x, z]);
 		}
 
 		var mm = new MultiMesh

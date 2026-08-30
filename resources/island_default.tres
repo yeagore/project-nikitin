@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1_params")
-Size = 96
-Radius = 34.0
+Size = 128
+Radius = 0.0
 Coverage = 0.62
 Irregularity = 0.55
 Arrangement = 0
@@ -19,6 +19,7 @@ PlateauLevels = 2
 MountainHeight = 40
 MesaHeight = 5
 BasinDepth = 5
+Rivers = 0.5
 EdgeThickness = 3
 KeelDepth = 34
 KeelRoughness = 0.45
