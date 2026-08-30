@@ -60,6 +60,14 @@ public sealed class IslandData
     /// <summary>The centre of each pass. Usually none or one.</summary>
     public List<Vector2I> Passes { get; } = new();
 
+    /// <summary>
+    /// Where a bridge would go: one cell pair per crossing, enough to join every
+    /// landmass into one. The generator uses these to make the two banks agree on
+    /// a level; the settlement layer will use them to know where a crossing is
+    /// worth building.
+    /// </summary>
+    public List<(Vector2I A, Vector2I B)> Bridges { get; } = new();
+
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
 
@@ -113,6 +121,9 @@ public sealed class IslandData
 
     /// <summary>The style actually used, with <c>Auto</c> already resolved.</summary>
     public ReliefStyle Style { get; internal set; }
+
+    /// <summary>The arrangement actually used, with <c>Auto</c> already resolved.</summary>
+    public IslandArrangement Arrangement { get; internal set; }
 
     /// <summary>The character actually used, with <c>Auto</c> already resolved.</summary>
     public TerrainCharacter Character { get; internal set; }

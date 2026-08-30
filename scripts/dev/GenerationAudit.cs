@@ -56,6 +56,7 @@ public partial class GenerationAudit : Node
         var shoreSteps = new List<int>();
 
         int landmasses = 0, diagonalLand = 0, diagonalWater = 0;
+        var byArrangement = new Dictionary<IslandArrangement, (int Islands, int Masses, int Linked)>();
 
         // Which landforms each character actually delivered, island by island.
         var charIslands = new Dictionary<TerrainCharacter, int>();
@@ -330,12 +331,18 @@ public partial class GenerationAudit : Node
             {
                 if (!d.Pass[x, z]) continue;
                 passCells++;
-                // Steepest step out of a pass cell: the whole point is that it is 1.
+
+                // Steepest step out of a pass cell: the whole point is that it is
+                // 1. Lake beds and canyon floors are skipped — a pass whose disc
+                // happens to take in one is measuring that feature's drop, not the
+                // saddle's grade.
+                if (d.WaterLevel[x, z] != IslandData.NoLand || d.Canyon[x, z]) continue;
                 int worst = 0;
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
                     if (!Land(nx, nz) || !d.Pass[nx, nz]) continue;
+                    if (d.WaterLevel[nx, nz] != IslandData.NoLand || d.Canyon[nx, nz]) continue;
                     worst = Math.Max(worst, Math.Abs(Top(x, z) - Top(nx, nz)));
                 }
                 passGrade.Add(worst);
@@ -376,8 +383,32 @@ public partial class GenerationAudit : Node
             shelfOffMainland.Add(offMain);
 
             // ---- continuity ----------------------------------------------------
-            landmasses += CountComponents(d, n);
-            diagonalLand += DiagonalOnly(n, (x, z) => Land(x, z));
+            int masses = CountComponents(d, n);
+            landmasses += masses;
+
+            // The archipelago guarantee, asked of the *landmasses* rather than of
+            // every cell: does every piece of land have somewhere the heartland
+            // can bridge to? A summit nobody can climb is a separate question and
+            // would otherwise drown this one.
+            var massOf = new int[n, n];
+            int massCount = LabelLandmasses(d, n, massOf);
+            var reached = new bool[massCount];
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (massOf[x, z] >= 0 && d.Reach[x, z] == d.Heartland) reached[massOf[x, z]] = true;
+
+            bool allLinked = true;
+            foreach (bool r in reached) allLinked &= r;
+
+            byArrangement.TryGetValue(d.Arrangement, out var acc);
+            byArrangement[d.Arrangement] =
+                (acc.Islands + 1, acc.Masses + masses, acc.Linked + (allLinked ? 1 : 0));
+
+            // Within a landmass only. Two separate islands a corner apart are not
+            // a broken join, they are two islands — and every arrangement but
+            // Single has them by design.
+            diagonalLand += DiagonalOnly(n, (x, z) =>
+                x >= 0 && z >= 0 && x < n && z < n && massOf[x, z] >= 0, massOf);
             diagonalWater += DiagonalOnly(n, (x, z) =>
                 x >= 0 && z >= 0 && x < n && z < n && d.WaterLevel[x, z] != IslandData.NoLand);
         }
@@ -482,8 +513,15 @@ public partial class GenerationAudit : Node
         Report("  buildable shelves off the mainland", shelfOffMainland, "per island");
         GD.Print("");
 
-        GD.Print($"continuity: {landmasses} landmasses for {Seeds} islands"
-            + $"  (want {Seeds}); diagonal-only joins: land {diagonalLand}, water {diagonalWater}");
+        GD.Print("arrangements: landmasses per island, and whether all of it links up");
+        foreach (var (a, v) in byArrangement.OrderBy(k => k.Key.ToString()))
+            GD.Print($"  {a,-12} {v.Islands,3} islands   {(float)v.Masses / v.Islands,4:0.0} masses each"
+                + $"   fully linked {100 * v.Linked / v.Islands,3}%");
+        GD.Print("");
+
+        GD.Print($"continuity: {landmasses} landmasses over {Seeds} islands "
+            + $"(more than one is the arrangement's doing, not a fault); "
+            + $"diagonal-only joins within a landmass: land {diagonalLand}, water {diagonalWater}");
     }
 
     private static void Report(string label, List<int> values, string unit)
@@ -544,6 +582,38 @@ public partial class GenerationAudit : Node
         return max;
     }
 
+    /// <summary>Labels each 4-connected landmass; returns how many there are.</summary>
+    private static int LabelLandmasses(IslandData d, int n, int[,] into)
+    {
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) into[x, z] = -1;
+
+        var stack = new Stack<(int X, int Z)>();
+        int found = 0;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!d.HasLand(sx, sz) || into[sx, sz] >= 0) continue;
+            int id = found++;
+            into[sx, sz] = id;
+            stack.Push((sx, sz));
+            while (stack.Count > 0)
+            {
+                var (x, z) = stack.Pop();
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!d.HasLand(nx, nz) || into[nx, nz] >= 0) continue;
+                    into[nx, nz] = id;
+                    stack.Push((nx, nz));
+                }
+            }
+        }
+        return found;
+    }
+
     private static int CountComponents(IslandData d, int n)
     {
         var seen = new bool[n, n];
@@ -574,16 +644,19 @@ public partial class GenerationAudit : Node
     }
 
     /// <summary>Corner-only touches: a join you can neither walk nor swim through.</summary>
-    private static int DiagonalOnly(int n, Func<int, int, bool> inSet)
+    private static int DiagonalOnly(int n, Func<int, int, bool> inSet, int[,]? sameAs = null)
     {
+        bool Same(int ax, int az, int bx, int bz)
+            => sameAs == null || sameAs[ax, az] == sameAs[bx, bz];
+
         int bad = 0;
         for (int x = 0; x + 1 < n; x++)
         for (int z = 0; z + 1 < n; z++)
         {
             bool a = inSet(x, z), b = inSet(x + 1, z + 1);
             bool c = inSet(x + 1, z), e = inSet(x, z + 1);
-            if (a && b && !c && !e) bad++;
-            if (c && e && !a && !b) bad++;
+            if (a && b && !c && !e && Same(x, z, x + 1, z + 1)) bad++;
+            if (c && e && !a && !b && Same(x + 1, z, x, z + 1)) bad++;
         }
         return bad;
     }

@@ -60,24 +60,43 @@ public sealed class IslandGenerator
             Character = ResolveCharacter(seed, p.Character),
         };
 
-        bool[,] land = BuildMask(seed, p);
+        IslandArrangement how = ResolveArrangement(seed, p.Arrangement);
+        data.Arrangement = how;
+        // Specks are not islets: BuildMask already drops anything under
+        // MinIsletCells, so what comes back is landmasses only.
+        bool[,] land = BuildMask(seed, p, how);
 
         // Bites are taken patch by patch, so the coast they leave runs along
         // region borders. Regions are rebuilt afterwards rather than re-indexed:
         // the partition is deterministic, so this simply re-derives it over the
         // land that remains.
-        int[,] draft = BuildRegions(seed, p, land, out int draftCount);
-        BiteRegions(seed, p, land, draft, draftCount);
+        // Bites are for a single landmass. A bite takes a third of what is left,
+        // measured over the whole footprint, and on a Twins or Triplets layout
+        // that is most of one island — which is exactly how a third of Twins came
+        // out with one twin. A layout with several pieces already has all the
+        // silhouette interest a bite was there to provide.
+        if (how == IslandArrangement.Single || how == IslandArrangement.Satellites)
+        {
+            int[,] draft = BuildRegions(seed, p, land, out int draftCount);
+            BiteRegions(seed, p, land, draft, draftCount);
+        }
         // Bites and the mask itself can leave two lobes meeting at a corner, which
         // is not a join you can walk. Filling the corner is done before the
         // component filter, so what it measures is what you can actually reach.
         CloseDiagonalJoins(land);
 
-        // Unless the island is deliberately an archipelago, reduce it to a single
-        // 4-connected landmass. Two comparable pieces that survive the size filter
-        // may still meet only at a corner, which is not a join you can walk.
-        if (p.Fragmentation < 0.25f) KeepLargestComponent(land);
-        else DropSmallComponents(land, 0.2f);
+        // A Single Domain is one landmass by definition. Every other arrangement
+        // keeps its pieces — and then has to earn them: LinkLandmasses nudges the
+        // pieces together until each can be reached from the next by a bridge.
+        if (how == IslandArrangement.Single) KeepLargestComponent(land);
+        else
+        {
+            DropComponentsUnder(land, MinIsletCells);
+            LinkLandmasses(land);
+        }
+        CloseDiagonalJoins(land);
+        List<(Vector2I A, Vector2I B)> bridges = FindBridgeSites(land);
+        data.Bridges.AddRange(bridges);
         int[,] region = BuildRegions(seed, p, land, out int regionCount);
 
         // Smooth, sub-cell distance to coast. Shared by the coastal taper and the
@@ -96,8 +115,23 @@ public sealed class IslandGenerator
         RepairAdjacency(region, regionCount, neighbours, types);
         RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
                                 RegionCells(land, region, regionCount));
+
+        // A mesa or basin takes its own level regardless of its rung group, so a
+        // bridgehead on one would ignore the agreement made below. Plains are what
+        // a landing belongs on anyway.
+        foreach (var (ca, cb) in bridges)
+        {
+            foreach (Vector2I c in new[] { ca, cb })
+            {
+                if (!land[c.X, c.Y]) continue;
+                int r = region[c.X, c.Y];
+                if (IsTable(types[r]) || types[r] == LandformType.Mountain)
+                    types[r] = LandformType.Plain;
+            }
+        }
+        RepairAdjacency(region, regionCount, neighbours, types);
         RegionPlan[] plan = AssignPlateaus(seed, p, land, region, regionCount, envelope,
-                                           neighbours, types);
+                                           neighbours, types, bridges);
         float[,] inward = InwardDistance(land, region, regionCount);
 
         short[,] surface = BuildSurface(seed, p, land, region, plan, inward);
@@ -592,74 +626,271 @@ public sealed class IslandGenerator
 
     // ---- Stage 1: footprint mask ----------------------------------------------
 
-    private static bool[,] BuildMask(int seed, IslandParams p)
+    /// <summary>One blob of the footprint: an ellipse with a wandering radius.</summary>
+    private readonly struct Lobe
+    {
+        public readonly float Cx, Cz, Radius, Aspect, Cos, Sin;
+        public readonly float Rings;      // how many wobbles go round its coast
+
+        /// <summary>
+        /// How far this lobe's radius is allowed to wander, as a share of the
+        /// island's Irregularity. A lone landmass can wobble freely; a lobe placed
+        /// next to another cannot, because a coast that swings by a third of its
+        /// radius decides for itself whether two islands are two islands.
+        /// </summary>
+        public readonly float Wander;
+
+        public Lobe(float cx, float cz, float radius, float aspect, float rot, float rings,
+                    float wander)
+        {
+            Cx = cx;
+            Cz = cz;
+            Radius = radius;
+            Aspect = aspect;
+            Cos = MathF.Cos(rot);
+            Sin = MathF.Sin(rot);
+            Rings = rings;
+            Wander = wander;
+        }
+
+        /// <summary>Normalised distance from this lobe's own wandering edge; &lt; 1 is inside.</summary>
+        public float Distance(float x, float z, Noise lobes, float irr)
+        {
+            float dx = x - Cx, dz = z - Cz;
+            float rx = (dx * Cos + dz * Sin) * Aspect;
+            float rz = (-dx * Sin + dz * Cos) / Aspect;
+            float dist = MathF.Sqrt(rx * rx + rz * rz);
+
+            // Sampled on the unit circle so it is seamless in angle — sampling the
+            // angle itself would seam at +-pi. The offset per lobe keeps two
+            // islets from having the same coastline.
+            float ang = MathF.Atan2(rz, rx);
+            float lobe = lobes.At(MathF.Cos(ang) * Rings + Cx, MathF.Sin(ang) * Rings + Cz);
+            float rEff = MathF.Max(1e-3f, Radius * (1f + irr * Wander * (lobe * 2f - 1f)));
+            return dist / rEff;
+        }
+    }
+
+    /// <summary>
+    /// Where the footprint's blobs go, per <see cref="IslandArrangement"/>. Laid
+    /// out deliberately rather than thresholded out of noise: "one big island with
+    /// three satellites" is a thing a Domain wants to *be*, and no single
+    /// fragmentation number reliably produces it.
+    ///
+    /// Neighbouring blobs are placed so their edges land within a couple of cells
+    /// of each other, which is what gives the bridge repair something to work
+    /// with; the coastline noise then decides whether they touch, nearly touch, or
+    /// need nudging.
+    /// </summary>
+    private static Lobe[] PlaceLobes(int seed, IslandParams p, IslandArrangement how,
+                                     float radius, float cx, float cz, float spread)
+    {
+        float irr = Math.Clamp(p.Irregularity, 0f, 1f);
+        bool alone = how == IslandArrangement.Single;
+
+        // One landmass can stretch and let its coast swing by a third of its
+        // radius, and it just reads as a lobed island. Several cannot: at that
+        // amplitude the *noise*, not the layout, decides whether two lobes touch,
+        // and a third of Twins came out as one peanut. An ellipse at aspect 1.44
+        // reaches half again as far along its long axis as its radius says, which
+        // is more than the gap the layout leaves. Placement has to be the
+        // decision, so both are damped when there is more than one blob.
+        float stretch = alone ? 1.8f : 1.22f;
+        float wander = alone ? 0.55f : 0.22f;
+
+        float Aspect(uint salt) => Mathf.Lerp(1f, stretch, irr * Hash01(seed, salt));
+        float Angle(uint salt) => Hash01(seed, salt) * Mathf.Tau;
+
+        var made = new List<Lobe>();
+
+        void Add(float x, float z, float r, uint salt)
+        {
+            // Keep every blob inside the footprint with a margin, or a nudge later
+            // will push it into the wall.
+            float pad = r + 3f;
+            int n = p.Size;
+            x = Math.Clamp(x, pad, n - 1 - pad);
+            z = Math.Clamp(z, pad, n - 1 - pad);
+            made.Add(new Lobe(x, z, r, Aspect(salt), Angle(salt ^ 0x77u),
+                              LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander));
+        }
+
+        /// A ring of blobs at a given radius, evenly spaced then jittered.
+        void Ring(int count, float ringRadius, float blobRadius, float spread, uint salt)
+        {
+            float phase = Hash01(seed, salt) * Mathf.Tau;
+            for (int i = 0; i < count; i++)
+            {
+                uint s = salt ^ (uint)(i + 1) * 2654435761u;
+                float a = phase + Mathf.Tau * i / count
+                          + (Hash01(seed, s) - 0.5f) * Mathf.Tau / count * 0.7f;
+                float rr = ringRadius * (1f - spread * 0.5f + spread * Hash01(seed, s ^ 0x5u));
+                float br = blobRadius * (0.75f + 0.5f * Hash01(seed, s ^ 0x9u));
+                Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s);
+            }
+        }
+
+        switch (how)
+        {
+            // Every blob is placed so its edge stops a few cells short of its
+            // neighbour's. Closer and the coastline noise simply fuses them — an
+            // early Twins came out as one peanut on a tenth of its seeds — and
+            // much further is more than the linker will close.
+            case IslandArrangement.Satellites:
+                Add(cx, cz, radius * 0.58f, 0x1000u);
+                Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.86f * spread,
+                     radius * 0.20f, 0.20f, 0x1002u);
+                break;
+
+            case IslandArrangement.Twins:
+            {
+                float a = Angle(0x2000u);
+                float half = radius * 0.66f * spread;
+                Add(cx + MathF.Cos(a) * half, cz + MathF.Sin(a) * half, radius * 0.56f, 0x2001u);
+                Add(cx - MathF.Cos(a) * half, cz - MathF.Sin(a) * half, radius * 0.50f, 0x2002u);
+                break;
+            }
+
+            case IslandArrangement.Triplets:
+                Ring(3, radius * 0.62f * spread, radius * 0.40f, 0.14f, 0x3000u);
+                break;
+
+            case IslandArrangement.Archipelago:
+                Ring(4 + (int)(Hash01(seed, 0x4000u) * 4f), radius * 0.66f * spread,
+                     radius * 0.22f, 0.45f, 0x4001u);
+                Add(cx, cz, radius * 0.20f, 0x4002u);
+                break;
+
+            case IslandArrangement.Atoll:
+                // The lagoon is what is *not* placed: a ring of small blobs and
+                // nothing in the middle.
+                Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), radius * 0.78f * spread,
+                     radius * 0.24f, 0.12f, 0x5001u);
+                break;
+
+            default:
+                Add(cx, cz, radius, 0x0001u);
+                break;
+        }
+        return made.ToArray();
+    }
+
+    /// <summary>
+    /// How many separate landmasses an arrangement has to deliver to be that
+    /// arrangement. Twins with one island is not Twins; an Archipelago whose
+    /// islets partly merge still reads as an archipelago, so the bar is lower
+    /// where merging is in character.
+    /// </summary>
+    private static int MassesWanted(IslandArrangement how) => how switch
+    {
+        IslandArrangement.Twins => 2,
+        IslandArrangement.Triplets => 3,
+        IslandArrangement.Satellites => 3,
+        IslandArrangement.Archipelago => 4,
+        IslandArrangement.Atoll => 4,
+        _ => 1,
+    };
+
+    /// <summary>
+    /// Builds the footprint, pushing the blobs further apart and trying again if
+    /// the layout did not come out as the arrangement it claims to be.
+    ///
+    /// Placing them "far enough apart" analytically does not work: a lobe's reach
+    /// is its radius times its ellipse aspect times its coastline wander, so the
+    /// spacing that never fuses is wide enough to make Twins two small islands in
+    /// a large empty field. Measuring the result and widening only when it
+    /// actually fused keeps the common case tight.
+    /// </summary>
+    private static bool[,] BuildMask(int seed, IslandParams p, IslandArrangement how)
+    {
+        bool[,] mask = BuildMaskOnce(seed, p, how, 1f);
+        int wanted = MassesWanted(how);
+        if (wanted <= 1) return mask;
+
+        for (int attempt = 1; attempt <= 3; attempt++)
+        {
+            DropComponentsUnder(mask, MinIsletCells);
+            if (CountMasses(mask) >= wanted) return mask;
+            mask = BuildMaskOnce(seed, p, how, 1f + 0.16f * attempt);
+        }
+        DropComponentsUnder(mask, MinIsletCells);
+        return mask;
+    }
+
+    private static int CountMasses(bool[,] mask)
+    {
+        int n = mask.GetLength(0);
+        return Components(mask, new int[n, n]).Count;
+    }
+
+    private static bool[,] BuildMaskOnce(int seed, IslandParams p, IslandArrangement how,
+                                         float spread)
     {
         int n = p.Size;
         float radius = AutoRadius(p);
         float cx = (n - 1) * 0.5f, cz = (n - 1) * 0.5f;
         float irr = Math.Clamp(p.Irregularity, 0f, 1f);
 
-        // Per-island silhouette: an ellipse at an arbitrary angle whose radius is
-        // then modulated around the circumference, which is what produces bays,
-        // capes and a long axis instead of a disc.
-        float aspect = Mathf.Lerp(1f, 1.8f, irr * Hash01(seed, 0x51E1));
-        float rot = Hash01(seed, 0x2C0F) * Mathf.Tau;
-        float cosR = MathF.Cos(rot), sinR = MathF.Sin(rot);
+        Lobe[] lobes = PlaceLobes(seed, p, how, radius, cx, cz, spread);
 
-        var lobes = new Noise(seed + 23, frequency: 1f, octaves: 2);
+        var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
         var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
             .WithWarp(amplitude: (0.25f + 0.55f * irr) * n, frequency: 0.6f / n);
-        var blobs = new Noise(seed + 17, frequency: 0.09f, octaves: 3, ridged: true);
 
-        // Bites taken out near the rim. A lobed disc is still a disc — one large
-        // bite makes a crescent, smaller ones make bays and a harbour mouth.
         // Bites are not taken here: cutting a shape out of the raw mask leaves an
         // arc across whatever patches it crosses. They are applied to whole
         // regions once those exist — see BiteRegions.
 
         var field = new float[n, n];
         var norm = new float[n, n];
-        var candidates = new List<float>(n * n / 4);
+        var owner = new int[n, n];
+        var candidates = new List<float>[lobes.Length];
+        for (int i = 0; i < lobes.Length; i++) candidates[i] = new List<float>();
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            float dx = x - cx, dz = z - cz;
-            float rx = (dx * cosR + dz * sinR) * aspect;
-            float rz = (-dx * sinR + dz * cosR) / aspect;
-            float dist = MathF.Sqrt(rx * rx + rz * rz);
-
-            // Sample the lobe field on the unit circle so it is seamless in angle
-            // — sampling the angle itself would seam at ±π.
-            float ang = MathF.Atan2(rz, rx);
-            float lobe = lobes.At(MathF.Cos(ang) * LobeRings, MathF.Sin(ang) * LobeRings);
-            float rEff = MathF.Max(1e-3f, radius * (1f + irr * 0.55f * (lobe * 2f - 1f)));
-
-            float d = dist / rEff;
+            // The nearest blob wins, and owns the cell. Taking the minimum rather
+            // than summing keeps two islets from fusing into a peanut just because
+            // they are close.
+            float d = float.MaxValue;
+            int mine = 0;
+            for (int i = 0; i < lobes.Length; i++)
+            {
+                float di = lobes[i].Distance(x, z, wobble, irr);
+                if (di >= d) continue;
+                d = di;
+                mine = i;
+            }
             norm[x, z] = d;
+            owner[x, z] = mine;
 
             float fall = 1f - FieldOps.SmoothStep(0.40f, 1f, d);
             float body = 0.35f + 0.65f * shape.At(x, z);
-            float frag = Mathf.Lerp(1f, blobs.At(x, z), p.Fragmentation);
-            field[x, z] = fall * body * frag;
+            field[x, z] = fall * body;
 
-            // `fall` is already 0 at d >= 1, so only the disc itself can be land.
-            // Sampling wider would pad the quantile with guaranteed zeroes and
-            // drag the threshold to 0, which is what made Coverage inert.
-            if (d < 1f) candidates.Add(field[x, z]);
+            // `fall` is already 0 at d >= 1, so only the blobs themselves can be
+            // land. Sampling wider would pad the quantile with guaranteed zeroes
+            // and drag the threshold to 0, which is what made Coverage inert.
+            if (d < 1f) candidates[mine].Add(field[x, z]);
         }
 
-        // Coverage is a fraction of the *candidate disc*, not of the whole grid —
-        // most of the grid is empty aether and would otherwise swamp the quantile.
-        float threshold = FieldOps.Quantile(candidates, 1f - Math.Clamp(p.Coverage, 0.01f, 0.99f));
+        // A threshold *per lobe*. One global cut makes Coverage a fraction of the
+        // whole layout, so a lobe that happens to sit under a low patch of the
+        // shape noise is simply deleted — which is what left a third of Twins with
+        // one island. Per lobe it means what it says: this share of each blob
+        // becomes land.
+        float want = 1f - Math.Clamp(p.Coverage, 0.01f, 0.99f);
+        var threshold = new float[lobes.Length];
+        for (int i = 0; i < lobes.Length; i++)
+            threshold[i] = FieldOps.Quantile(candidates[i], want);
 
         var mask = new bool[n, n];
         // Leave a one-cell border empty so every land cell has a reachable coast.
         for (int x = 1; x < n - 1; x++)
         for (int z = 1; z < n - 1; z++)
-            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold;
+            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold[owner[x, z]];
 
-        DropSmallComponents(mask, 0.2f);
         return mask;
     }
 
@@ -753,27 +984,43 @@ public sealed class IslandGenerator
     /// </summary>
     /// <summary>Reduces the mask to its single largest 4-connected component.</summary>
     /// <summary>
-    /// Fills the corner where two land cells touch only diagonally. A corner is
-    /// not a join you can walk, so left alone it is either a hairline break in a
-    /// landmass the component filter cannot see (both sides are already one
-    /// component) or a false connection in the audit. The filled cell is the one
-    /// with more land around it, so the coast stays plausible.
+    /// Fills the corner where two cells <b>of the same landmass</b> touch only
+    /// diagonally. A corner is not a join you can walk, so left alone it is a
+    /// hairline break the component filter cannot see — both sides are already
+    /// one component, so nothing else will notice.
+    ///
+    /// <b>Only within a landmass.</b> Welding a diagonal touch between two
+    /// separate islands does not heal anything, it deletes an island: two of them
+    /// become one. That is what left a third of Twins with a single landmass, and
+    /// no amount of pushing the blobs apart fixed it, because the merge happened
+    /// after the footprint was drawn. Two islands a corner apart are two islands,
+    /// and the bridge rule is what joins them.
     /// </summary>
     private static void CloseDiagonalJoins(bool[,] mask)
     {
         int n = mask.GetLength(0);
+        var comp = new int[n, n];
+        Components(mask, comp);
+
         for (int x = 1; x + 2 < n; x++)
         for (int z = 1; z + 2 < n; z++)
         {
             bool a = mask[x, z], b = mask[x + 1, z + 1];
             bool c = mask[x + 1, z], e = mask[x, z + 1];
-            if (a && b && !c && !e) Fill(x + 1, z, x, z + 1);
-            else if (c && e && !a && !b) Fill(x, z, x + 1, z + 1);
+
+            if (a && b && !c && !e && comp[x, z] == comp[x + 1, z + 1])
+                Fill(x + 1, z, x, z + 1);
+            else if (c && e && !a && !b && comp[x + 1, z] == comp[x, z + 1])
+                Fill(x, z, x + 1, z + 1);
         }
 
+        // The filled cell is the one with more land around it, so the coast stays
+        // plausible.
         void Fill(int ax, int az, int bx, int bz)
-            => mask[Neighbours(ax, az) >= Neighbours(bx, bz) ? ax : bx,
-                    Neighbours(ax, az) >= Neighbours(bx, bz) ? az : bz] = true;
+        {
+            bool first = Neighbours(ax, az) >= Neighbours(bx, bz);
+            mask[first ? ax : bx, first ? az : bz] = true;
+        }
 
         int Neighbours(int x, int z)
         {
@@ -790,6 +1037,336 @@ public sealed class IslandGenerator
     }
 
     private static void KeepLargestComponent(bool[,] mask) => DropSmallComponents(mask, 1f);
+
+    /// <summary>Smallest thing that counts as an islet. Below it, it is coastline noise.</summary>
+    private const int MinIsletCells = 30;
+
+    /// <summary>Labels 4-connected land; returns per-component cell lists.</summary>
+    private static List<List<Vector2I>> Components(bool[,] mask, int[,] into)
+    {
+        int n = mask.GetLength(0);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) into[x, z] = -1;
+
+        var found = new List<List<Vector2I>>();
+        var stack = new Stack<Vector2I>();
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!mask[sx, sz] || into[sx, sz] >= 0) continue;
+
+            int id = found.Count;
+            var cells = new List<Vector2I>();
+            into[sx, sz] = id;
+            stack.Push(new Vector2I(sx, sz));
+
+            while (stack.Count > 0)
+            {
+                Vector2I c = stack.Pop();
+                cells.Add(c);
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!mask[nx, nz] || into[nx, nz] >= 0) continue;
+                    into[nx, nz] = id;
+                    stack.Push(new Vector2I(nx, nz));
+                }
+            }
+            found.Add(cells);
+        }
+        return found;
+    }
+
+    private static void DropComponentsUnder(bool[,] mask, int minCells)
+    {
+        int n = mask.GetLength(0);
+        var comp = new int[n, n];
+        List<List<Vector2I>> parts = Components(mask, comp);
+        foreach (List<Vector2I> cells in parts)
+        {
+            if (cells.Count >= minCells) continue;
+            foreach (Vector2I c in cells) mask[c.X, c.Y] = false;
+        }
+    }
+
+    /// <summary>
+    /// Every pair of landmasses that face each other across at most
+    /// <paramref name="span"/> empty cells, <b>cardinally</b> — the way a bridge
+    /// sees it. A diagonal near-miss is not a crossing.
+    ///
+    /// One sweep of the grid for all pairs at once. Asking pair by pair is the
+    /// obvious shape and it is cubic: a Triplets layout spent 400 ms per island
+    /// re-scanning the whole field for every candidate on every nudge.
+    /// </summary>
+    private static Dictionary<long, (Vector2I A, Vector2I B, int Gap)> FacingPairs(
+        bool[,] mask, int[,] comp, int span)
+    {
+        int n = mask.GetLength(0);
+        var found = new Dictionary<long, (Vector2I, Vector2I, int)>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!mask[x, z]) continue;
+            int a = comp[x, z];
+
+            // Only +X and +Z: the opposite ray is the same crossing seen from the
+            // far bank.
+            for (int k = 0; k < 2; k++)
+            {
+                int dx = k == 0 ? 1 : 0, dz = k == 0 ? 0 : 1;
+                for (int step = 2; step <= span + 1; step++)
+                {
+                    int nx = x + dx * step, nz = z + dz * step;
+                    if (nx >= n || nz >= n) break;
+                    // The first solid cell ends the ray: it is either the far bank
+                    // or a third island in the way.
+                    if (!mask[nx, nz]) continue;
+
+                    int b = comp[nx, nz];
+                    if (b != a)
+                    {
+                        long key = Pair(a, b);
+                        int gap = step - 1;
+                        if (!found.TryGetValue(key, out var had) || gap < had.Item3)
+                            found[key] = (new Vector2I(x, z), new Vector2I(nx, nz), gap);
+                    }
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    private static Vector2 Centroid(List<Vector2I> cells)
+    {
+        float x = 0f, z = 0f;
+        foreach (Vector2I c in cells) { x += c.X; z += c.Y; }
+        return new Vector2(x / cells.Count, z / cells.Count);
+    }
+
+    private static long Pair(int a, int b)
+        => a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
+
+    /// <summary>
+    /// Which landmasses are already joined into one linkable whole, growing out
+    /// from the largest.
+    /// </summary>
+    private static HashSet<int> LinkedSet(int count, Dictionary<long, (Vector2I A, Vector2I B, int Gap)> facing,
+                                          int seedPart, int span)
+    {
+        var linked = new HashSet<int> { seedPart };
+        bool grew = true;
+        while (grew)
+        {
+            grew = false;
+            foreach (var (key, v) in facing)
+            {
+                if (v.Gap > span) continue;
+                int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
+                if (linked.Contains(a) == linked.Contains(b)) continue;
+                linked.Add(a);
+                linked.Add(b);
+                grew = true;
+            }
+        }
+        return linked;
+    }
+
+    /// <summary>
+    /// Nudges landmasses together until every one can be reached from the next by
+    /// a bridge — land facing land across at most
+    /// <see cref="Traversal.MaxBridgeSpan"/> cells, cardinally.
+    ///
+    /// An archipelago is meant to be an island you build your way across, not a
+    /// set of separate worlds. A layout that is *nearly* linkable is the common
+    /// case — the lobes are placed to nearly touch and the coastline noise decides
+    /// whether they do — so rather than rejecting and re-rolling the whole
+    /// footprint, the offending piece is translated bodily toward the body it
+    /// should be joined to. That preserves its shape, where widening it or filling
+    /// the gap with a spit would leave a visible causeway.
+    ///
+    /// Anything that still cannot be linked is deleted. A piece nobody can ever
+    /// reach is not content.
+    /// </summary>
+    private static void LinkLandmasses(bool[,] mask)
+    {
+        int n = mask.GetLength(0);
+        var comp = new int[n, n];
+        int span = Traversal.MaxBridgeSpan;
+        // Far enough to cross the widest strait a lobe layout produces, and short
+        // enough that the sweep stays cheap.
+        const int Sightline = 48;
+
+        for (int round = 0; round < 40; round++)
+        {
+            List<List<Vector2I>> parts = Components(mask, comp);
+            if (parts.Count <= 1) return;
+
+            int biggest = 0;
+            for (int i = 1; i < parts.Count; i++)
+                if (parts[i].Count > parts[biggest].Count) biggest = i;
+
+            var near = FacingPairs(mask, comp, span);
+            HashSet<int> linked = LinkedSet(parts.Count, near, biggest, span);
+            if (linked.Count == parts.Count) return;
+
+            // The closest stray, over a long sightline this time, and how far it
+            // has to travel. Moving the whole distance at once is what keeps this
+            // to a handful of rounds instead of hundreds.
+            var far = FacingPairs(mask, comp, Sightline);
+            long bestKey = -1;
+            int bestGap = int.MaxValue;
+
+            foreach (var (key, v) in far)
+            {
+                int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
+                if (linked.Contains(a) == linked.Contains(b)) continue;
+                if (v.Gap >= bestGap) continue;
+                bestGap = v.Gap;
+                bestKey = key;
+            }
+
+            if (bestKey < 0)
+            {
+                // Nothing adrift has a cardinal sightline to the linked body — two
+                // islands set diagonally apart can miss each other entirely on both
+                // axes. Deleting one was the first answer and it was wrong: it is
+                // how a third of Twins came out with a single island. Slide the
+                // stray sideways instead, along whichever axis it is *closer* to
+                // aligned on, until it does have a line of sight.
+                int stray = -1;
+                float bestDist = float.MaxValue;
+                Vector2 strayMid = default, linkedMid = default;
+
+                for (int i = 0; i < parts.Count; i++)
+                {
+                    if (linked.Contains(i)) continue;
+                    Vector2 mid = Centroid(parts[i]);
+                    foreach (int j in linked)
+                    {
+                        Vector2 other = Centroid(parts[j]);
+                        float dist = mid.DistanceTo(other);
+                        if (dist >= bestDist) continue;
+                        bestDist = dist;
+                        stray = i;
+                        strayMid = mid;
+                        linkedMid = other;
+                    }
+                }
+                if (stray < 0) return;
+
+                float ax = linkedMid.X - strayMid.X, az = linkedMid.Y - strayMid.Y;
+                int sx = MathF.Abs(ax) <= MathF.Abs(az) ? Math.Sign(ax) : 0;
+                int sz = sx == 0 ? Math.Sign(az) : 0;
+
+                if (sx == 0 && sz == 0) return;
+                // If the slide is blocked, try the other axis before giving up.
+                // Deleting a stray here was costing whole islands: an arrangement
+                // that promised two landmasses would quietly deliver one.
+                if (!Translate(mask, parts[stray], sx, sz)
+                    && !Translate(mask, parts[stray], Math.Sign(ax) - sx, Math.Sign(az) - sz))
+                    return;
+                continue;
+            }
+
+            var (from, toward, gap) = far[bestKey];
+            int strayId = linked.Contains(comp[from.X, from.Y])
+                ? comp[toward.X, toward.Y]
+                : comp[from.X, from.Y];
+            Vector2I anchor = linked.Contains(comp[from.X, from.Y]) ? toward : from;
+            Vector2I goal = linked.Contains(comp[from.X, from.Y]) ? from : toward;
+
+            int dx = Math.Sign(goal.X - anchor.X);
+            int dz = Math.Sign(goal.Y - anchor.Y);
+            int want = gap - span;
+
+            int moved = 0;
+            while (moved < want && Translate(mask, parts[strayId], dx, dz))
+            {
+                for (int i = 0; i < parts[strayId].Count; i++)
+                    parts[strayId][i] = new Vector2I(parts[strayId][i].X + dx,
+                                                     parts[strayId][i].Y + dz);
+                moved++;
+            }
+            // Blocked before it could move at all: the pieces are already as close
+            // as the field allows. Leave it — the final sweep decides whether it
+            // is linked, and deleting here would silently drop a landmass the
+            // arrangement promised.
+            if (moved == 0) return;
+        }
+
+        // Budget spent. Whatever is still adrift goes, so the guarantee holds
+        // rather than merely usually holding.
+        List<List<Vector2I>> last = Components(mask, comp);
+        if (last.Count <= 1) return;
+
+        int keep = 0;
+        for (int i = 1; i < last.Count; i++) if (last[i].Count > last[keep].Count) keep = i;
+
+        HashSet<int> survivors = LinkedSet(last.Count, FacingPairs(mask, comp, span), keep, span);
+        for (int i = 0; i < last.Count; i++)
+            if (!survivors.Contains(i))
+                foreach (Vector2I c in last[i]) mask[c.X, c.Y] = false;
+    }
+
+    /// <summary>
+    /// The crossings that hold an archipelago together: one cell pair per bridge,
+    /// enough to join every landmass into a single linked set. Found after the
+    /// nudging, on the layout as it finally stands.
+    /// </summary>
+    private static List<(Vector2I A, Vector2I B)> FindBridgeSites(bool[,] mask)
+    {
+        int n = mask.GetLength(0);
+        var comp = new int[n, n];
+        List<List<Vector2I>> parts = Components(mask, comp);
+        var found = new List<(Vector2I, Vector2I)>();
+        if (parts.Count <= 1) return found;
+
+        int biggest = 0;
+        for (int i = 1; i < parts.Count; i++)
+            if (parts[i].Count > parts[biggest].Count) biggest = i;
+
+        var facing = FacingPairs(mask, comp, Traversal.MaxBridgeSpan);
+        var linked = new HashSet<int> { biggest };
+        bool grew = true;
+        while (grew)
+        {
+            grew = false;
+            foreach (var (key, v) in facing)
+            {
+                int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
+                if (linked.Contains(a) == linked.Contains(b)) continue;
+                found.Add((v.A, v.B));
+                linked.Add(a);
+                linked.Add(b);
+                grew = true;
+            }
+        }
+        return found;
+    }
+
+    /// <summary>Moves one landmass by a cell, refusing if it would leave the field or collide.</summary>
+    private static bool Translate(bool[,] mask, List<Vector2I> cells, int dx, int dz)
+    {
+        if (dx == 0 && dz == 0) return false;
+        int n = mask.GetLength(0);
+
+        var moving = new HashSet<Vector2I>(cells);
+        foreach (Vector2I c in cells)
+        {
+            int nx = c.X + dx, nz = c.Y + dz;
+            // The one-cell border stays empty so every land cell has a coast.
+            if (nx < 1 || nz < 1 || nx >= n - 1 || nz >= n - 1) return false;
+            if (mask[nx, nz] && !moving.Contains(new Vector2I(nx, nz))) return false;
+        }
+
+        foreach (Vector2I c in cells) mask[c.X, c.Y] = false;
+        foreach (Vector2I c in cells) mask[c.X + dx, c.Y + dz] = true;
+        return true;
+    }
 
     private static void DropSmallComponents(bool[,] mask, float keepFraction)
     {
@@ -1411,7 +1988,8 @@ public sealed class IslandGenerator
 
     private static RegionPlan[] AssignPlateaus(int seed, IslandParams p, bool[,] land, int[,] region,
                                                int count, float[,] envelope,
-                                               HashSet<int>[] neighbours, LandformType[] type)
+                                               HashSet<int>[] neighbours, LandformType[] type,
+                                               List<(Vector2I A, Vector2I B)> bridges)
     {
         float[] env = RegionEnvelope(land, region, count, envelope);
         var cells = RegionCells(land, region, count);
@@ -1442,6 +2020,18 @@ public sealed class IslandGenerator
             if (cliffAllowed) continue;
 
             int a = Find(r), b = Find(nb);
+            if (a != b) parent[b] = a;
+        }
+
+        // The two ends of a bridge share a rung as well. They are not neighbours —
+        // there is aether between them — so nothing else would make them agree,
+        // and a crossing whose far bank stands eight slabs higher is not a
+        // crossing. This is the same mechanism the cliff rule uses, pointed at a
+        // gap instead of a border.
+        foreach (var (ca, cb) in bridges)
+        {
+            if (!land[ca.X, ca.Y] || !land[cb.X, cb.Y]) continue;
+            int a = Find(region[ca.X, ca.Y]), b = Find(region[cb.X, cb.Y]);
             if (a != b) parent[b] = a;
         }
 
@@ -2328,6 +2918,23 @@ public sealed class IslandGenerator
 
     private static ReliefStyle ResolveStyle(int seed, IslandParams p)
         => StyleFor(seed, ResolveCharacter(seed, p.Character));
+
+    /// <summary>
+    /// Auto picks a layout, weighted toward a single landmass: an archipelago is
+    /// the interesting case, not the common one.
+    /// </summary>
+    private static IslandArrangement ResolveArrangement(int seed, IslandArrangement requested)
+    {
+        if (requested != IslandArrangement.Auto) return requested;
+
+        float u = Hash01(seed, 0x7A1Du);
+        return u < 0.46f ? IslandArrangement.Single
+             : u < 0.62f ? IslandArrangement.Satellites
+             : u < 0.74f ? IslandArrangement.Twins
+             : u < 0.83f ? IslandArrangement.Triplets
+             : u < 0.93f ? IslandArrangement.Archipelago
+             : IslandArrangement.Atoll;
+    }
 
     private static TerrainCharacter ResolveCharacter(int seed, TerrainCharacter requested)
         => requested != TerrainCharacter.Auto

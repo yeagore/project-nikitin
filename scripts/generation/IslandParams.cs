@@ -34,8 +34,16 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Irregularity { get; set; } = 0.55f;
 
-    /// <summary>Single blob (0) to many separated islets (1).</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Fragmentation { get; set; } = 0f;
+    /// <summary>
+    /// How the land is laid out: one mass, twins, an atoll, and so on.
+    /// <c>Auto</c> picks one per seed.
+    ///
+    /// This replaces the old <c>Fragmentation</c> float, which asked one number
+    /// to mean both "how broken up" and "into how many pieces" and delivered
+    /// neither reliably. Whatever the arrangement, the pieces are guaranteed
+    /// linkable by bridge — see <see cref="IslandArrangement"/>.
+    /// </summary>
+    [Export] public IslandArrangement Arrangement { get; set; } = IslandArrangement.Auto;
 
     // ---- what the island is made of -----------------------------------------
 

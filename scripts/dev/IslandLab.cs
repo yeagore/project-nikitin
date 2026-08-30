@@ -210,6 +210,7 @@ public partial class IslandLab : Node3D
 			// Force a character, so one kind can be inspected across many seeds
 			// instead of waiting for Auto to roll it.
 			case Key.V: CycleCharacter(); break;
+			case Key.G: CycleArrangement(); break;
 			// The two knobs worth eyeballing on the same island rather than by
 			// editing a resource and losing your place.
 			case Key.H: Cycle(v => Params.Hilliness = v, Params?.Hilliness ?? 0.5f, "Hilliness"); break;
@@ -225,6 +226,14 @@ public partial class IslandLab : Node3D
 		if (next > 1.001f) next = 0f;
 		set(next);
 		GD.Print($"[IslandLab] {label} = {next:0.00}");
+	}
+
+	private void CycleArrangement()
+	{
+		Params ??= new IslandParams();
+		int count = Enum.GetValues<IslandArrangement>().Length;
+		Params.Arrangement = (IslandArrangement)(((int)Params.Arrangement + 1) % count);
+		GD.Print($"[IslandLab] Arrangement = {Params.Arrangement}");
 	}
 
 	private void CycleCharacter()
@@ -244,7 +253,7 @@ public partial class IslandLab : Node3D
 			h.Add(Params.Size);
 			h.Add(Params.Radius);
 			h.Add(Params.Coverage);
-			h.Add(Params.Fragmentation);
+			h.Add(Params.Arrangement);
 			h.Add(Params.Irregularity);
 			h.Add(Params.Character);
 			h.Add(Params.LandformMix);
@@ -278,7 +287,7 @@ public partial class IslandLab : Node3D
 			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
 
 		if (_status != null)
-			_status.Text = $"{data.Character}   high ground: {data.Style}   "
+			_status.Text = $"{data.Character}   {data.Arrangement}   high ground: {data.Style}   "
 				+ $"seed {Seed}   view: {_view}   lakes: {lakes}"
 				+ (Params.Character == TerrainCharacter.Auto ? "" : "   [character pinned]")
 				+ $"\nhilliness {Params.Hilliness:0.00}   mix {Params.LandformMix:0.00}   "
@@ -483,7 +492,7 @@ public partial class IslandLab : Node3D
 		var label = new Label
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate + tilt   arrows tilt   wheel zoom   Shift faster"
-				 + "\nN new seed   V character   H hilliness   M landform mix"
+				 + "\nN new seed   V character   G arrangement   H hilliness   M landform mix"
 				 + "   C view: height/landform/region/walk/reach/shelves   F frame   R rebuild",
 			Position = new Vector2(12, 8),
 		};

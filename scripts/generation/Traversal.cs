@@ -77,10 +77,14 @@ public static class Traversal
     public const int MaxBridgeSpan = 2;
 
     /// <summary>
-    /// How far a bridge's two ends may differ in height, in slabs. A deck is
-    /// level; the stairs that get you onto it are the other rule.
+    /// How far a bridge's two ends may differ in height, in slabs. The same as
+    /// <see cref="InfrastructureStep"/>, and for the same reason: a bridge is a
+    /// built thing and so are its approaches, so a deck that meets a stair at one
+    /// end is a perfectly ordinary crossing. Holding bridges to a level deck was
+    /// tried and it made most archipelagos unlinkable — two islets have no reason
+    /// to agree on a rung.
     /// </summary>
-    public const int MaxBridgeRise = 2;
+    public const int MaxBridgeRise = InfrastructureStep;
 
     private static readonly int[] Dx = { 1, -1, 0, 0 };
     private static readonly int[] Dz = { 0, 0, 1, -1 };
