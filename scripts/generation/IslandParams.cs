@@ -136,6 +136,20 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
 
+    // ---- Gates --------------------------------------------------------------
+
+    /// <summary>
+    /// What kind of Gate the player arrives through. <b>An input, not a
+    /// preference:</b> a Link joins two Gates, so the far end has to match the one
+    /// they left — land to land, hanging to hanging. The Domain that sends them
+    /// sets this, and this Domain is generated around it. <c>Auto</c> is for a
+    /// Home Domain, which has nothing to match.
+    /// </summary>
+    [Export] public GateKind EntryGate { get; set; } = GateKind.Auto;
+
+    /// <summary>Links onward, 1 to 3. 0 picks a count from the seed.</summary>
+    [Export(PropertyHint.Range, "0,3,1")] public int ExitGates { get; set; } = 0;
+
     // ---- underside / keel ---------------------------------------------------
     // The island hangs in aether as a spinning top: a thin lip at the coastline
     // thickening inland to a deep keel under the interior.

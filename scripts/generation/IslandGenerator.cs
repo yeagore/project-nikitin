@@ -113,12 +113,11 @@ public sealed class IslandGenerator
 
         var borders = BuildBorders(land, region, regionCount, out HashSet<int>[] neighbours);
         RepairAdjacency(region, regionCount, neighbours, types);
-        RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
-                                RegionCells(land, region, regionCount));
 
-        // A mesa or basin takes its own level regardless of its rung group, so a
-        // bridgehead on one would ignore the agreement made below. Plains are what
-        // a landing belongs on anyway.
+        // A mesa or basin takes its own level regardless of its rung group, and a
+        // mountain takes no rung at all, so a bridgehead on either would ignore
+        // the agreement AssignPlateaus makes between the two banks. Plains are
+        // what a landing belongs on anyway.
         foreach (var (ca, cb) in bridges)
         {
             foreach (Vector2I c in new[] { ca, cb })
@@ -130,6 +129,14 @@ public sealed class IslandGenerator
             }
         }
         RepairAdjacency(region, regionCount, neighbours, types);
+
+        // The quota is restored *last*, after everything that flattens a region
+        // has had its say. Restoring before the bridgeheads were cleared meant a
+        // character's only mountain could be the one region a crossing landed on,
+        // and it was quietly deleted afterwards: Highland delivered mountains on
+        // 72% of its islands instead of all of them.
+        RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
+                                RegionCells(land, region, regionCount));
         RegionPlan[] plan = AssignPlateaus(seed, p, land, region, regionCount, envelope,
                                            neighbours, types, bridges);
         float[,] inward = InwardDistance(land, region, regionCount);
@@ -209,6 +216,10 @@ public sealed class IslandGenerator
         // Stage 5: read back what the terrain turned out to be. Pure analysis —
         // it changes nothing, so it stays outside the pipeline proper.
         Traversal.Analyse(data);
+
+        // Gates last of all: every rule about where one may go is a rule about
+        // ground the player can actually use, so it needs the traversal answer.
+        GatePlacement.Place(seed, p, data);
         return data;
     }
 

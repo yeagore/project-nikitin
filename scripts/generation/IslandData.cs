@@ -148,6 +148,12 @@ public sealed class IslandData
     /// <summary>The style actually used, with <c>Auto</c> already resolved.</summary>
     public ReliefStyle Style { get; internal set; }
 
+    /// <summary>
+    /// The Domain's Gates: one <see cref="GateRole.Entry"/> and one to three
+    /// <see cref="GateRole.Exit"/>, at most one per edge.
+    /// </summary>
+    public List<Gate> Gates { get; } = new();
+
     /// <summary>The arrangement actually used, with <c>Auto</c> already resolved.</summary>
     public IslandArrangement Arrangement { get; internal set; }
 

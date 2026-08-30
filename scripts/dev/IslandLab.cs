@@ -28,6 +28,8 @@ public partial class IslandLab : Node3D
 
 	private MultiMeshInstance3D _terrain = null!;
 	private MultiMeshInstance3D _water = null!;
+	private MultiMeshInstance3D _gates = null!;
+	private BoxMesh _gateBox = null!;
 	private CameraRig _rig = null!;
 	private BoxMesh _unitBox = null!;
 	private PlaneMesh _waterBox = null!;
@@ -186,6 +188,25 @@ public partial class IslandLab : Node3D
 		};
 		AddChild(_water);
 
+		// A Gate is three cells across, one deep and twelve slabs tall, which at
+		// four slabs to the cell is a square portal. Drawn unshaded so it reads as
+		// a structure rather than as terrain, and visible through the island so a
+		// Gate on the far side can still be found.
+		_gateBox = new BoxMesh { Size = Vector3.One };
+		_gateBox.Material = new StandardMaterial3D
+		{
+			VertexColorUseAsAlbedo = true,
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			NoDepthTest = true,
+		};
+		_gates = new MultiMeshInstance3D
+		{
+			Name = "Gates",
+			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+		};
+		AddChild(_gates);
+
 		AddControlsHint();
 		Rebuild();
 	}
@@ -282,6 +303,7 @@ public partial class IslandLab : Node3D
 		IslandData data = new IslandGenerator().Generate(Seed, Params);
 		int spans = RenderSpans(data);
 		int lakes = RenderWater(data);
+		RenderGates(data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		GD.Print($"[IslandLab] seed {Seed}, {Params.Size}², {data.Character} ({data.Style})"
 			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
@@ -338,7 +360,8 @@ public partial class IslandLab : Node3D
 			+ $"   reach: heartland {100f * heart / land:0}%"
 			+ $"   shelves: {buildable} buildable of {d.Shelves.Count}"
 			+ $"   passes: {d.Passes.Count}"
-			+ $"   rivers: {RiverCells(d)} cells, {d.Falls.Count} falls";
+			+ $"   rivers: {RiverCells(d)} cells, {d.Falls.Count} falls"
+			+ "\n" + GateSummary(d);
 	}
 
 	/// <summary>
@@ -383,6 +406,69 @@ public partial class IslandLab : Node3D
 		for (int i = 0; i < xf.Count; i++) mm.SetInstanceTransform(i, xf[i]);
 		_water.Multimesh = mm;
 		return lakes.Count;
+	}
+
+	/// <summary>
+	/// One box per Gate, in the portal's real proportions. Entry is gold, exits
+	/// are cyan; a hanging Gate is drawn paler, since the thing that distinguishes
+	/// it is that there is nothing under it.
+	/// </summary>
+	private void RenderGates(IslandData d)
+	{
+		int n = d.Size;
+		float half = n * 0.5f;
+		const float sh = Terrain.SlabHeight;
+		const float cs = Terrain.CellSize;
+
+		var xf = new List<Transform3D>();
+		var col = new List<Color>();
+
+		foreach (Gate g in d.Gates)
+		{
+			// Center.Y is the slab the sill rests on, so the portal starts at the
+			// top of that slab and rises Gate.Height from there.
+			float baseY = (g.Center.Y + 1) * sh;
+			var origin = new Vector3((g.Center.X - half) * cs,
+									 baseY + Gate.Height * sh * 0.5f,
+									 (g.Center.Z - half) * cs);
+
+			// Three cells across its face, one deep through it.
+			var size = new Vector3(
+				Mathf.Abs(g.Across.X) * Gate.Width * cs + Mathf.Abs(g.Outward.X) * cs,
+				Gate.Height * sh,
+				Mathf.Abs(g.Across.Y) * Gate.Width * cs + Mathf.Abs(g.Outward.Y) * cs);
+
+			xf.Add(new Transform3D(Basis.Identity.Scaled(size), origin));
+
+			Color tint = g.Role == GateRole.Entry
+				? new Color(1f, 0.82f, 0.25f, 0.85f)
+				: new Color(0.35f, 0.85f, 0.95f, 0.75f);
+			col.Add(g.Kind == GateKind.Hanging ? tint.Lightened(0.35f) : tint);
+		}
+
+		var mm = new MultiMesh
+		{
+			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+			UseColors = true,
+			Mesh = _gateBox,
+			InstanceCount = xf.Count,
+		};
+		for (int i = 0; i < xf.Count; i++)
+		{
+			mm.SetInstanceTransform(i, xf[i]);
+			mm.SetInstanceColor(i, col[i]);
+		}
+		_gates.Multimesh = mm;
+	}
+
+	private static string GateSummary(IslandData d)
+	{
+		if (d.Gates.Count == 0) return "gates: none";
+
+		var bits = new List<string>();
+		foreach (Gate g in d.Gates)
+			bits.Add($"{g.Facing} {g.Kind}{(g.Role == GateRole.Entry ? "*" : "")}");
+		return "gates: " + string.Join(", ", bits) + "   (* = entry)";
 	}
 
 	private static bool OnRegionBorder(IslandData d, int x, int z)
@@ -504,7 +590,8 @@ public partial class IslandLab : Node3D
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate + tilt   arrows tilt   wheel zoom   Shift faster"
 				 + "\nN new seed   V character   G arrangement   H hilliness   M landform mix"
-				 + "   C view: height/landform/region/walk/reach/shelves   F frame   R rebuild",
+				 + "   C view: height/landform/region/walk/reach/shelves   F frame   R rebuild"
+				 + "\ngold portal = entry gate   cyan = exits   pale = hanging in the aether",
 			Position = new Vector2(12, 8),
 		};
 		label.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.85f));

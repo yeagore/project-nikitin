@@ -61,6 +61,13 @@ public partial class GenerationAudit : Node
         var shoreSteps = new List<int>();
 
         int landmasses = 0, diagonalLand = 0, diagonalWater = 0;
+
+        int noEntry = 0, badExitCount = 0, sharedEdge = 0, wrongEntryKind = 0;
+        int gateOffHeartland = 0, gateApronShort = 0, gateInWater = 0;
+        int landGates = 0, hangingGates = 0, stripMissing = 0, hangingOnLand = 0;
+        var exitCounts = new List<int>();
+        var apronSizes = new List<int>();
+        var stripLengths = new List<int>();
         var byArrangement = new Dictionary<IslandArrangement, (int Islands, int Masses, int Linked)>();
 
         // Which landforms each character actually delivered, island by island.
@@ -443,6 +450,61 @@ public partial class GenerationAudit : Node
             widestShelf.Add(widest);
             shelfOffMainland.Add(offMain);
 
+            // ---- Gates ---------------------------------------------------------
+            int entries = 0, exits = 0;
+            var edges = new HashSet<Cardinal>();
+
+            foreach (Gate g in d.Gates)
+            {
+                if (g.Role == GateRole.Entry) entries++; else exits++;
+                if (!edges.Add(g.Facing)) sharedEdge++;
+
+                apronSizes.Add(g.ApronArea);
+                if (g.ApronArea < GatePlacement.ApronArea) gateApronShort++;
+
+                if (g.Kind == GateKind.Land)
+                {
+                    landGates++;
+                    // Standing on ground: dry, and part of the heartland.
+                    if (!Land(g.Center.X, g.Center.Z)) gateOffHeartland++;
+                    else if (d.WaterLevel[g.Center.X, g.Center.Z] != IslandData.NoLand) gateInWater++;
+                    else if (d.Reach[g.Center.X, g.Center.Z] != d.Heartland) gateOffHeartland++;
+                }
+                else
+                {
+                    hangingGates++;
+                    // Hanging in the aether: there must be nothing under it.
+                    if (Land(g.Center.X, g.Center.Z)) hangingOnLand++;
+
+                    // And a strip of level ground opposite, running inland.
+                    Vector2I outward = g.Outward, across = g.Across;
+                    int hx = g.Center.X - outward.X * GatePlacement.HangingOffset;
+                    int hz = g.Center.Z - outward.Y * GatePlacement.HangingOffset;
+                    bool strip = Land(hx, hz) && g.Landing >= Gate.Width + 1;
+                    if (strip)
+                    {
+                        short level = Top(hx, hz);
+                        for (int along = 0; along < g.Landing && strip; along++)
+                        for (int side = -1; side <= 1 && strip; side++)
+                        {
+                            int sx = hx - outward.X * along + across.X * side;
+                            int sz = hz - outward.Y * along + across.Y * side;
+                            strip = Land(sx, sz) && Math.Abs(Top(sx, sz) - level) <= 1
+                                    && d.WaterLevel[sx, sz] == IslandData.NoLand
+                                    && d.Reach[sx, sz] == d.Heartland;
+                        }
+                    }
+                    if (!strip) stripMissing++; else stripLengths.Add(g.Landing);
+                }
+            }
+
+            if (entries != 1) noEntry++;
+            if (exits < 1 || exits > 3) badExitCount++;
+            exitCounts.Add(exits);
+            foreach (Gate g in d.Gates)
+                if (g.Role == GateRole.Entry && Params.EntryGate != GateKind.Auto
+                    && g.Kind != Params.EntryGate) wrongEntryKind++;
+
             // ---- continuity ----------------------------------------------------
             int masses = CountComponents(d, n);
             landmasses += masses;
@@ -582,6 +644,19 @@ public partial class GenerationAudit : Node
         Report("  widest square of flat ground", widestShelf, "cells");
         Report("  buildable shelves off the mainland", shelfOffMainland, "per island");
         GD.Print("");
+
+        GD.Print($"gates: {landGates} standing on land, {hangingGates} hanging in the aether");
+        GD.Print($"  islands without exactly one entry (want 0): {noEntry}");
+        GD.Print($"  islands whose exits are not 1-3 (want 0):   {badExitCount}");
+        Report("  exits per island", exitCounts, "");
+        GD.Print($"  two gates on one edge (want 0):             {sharedEdge}");
+        GD.Print($"  entry gate not the kind asked for (want 0): {wrongEntryKind}");
+        Report($"  level ground at the gate (want >= {GatePlacement.ApronArea})", apronSizes, "cells");
+        GD.Print($"  gate off the heartland or in water (want 0): "
+            + $"{gateOffHeartland + gateInWater}");
+        GD.Print($"  hanging gate standing on land (want 0):     {hangingOnLand}");
+        Report("  landing strip", stripLengths, "cells");
+        GD.Print($"  hanging gate with no landing strip (want 0):{stripMissing}\n");
 
         GD.Print("arrangements: landmasses per island, and whether all of it links up");
         foreach (var (a, v) in byArrangement.OrderBy(k => k.Key.ToString()))
