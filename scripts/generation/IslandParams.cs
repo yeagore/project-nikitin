@@ -136,6 +136,22 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
 
+    // ---- crossings ----------------------------------------------------------
+
+    /// <summary>
+    /// How far one bridge may reach, and so how hard the Domain is to build your
+    /// way across: <c>Easy</c> spans a single cell, <c>Medium</c> three,
+    /// <c>Hard</c> six.
+    ///
+    /// It is not only an analysis setting — the arrangement's landmasses are
+    /// nudged together until each faces the next across at most this many cells,
+    /// so an <c>Easy</c> Domain is an archipelago you can almost step between and
+    /// a <c>Hard</c> one leaves real straits. A deck is level and has to be walked
+    /// onto at both ends, so the two banks of every crossing are levelled whatever
+    /// the span (see <see cref="Crossing"/>).
+    /// </summary>
+    [Export] public BridgeEase Crossings { get; set; } = BridgeEase.Medium;
+
     // ---- Gates --------------------------------------------------------------
 
     /// <summary>

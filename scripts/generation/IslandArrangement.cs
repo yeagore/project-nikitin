@@ -11,7 +11,7 @@ namespace ProjectNikitin.Generation;
 ///
 /// <b>Every arrangement is linkable.</b> Whatever the layout, the pieces are
 /// nudged together until land faces land across at most
-/// <see cref="Traversal.MaxBridgeSpan"/> cells somewhere — so an archipelago is
+/// <see cref="IslandParams.Crossings"/> cells somewhere — so an archipelago is
 /// an island you have to *build* your way across, not a set of separate worlds.
 /// </summary>
 public enum IslandArrangement

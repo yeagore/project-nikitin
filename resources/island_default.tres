@@ -20,6 +20,7 @@ MountainHeight = 40
 MesaHeight = 5
 BasinDepth = 5
 Rivers = 0.5
+Crossings = 3
 EntryGate = 0
 ExitGates = 0
 EdgeThickness = 3

@@ -27,6 +27,13 @@ public partial class GenerationAudit : Node
     [Export] public int FirstSeed { get; set; } = 5000;
     [Export] public IslandParams Params { get; set; } = null!;
 
+    /// <summary>
+    /// Print an ASCII silhouette of one island per arrangement as well. Shape is
+    /// measurable headless where appearance is not, so this is how a change to the
+    /// footprint can be checked without opening the lab.
+    /// </summary>
+    [Export] public bool Silhouettes { get; set; } = false;
+
     private static readonly int[] Dx = { 1, -1, 0, 0 };
     private static readonly int[] Dz = { 0, 0, 1, -1 };
     private static readonly string[] TypeName = { "plain", "hills", "mountain", "mesa", "basin" };
@@ -38,6 +45,7 @@ public partial class GenerationAudit : Node
         long free = 0, ambiguous = 0, cliff = 0;
         long ambiguousOffMountain = 0, pairsOffMountain = 0;
         var cliffByBorder = new Dictionary<string, int>();
+        var ambiguousWhere = new Dictionary<string, int>();
 
         var patchSizes = new List<int>();
         int patchesUndersized = 0;
@@ -53,6 +61,8 @@ public partial class GenerationAudit : Node
         var stepByBand = new Dictionary<int, List<int>>();
 
         int riverCells = 0, navigableCells = 0, fallCells = 0, rimFalls = 0;
+        var innerFalls = new List<int>();
+        var riverDepth = new List<int>();
         int islandsWithRiver = 0, riverIslandsReachingRim = 0;
         int riverUphill = 0, riverDry = 0;
         var riverPerIsland = new List<int>();
@@ -65,6 +75,15 @@ public partial class GenerationAudit : Node
         int noEntry = 0, badExitCount = 0, sharedEdge = 0, wrongEntryKind = 0;
         int gateOffHeartland = 0, gateApronShort = 0, gateInWater = 0;
         int landGates = 0, hangingGates = 0, stripMissing = 0, hangingOnLand = 0;
+        int gateInCorner = 0, gateNotOutermost = 0, gatesCrowded = 0;
+        var gateBehind = new List<int>();
+        int crossings = 0, deckSteep = 0, deckOffBank = 0;
+        var crossingSpans = new List<int>();
+        var shelfDrops = new List<int>();
+        var attempts = new List<int>();
+        int unplayable = 0;
+        int airstripIslands = 0;
+        var airstripCells = new List<int>();
         var exitCounts = new List<int>();
         var apronSizes = new List<int>();
         var stripLengths = new List<int>();
@@ -136,7 +155,20 @@ public partial class GenerationAudit : Node
                     if (!mountain)
                     {
                         pairsOffMountain++;
-                        if (diff == 2) ambiguousOffMountain++;
+                        if (diff == 2)
+                        {
+                            ambiguousOffMountain++;
+                            // Where the ambiguous step is, rather than only how
+                            // many there are: a bank the river was not allowed to
+                            // cut reads very differently from one the terrain rules
+                            // left behind.
+                            int a2 = (int)Form(x, z), b2 = (int)Form(nx, nz);
+                            string where = d.River[x, z] || d.River[nx, nz]
+                                ? "riverbank"
+                                : $"{TypeName[Math.Min(a2, b2)]}-{TypeName[Math.Max(a2, b2)]}";
+                            ambiguousWhere.TryGetValue(where, out int had);
+                            ambiguousWhere[where] = had + 1;
+                        }
                     }
 
                     if (diff >= 3 && d.Region[x, z] != d.Region[nx, nz])
@@ -195,11 +227,12 @@ public partial class GenerationAudit : Node
                     else if (o != LandformType.Plain && o != t) mesaTouchesOther++;
 
                     if (o == t) continue;                       // stepped mesas / basins are fine
+                    // Measured against the ground, not against a channel cut
+                    // through it: a river beside a basin runs below the basin
+                    // floor by design, and counting its bed would report the
+                    // escarpment as inverted.
+                    if (d.River[nx, nz] || d.River[x, z]) continue;
                     int delta = Top(x, z) - Top(nx, nz);
-                    if (t == LandformType.Basin && -delta < 2)
-                        GD.Print($"PROBE seed {FirstSeed + i} ({x},{z}) basin {Top(x, z)} vs {o} "
-                            + $"{Top(nx, nz)} w{d.WaterLevel[x, z]},{d.WaterLevel[nx, nz]} "
-                            + $"shelf{d.ShelfId[x, z]}");
                     var into = t == LandformType.Mesa ? worstMesa : worstBasin;
                     int signed = t == LandformType.Mesa ? delta : -delta;
                     if (!into.TryGetValue(r, out int cur) || signed < cur) into[r] = signed;
@@ -376,11 +409,11 @@ public partial class GenerationAudit : Node
                         && d.Flow[nx, nz] > d.Flow[x, z]) riverUphill++;
                 }
             }
-            foreach (Vector2I f in d.Falls)
+            foreach (Fall f in d.Falls)
             {
                 fallCells++;
-                for (int k = 0; k < 4; k++)
-                    if (!Land(f.X + Dx[k], f.Y + Dz[k])) { rimFalls++; break; }
+                if (f.OffRim) rimFalls++;
+                else innerFalls.Add(f.Drop);
             }
             if (here > 0)
             {
@@ -443,6 +476,7 @@ public partial class GenerationAudit : Node
                 widest = Math.Max(widest, shelf.Width);
                 if (!shelf.Buildable) continue;
                 islandShelves++;
+                shelfDrops.Add(shelf.Drop);
                 if (d.Walk[shelf.Center.X, shelf.Center.Y] != d.Mainland) offMain++;
             }
             buildableShelves += islandShelves;
@@ -480,12 +514,13 @@ public partial class GenerationAudit : Node
                     Vector2I outward = g.Outward, across = g.Across;
                     int hx = g.Center.X - outward.X * GatePlacement.HangingOffset;
                     int hz = g.Center.Z - outward.Y * GatePlacement.HangingOffset;
-                    bool strip = Land(hx, hz) && g.Landing >= Gate.Width + 1;
+                    bool strip = Land(hx, hz) && g.Landing >= 2;
                     if (strip)
                     {
                         short level = Top(hx, hz);
+                        int half = (GatePlacement.StripWidth - 1) / 2;
                         for (int along = 0; along < g.Landing && strip; along++)
-                        for (int side = -1; side <= 1 && strip; side++)
+                        for (int side = -half; side <= half && strip; side++)
                         {
                             int sx = hx - outward.X * along + across.X * side;
                             int sz = hz - outward.Y * along + across.Y * side;
@@ -496,6 +531,41 @@ public partial class GenerationAudit : Node
                     }
                     if (!strip) stripMissing++; else stripLengths.Add(g.Landing);
                 }
+
+                // ---- is it on the side of the map it claims? -------------------
+                // Three separate questions, because they fail separately: how much
+                // of the Domain is left behind the player as they arrive, whether
+                // the Gate has slid into a corner, and whether the east Gate is in
+                // fact the easternmost thing on the island.
+                Vector2I outAxis = g.Outward, sideAxis = g.Across;
+                int gateAlong = g.Center.X * outAxis.X + g.Center.Z * outAxis.Y;
+                long beyond = 0, dry = 0;
+                int sideMin = int.MaxValue, sideMax = int.MinValue;
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                {
+                    if (!Land(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
+                    dry++;
+                    if (x * outAxis.X + z * outAxis.Y > gateAlong) beyond++;
+                    int s = x * sideAxis.X + z * sideAxis.Y;
+                    if (s < sideMin) sideMin = s;
+                    if (s > sideMax) sideMax = s;
+                }
+                if (dry > 0) gateBehind.Add((int)(100 * beyond / dry));
+
+                int gateSide = g.Center.X * sideAxis.X + g.Center.Z * sideAxis.Y;
+                int width = sideMax - sideMin;
+                if (width > 0 && (gateSide > sideMax - width * 0.12f
+                                  || gateSide < sideMin + width * 0.12f)) gateInCorner++;
+
+                foreach (Gate o in d.Gates)
+                {
+                    if (o.Facing == g.Facing) continue;
+                    if (o.Center.X * outAxis.X + o.Center.Z * outAxis.Y >= gateAlong)
+                        gateNotOutermost++;
+                    if (Math.Abs(o.Center.X - g.Center.X)
+                        + Math.Abs(o.Center.Z - g.Center.Z) < 0.30f * n) gatesCrowded++;
+                }
             }
 
             if (entries != 1) noEntry++;
@@ -504,6 +574,34 @@ public partial class GenerationAudit : Node
             foreach (Gate g in d.Gates)
                 if (g.Role == GateRole.Entry && Params.EntryGate != GateKind.Auto
                     && g.Kind != Params.EntryGate) wrongEntryKind++;
+
+            // ---- crossings -----------------------------------------------------
+            // A bridge is a level deck, so the only thing worth measuring is
+            // whether you can walk onto it: one slab at each end, no more.
+            foreach (Crossing c in d.Bridges)
+            {
+                crossings++;
+                crossingSpans.Add(c.Span);
+                int a = Traversal.CrossLevel(d, c.A.X, c.A.Y);
+                int b = Traversal.CrossLevel(d, c.B.X, c.B.Y);
+                if (Math.Abs(a - b) > Traversal.MaxBridgeRise) deckSteep++;
+                if (Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1) deckOffBank++;
+            }
+
+            // ---- the Stage 6 guarantees ----------------------------------------
+            attempts.Add(d.Attempts);
+            if (d.Unmet.Length > 0)
+            {
+                unplayable++;
+                GD.Print($"  seed {seed} gave up after {d.Attempts}: {d.Unmet}");
+            }
+
+            // ---- airstrips -----------------------------------------------------
+            int strips = 0;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++) if (d.Airstrip[x, z]) strips++;
+            if (strips > 0) airstripIslands++;
+            airstripCells.Add(strips);
 
             // ---- continuity ----------------------------------------------------
             int masses = CountComponents(d, n);
@@ -545,7 +643,10 @@ public partial class GenerationAudit : Node
         GD.Print($"  free (0-1 slabs)          {100.0 * free / pairs,6:0.0}%");
         GD.Print($"  two-slab                  {100.0 * ambiguous / pairs,6:0.0}%");
         GD.Print($"  cliff (3+ slabs)          {100.0 * cliff / pairs,6:0.0}%");
-        GD.Print($"  two-slab off mountains    {ambiguousOffMountain} of {pairsOffMountain}\n");
+        GD.Print($"  two-slab off mountains    {ambiguousOffMountain} of {pairsOffMountain}");
+        foreach (var (k, v) in ambiguousWhere.OrderByDescending(e => e.Value))
+            GD.Print($"    {k,-20} {v,6}");
+        GD.Print("");
 
         GD.Print("cliffs by the landforms either side (rule: plain-plain, mesa-mesa, basin-basin)");
         foreach (var kv in cliffByBorder.OrderByDescending(k => k.Value))
@@ -610,7 +711,7 @@ public partial class GenerationAudit : Node
         GD.Print($"  broken ground               {100.0 * walkBroken / walkLand,6:0.0}%"
             + $"  in {scraps} scraps, against {districts} districts");
         GD.Print($"\n  with stairs, hoists and bridges ("
-            + $"face <= {Traversal.InfrastructureStep} slabs, span <= {Traversal.MaxBridgeSpan} cells)");
+            + $"face <= {Traversal.InfrastructureStep} slabs, span <= {(int)Params.Crossings} cells)");
         GD.Print($"  land on the heartland       {100.0 * reachHeartland / walkLand,6:0.0}%");
         Report("  heartland share per island", reachShare, "%");
         GD.Print($"  islands whose dry land is ONE reachable whole: {islandsFullyReachable} of {Seeds}");
@@ -643,7 +744,14 @@ public partial class GenerationAudit : Node
             + $"on {islandsWithShelf} of {Seeds} islands");
         Report("  widest square of flat ground", widestShelf, "cells");
         Report("  buildable shelves off the mainland", shelfOffMainland, "per island");
+        Report("  descent across one shelf", shelfDrops, "slabs");
         GD.Print("");
+
+        GD.Print($"crossings: {crossings} bridge sites over {Seeds} islands"
+            + $"  (span <= {(int)Params.Crossings} cells)");
+        Report("  span", crossingSpans, "cells");
+        GD.Print($"  banks disagreeing by more than {Traversal.MaxBridgeRise} slabs (want 0): {deckSteep}");
+        GD.Print($"  deck more than a slab off a bank (want 0):   {deckOffBank}\n");
 
         GD.Print($"gates: {landGates} standing on land, {hangingGates} hanging in the aether");
         GD.Print($"  islands without exactly one entry (want 0): {noEntry}");
@@ -656,13 +764,25 @@ public partial class GenerationAudit : Node
             + $"{gateOffHeartland + gateInWater}");
         GD.Print($"  hanging gate standing on land (want 0):     {hangingOnLand}");
         Report("  landing strip", stripLengths, "cells");
-        GD.Print($"  hanging gate with no landing strip (want 0):{stripMissing}\n");
+        GD.Print($"  hanging gate with no landing strip (want 0):{stripMissing}");
+        GD.Print($"  gate that is not the outermost on its own axis (want 0): {gateNotOutermost}");
+        GD.Print($"  gate in a corner of its own edge (want 0):   {gateInCorner}");
+        GD.Print($"  two gates closer than 30% of the map (want 0): {gatesCrowded / 2}");
+        Report("  dry land left behind a gate", gateBehind, "%");
+        GD.Print($"  islands offering a landing strip: {airstripIslands} of {Seeds}");
+        Report("  ground a vessel could set down on", airstripCells, "cells");
+        GD.Print("");
 
         GD.Print("arrangements: landmasses per island, and whether all of it links up");
         foreach (var (a, v) in byArrangement.OrderBy(k => k.Key.ToString()))
             GD.Print($"  {a,-12} {v.Islands,3} islands   {(float)v.Masses / v.Islands,4:0.0} masses each"
                 + $"   fully linked {100 * v.Linked / v.Islands,3}%");
         GD.Print("");
+
+        Report("re-rolls: islands built per seed", attempts, "");
+        GD.Print($"  seeds that never met the guarantees (want 0): {unplayable}\n");
+
+        if (Silhouettes) PrintSilhouettes();
 
         GD.Print($"continuity: {landmasses} landmasses over {Seeds} islands "
             + $"(more than one is the arrangement's doing, not a fault); "
@@ -786,6 +906,51 @@ public partial class GenerationAudit : Node
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// A coarse ASCII silhouette of one island per arrangement.
+    ///
+    /// Headless gives no rendering, so how terrain <i>looks</i> needs a human at
+    /// the editor — but the <b>shape</b> of a footprint is a fact about the mask,
+    /// and printing it is how a change to the arrangements can be checked at all
+    /// without opening the lab. Water and land only; two cells to the character,
+    /// so a 128² island fits in a terminal.
+    /// </summary>
+    private void PrintSilhouettes()
+    {
+        foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
+        {
+            if (how == IslandArrangement.Auto) continue;
+
+            var p = (IslandParams)Params.Duplicate();
+            p.Arrangement = how;
+            IslandData d = new IslandGenerator().Generate(FirstSeed, p);
+            int n = d.Size, step = Math.Max(1, n / 64);
+
+            GD.Print($"--- {how} (seed {FirstSeed}) ---");
+            for (int z = 0; z < n; z += step)
+            {
+                var row = new System.Text.StringBuilder();
+                for (int x = 0; x < n; x += step)
+                {
+                    // Whatever the sample lands on: land wins over water, water
+                    // over aether, so a one-cell strait still shows as a strait
+                    // only where it really is one.
+                    bool land = false, wet = false;
+                    for (int dx = 0; dx < step; dx++)
+                    for (int dz = 0; dz < step; dz++)
+                    {
+                        int cx = x + dx, cz = z + dz;
+                        if (cx >= n || cz >= n || !d.HasLand(cx, cz)) continue;
+                        if (d.WaterLevel[cx, cz] != IslandData.NoLand) wet = true;
+                        else land = true;
+                    }
+                    row.Append(land ? '#' : wet ? '~' : '.');
+                }
+                GD.Print(row.ToString());
+            }
+        }
     }
 
     /// <summary>Corner-only touches: a join you can neither walk nor swim through.</summary>

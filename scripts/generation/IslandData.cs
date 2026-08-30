@@ -61,12 +61,27 @@ public sealed class IslandData
     public List<Vector2I> Passes { get; } = new();
 
     /// <summary>
-    /// Where a bridge would go: one cell pair per crossing, enough to join every
-    /// landmass into one. The generator uses these to make the two banks agree on
-    /// a level; the settlement layer will use them to know where a crossing is
-    /// worth building.
+    /// Where a bridge would go: one <see cref="Crossing"/> per link, enough to
+    /// join every landmass into one. The generator levels both banks so the deck
+    /// can run at a single level and be walked onto at either end; the settlement
+    /// layer will use them to know where a crossing is worth building.
     /// </summary>
-    public List<(Vector2I A, Vector2I B)> Bridges { get; } = new();
+    public List<Crossing> Bridges { get; } = new();
+
+    /// <summary>
+    /// Cells of gap one bridge may span on this Domain, from
+    /// <see cref="IslandParams.Crossings"/>. It decides how far apart an
+    /// arrangement's landmasses may sit and what <see cref="Traversal"/> counts as
+    /// reachable, so it is carried on the data rather than being a constant.
+    /// </summary>
+    public int BridgeSpan { get; internal set; } = Traversal.DefaultBridgeSpan;
+
+    /// <summary>
+    /// Ground a vessel could set down on: cells belonging to some viable landing
+    /// strip running inland from the rim. Every hanging Gate stands opposite one
+    /// of these, and the rest are where another could go.
+    /// </summary>
+    public bool[,] Airstrip { get; }
 
     /// <summary>
     /// Columns carrying a watercourse. A river column is flooded like a lake —
@@ -90,9 +105,10 @@ public sealed class IslandData
     /// <summary>
     /// Where water falls rather than runs — a drop of three slabs or more along a
     /// channel, and every channel that reaches the rim. At the coast every river
-    /// becomes one, because there is no sea to run to.
+    /// becomes one, because there is no sea to run to; those are the falls that
+    /// pour off the underside of the Domain.
     /// </summary>
-    public List<Vector2I> Falls { get; } = new();
+    public List<Fall> Falls { get; } = new();
 
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
@@ -157,6 +173,21 @@ public sealed class IslandData
     /// <summary>The arrangement actually used, with <c>Auto</c> already resolved.</summary>
     public IslandArrangement Arrangement { get; internal set; }
 
+    /// <summary>
+    /// How many islands were built for this seed before one was playable. One
+    /// almost always; more where the first roll had no way in, nowhere to build,
+    /// or too much of itself out of reach.
+    /// </summary>
+    public int Attempts { get; internal set; } = 1;
+
+    /// <summary>
+    /// Which Stage 6 guarantees this island still misses, or empty when it meets
+    /// them all. Non-empty means the re-roll budget ran out and this was the best
+    /// of the attempts — worth surfacing rather than hiding, since it says the
+    /// parameters are asking for something the pipeline cannot give.
+    /// </summary>
+    public string Unmet { get; internal set; } = "";
+
     /// <summary>The character actually used, with <c>Auto</c> already resolved.</summary>
     public TerrainCharacter Character { get; internal set; }
 
@@ -173,6 +204,7 @@ public sealed class IslandData
         Pass = new bool[size, size];
         River = new bool[size, size];
         Navigable = new bool[size, size];
+        Airstrip = new bool[size, size];
         Flow = new int[size, size];
         Walk = new int[size, size];
         Reach = new int[size, size];

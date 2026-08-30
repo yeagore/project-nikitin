@@ -26,6 +26,15 @@ public sealed class IslandGenerator
     /// <summary>Turns around the circumference sampled for coastline lobes.</summary>
     private const float LobeRings = 1.7f;
 
+    /// <summary>
+    /// Narrowest a strait between two lobes may pinch to, in cells. Just over one:
+    /// the water may narrow to a single step across — which is what makes a crack
+    /// read as a crack rather than as a channel — but it may never close, because
+    /// a strait that heals is an arrangement quietly delivering fewer landmasses
+    /// than it promised.
+    /// </summary>
+    private const float StraitNarrowest = 1.05f;
+
     private static readonly int[] Dx = { 1, -1, 0, 0 };
     private static readonly int[] Dz = { 0, 0, 1, -1 };
 
@@ -51,7 +60,103 @@ public sealed class IslandGenerator
         }
     }
 
+    /// <summary>
+    /// How many islands may be built for one seed before the best of them is
+    /// taken as it stands. Four: a re-roll is for the rare island that comes out
+    /// unplayable, and if four in a row fail the guarantee then the parameters are
+    /// asking for something the pipeline cannot deliver, which is not a thing more
+    /// dice will fix.
+    /// </summary>
+    private const int Attempts = 4;
+
+    /// <summary>
+    /// Generates the Domain, and re-rolls a Domain that comes out unplayable.
+    ///
+    /// <b>Still a pure function of (seed, params).</b> A rejected island is
+    /// rebuilt from a seed derived from the one asked for, so the same seed gives
+    /// the same Domain every time — it simply may not be the *first* island that
+    /// seed describes. What is checked is in <see cref="Unmet"/>: somewhere to
+    /// arrive, somewhere to build, and enough of the island reachable from there
+    /// to be worth arriving on.
+    /// </summary>
     public IslandData Generate(int seed, IslandParams p)
+    {
+        IslandData? best = null;
+
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            int use = attempt == 0 ? seed : unchecked((int)Hash(seed, 0x5E1Fu + (uint)attempt));
+            IslandData d = Build(use, p);
+            d.Attempts = attempt + 1;
+            d.Unmet = Unmet(d, p);
+
+            if (d.Unmet.Length == 0) return d;
+            // Keep the best failure rather than the last: an island short of one
+            // guarantee still beats one short of three.
+            if (best == null || d.Unmet.Length < best.Unmet.Length)
+            {
+                d.Attempts = attempt + 1;
+                best = d;
+            }
+        }
+        return best!;
+    }
+
+    /// <summary>
+    /// Which of the Stage 6 guarantees this island misses, as a short list. Empty
+    /// means it is playable.
+    ///
+    /// The three are the minimum a run needs: a Gate of the kind the Link
+    /// promised, ground the first company can be laid out on, and an island that
+    /// is mostly one place once you have built stairs and bridges. Everything else
+    /// — how many lakes, how the coast reads, whether the mountains came out where
+    /// the style asked — is variety, and re-rolling for variety is how a generator
+    /// ends up producing one island.
+    /// </summary>
+    private static string Unmet(IslandData d, IslandParams p)
+    {
+        var missing = new List<string>();
+
+        int entries = 0;
+        bool rightKind = true;
+        foreach (Gate g in d.Gates)
+        {
+            if (g.Role != GateRole.Entry) continue;
+            entries++;
+            if (p.EntryGate != GateKind.Auto && g.Kind != p.EntryGate) rightKind = false;
+        }
+        if (entries != 1 || !rightKind) missing.Add("entry gate");
+
+        bool buildable = false;
+        foreach (Shelf shelf in d.Shelves)
+        {
+            if (!shelf.Buildable) continue;
+            if (d.Heartland >= 0 && d.Reach[shelf.Center.X, shelf.Center.Y] != d.Heartland) continue;
+            buildable = true;
+            break;
+        }
+        if (!buildable) missing.Add("somewhere to build");
+
+        int dry = 0;
+        for (int x = 0; x < d.Size; x++)
+        for (int z = 0; z < d.Size; z++)
+            if (d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand) dry++;
+
+        int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
+        if (dry > 0 && heart < dry * MinHeartlandShare) missing.Add("one island");
+
+        return string.Join(", ", missing);
+    }
+
+    /// <summary>
+    /// How much of the dry land has to be reachable — with stairs, hoists and
+    /// bridges — from the largest reachable piece. Three quarters: a Domain where
+    /// a quarter of the ground cannot be built to is a Domain with a second island
+    /// on it that nobody asked for.
+    /// </summary>
+    private const float MinHeartlandShare = 0.75f;
+
+    private IslandData Build(int seed, IslandParams p)
     {
         int n = p.Size;
         var data = new IslandData(n)
@@ -88,15 +193,22 @@ public sealed class IslandGenerator
         // A Single Domain is one landmass by definition. Every other arrangement
         // keeps its pieces — and then has to earn them: LinkLandmasses nudges the
         // pieces together until each can be reached from the next by a bridge.
+        // How far one bridge reaches decides how far apart the pieces may sit, so
+        // the linker and the reach analysis have to be told the same number.
+        int span = Math.Max(1, (int)p.Crossings);
+        data.BridgeSpan = span;
+
         if (how == IslandArrangement.Single) KeepLargestComponent(land);
         else
         {
             DropComponentsUnder(land, MinIsletCells);
-            LinkLandmasses(land);
+            LinkLandmasses(land, span);
         }
         CloseDiagonalJoins(land);
-        List<(Vector2I A, Vector2I B)> bridges = FindBridgeSites(land);
-        data.Bridges.AddRange(bridges);
+        // The crossings themselves are recorded once the terrain has a height:
+        // a bridge is a level deck, so it is not a crossing until both banks
+        // agree on one — see LevelBridgeheads.
+        List<(Vector2I A, Vector2I B)> bridges = FindBridgeSites(land, span);
         int[,] region = BuildRegions(seed, p, land, out int regionCount);
 
         // Smooth, sub-cell distance to coast. Shared by the coastal taper and the
@@ -118,12 +230,14 @@ public sealed class IslandGenerator
         // mountain takes no rung at all, so a bridgehead on either would ignore
         // the agreement AssignPlateaus makes between the two banks. Plains are
         // what a landing belongs on anyway.
+        var bridgeheads = new HashSet<int>();
         foreach (var (ca, cb) in bridges)
         {
             foreach (Vector2I c in new[] { ca, cb })
             {
                 if (!land[c.X, c.Y]) continue;
                 int r = region[c.X, c.Y];
+                bridgeheads.Add(r);
                 if (IsTable(types[r]) || types[r] == LandformType.Mountain)
                     types[r] = LandformType.Plain;
             }
@@ -136,7 +250,7 @@ public sealed class IslandGenerator
         // and it was quietly deleted afterwards: Highland delivered mountains on
         // 72% of its islands instead of all of them.
         RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
-                                RegionCells(land, region, regionCount));
+                                RegionCells(land, region, regionCount), bridgeheads);
         RegionPlan[] plan = AssignPlateaus(seed, p, land, region, regionCount, envelope,
                                            neighbours, types, bridges);
         float[,] inward = InwardDistance(land, region, regionCount);
@@ -181,17 +295,43 @@ public sealed class IslandGenerator
         // Settled together, not once each. Resolving a two-slab step lowers a
         // cell, which can leave a *three*-slab one behind it on a border the rules
         // forbid a cliff on — and the limiter closing that can in turn expose a
-        // new two. Both passes only ever lower, so alternating them terminates.
+        // new two. All three passes only ever lower, so cycling them terminates.
+        //
+        // The bridgeheads are levelled inside the loop rather than before it: a
+        // bridge is several slabs at one level, and the two passes that follow are
+        // free to lower one bank and not the other, which is how a crossing ended
+        // up with its two ends three slabs apart after they had been made to agree.
         for (int settle = 0; settle < 6; settle++)
         {
-            bool moved = LimitSlope(surface, region, land, plan, exempt, pass);
+            bool moved = LevelBridgeheads(land, surface, water, region, plan, bridges);
+            moved |= LimitSlope(surface, region, land, plan, exempt, pass);
             moved |= ResolveAmbiguousSteps(surface, region, land, plan, water);
             if (!moved) break;
         }
-        // Rivers last: they are cut across the finished patchwork, and they only
-        // ever lower a cell by one slab, so the step grammar survives them.
+        // Rivers last: they are cut across the finished patchwork, and they carry
+        // their own step grammar with them — the channel goes two slabs down, the
+        // banks come down to meet it, and a ford is measured at the water.
+        //
+        // What each column is made of, which the river needs so that cutting its
+        // banks does not quietly eat the rim of a mesa or the wall of a basin.
+        var form = new byte[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            form[x, z] = land[x, z] ? (byte)plan[region[x, z]].Type : (byte)0;
+
+        // The bridgeheads are off limits to the water. A channel cut through one
+        // takes two slabs off the bank that was just levelled to meet the far
+        // side, and the crossing the whole arrangement hangs on stops being a
+        // crossing — one island in sixty came out with an islet nobody could
+        // build to. A stream that would have run over the bank pours off a cell
+        // earlier instead, which is a fall either way.
+        var keep = new bool[n, n];
+        foreach (var (ca, cb) in bridges)
+        foreach (Vector2I c in new[] { ca, cb })
+            if (c.X >= 0 && c.Y >= 0 && c.X < n && c.Y < n) keep[c.X, c.Y] = true;
+
         Rivers.Carve(seed, p, land, surface, water, data.River, data.Navigable,
-                     data.Flow, data.Falls);
+                     data.Flow, data.Falls, span, form, keep);
 
         short[,] keel = BuildKeel(seed, p, land, surface, toCoast);
 
@@ -212,6 +352,13 @@ public sealed class IslandGenerator
             data.Canyon[x, z] = canyon != null && canyon[x, z];
             data.Pass[x, z] = pass != null && pass[x, z];
         }
+
+        // What the crossings finally are, measured off the finished terrain: the
+        // deck level each one runs at, and how long it is.
+        RecordCrossings(data, bridges);
+        // A fall at the rim has nothing under it, so it is drawn past the keel and
+        // out of the world. The keel is only known now.
+        Rivers.DropFallsPastTheKeel(data);
 
         // Stage 5: read back what the terrain turned out to be. Pure analysis —
         // it changes nothing, so it stays outside the pipeline proper.
@@ -248,10 +395,12 @@ public sealed class IslandGenerator
     /// a walkable shore — while the terrain beneath drops three or four, well
     /// clear of the ambiguous two.
     ///
-    /// Adjacent lake patches whose shores agree to within a slab share one level
-    /// and get a channel cut between them; a channel cell is only carved if every
-    /// one of its neighbours also belongs to the pair, so linking two lakes can
-    /// never open one to the outside.
+    /// <b>One lake, not a chain.</b> A patch beside one that already holds water
+    /// stays dry: each lake fills to its own patch's rim, so a row of neighbouring
+    /// patches flooding at slightly different levels steps across the island and
+    /// reads as flooding rather than as lakes. Joining such a pair into one body —
+    /// one level, a channel notched between them — was the previous answer, and it
+    /// spreads the same sheet of water over more of the island instead.
     /// </summary>
     private static short[,] PlaceLakes(int seed, IslandParams p, bool[,] land, int[,] region,
                                        int count, RegionPlan[] plan, short[,] surface,
@@ -303,46 +452,27 @@ public sealed class IslandGenerator
             wants[r] = Hash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
         }
 
-        // Group neighbouring lakes that sit at the same height, so a channel
-        // between them joins two surfaces rather than stepping between them.
-        var parent = new int[count];
-        for (int i = 0; i < count; i++) parent[i] = i;
-        int Find(int a) { while (parent[a] != a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
-
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (inset[x, z] != 0) continue;
-            int r = region[x, z];
-            if (!wants[r]) continue;
-            for (int k = 0; k < 4; k++)
-            {
-                int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
-                int o = region[nx, nz];
-                // Equal, not merely close: a slab of disagreement between two
-                // grouped patches becomes a two-slab shore step on the higher one.
-                if (o == r || !wants[o] || shore[r] != shore[o]) continue;
-                int a = Find(r), b = Find(o);
-                if (a != b) parent[b] = a;
-            }
-        }
-
-        var groupShore = new int[count];
-        Array.Fill(groupShore, int.MaxValue);
-        for (int r = 0; r < count; r++)
-            if (wants[r]) groupShore[Find(r)] = Math.Min(groupShore[Find(r)], shore[r]);
+        // <b>No chains of lakes.</b> Each patch fills to its own rim, so a row of
+        // neighbouring patches that all hold water is a row of pools at slightly
+        // different levels stepping across the island — which reads as flooding,
+        // not as lakes. A patch beside one that already holds water therefore
+        // stays dry.
+        //
+        // Linking such a pair instead — one level, a channel notched between
+        // them — was the previous answer, and it makes the two pools one body:
+        // the same sheet of water spread over more of the island, which is the
+        // look this removes.
+        DropNeighbouringLakes(land, region, wants, count);
 
         var level = new int[count];
         var bed = new int[count];
         for (int r = 0; r < count; r++)
         {
             if (!wants[r]) continue;
-            int g = Find(r);
-            level[r] = groupShore[g] - 1;
+            level[r] = shore[r] - 1;
             // Two or three slabs of water; the bed therefore sits three or four
             // below the ring, never the ambiguous two.
-            bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)g * 40503u) * 2f));
+            bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
         }
 
         // Which interior cells actually become water: the largest 4-connected
@@ -401,10 +531,45 @@ public sealed class IslandGenerator
             water[x, z] = (short)level[r];
         }
 
-        CutLakeChannels(land, region, inset, wants, parent, level, bed, surface, water, Find);
         RemoveDiagonalWater(surface, water, region, level);
         LevelShores(land, surface, water);
         return water;
+    }
+
+    /// <summary>
+    /// Keeps lakes from forming a chain. Patches are visited in a fixed order and
+    /// any patch that borders one already holding water is refused, so what
+    /// survives is single bodies of water with dry country between them.
+    /// </summary>
+    private static void DropNeighbouringLakes(bool[,] land, int[,] region, bool[] wants, int count)
+    {
+        int n = land.GetLength(0);
+        var neighbours = new HashSet<int>[count];
+        for (int i = 0; i < count; i++) neighbours[i] = new HashSet<int>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z]) continue;
+            int r = region[x, z];
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                int o = region[nx, nz];
+                if (o != r) neighbours[r].Add(o);
+            }
+        }
+
+        var kept = new bool[count];
+        for (int r = 0; r < count; r++)
+        {
+            if (!wants[r]) continue;
+            bool beside = false;
+            foreach (int nb in neighbours[r]) if (kept[nb]) { beside = true; break; }
+            if (beside) wants[r] = false;
+            else kept[r] = true;
+        }
     }
 
     /// <summary>
@@ -576,69 +741,6 @@ public sealed class IslandGenerator
         return inset;
     }
 
-    /// <summary>
-    /// Notches through the dry rings separating two lakes of the same group, so
-    /// they read as one body of water. A cell is only carved when every one of its
-    /// neighbours belongs to the same pair of patches — otherwise the notch would
-    /// breach the ring outward and drain the lake.
-    /// </summary>
-    private static void CutLakeChannels(bool[,] land, int[,] region, int[,] inset, bool[] wants,
-                                        int[] parent, int[] level, int[] bed,
-                                        short[,] surface, short[,] water, Func<int, int> find)
-    {
-        int n = land.GetLength(0);
-        var seam = new Dictionary<long, List<(int X, int Z)>>();
-
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (!land[x, z]) continue;
-            int r = region[x, z];
-            if (!wants[r]) continue;
-
-            for (int k = 0; k < 4; k++)
-            {
-                int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
-                int o = region[nx, nz];
-                if (o == r || !wants[o] || find(o) != find(r)) continue;
-
-                long key = ((long)Math.Min(r, o) << 32) | (uint)Math.Max(r, o);
-                if (!seam.TryGetValue(key, out var list)) seam[key] = list = new List<(int X, int Z)>();
-                list.Add((x, z));
-            }
-        }
-
-        foreach (var (key, cells) in seam)
-        {
-            int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
-            var mid = cells[cells.Count / 2];
-
-            // Radius two, because the ring is two cells thick on each side: a
-            // shorter notch would not reach open water on either.
-            for (int dx = -2; dx <= 2; dx++)
-            for (int dz = -2; dz <= 2; dz++)
-            {
-                int x = mid.X + dx, z = mid.Z + dz;
-                if (x < 0 || z < 0 || x >= n || z >= n || !land[x, z]) continue;
-                int r = region[x, z];
-                if (r != a && r != b) continue;
-                if (inset[x, z] >= ShoreMargin) continue;               // already water
-
-                bool safe = true;
-                for (int k = 0; k < 4 && safe; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    safe = nx >= 0 && nz >= 0 && nx < n && nz < n && land[nx, nz]
-                           && (region[nx, nz] == a || region[nx, nz] == b);
-                }
-                if (!safe) continue;
-
-                surface[x, z] = SlabClamp(bed[r]);
-                water[x, z] = (short)level[r];
-            }
-        }
-    }
 
     // ---- Stage 1: footprint mask ----------------------------------------------
 
@@ -671,6 +773,15 @@ public sealed class IslandGenerator
 
         /// <summary>Normalised distance from this lobe's own wandering edge; &lt; 1 is inside.</summary>
         public float Distance(float x, float z, Noise lobes, float irr)
+            => Distance(x, z, lobes, irr, out _);
+
+        /// <summary>
+        /// As above, and reports the wandering radius it measured against, in
+        /// cells. The strait carving needs it: the seam between two lobes is where
+        /// their normalised distances agree, and turning that back into a width on
+        /// the ground takes the radius it was normalised by.
+        /// </summary>
+        public float Distance(float x, float z, Noise lobes, float irr, out float rEff)
         {
             float dx = x - Cx, dz = z - Cz;
             float rx = (dx * Cos + dz * Sin) * Aspect;
@@ -682,7 +793,7 @@ public sealed class IslandGenerator
             // islets from having the same coastline.
             float ang = MathF.Atan2(rz, rx);
             float lobe = lobes.At(MathF.Cos(ang) * Rings + Cx, MathF.Sin(ang) * Rings + Cz);
-            float rEff = MathF.Max(1e-3f, Radius * (1f + irr * Wander * (lobe * 2f - 1f)));
+            rEff = MathF.Max(1e-3f, Radius * (1f + irr * Wander * (lobe * 2f - 1f)));
             return dist / rEff;
         }
     }
@@ -699,27 +810,31 @@ public sealed class IslandGenerator
     /// need nudging.
     /// </summary>
     private static Lobe[] PlaceLobes(int seed, IslandParams p, IslandArrangement how,
-                                     float radius, float cx, float cz, float spread)
+                                     float radius, float cx, float cz, float spread,
+                                     out float lagoon)
     {
         float irr = Math.Clamp(p.Irregularity, 0f, 1f);
         bool alone = how == IslandArrangement.Single;
+        lagoon = 0f;
 
-        // One landmass can stretch and let its coast swing by a third of its
-        // radius, and it just reads as a lobed island. Several cannot: at that
-        // amplitude the *noise*, not the layout, decides whether two lobes touch,
-        // and a third of Twins came out as one peanut. An ellipse at aspect 1.44
-        // reaches half again as far along its long axis as its radius says, which
-        // is more than the gap the layout leaves. Placement has to be the
-        // decision, so both are damped when there is more than one blob.
-        float stretch = alone ? 1.8f : 1.22f;
-        float wander = alone ? 0.55f : 0.22f;
+        // <b>Separation is cut, not hoped for.</b> Where two lobes meet, the seam
+        // between them is carved into a strait (see BuildMaskOnce), so a lobe with
+        // a neighbour may stretch and let its coast swing exactly as far as a lone
+        // one. Damping those two numbers was the previous answer — it stopped
+        // Twins fusing and it also made every multi-island layout a field of
+        // discs, which is the wrong trade: the point of an arrangement is where
+        // the land is, and the point of the noise is that no coastline is a
+        // circle. Now the layout decides the first and the noise decides the
+        // second, and neither has to do the other's job.
+        const float stretch = 1.8f;
+        float wander = alone ? 0.55f : 0.5f;
 
         float Aspect(uint salt) => Mathf.Lerp(1f, stretch, irr * Hash01(seed, salt));
         float Angle(uint salt) => Hash01(seed, salt) * Mathf.Tau;
 
         var made = new List<Lobe>();
 
-        void Add(float x, float z, float r, uint salt)
+        void Add(float x, float z, float r, uint salt, float aspect = 0f, float rot = float.NaN)
         {
             // Keep every blob inside the footprint with a margin, or a nudge later
             // will push it into the wall.
@@ -727,12 +842,17 @@ public sealed class IslandGenerator
             int n = p.Size;
             x = Math.Clamp(x, pad, n - 1 - pad);
             z = Math.Clamp(z, pad, n - 1 - pad);
-            made.Add(new Lobe(x, z, r, Aspect(salt), Angle(salt ^ 0x77u),
+            made.Add(new Lobe(x, z, r,
+                              aspect > 0f ? aspect : Aspect(salt),
+                              float.IsNaN(rot) ? Angle(salt ^ 0x77u) : rot,
                               LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander));
         }
 
         /// A ring of blobs at a given radius, evenly spaced then jittered.
-        void Ring(int count, float ringRadius, float blobRadius, float spread, uint salt)
+        /// <paramref name="tangential"/> turns each blob broadside to the ring, so
+        /// the ring reads as a chain of arcs rather than as a necklace of beads.
+        void Ring(int count, float ringRadius, float blobRadius, float spread, uint salt,
+                  float tangential = 0f)
         {
             float phase = Hash01(seed, salt) * Mathf.Tau;
             for (int i = 0; i < count; i++)
@@ -742,47 +862,71 @@ public sealed class IslandGenerator
                           + (Hash01(seed, s) - 0.5f) * Mathf.Tau / count * 0.7f;
                 float rr = ringRadius * (1f - spread * 0.5f + spread * Hash01(seed, s ^ 0x5u));
                 float br = blobRadius * (0.75f + 0.5f * Hash01(seed, s ^ 0x9u));
-                Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s);
+                // An ellipse is squashed along its rotation and stretched across
+                // it, so rotating to the radial direction elongates the blob along
+                // the tangent — around the lagoon rather than into it.
+                float aspect = tangential > 0f
+                    ? tangential * (0.85f + 0.4f * Hash01(seed, s ^ 0x11u))
+                    : 0f;
+                Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s,
+                    aspect, tangential > 0f ? a : float.NaN);
             }
         }
 
         switch (how)
         {
-            // Every blob is placed so its edge stops a few cells short of its
-            // neighbour's. Closer and the coastline noise simply fuses them — an
-            // early Twins came out as one peanut on a tenth of its seeds — and
-            // much further is more than the linker will close.
+            // A dominant landmass with islets round it. The islets are placed
+            // clear of the main blob; where one lands close enough to touch, the
+            // strait carving parts them along the seam.
             case IslandArrangement.Satellites:
                 Add(cx, cz, radius * 0.58f, 0x1000u);
-                Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.86f * spread,
-                     radius * 0.20f, 0.20f, 0x1002u);
+                Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
+                     radius * 0.21f, 0.26f, 0x1002u);
                 break;
 
+            // Two halves of one irregular mass, split by the strait that runs
+            // between them: a crack rather than a channel between two discs. The
+            // blobs are placed close enough to overlap on purpose — what makes
+            // them two islands is the cut, so the silhouette can be as ragged as
+            // a lone island's.
             case IslandArrangement.Twins:
             {
                 float a = Angle(0x2000u);
-                float half = radius * 0.66f * spread;
-                Add(cx + MathF.Cos(a) * half, cz + MathF.Sin(a) * half, radius * 0.56f, 0x2001u);
-                Add(cx - MathF.Cos(a) * half, cz - MathF.Sin(a) * half, radius * 0.50f, 0x2002u);
+                float half = radius * 0.44f * spread;
+                Add(cx + MathF.Cos(a) * half, cz + MathF.Sin(a) * half, radius * 0.62f, 0x2001u);
+                Add(cx - MathF.Cos(a) * half, cz - MathF.Sin(a) * half, radius * 0.56f, 0x2002u);
                 break;
             }
 
+            // The same again in three, so the cracks meet at a junction inland.
             case IslandArrangement.Triplets:
-                Ring(3, radius * 0.62f * spread, radius * 0.40f, 0.14f, 0x3000u);
+                Ring(3, radius * 0.46f * spread, radius * 0.50f, 0.16f, 0x3000u);
                 break;
 
+            // Scattered and unequal: two or three near the middle, four or five
+            // further out, radii varying by half. An archipelago is defined by
+            // having no order to it, which is what separates it from an atoll.
             case IslandArrangement.Archipelago:
-                Ring(4 + (int)(Hash01(seed, 0x4000u) * 4f), radius * 0.66f * spread,
-                     radius * 0.22f, 0.45f, 0x4001u);
-                Add(cx, cz, radius * 0.20f, 0x4002u);
+                Ring(2 + (int)(Hash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
+                     radius * 0.20f, 0.55f, 0x4001u);
+                Ring(3 + (int)(Hash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
+                     radius * 0.19f, 0.55f, 0x4003u);
                 break;
 
+            // A ring, and the lagoon is what is *not* placed. Two things separate
+            // it from an archipelago, and the old version had neither: the islets
+            // are elongated along the ring, so each is an arc of a broken rim
+            // rather than a bead, and the water inside is cleared outright — a
+            // ring of blobs alone leaves the middle to the shape noise, which
+            // fills it in about as often as not.
             case IslandArrangement.Atoll:
-                // The lagoon is what is *not* placed: a ring of small blobs and
-                // nothing in the middle.
-                Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), radius * 0.78f * spread,
-                     radius * 0.24f, 0.12f, 0x5001u);
+            {
+                float ring = radius * 0.76f * spread;
+                float blob = radius * 0.30f;
+                Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
+                lagoon = MathF.Max(4f, ring - blob * 0.55f);
                 break;
+            }
 
             default:
                 Add(cx, cz, radius, 0x0001u);
@@ -847,11 +991,19 @@ public sealed class IslandGenerator
         float cx = (n - 1) * 0.5f, cz = (n - 1) * 0.5f;
         float irr = Math.Clamp(p.Irregularity, 0f, 1f);
 
-        Lobe[] lobes = PlaceLobes(seed, p, how, radius, cx, cz, spread);
+        Lobe[] lobes = PlaceLobes(seed, p, how, radius, cx, cz, spread, out float lagoon);
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
         var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
             .WithWarp(amplitude: (0.25f + 0.55f * irr) * n, frequency: 0.6f / n);
+        // How wide the water is where two lobes meet. Wandering, so the strait
+        // narrows to a step across in places and opens to a channel in others.
+        var strait = new Noise(seed + 907, frequency: 0.09f, octaves: 3);
+        // A bridge reaches `Crossings` cells, so a strait that opens wider than
+        // that would only have to be dragged shut again by the linker. Keeping the
+        // widest part just inside the span means the arrangement's own geometry is
+        // crossable as it stands.
+        float straitCells = MathF.Max(1.4f, (int)p.Crossings + 0.4f);
 
         // Bites are not taken here: cutting a shape out of the raw mask leaves an
         // arc across whatever patches it crosses. They are applied to whole
@@ -860,6 +1012,7 @@ public sealed class IslandGenerator
         var field = new float[n, n];
         var norm = new float[n, n];
         var owner = new int[n, n];
+        var cut = new bool[n, n];
         var candidates = new List<float>[lobes.Length];
         for (int i = 0; i < lobes.Length; i++) candidates[i] = new List<float>();
 
@@ -868,18 +1021,47 @@ public sealed class IslandGenerator
         {
             // The nearest blob wins, and owns the cell. Taking the minimum rather
             // than summing keeps two islets from fusing into a peanut just because
-            // they are close.
-            float d = float.MaxValue;
+            // they are close. The runner-up is kept as well: where the two agree
+            // is the seam between them, and the seam is where the strait goes.
+            float d = float.MaxValue, second = float.MaxValue;
+            float rd = 1f, rSecond = 1f;
             int mine = 0;
             for (int i = 0; i < lobes.Length; i++)
             {
-                float di = lobes[i].Distance(x, z, wobble, irr);
-                if (di >= d) continue;
-                d = di;
-                mine = i;
+                float di = lobes[i].Distance(x, z, wobble, irr, out float ri);
+                if (di < d)
+                {
+                    second = d; rSecond = rd;
+                    d = di; rd = ri; mine = i;
+                }
+                else if (di < second) { second = di; rSecond = ri; }
             }
             norm[x, z] = d;
             owner[x, z] = mine;
+
+            // Turn the difference between the two normalised distances back into
+            // cells — a normalised unit is one lobe radius — and clear a band of
+            // them either side of the seam. The band never closes completely: a
+            // strait that heals is an arrangement that quietly delivered fewer
+            // landmasses than it promised, which is exactly what used to happen to
+            // Twins.
+            if (lobes.Length > 1 && second < float.MaxValue)
+            {
+                float seam = (second - d) * 0.5f * (rd + rSecond);
+                float width = StraitNarrowest
+                              + (straitCells - StraitNarrowest) * strait.At(x, z);
+                cut[x, z] = seam < width;
+            }
+
+            // An atoll's lagoon is cleared outright rather than left to the shape
+            // noise, which fills the middle of the ring as often as not — and a
+            // filled atoll is an archipelago.
+            if (lagoon > 0f)
+            {
+                float lx = x - cx, lz = z - cz;
+                float wob = 0.86f + 0.28f * wobble.At(lx * 0.09f, lz * 0.09f);
+                if (lx * lx + lz * lz < lagoon * lagoon * wob) cut[x, z] = true;
+            }
 
             float fall = 1f - FieldOps.SmoothStep(0.40f, 1f, d);
             float body = 0.35f + 0.65f * shape.At(x, z);
@@ -905,7 +1087,8 @@ public sealed class IslandGenerator
         // Leave a one-cell border empty so every land cell has a reachable coast.
         for (int x = 1; x < n - 1; x++)
         for (int z = 1; z < n - 1; z++)
-            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold[owner[x, z]];
+            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold[owner[x, z]]
+                         && !cut[x, z];
 
         return mask;
     }
@@ -1194,7 +1377,7 @@ public sealed class IslandGenerator
     /// <summary>
     /// Nudges landmasses together until every one can be reached from the next by
     /// a bridge — land facing land across at most
-    /// <see cref="Traversal.MaxBridgeSpan"/> cells, cardinally.
+    /// <see cref="IslandParams.Crossings"/> cells, cardinally.
     ///
     /// An archipelago is meant to be an island you build your way across, not a
     /// set of separate worlds. A layout that is *nearly* linkable is the common
@@ -1207,11 +1390,10 @@ public sealed class IslandGenerator
     /// Anything that still cannot be linked is deleted. A piece nobody can ever
     /// reach is not content.
     /// </summary>
-    private static void LinkLandmasses(bool[,] mask)
+    private static void LinkLandmasses(bool[,] mask, int span)
     {
         int n = mask.GetLength(0);
         var comp = new int[n, n];
-        int span = Traversal.MaxBridgeSpan;
         // Far enough to cross the widest strait a lobe layout produces, and short
         // enough that the sweep stays cheap.
         const int Sightline = 48;
@@ -1333,7 +1515,7 @@ public sealed class IslandGenerator
     /// enough to join every landmass into a single linked set. Found after the
     /// nudging, on the layout as it finally stands.
     /// </summary>
-    private static List<(Vector2I A, Vector2I B)> FindBridgeSites(bool[,] mask)
+    private static List<(Vector2I A, Vector2I B)> FindBridgeSites(bool[,] mask, int span)
     {
         int n = mask.GetLength(0);
         var comp = new int[n, n];
@@ -1345,7 +1527,7 @@ public sealed class IslandGenerator
         for (int i = 1; i < parts.Count; i++)
             if (parts[i].Count > parts[biggest].Count) biggest = i;
 
-        var facing = FacingPairs(mask, comp, Traversal.MaxBridgeSpan);
+        var facing = FacingPairs(mask, comp, span);
         var linked = new HashSet<int> { biggest };
         bool grew = true;
         while (grew)
@@ -1362,6 +1544,130 @@ public sealed class IslandGenerator
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// Slabs of disagreement between two banks that levelling will still close.
+    /// Beyond this the crossing is left alone: cutting a bank down by more than
+    /// a stair's worth to meet the far side gouges a notch in the coast, and the
+    /// two banks were meant to have been put on one rung long before this.
+    /// </summary>
+    private const int MaxBridgeheadDrop = 8;
+
+    /// <summary>Cells either side of a bridgehead that come down with it.</summary>
+    private const int BridgeheadPad = 1;
+
+    /// <summary>
+    /// Brings the two ends of every crossing to one level.
+    ///
+    /// <b>A bridge is a run of slabs at a single level.</b> It does not climb, so
+    /// a deck between banks eight slabs apart is not a bridge — it is a lift with
+    /// a deck on it, which is what the old <c>MaxBridgeRise</c> was quietly
+    /// allowing. Levelling here, rather than relaxing the rule there, is what
+    /// makes a crossing something you can walk onto at both ends.
+    ///
+    /// It only ever <i>lowers</i>, which is what lets the settle loop that
+    /// follows clean up the step it leaves without a special case — and it will
+    /// not touch ground beside a lake, since cutting a shore down is how you
+    /// empty one.
+    /// </summary>
+    /// <returns>Whether any ground was lowered.</returns>
+    private static bool LevelBridgeheads(bool[,] land, short[,] surface, short[,] water,
+                                         int[,] region, RegionPlan[] plan,
+                                         List<(Vector2I A, Vector2I B)> bridges)
+    {
+        int n = land.GetLength(0);
+        bool moved = false;
+
+        foreach (var (a, b) in bridges)
+        {
+            if (!land[a.X, a.Y] || !land[b.X, b.Y]) continue;
+
+            int la = surface[a.X, a.Y], lb = surface[b.X, b.Y];
+            if (Math.Abs(la - lb) > MaxBridgeheadDrop) continue;
+
+            short target = SlabClamp(Math.Min(la, lb));
+            moved |= FlattenPad(land, surface, water, region, plan, a, target, n);
+            moved |= FlattenPad(land, surface, water, region, plan, b, target, n);
+        }
+        return moved;
+    }
+
+    private static bool FlattenPad(bool[,] land, short[,] surface, short[,] water,
+                                   int[,] region, RegionPlan[] plan,
+                                   Vector2I c, short target, int n)
+    {
+        bool moved = false;
+        for (int dx = -BridgeheadPad; dx <= BridgeheadPad; dx++)
+        for (int dz = -BridgeheadPad; dz <= BridgeheadPad; dz++)
+        {
+            int x = c.X + dx, z = c.Y + dz;
+            if (x < 0 || z < 0 || x >= n || z >= n) continue;
+            if (!land[x, z] || surface[x, z] <= target) continue;
+            if (NearWater(water, n, x, z)) continue;
+            // A landing is plains ground. Cutting a pad into a mesa's rim or a
+            // mountain's foot would take the landform's own height away from it —
+            // and cutting the plain beside a basin down past the basin floor turns
+            // the escarpment upside down, which is how a basin came out standing
+            // three slabs *above* the country around it.
+            if (plan[region[x, z]].Type is not (LandformType.Plain or LandformType.Hills))
+                continue;
+            if (target < BasinFloorNear(land, surface, region, plan, n, x, z)) continue;
+            surface[x, z] = target;
+            moved = true;
+        }
+        return moved;
+    }
+
+    /// <summary>
+    /// The lowest a cell beside a basin may be cut to and leave the escarpment
+    /// facing the right way: a cliff's height above the floor it looks down on.
+    /// </summary>
+    private static int BasinFloorNear(bool[,] land, short[,] surface, int[,] region,
+                                      RegionPlan[] plan, int n, int x, int z)
+    {
+        int floor = int.MinValue;
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dz = -1; dz <= 1; dz++)
+        {
+            int nx = x + dx, nz = z + dz;
+            if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+            if (plan[region[nx, nz]].Type != LandformType.Basin) continue;
+            floor = Math.Max(floor, surface[nx, nz] + 3);
+        }
+        return floor;
+    }
+
+    /// <summary>Whether a cell or any of its eight neighbours holds standing water.</summary>
+    private static bool NearWater(short[,] water, int n, int x, int z)
+    {
+        for (int dx = -1; dx <= 1; dx++)
+        for (int dz = -1; dz <= 1; dz++)
+        {
+            int nx = x + dx, nz = z + dz;
+            if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+            if (water[nx, nz] != IslandData.NoLand) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Records each crossing as it finally stands: the level its deck runs at,
+    /// halfway between the two banks so each end is a one-slab step, and how many
+    /// cells of nothing it has to cover.
+    /// </summary>
+    private static void RecordCrossings(IslandData d, List<(Vector2I A, Vector2I B)> pairs)
+    {
+        foreach (var (a, b) in pairs)
+        {
+            if (!d.HasLand(a.X, a.Y) || !d.HasLand(b.X, b.Y)) continue;
+
+            int la = Traversal.CrossLevel(d, a.X, a.Y);
+            int lb = Traversal.CrossLevel(d, b.X, b.Y);
+            short deck = SlabClamp(Mathf.RoundToInt((la + lb) * 0.5f));
+            int span = Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y)) - 1;
+            d.Bridges.Add(new Crossing(a, b, deck, span));
+        }
     }
 
     /// <summary>Moves one landmass by a cell, refusing if it would leave the field or collide.</summary>
@@ -1917,7 +2223,7 @@ public sealed class IslandGenerator
     /// </summary>
     private static void RestoreMissingLandforms(IslandParams p, int seed, int[,] region, int count,
                                                 HashSet<int>[] neighbours, LandformType[] type,
-                                                int[] cells)
+                                                int[] cells, HashSet<int> bridgeheads)
     {
         float[] weights = TypeWeights(ResolveCharacter(seed, p.Character));
 
@@ -1927,27 +2233,44 @@ public sealed class IslandGenerator
             if (weights[t] <= 0f || want == LandformType.Plain) continue;
             if (Array.IndexOf(type, want) >= 0) continue;
 
-            int best = -1;
-            for (int r = 0; r < count; r++)
-            {
-                if (type[r] != LandformType.Plain || cells[r] <= 0) continue;
-                if (best >= 0 && cells[r] <= cells[best]) continue;
-
-                // The restored region has to satisfy the adjacency rules on its
-                // own, because nothing repairs them afterwards: a mesa or basin
-                // may only touch plains, and nothing else may touch a mesa or
-                // basin. Restoring blind is how a basin ends up beside a massif.
-                bool clear = true;
-                foreach (int nb in neighbours[r])
-                {
-                    bool ok = IsTable(want)
-                        ? type[nb] == LandformType.Plain
-                        : !IsTable(type[nb]);
-                    if (!ok) { clear = false; break; }
-                }
-                if (clear) best = r;
-            }
+            // Two passes: any patch but a bridgehead first, and only then a
+            // bridgehead. Those were made plains on purpose — a mesa or a mountain
+            // takes its own level regardless of the rung its bank agreed with the
+            // far side, so handing one the island's missing mountain puts a
+            // bridgehead twelve slabs above the islet it is supposed to reach. But
+            // the quota comes first: a Highland with no mountain on it is a worse
+            // island than one with an awkward crossing, and the crossing is only
+            // awkward when there was nowhere else to put the massif.
+            int best = Candidate(r => !bridgeheads.Contains(r));
+            if (best < 0) best = Candidate(_ => true);
             if (best >= 0) type[best] = want;
+
+            int Candidate(Func<int, bool> allowed)
+            {
+                int found = -1;
+                for (int r = 0; r < count; r++)
+                {
+                    if (type[r] != LandformType.Plain || cells[r] <= 0) continue;
+                    if (found >= 0 && cells[r] <= cells[found]) continue;
+                    if (!allowed(r)) continue;
+
+                    // The restored region has to satisfy the adjacency rules on
+                    // its own, because nothing repairs them afterwards: a mesa or
+                    // basin may only touch plains, and nothing else may touch a
+                    // mesa or basin. Restoring blind is how a basin ends up beside
+                    // a massif.
+                    bool clear = true;
+                    foreach (int nb in neighbours[r])
+                    {
+                        bool ok = IsTable(want)
+                            ? type[nb] == LandformType.Plain
+                            : !IsTable(type[nb]);
+                        if (!ok) { clear = false; break; }
+                    }
+                    if (clear) found = r;
+                }
+                return found;
+            }
         }
     }
 
@@ -2522,8 +2845,12 @@ public sealed class IslandGenerator
                 if (!land[x, z] || plan[region[x, z]].Type == LandformType.Mountain) continue;
                 if (water != null && water[x, z] != IslandData.NoLand) continue;   // lake bed
 
-                // A shore may not be lowered into its own lake.
-                int keepAbove = int.MinValue;
+                // A shore may not be lowered into its own lake, and ground beside a
+                // basin may not be lowered to within a cliff of the floor it looks
+                // down on — an escarpment resolved away is a basin deleted.
+                int keepAbove = plan[region[x, z]].Type == LandformType.Basin
+                    ? int.MinValue
+                    : BasinFloorNear(land, h, region, plan, n, x, z);
                 if (water != null)
                 {
                     for (int k = 0; k < 4; k++)
@@ -2668,7 +2995,14 @@ public sealed class IslandGenerator
             for (int z = Math.Max(0, pz - span); z <= Math.Min(n - 1, pz + span); z++)
             {
                 if (!land[x, z]) continue;
-                if (plan[region[x, z]].Type == LandformType.Mountain) continue;
+                // A col is cut through the rung ladder, never through a landform
+                // that *is* its own height. Sagging a mesa or a basin takes the
+                // landform away — and marking one as pass ground is worse still,
+                // because the slope limiter is told to reach across a pass border,
+                // which then drags the plain down to meet the basin floor it is
+                // supposed to look down on.
+                if (plan[region[x, z]].Type is LandformType.Mountain
+                    or LandformType.Mesa or LandformType.Basin) continue;
 
                 float dx = x - px, dz = z - pz;
                 float dist = MathF.Sqrt(dx * dx + dz * dz);
@@ -2681,6 +3015,12 @@ public sealed class IslandGenerator
 
                 float w = 1f - FieldOps.SmoothStep(0f, 1f, dist / rEff);
                 int target = (int)MathF.Round(h[x, z] + (floor - h[x, z]) * w);
+                // A sag reaching the rim of a basin would sink the ground to meet
+                // the floor it is supposed to look down on — the escarpment
+                // inverted, which is the same bug a canyon cut beside a basin used
+                // to have. The col stops at a cliff's height above the floor.
+                if (plan[region[x, z]].Type != LandformType.Basin)
+                    target = Math.Max(target, BasinFloorNear(land, h, region, plan, n, x, z));
                 if (target < h[x, z]) h[x, z] = SlabClamp(target);
                 mask[x, z] = true;
             }
