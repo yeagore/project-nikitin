@@ -45,8 +45,10 @@ public partial class IslandLab : Node3D
 		Landform,
 		/// <summary>The patchwork itself.</summary>
 		Region,
-		/// <summary>What connects to what under the traversal rule.</summary>
+		/// <summary>What connects to what on foot.</summary>
 		Walk,
+		/// <summary>What connects to what once stairs and bridges are built.</summary>
+		Reach,
 		/// <summary>Flat ground, and whether it is big and wide enough to build on.</summary>
 		Shelves,
 	}
@@ -83,6 +85,11 @@ public partial class IslandLab : Node3D
 	/// <summary>Broken ground, and anything with no classification: one flat grey.</summary>
 	private static readonly Color Unremarkable = new(0.34f, 0.34f, 0.36f);
 
+	private static readonly Color WaterTint = new(0.16f, 0.34f, 0.52f);
+
+	/// <summary>A pass, overlaid on the landform view so the saddle is findable.</summary>
+	private static readonly Color PassTint = new(0.92f, 0.85f, 0.42f);
+
 	/// <summary>
 	/// Walkable areas, by area rank. Rank 0 is the mainland and always reads as
 	/// ground; the rest get widely separated hues.
@@ -95,13 +102,31 @@ public partial class IslandLab : Node3D
 	/// </summary>
 	private static Color WalkColor(IslandData d, int id)
 	{
-		if (id == Traversal.Water) return new Color(0.16f, 0.34f, 0.52f);
+		if (id == Traversal.Water) return WaterTint;
 		if (id < 0 || id >= d.Areas.Count) return Unremarkable;
 		if (!d.Areas[id].IsDistrict) return Unremarkable;
 		if (id == d.Mainland) return new Color(0.42f, 0.62f, 0.28f);
 
 		float hue = (0.08f + id * 0.61803399f) % 1f;
 		return Color.FromHsv(hue, 0.62f, 0.88f);
+	}
+
+	/// <summary>
+	/// The same question asked of a player who can build. Green is the heartland —
+	/// everything a stair, a hoist or a bridge could join into one place. Red is
+	/// what stays out of reach whatever you build, which should be mountain and
+	/// almost nothing else.
+	/// </summary>
+	private static Color ReachColor(IslandData d, int id)
+	{
+		if (id == Traversal.Water) return WaterTint;
+		if (id < 0 || id >= d.Reaches.Count) return Unremarkable;
+		if (id == d.Heartland) return new Color(0.42f, 0.62f, 0.28f);
+
+		// Warm, and warmer the smaller the scrap, so a stranded plateau reads
+		// differently from the shrapnel of a summit.
+		float t = Mathf.Clamp(d.Reaches[id].Area / 120f, 0f, 1f);
+		return new Color(0.86f, 0.22f + 0.26f * t, 0.18f);
 	}
 
 	/// <summary>
@@ -289,9 +314,13 @@ public partial class IslandLab : Node3D
 		int buildable = 0;
 		foreach (Shelf shelf in d.Shelves) if (shelf.Buildable) buildable++;
 
+		int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
+
 		return $"walk: {districts} districts, mainland {100f * mainland / land:0}% of land, "
-			+ $"broken {100f * broken / land:0}% in {d.Areas.Count - districts} scraps   "
-			+ $"shelves: {buildable} buildable of {d.Shelves.Count}";
+			+ $"broken {100f * broken / land:0}% in {d.Areas.Count - districts} scraps"
+			+ $"   reach: heartland {100f * heart / land:0}%"
+			+ $"   shelves: {buildable} buildable of {d.Shelves.Count}"
+			+ $"   passes: {d.Passes.Count}";
 	}
 
 	/// <summary>
@@ -394,7 +423,9 @@ public partial class IslandLab : Node3D
 				switch (_view)
 				{
 					case View.Landform:
-						col.Add(LandformColor((LandformType)d.Landform[x, z]));
+						col.Add(d.Pass[x, z]
+							? LandformColor((LandformType)d.Landform[x, z]).Lerp(PassTint, 0.55f)
+							: LandformColor((LandformType)d.Landform[x, z]));
 						break;
 					case View.Region:
 						// Darken the border ring so each patch is outlined.
@@ -404,6 +435,9 @@ public partial class IslandLab : Node3D
 						break;
 					case View.Walk:
 						col.Add(WalkColor(d, d.Walk[x, z]));
+						break;
+					case View.Reach:
+						col.Add(ReachColor(d, d.Reach[x, z]));
 						break;
 					case View.Shelves:
 						col.Add(ShelfColor(d, x, z));
@@ -450,7 +484,7 @@ public partial class IslandLab : Node3D
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate + tilt   arrows tilt   wheel zoom   Shift faster"
 				 + "\nN new seed   V character   H hilliness   M landform mix"
-				 + "   C view: height/landform/region/walk/shelves   F frame   R rebuild",
+				 + "   C view: height/landform/region/walk/reach/shelves   F frame   R rebuild",
 			Position = new Vector2(12, 8),
 		};
 		label.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.85f));

@@ -105,19 +105,37 @@ public sealed class IslandGenerator
         bool[,]? canyon = WantsCanyon(seed, p)
             ? CarveCanyon(seed, p, land, region, plan, surface, borders)
             : null;
+        bool[,]? pass = CutPasses(seed, p, land, region, plan, surface, borders, data.Passes);
+
+        // A canyon floor is exempt from the limiter — take it as a bound and the
+        // whole rung group is dragged into it. A pass is the exact opposite: it
+        // exists to be walked, so the limiter is told to reach across its border.
+        var exempt = new bool[n, n];
+        if (canyon != null) Array.Copy(canyon, exempt, canyon.Length);
+        LimitSlope(surface, region, land, plan, exempt, pass);
         ResolveAmbiguousSteps(surface, region, land, plan);
 
         // Lakes sink into the surface, so they run before the keel measures column
         // thickness — and after every step-grammar pass, which they must not undo.
-        short[,] water = PlaceLakes(seed, p, land, region, regionCount, plan, surface, canyon);
+        // Both a canyon and a pass cut a patch's rim, and the rim is what sets a
+        // lake's level — a patch with either through it would fill to the bottom
+        // of the cut and pour out. Neither holds water.
+        bool[,]? drains = canyon;
+        if (pass != null)
+        {
+            drains = new bool[n, n];
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                drains[x, z] = pass[x, z] || (canyon != null && canyon[x, z]);
+        }
+        short[,] water = PlaceLakes(seed, p, land, region, regionCount, plan, surface, drains);
         // Lakes cut the surface after the grammar passes, so both run once more
         // over what they left. Levelling a shore leaves the bank behind it
         // standing a few slabs proud, and an islet edge can land on the
         // ambiguous two.
-        var exempt = new bool[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            exempt[x, z] = water[x, z] != IslandData.NoLand || (canyon != null && canyon[x, z]);
+            if (water[x, z] != IslandData.NoLand) exempt[x, z] = true;
 
         // Settled together, not once each. Resolving a two-slab step lowers a
         // cell, which can leave a *three*-slab one behind it on a border the rules
@@ -125,7 +143,7 @@ public sealed class IslandGenerator
         // new two. Both passes only ever lower, so alternating them terminates.
         for (int settle = 0; settle < 6; settle++)
         {
-            bool moved = LimitSlope(surface, region, land, plan, exempt);
+            bool moved = LimitSlope(surface, region, land, plan, exempt, pass);
             moved |= ResolveAmbiguousSteps(surface, region, land, plan, water);
             if (!moved) break;
         }
@@ -146,6 +164,7 @@ public sealed class IslandGenerator
             data.Landform[x, z] = (byte)plan[region[x, z]].Type;
             data.WaterLevel[x, z] = water[x, z];
             data.Canyon[x, z] = canyon != null && canyon[x, z];
+            data.Pass[x, z] = pass != null && pass[x, z];
         }
 
         // Stage 5: read back what the terrain turned out to be. Pure analysis —
@@ -1830,7 +1849,7 @@ public sealed class IslandGenerator
     /// </summary>
     /// <returns>Whether anything was lowered.</returns>
     private static bool LimitSlope(short[,] h, int[,] region, bool[,] land, RegionPlan[] plan,
-                                   bool[,]? exempt = null)
+                                   bool[,]? exempt = null, bool[,]? saddle = null)
     {
         int n = h.GetLength(0);
         bool any = false;
@@ -1861,7 +1880,11 @@ public sealed class IslandGenerator
                     if (exempt != null && exempt[nx, nz]) continue;
 
                     int rn = region[nx, nz];
-                    if (rn != r && !BorderIsBound(plan[r], plan[rn])) continue;
+                    // A pass is the one place a cliff border is deliberately bound:
+                    // the saddle exists precisely so you can walk across it, so the
+                    // limiter has to reach over the border there.
+                    bool joined = saddle != null && saddle[x, z] && saddle[nx, nz];
+                    if (rn != r && !joined && !BorderIsBound(plan[r], plan[rn])) continue;
                     cap = Math.Min(cap, h[nx, nz] + limit);
                 }
 
@@ -1926,6 +1949,152 @@ public sealed class IslandGenerator
     }
 
     private static bool WantsCanyon(int seed, IslandParams p) => Hash01(seed, 0x4C17) < 0.20f;
+
+    /// <summary>
+    /// Cuts a <b>pass</b>: a saddle where one plateau sags down to meet the next,
+    /// so a cliff border has exactly one place you can walk across.
+    ///
+    /// <para>Not a ramp. A ramp was tried and removed (docs §4c): a mesa stands
+    /// five or six slabs, a one-slab-per-cell grade covers that in five or six
+    /// cells, and five risers in a row against flat open ground is a staircase by
+    /// any reading. The failure was the <i>shape</i>, not the grade — a narrow
+    /// causeway sticking out into a plain shows every riser in profile.</para>
+    ///
+    /// <para>A pass is instead a broad radial sag, some fifteen to twenty cells
+    /// across, centred on a point of the border. The ground either side of the
+    /// path descends with it, so the eye reads a valley rather than a stair, and
+    /// the same grade that failed as a causeway works as a col. Its outline is a
+    /// noise-wobbled radius, so it is not a disc.</para>
+    ///
+    /// <para><b>Occasional on purpose.</b> Passes are flavour, not the
+    /// connectivity answer — that is infrastructure (see <see cref="Traversal"/>).
+    /// Cutting one on every border would flatten the island into a single
+    /// walkable district and throw away the plateau ladder. Most islands get
+    /// none or one.</para>
+    ///
+    /// <para>Only rung-ladder cliffs qualify: both sides plain or hills, neither a
+    /// mesa, basin or mountain. A mesa with a pass cut into it stops being a
+    /// mesa — the landform <i>is</i> "flat top, cliff all round" — and a mesa top
+    /// is reachable with a stair anyway.</para>
+    /// </summary>
+    /// <returns>The cells the saddle touched, or <c>null</c> if no pass was cut.</returns>
+    private static bool[,]? CutPasses(int seed, IslandParams p, bool[,] land, int[,] region,
+                                      RegionPlan[] plan, short[,] h,
+                                      Dictionary<long, List<(int X, int Z)>> borders,
+                                      List<Vector2I> sites)
+    {
+        float roll = Hash01(seed, 0x9E15);
+        int want = roll < 0.35f ? 0 : roll < 0.80f ? 1 : 2;
+        if (want == 0) return null;
+
+        int n = p.Size;
+        int maxDrop = Math.Max(6, p.CliffHeight * 2);
+
+        // Rank the borders that could take one: a real drop, room to sag into, and
+        // a pair of patches whose difference is the ladder rather than a landform.
+        var options = new List<(float Score, int X, int Z, int Drop)>();
+
+        foreach (var (key, cells) in borders)
+        {
+            if (cells.Count < 8) continue;
+            int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
+            if (!LadderPair(plan[a], plan[b])) continue;
+
+            // The cheapest crossing on this border, which is where a pass would
+            // form: least ground to move, least scar.
+            int bestDrop = int.MaxValue;
+            int bx = -1, bz = -1;
+            foreach (var (x, z) in cells)
+            {
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                    if (region[nx, nz] == region[x, z]) continue;
+
+                    // Three, not two: a two-slab step is not a cliff — the grammar
+                    // pass that runs after this one resolves it to a walkable step
+                    // anyway, so a pass cut there does nothing but scar the ground.
+                    int drop = Math.Abs(h[x, z] - h[nx, nz]);
+                    if (drop < 3 || drop > maxDrop || drop >= bestDrop) continue;
+                    bestDrop = drop;
+                    bx = x;
+                    bz = z;
+                }
+            }
+            if (bx < 0) continue;
+
+            float jitter = 0.6f + 0.8f * Hash01(seed, 0x5A11u ^ (uint)key * 2654435761u);
+            options.Add((cells.Count * jitter / bestDrop, bx, bz, bestDrop));
+        }
+        if (options.Count == 0) return null;
+
+        options.Sort((u, v) => v.Score.CompareTo(u.Score));
+
+        var mask = new bool[n, n];
+        var wobble = new Noise(seed + 4242, frequency: 1.1f, octaves: 2);
+        int cut = 0;
+
+        foreach (var (_, px, pz, drop) in options)
+        {
+            if (cut >= want) break;
+
+            // Don't stack two passes on top of each other.
+            bool tooClose = false;
+            foreach (Vector2I had in sites)
+                if (Math.Abs(had.X - px) + Math.Abs(had.Y - pz) < 24) { tooClose = true; break; }
+            if (tooClose) continue;
+
+            // Radius from the drop, so the grade stays under a slab per cell: the
+            // sag has to be longer than it is deep, or it is a staircase again.
+            float radius = drop + 4f;
+            int floor = int.MaxValue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = px + Dx[k], nz = pz + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (region[nx, nz] != region[px, pz]) floor = Math.Min(floor, h[nx, nz]);
+            }
+            if (floor == int.MaxValue) continue;
+
+            int span = (int)MathF.Ceiling(radius) + 2;
+            for (int x = Math.Max(0, px - span); x <= Math.Min(n - 1, px + span); x++)
+            for (int z = Math.Max(0, pz - span); z <= Math.Min(n - 1, pz + span); z++)
+            {
+                if (!land[x, z]) continue;
+                if (plan[region[x, z]].Type == LandformType.Mountain) continue;
+
+                float dx = x - px, dz = z - pz;
+                float dist = MathF.Sqrt(dx * dx + dz * dz);
+                if (dist < 0.001f) dist = 0.001f;
+
+                // A wobbled radius, sampled on the unit circle so it is seamless
+                // where the angle wraps. A perfect disc reads as a crater.
+                float rEff = radius * (0.75f + 0.5f * wobble.At(dx / dist, dz / dist));
+                if (dist > rEff) continue;
+
+                float w = 1f - FieldOps.SmoothStep(0f, 1f, dist / rEff);
+                int target = (int)MathF.Round(h[x, z] + (floor - h[x, z]) * w);
+                if (target < h[x, z]) h[x, z] = SlabClamp(target);
+                mask[x, z] = true;
+            }
+
+            sites.Add(new Vector2I(px, pz));
+            cut++;
+        }
+        return cut > 0 ? mask : null;
+    }
+
+    /// <summary>
+    /// Whether a border's drop is the plateau ladder rather than a landform. A
+    /// mesa or basin escarpment and a mountain flank are the landform itself, and
+    /// notching them would delete it.
+    /// </summary>
+    private static bool LadderPair(RegionPlan a, RegionPlan b)
+    {
+        static bool Soft(LandformType t) => t is LandformType.Plain or LandformType.Hills;
+        return Soft(a.Type) && Soft(b.Type) && a.RungGroup != b.RungGroup;
+    }
 
     /// <summary>
     /// Cuts a trench along the border between two regions, preferring a border

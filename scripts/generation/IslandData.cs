@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Godot;
+
 namespace ProjectNikitin.Generation;
 
 /// <summary>
@@ -47,6 +49,17 @@ public sealed class IslandData
     /// </summary>
     public bool[,] Canyon { get; }
 
+    /// <summary>
+    /// Columns inside a <b>pass</b> — a saddle cut where one plateau sags down to
+    /// meet the next, so a cliff border has one place you can walk across. Like a
+    /// canyon it is a deliberate exception, but the opposite one: a canyon breaks
+    /// a connection, a pass makes one.
+    /// </summary>
+    public bool[,] Pass { get; }
+
+    /// <summary>The centre of each pass. Usually none or one.</summary>
+    public List<Vector2I> Passes { get; } = new();
+
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
 
@@ -75,6 +88,20 @@ public sealed class IslandData
     /// <summary>Index of the largest walkable area, or <c>-1</c> if there is no land.</summary>
     public int Mainland { get; internal set; } = -1;
 
+    /// <summary>
+    /// As <see cref="Walk"/>, but for a player who can build: two columns share an
+    /// id when a stair, a hoist or a bridge could join them. This is the
+    /// connectivity the design is actually held to — a cliff is meant to cost
+    /// something, not to be a wall.
+    /// </summary>
+    public int[,] Reach { get; }
+
+    /// <summary>Every infrastructure-reachable area, largest first.</summary>
+    public List<WalkArea> Reaches { get; } = new();
+
+    /// <summary>Index of the largest reachable area — the island's heartland.</summary>
+    public int Heartland { get; internal set; } = -1;
+
     /// <summary>Which <see cref="Shelf"/> a column belongs to, or <c>-1</c> for none.</summary>
     public int[,] ShelfId { get; }
 
@@ -100,13 +127,16 @@ public sealed class IslandData
         Region = new int[size, size];
         WaterLevel = new short[size, size];
         Canyon = new bool[size, size];
+        Pass = new bool[size, size];
         Walk = new int[size, size];
+        Reach = new int[size, size];
         ShelfId = new int[size, size];
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             WaterLevel[x, z] = NoLand;
             Walk[x, z] = -1;
+            Reach[x, z] = -1;
             ShelfId[x, z] = -1;
         }
     }

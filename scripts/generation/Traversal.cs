@@ -60,13 +60,41 @@ public static class Traversal
     /// <summary>Value in <see cref="IslandData.Walk"/> for a flooded column.</summary>
     public const int Water = -2;
 
+    /// <summary>
+    /// The tallest face a built stair or hoist is assumed to span, in slabs — the
+    /// line between "needs infrastructure" and "cannot be reached at all". Eight
+    /// slabs is two world units; it clears any mesa (max 7) and any basin rim,
+    /// and does not clear a mountain's mid-flank risers, which run to 15.
+    /// </summary>
+    public const int InfrastructureStep = 8;
+
+    /// <summary>
+    /// Cells of gap a bridge spans. Two, and cardinal only — a diagonal crossing
+    /// is not a thing you can build on a square grid without it reading as a
+    /// mistake. So two banks are linkable when land faces land across at most two
+    /// cells of water or aether.
+    /// </summary>
+    public const int MaxBridgeSpan = 2;
+
+    /// <summary>
+    /// How far a bridge's two ends may differ in height, in slabs. A deck is
+    /// level; the stairs that get you onto it are the other rule.
+    /// </summary>
+    public const int MaxBridgeRise = 2;
+
     private static readonly int[] Dx = { 1, -1, 0, 0 };
     private static readonly int[] Dz = { 0, 0, 1, -1 };
 
-    /// <summary>Fills <c>Walk</c>, <c>Areas</c>, <c>Mainland</c>, <c>ShelfId</c> and <c>Shelves</c>.</summary>
+    /// <summary>
+    /// Fills <c>Walk</c> / <c>Areas</c> / <c>Mainland</c> (what you can cross on
+    /// foot), <c>Reach</c> / <c>Reaches</c> / <c>Heartland</c> (what you could
+    /// cross once stairs and bridges are built), and <c>ShelfId</c> /
+    /// <c>Shelves</c> (what you could build on).
+    /// </summary>
     public static void Analyse(IslandData d)
     {
         BuildWalkAreas(d);
+        BuildReachAreas(d);
         BuildShelves(d);
     }
 
@@ -142,6 +170,98 @@ public static class Traversal
         d.Areas.Clear();
         for (int i = 0; i < order.Count; i++) d.Areas.Add(order[i] with { Id = i });
         d.Mainland = d.Areas.Count > 0 ? 0 : -1;
+    }
+
+    /// <summary>
+    /// The same connectivity question asked of a player who can build. Two ground
+    /// cells join when the face between them is at most
+    /// <see cref="InfrastructureStep"/> slabs — a stair or a hoist — or when land
+    /// faces land across at most <see cref="MaxBridgeSpan"/> cells of water or
+    /// aether, which is a bridge.
+    ///
+    /// This is the connectivity the design should actually be held to. Walking is
+    /// the *free* case; a cliff is meant to be an obstacle that costs something,
+    /// not a wall. What matters is whether the cost can be paid at all.
+    /// </summary>
+    private static void BuildReachAreas(IslandData d)
+    {
+        int n = d.Size;
+        var areas = new List<WalkArea>();
+        var queue = new Queue<(int X, int Z)>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            d.Reach[x, z] = d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                ? Water
+                : -1;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!Walkable(d, sx, sz) || d.Reach[sx, sz] != -1) continue;
+
+            int id = areas.Count;
+            int area = 0;
+            short low = short.MaxValue, high = short.MinValue;
+            var min = new Vector2I(sx, sz);
+            var max = new Vector2I(sx, sz);
+
+            d.Reach[sx, sz] = id;
+            queue.Enqueue((sx, sz));
+
+            while (queue.Count > 0)
+            {
+                var (x, z) = queue.Dequeue();
+                short top = d.SurfaceLevel(x, z);
+                area++;
+                if (top < low) low = top;
+                if (top > high) high = top;
+                min = new Vector2I(Math.Min(min.X, x), Math.Min(min.Y, z));
+                max = new Vector2I(Math.Max(max.X, x), Math.Max(max.Y, z));
+
+                for (int k = 0; k < 4; k++)
+                {
+                    // Step 1 is the neighbour; steps 2 and 3 are a bridge over one
+                    // or two cells of nothing. Anything solid in between is not a
+                    // gap, so it is the neighbour case or nothing.
+                    for (int reach = 1; reach <= MaxBridgeSpan + 1; reach++)
+                    {
+                        int nx = x + Dx[k] * reach, nz = z + Dz[k] * reach;
+                        if (!Walkable(d, nx, nz)) continue;
+
+                        bool bridged = reach > 1;
+                        if (bridged)
+                        {
+                            bool clear = true;
+                            for (int step = 1; step < reach && clear; step++)
+                                clear = !Walkable(d, x + Dx[k] * step, z + Dz[k] * step);
+                            if (!clear) continue;
+                        }
+
+                        int rise = Math.Abs(d.SurfaceLevel(nx, nz) - top);
+                        if (rise > (bridged ? MaxBridgeRise : InfrastructureStep)) continue;
+                        if (d.Reach[nx, nz] != -1) continue;
+
+                        d.Reach[nx, nz] = id;
+                        queue.Enqueue((nx, nz));
+                    }
+                }
+            }
+            areas.Add(new WalkArea(id, area, low, high, min, max));
+        }
+
+        var order = new List<WalkArea>(areas);
+        order.Sort((a, b) => b.Area.CompareTo(a.Area));
+
+        var remap = new int[areas.Count];
+        for (int i = 0; i < order.Count; i++) remap[order[i].Id] = i;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.Reach[x, z] >= 0) d.Reach[x, z] = remap[d.Reach[x, z]];
+
+        d.Reaches.Clear();
+        for (int i = 0; i < order.Count; i++) d.Reaches.Add(order[i] with { Id = i });
+        d.Heartland = d.Reaches.Count > 0 ? 0 : -1;
     }
 
     private static void BuildShelves(IslandData d)

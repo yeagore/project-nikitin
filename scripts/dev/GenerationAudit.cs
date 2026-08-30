@@ -66,6 +66,14 @@ public partial class GenerationAudit : Node
         int districts = 0, scraps = 0;
         var mainlandShare = new List<int>();
         var strandedShare = new List<int>();
+        var reachShare = new List<int>();
+        long reachHeartland = 0;
+        int islandsFullyReachable = 0;
+        long mesaReachable = 0;
+        var strandedByForm = new long[5];
+        int passes = 0, passIslands = 0, passesJoined = 0;
+        long passCells = 0;
+        var passGrade = new List<int>();
 
         int buildableShelves = 0, islandsWithShelf = 0;
         var widestShelf = new List<int>();
@@ -275,7 +283,7 @@ public partial class GenerationAudit : Node
             // The traversal rule made visible: how much of the island is one piece
             // you can cross on foot, and how much is broken ground — the contour
             // benches of a mountain flank, each its own connected set.
-            long islandLand = 0, islandMainland = 0;
+            long islandLand = 0, islandMainland = 0, islandHeart = 0;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -286,18 +294,72 @@ public partial class GenerationAudit : Node
                 if (onMain) islandMainland++;
                 if (w >= 0 && !d.Areas[w].IsDistrict) walkBroken++;
 
+                if (d.Reach[x, z] == d.Heartland && d.Heartland >= 0) islandHeart++;
+                else if (d.WaterLevel[x, z] == IslandData.NoLand) strandedByForm[(int)Form(x, z)]++;
+
                 if (Form(x, z) != LandformType.Mesa) continue;
                 mesaCells++;
                 if (onMain) mesaOnMainland++;
+                if (d.Reach[x, z] == d.Heartland && d.Heartland >= 0) mesaReachable++;
             }
             walkLand += islandLand;
             walkMainland += islandMainland;
+            reachHeartland += islandHeart;
             if (islandLand > 0)
             {
                 mainlandShare.Add((int)(100 * islandMainland / islandLand));
                 strandedShare.Add((int)(100 * (islandLand - islandMainland) / islandLand));
+                reachShare.Add((int)(100 * islandHeart / islandLand));
+                // Flooded columns are not ground, so a lake's own cells never join
+                // the heartland; the land around it is what has to.
+                long dry = 0;
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                    if (Land(x, z) && d.WaterLevel[x, z] == IslandData.NoLand) dry++;
+                if (islandHeart >= dry) islandsFullyReachable++;
             }
             foreach (WalkArea a in d.Areas) { if (a.IsDistrict) districts++; else scraps++; }
+
+            // ---- passes --------------------------------------------------------
+            // Did the saddle actually do its job? A pass works when the two patches
+            // it straddles end up in ONE walk area — walkable, not merely lower.
+            passes += d.Passes.Count;
+            if (d.Passes.Count > 0) passIslands++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.Pass[x, z]) continue;
+                passCells++;
+                // Steepest step out of a pass cell: the whole point is that it is 1.
+                int worst = 0;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!Land(nx, nz) || !d.Pass[nx, nz]) continue;
+                    worst = Math.Max(worst, Math.Abs(Top(x, z) - Top(nx, nz)));
+                }
+                passGrade.Add(worst);
+            }
+            foreach (Vector2I site in d.Passes)
+            {
+                var across = new HashSet<int>();
+                for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                {
+                    int x = site.X + dx, z = site.Y + dz;
+                    if (Land(x, z) && d.Walk[x, z] >= 0) across.Add(d.Region[x, z]);
+                }
+                // Two patches meeting at the site, one walk area covering both.
+                if (across.Count < 2) continue;
+                var walks = new HashSet<int>();
+                for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                {
+                    int x = site.X + dx, z = site.Y + dz;
+                    if (Land(x, z) && d.Walk[x, z] >= 0) walks.Add(d.Walk[x, z]);
+                }
+                if (walks.Count == 1) passesJoined++;
+            }
 
             // ---- shelves -------------------------------------------------------
             int islandShelves = 0, widest = 0, offMain = 0;
@@ -384,10 +446,34 @@ public partial class GenerationAudit : Node
         Report("  stranded off the mainland", strandedShare, "%");
         GD.Print($"  broken ground               {100.0 * walkBroken / walkLand,6:0.0}%"
             + $"  in {scraps} scraps, against {districts} districts");
+        GD.Print($"\n  with stairs, hoists and bridges ("
+            + $"face <= {Traversal.InfrastructureStep} slabs, span <= {Traversal.MaxBridgeSpan} cells)");
+        GD.Print($"  land on the heartland       {100.0 * reachHeartland / walkLand,6:0.0}%");
+        Report("  heartland share per island", reachShare, "%");
+        GD.Print($"  islands whose dry land is ONE reachable whole: {islandsFullyReachable} of {Seeds}");
+        long stranded = 0;
+        foreach (long v in strandedByForm) stranded += v;
+        if (stranded > 0)
+        {
+            var bits = new List<string>();
+            for (int t = 0; t < 5; t++)
+                if (strandedByForm[t] > 0) bits.Add($"{TypeName[t]} {100 * strandedByForm[t] / stranded}%");
+            GD.Print($"  what stays out of reach: {string.Join(", ", bits)}");
+        }
+        GD.Print($"  mesa top reachable at all   "
+            + (mesaCells > 0 ? $"{100.0 * mesaReachable / mesaCells,6:0.0}% of mesa cells"
+                             : "no mesas"));
+
         GD.Print($"  mesa top reachable on foot  "
             + (mesaCells > 0 ? $"{100.0 * mesaOnMainland / mesaCells,6:0.0}% of mesa cells"
                              : "no mesas")
             + "\n");
+
+        GD.Print($"passes: {passes} cut on {passIslands} of {Seeds} islands, "
+            + $"{passesJoined} joining their two patches into one walk area, "
+            + $"{(passes > 0 ? passCells / passes : 0)} cells each");
+        Report("  steepest step inside a pass", passGrade, "slabs");
+        GD.Print("");
 
         GD.Print($"shelves (flat, >= {Traversal.MinShelfArea} cells and "
             + $">= {Traversal.MinShelfWidth} wide): {buildableShelves} buildable, "
