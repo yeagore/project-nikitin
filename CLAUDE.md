@@ -138,14 +138,24 @@ height field. Regions come from a warped Voronoi; each gets a `LandformType`
 (Plain, Hills, Mountain, Mesa, Basin) and a rung on a plateau ladder, and relief
 is generated under that landform's slope limit. This is what keeps steps
 meaningful: a 1-slab step is free, so terrain is walkable by default and cliffs
-only appear where they were decided. Mountains take no rung — they rise on an
-S-curve from the ground they actually meet. Lakes sink into a patch's interior,
-the untouched rim being what holds the water. `TerrainCharacter` is the single
-landform knob; `ReliefStyle` is internal and follows from it.
+only appear where they were decided — audited, and **every cliff in 60 islands is
+now one the rules allow**. Mountains take no rung — they rise on an S-curve from
+the ground they actually meet. Lakes sink into a patch's interior, the untouched
+rim being what holds the water.
+
+Landforms are handed out **by quota, not by per-region dice**: every landform a
+`TerrainCharacter` names is guaranteed to appear, and `LandformMix` slides the
+proportions from low ground to high. `ReliefStyle` is internal and follows from
+the character.
+
+`Traversal.Analyse` then reads the finished terrain back: which ground connects
+to which under the traversal rule (`WalkArea`), and which of it is flat and wide
+enough to build on (`Shelf`). It changes nothing — it is how we find out whether
+the island is playable.
 
 The dev lab (`scenes/dev/island_lab.tscn`) draws one scaled `MultiMesh` box per
 span, plus flat quads for water. Still to come: the chunked mesher, overhangs
-(stage 4b), rivers, feature anchors, settlement guarantees.
+(stage 4b), rivers, the remaining feature anchors, settlement guarantees.
 
 **Launching the island lab:**
 
@@ -153,15 +163,27 @@ span, plus flat quads for water. Still to come: the chunked mesher, overhangs
    `dotnet build "Project Nikitin.csproj"`).
 2. In the FileSystem dock open `scenes/dev/island_lab.tscn`, then press **F6**
    ("Run Current Scene"). It is not the project's main scene, so F5 won't run it.
-3. Tweak generation live: with the scene running, in the **Remote** tab of the
-   Scene dock select the `IslandLab` node and edit `Seed` or the `Params`
-   resource — the island rebuilds on any change. Console prints span count + time.
-4. Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
+3. Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
    arrows** tilt (far enough to look up at the keel), **wheel** zoom, **Shift**
-   faster. **N** new seed, **V** cycle `TerrainCharacter`, **C** cycle view
-   (height / landform / region), **F** re-frame, **R** rebuild the same island.
-   A status line on screen names the character, high-ground style, seed and lake
-   count.
+   faster. **N** new seed, **V** cycle `TerrainCharacter`, **H** cycle
+   `Hilliness`, **M** cycle `LandformMix`, **C** cycle view, **F** re-frame,
+   **R** rebuild the same island.
+4. Views on **C**: `height` / `landform` / `region` / **`walk`** (what connects to
+   what on foot — the mainland is green, other districts get their own hue, and
+   all broken ground is one grey) / **`shelves`** (flat ground; dim brown is flat
+   but too small or too narrow to build on). The status line names the character,
+   high-ground style, seed, lake count, the two knobs, and the walk/shelf tally.
+
+**Where the numbers live.** `resources/island_default.tres` is the `IslandParams`
+preset, and **both** the lab and the audit scene load it — so the audit measures
+the island you are tuning. Two ways to change it:
+
+- **Durably:** select the `.tres` in the FileSystem dock and edit it in the
+  Inspector. Saved to disk, picked up by the next run and by the audit.
+- **Throwaway:** with the lab *running*, use the **Remote** tab of the Scene dock,
+  select `IslandLab`, and edit `Seed` or the fields inside `Params`. The island
+  rebuilds on every change and nothing is written to disk. This is the one to use
+  while you are hunting for a look.
 
 CLI: `godot --path . scenes/dev/island_lab.tscn`
 
@@ -198,8 +220,11 @@ scripts/
     ReliefStyle.cs              Where the high ground sits (internal, per character).
     Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
     IslandGenerator.cs          Generate(seed, params) — mask, patches, relief, lakes, keel.
+    Traversal.cs                Stage 5 analysis: walk areas + buildable shelves.
   dev/IslandLab.cs              Runtime harness for scenes/dev/island_lab.tscn.
   dev/GenerationAudit.cs        Headless audit of the measured guarantees.
+resources/
+  island_default.tres          The IslandParams preset both dev scenes load.
 scenes/
   main/main.tscn               Single-slab viewer (grass_block.tscn — still a cube).
   terrain/grass_block.tscn     Prototype terrain block (pre-slab-decision).
@@ -299,12 +324,18 @@ and to answer/close the matching **Open Question**.
   `docs/island-generation.md`. Done: footprint → landform patches → relief under
   per-landform slope limits → lakes → keel, plus the lab and the audit scene.
 
-Next, in rough order: close the gaps listed in `docs/island-generation.md` §4d
-(cliff-rule leaks at hills borders, mesa clearance compounding to 22 slabs,
-basins effectively never appearing, lake shores reaching 4 slabs); then rivers
-(cut **across** patches, after the patchwork — a river that follows a border
-reads as a seam); then the chunked span-aware mesher + colliders, Stage 4b
-overhangs, feature anchors, settlement hooks.
+The §4d gaps are closed (cliff-rule leaks, mesa compounding, missing basins, lake
+shores, diagonal joins) and Stage 5 walkability + shelves are in.
+
+**The open question is reachability.** Now that it is measured: only 62% of land
+is on the mainland, a median island strands 37% of itself, and mesa tops are 14%
+reachable on foot. Whether that is scenery or a defect decides what comes next —
+see `docs/island-generation.md` §7.
+
+Then, in rough order: rivers and waterfalls (cut **across** patches, after the
+patchwork — a river that follows a border reads as a seam); archipelagos; the
+chunked span-aware mesher + colliders; Stage 4b overhangs; the remaining feature
+anchors; settlement guarantees.
 
 ---
 

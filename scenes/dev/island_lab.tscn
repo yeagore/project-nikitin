@@ -1,30 +1,8 @@
 [gd_scene load_steps=7 format=3 uid="uid://ddtqga4hk5p0d"]
 
 [ext_resource type="Script" uid="uid://cbet6gc4qq8ga" path="res://scripts/dev/IslandLab.cs" id="1_lab"]
-[ext_resource type="Script" uid="uid://rjdpfihab1os" path="res://scripts/generation/IslandParams.cs" id="2_params"]
+[ext_resource type="Resource" path="res://resources/island_default.tres" id="2_params"]
 [ext_resource type="Script" uid="uid://bps36woy4qpmp" path="res://scripts/CameraRig.cs" id="3_rig"]
-
-[sub_resource type="Resource" id="Resource_params"]
-script = ExtResource("2_params")
-Size = 96
-Radius = 34.0
-Coverage = 0.62
-Irregularity = 0.55
-Fragmentation = 0.05
-Character = 0
-Relief = 0.5
-Roughness = 0.5
-RegionScale = 16
-MinRegionArea = 55
-CliffHeight = 4
-PlateauLevels = 2
-MountainHeight = 40
-MesaHeight = 5
-BasinDepth = 5
-EdgeThickness = 3
-KeelDepth = 34
-KeelTaper = 0.85
-KeelRoughness = 0.45
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 
@@ -40,7 +18,7 @@ tonemap_mode = 2
 [node name="IslandLab" type="Node3D"]
 script = ExtResource("1_lab")
 Seed = 1337
-Params = SubResource("Resource_params")
+Params = ExtResource("2_params")
 
 [node name="Terrain" type="MultiMeshInstance3D" parent="."]
 

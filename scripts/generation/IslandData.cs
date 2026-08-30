@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ProjectNikitin.Generation;
 
 /// <summary>
@@ -37,6 +39,14 @@ public sealed class IslandData
     /// </summary>
     public short[,] WaterLevel { get; }
 
+    /// <summary>
+    /// Columns a canyon was cut through. A canyon is a deliberate exception to
+    /// the step grammar — its walls are a cliff on a border the rules would
+    /// otherwise forbid one on — so anything auditing or pathing the terrain has
+    /// to be able to tell one from a mistake. Rivers will want it too.
+    /// </summary>
+    public bool[,] Canyon { get; }
+
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
 
@@ -45,6 +55,34 @@ public sealed class IslandData
     /// Regions are the patches the island is stitched from.
     /// </summary>
     public int[,] Region { get; }
+
+    /// <summary>
+    /// Which walkable area each column belongs to — an index into
+    /// <see cref="Areas"/> — or <see cref="Traversal.Water"/> for a flooded
+    /// column and <c>-1</c> for no land. Two columns share an id exactly when you
+    /// can walk between them without infrastructure.
+    /// </summary>
+    public int[,] Walk { get; }
+
+    /// <summary>
+    /// Every walkable area, <b>largest first</b>, so <c>Areas[0]</c> is the
+    /// mainland. Most are broken ground: a mountain flank of 4-slab risers is
+    /// dozens of contour benches, each its own area. See
+    /// <see cref="WalkArea.IsDistrict"/>.
+    /// </summary>
+    public List<WalkArea> Areas { get; } = new();
+
+    /// <summary>Index of the largest walkable area, or <c>-1</c> if there is no land.</summary>
+    public int Mainland { get; internal set; } = -1;
+
+    /// <summary>Which <see cref="Shelf"/> a column belongs to, or <c>-1</c> for none.</summary>
+    public int[,] ShelfId { get; }
+
+    /// <summary>
+    /// Flat ground, one entry per contiguous same-level patch big enough to
+    /// matter. The settlement layer reads this rather than re-deriving slopes.
+    /// </summary>
+    public List<Shelf> Shelves { get; } = new();
 
     /// <summary>The style actually used, with <c>Auto</c> already resolved.</summary>
     public ReliefStyle Style { get; internal set; }
@@ -61,8 +99,16 @@ public sealed class IslandData
         Land = new bool[size, size];
         Region = new int[size, size];
         WaterLevel = new short[size, size];
+        Canyon = new bool[size, size];
+        Walk = new int[size, size];
+        ShelfId = new int[size, size];
         for (int x = 0; x < size; x++)
-        for (int z = 0; z < size; z++) WaterLevel[x, z] = NoLand;
+        for (int z = 0; z < size; z++)
+        {
+            WaterLevel[x, z] = NoLand;
+            Walk[x, z] = -1;
+            ShelfId[x, z] = -1;
+        }
     }
 
     public bool HasLand(int x, int z) => Spans[x, z] is { Length: > 0 };

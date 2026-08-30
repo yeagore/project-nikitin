@@ -35,10 +35,19 @@ public sealed class IslandGenerator
         public readonly LandformType Type;
         public readonly int Plateau;        // slabs
 
-        public RegionPlan(LandformType type, int plateau)
+        /// <summary>
+        /// The rung group this region was unioned into. Neighbours in one group
+        /// share a rung, which is exactly the statement "no cliff belongs here" —
+        /// so the slope limiter can enforce it <i>across</i> the border instead of
+        /// hoping a blurred amplitude field closes the gap on its own.
+        /// </summary>
+        public readonly int RungGroup;
+
+        public RegionPlan(LandformType type, int plateau, int rungGroup)
         {
             Type = type;
             Plateau = plateau;
+            RungGroup = rungGroup;
         }
     }
 
@@ -59,6 +68,10 @@ public sealed class IslandGenerator
         // land that remains.
         int[,] draft = BuildRegions(seed, p, land, out int draftCount);
         BiteRegions(seed, p, land, draft, draftCount);
+        // Bites and the mask itself can leave two lobes meeting at a corner, which
+        // is not a join you can walk. Filling the corner is done before the
+        // component filter, so what it measures is what you can actually reach.
+        CloseDiagonalJoins(land);
 
         // Unless the island is deliberately an archipelago, reduce it to a single
         // 4-connected landmass. Two comparable pieces that survive the size filter
@@ -81,21 +94,41 @@ public sealed class IslandGenerator
 
         var borders = BuildBorders(land, region, regionCount, out HashSet<int>[] neighbours);
         RepairAdjacency(region, regionCount, neighbours, types);
+        RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
+                                RegionCells(land, region, regionCount));
         RegionPlan[] plan = AssignPlateaus(seed, p, land, region, regionCount, envelope,
                                            neighbours, types);
         float[,] inward = InwardDistance(land, region, regionCount);
 
         short[,] surface = BuildSurface(seed, p, land, region, plan, inward);
         LimitSlope(surface, region, land, plan);
-        if (WantsCanyon(seed, p)) CarveCanyon(seed, p, land, region, plan, surface, borders);
+        bool[,]? canyon = WantsCanyon(seed, p)
+            ? CarveCanyon(seed, p, land, region, plan, surface, borders)
+            : null;
         ResolveAmbiguousSteps(surface, region, land, plan);
 
         // Lakes sink into the surface, so they run before the keel measures column
         // thickness — and after every step-grammar pass, which they must not undo.
-        short[,] water = PlaceLakes(seed, p, land, region, regionCount, plan, surface);
-        // Lakes cut the surface after the grammar pass, so run it once more over
-        // what they left — banks and islet edges can land on the ambiguous two.
-        ResolveAmbiguousSteps(surface, region, land, plan, water);
+        short[,] water = PlaceLakes(seed, p, land, region, regionCount, plan, surface, canyon);
+        // Lakes cut the surface after the grammar passes, so both run once more
+        // over what they left. Levelling a shore leaves the bank behind it
+        // standing a few slabs proud, and an islet edge can land on the
+        // ambiguous two.
+        var exempt = new bool[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            exempt[x, z] = water[x, z] != IslandData.NoLand || (canyon != null && canyon[x, z]);
+
+        // Settled together, not once each. Resolving a two-slab step lowers a
+        // cell, which can leave a *three*-slab one behind it on a border the rules
+        // forbid a cliff on — and the limiter closing that can in turn expose a
+        // new two. Both passes only ever lower, so alternating them terminates.
+        for (int settle = 0; settle < 6; settle++)
+        {
+            bool moved = LimitSlope(surface, region, land, plan, exempt);
+            moved |= ResolveAmbiguousSteps(surface, region, land, plan, water);
+            if (!moved) break;
+        }
         short[,] keel = BuildKeel(seed, p, land, surface, toCoast);
 
         for (int x = 0; x < n; x++)
@@ -112,7 +145,12 @@ public sealed class IslandGenerator
             data.Material[x, z] = 0;
             data.Landform[x, z] = (byte)plan[region[x, z]].Type;
             data.WaterLevel[x, z] = water[x, z];
+            data.Canyon[x, z] = canyon != null && canyon[x, z];
         }
+
+        // Stage 5: read back what the terrain turned out to be. Pure analysis —
+        // it changes nothing, so it stays outside the pipeline proper.
+        Traversal.Analyse(data);
         return data;
     }
 
@@ -147,7 +185,8 @@ public sealed class IslandGenerator
     /// never open one to the outside.
     /// </summary>
     private static short[,] PlaceLakes(int seed, IslandParams p, bool[,] land, int[,] region,
-                                       int count, RegionPlan[] plan, short[,] surface)
+                                       int count, RegionPlan[] plan, short[,] surface,
+                                       bool[,]? canyon)
     {
         int n = p.Size;
         var water = new short[n, n];
@@ -169,9 +208,20 @@ public sealed class IslandGenerator
             else shore[r] = Math.Min(shore[r], surface[x, z]);
         }
 
+        // A canyon is a drain. It cuts seven slabs through whatever it crosses,
+        // including a patch's rim — and the rim is what sets the water level, so
+        // a patch with a trench through it would fill to the bottom of the trench
+        // and swallow the surrounding country. A cut patch holds no water.
+        var drained = new bool[count];
+        if (canyon != null)
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (canyon[x, z] && land[x, z]) drained[region[x, z]] = true;
+
         var wants = new bool[count];
         for (int r = 0; r < count; r++)
         {
+            if (drained[r]) continue;
             LandformType t = plan[r].Type;
             if (t != LandformType.Plain && t != LandformType.Mesa && t != LandformType.Basin) continue;
             if (interior[r] < 25 || shore[r] == int.MaxValue) continue;
@@ -271,27 +321,6 @@ public sealed class IslandGenerator
             }
         }
 
-        // Every dry cell touching the water is levelled to exactly one slab above
-        // it. Left at its natural height a shore stands one *or two* above, and a
-        // two-slab shore is the one step height the grammar exists to avoid — a
-        // beach you cannot walk onto.
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (inset[x, z] < 0 || pool[x, z]) continue;
-            int r = region[x, z];
-            if (!wants[r]) continue;
-
-            bool touches = false;
-            for (int k = 0; k < 4 && !touches; k++)
-            {
-                int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
-                touches = pool[nx, nz] && region[nx, nz] == r;
-            }
-            if (touches) surface[x, z] = SlabClamp(level[r] + 1);
-        }
-
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
@@ -305,7 +334,39 @@ public sealed class IslandGenerator
 
         CutLakeChannels(land, region, inset, wants, parent, level, bed, surface, water, Find);
         RemoveDiagonalWater(surface, water, region, level);
+        LevelShores(land, surface, water);
         return water;
+    }
+
+    /// <summary>
+    /// Brings every dry cell that touches water down to exactly one slab above
+    /// it. Left at its natural height a shore stands one <i>or two</i> above, and
+    /// a two-slab shore is the one step height the grammar exists to avoid — a
+    /// beach you cannot walk onto.
+    ///
+    /// It runs <b>last</b>, over the water that actually ended up there, and it
+    /// does not care which patch a cell belongs to. Both matter: levelling before
+    /// the channels were cut left every channel rim unhandled, and the same-patch
+    /// test skipped the far bank of a channel by construction. That is where the
+    /// four-slab shores were coming from.
+    /// </summary>
+    private static void LevelShores(bool[,] land, short[,] surface, short[,] water)
+    {
+        int n = land.GetLength(0);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z] || water[x, z] != IslandData.NoLand) continue;
+
+            int cap = int.MaxValue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (water[nx, nz] != IslandData.NoLand) cap = Math.Min(cap, water[nx, nz] + 1);
+            }
+            if (cap != int.MaxValue && surface[x, z] > cap) surface[x, z] = SlabClamp(cap);
+        }
     }
 
     /// <summary>
@@ -672,6 +733,43 @@ public sealed class IslandGenerator
     /// comparable size.
     /// </summary>
     /// <summary>Reduces the mask to its single largest 4-connected component.</summary>
+    /// <summary>
+    /// Fills the corner where two land cells touch only diagonally. A corner is
+    /// not a join you can walk, so left alone it is either a hairline break in a
+    /// landmass the component filter cannot see (both sides are already one
+    /// component) or a false connection in the audit. The filled cell is the one
+    /// with more land around it, so the coast stays plausible.
+    /// </summary>
+    private static void CloseDiagonalJoins(bool[,] mask)
+    {
+        int n = mask.GetLength(0);
+        for (int x = 1; x + 2 < n; x++)
+        for (int z = 1; z + 2 < n; z++)
+        {
+            bool a = mask[x, z], b = mask[x + 1, z + 1];
+            bool c = mask[x + 1, z], e = mask[x, z + 1];
+            if (a && b && !c && !e) Fill(x + 1, z, x, z + 1);
+            else if (c && e && !a && !b) Fill(x, z, x + 1, z + 1);
+        }
+
+        void Fill(int ax, int az, int bx, int bz)
+            => mask[Neighbours(ax, az) >= Neighbours(bx, bz) ? ax : bx,
+                    Neighbours(ax, az) >= Neighbours(bx, bz) ? az : bz] = true;
+
+        int Neighbours(int x, int z)
+        {
+            int found = 0;
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                int nx = x + dx, nz = z + dz;
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || (dx == 0 && dz == 0)) continue;
+                if (mask[nx, nz]) found++;
+            }
+            return found;
+        }
+    }
+
     private static void KeepLargestComponent(bool[,] mask) => DropSmallComponents(mask, 1f);
 
     private static void DropSmallComponents(bool[,] mask, float keepFraction)
@@ -1009,6 +1107,25 @@ public sealed class IslandGenerator
         return min;
     }
 
+    /// <summary>Mean of a field over each region's cells.</summary>
+    private static float[] RegionMean(bool[,] land, int[,] region, int count, float[,] field)
+    {
+        var sum = new float[count];
+        var seen = new int[count];
+        int n = land.GetLength(0);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z]) continue;
+            int r = region[x, z];
+            if (r < 0 || r >= count) continue;
+            sum[r] += field[x, z];
+            seen[r]++;
+        }
+        for (int r = 0; r < count; r++) if (seen[r] > 0) sum[r] /= seen[r];
+        return sum;
+    }
+
     private static int[] RegionCells(bool[,] land, int[,] region, int count)
     {
         int n = land.GetLength(0);
@@ -1019,65 +1136,132 @@ public sealed class IslandGenerator
         return cells;
     }
 
+    /// <summary>
+    /// Hands each region a <see cref="LandformType"/>.
+    ///
+    /// <b>By quota, not by dice.</b> Independent per-region draws over ten-odd
+    /// regions have enormous variance: a <c>Highland</c> would come out with no
+    /// mountains on one seed and with mountains but no hills on the next, which
+    /// makes the character an unreliable promise. Instead the weights are turned
+    /// into <i>counts</i>, every landform the character names is guaranteed at
+    /// least one region, and the counts are then handed out by rank on the relief
+    /// envelope — mountains to the high ground, basins to the low and inland,
+    /// hills to what is left in the middle.
+    ///
+    /// Rank alone would band the island by elevation like a contour map, so the
+    /// sort key carries a per-region jitter. The exception is a cordillera, where
+    /// the band being contiguous is the whole point.
+    /// </summary>
     private static LandformType[] AssignTypes(int seed, IslandParams p, bool[,] land, int[,] region,
                                               int count, float[,] envelope, float[,] toCoast)
     {
         float[] env = RegionEnvelope(land, region, count, envelope);
-        float[] nearestCoast = RegionMin(land, region, count, toCoast);
-        float[] baseWeights = TypeWeights(ResolveCharacter(seed, p.Character));
-        var type = new LandformType[count];
+        float[] inland = RegionMean(land, region, count, toCoast);
+        TerrainCharacter character = ResolveCharacter(seed, p.Character);
+        float[] weights = MixedWeights(character, p.LandformMix);
 
-        for (int r = 0; r < count; r++)
+        int[] quota = Apportion(weights, count);
+        var type = new LandformType[count];
+        for (int r = 0; r < count; r++) type[r] = LandformType.Plain;
+
+        var free = new List<int>(count);
+        for (int r = 0; r < count; r++) free.Add(r);
+
+        // A range rather than a scatter of solitary peaks: taking the top band of
+        // the envelope *without* jitter makes the chosen regions adjacent, and the
+        // massif merge then welds them into one. Under a Ridge envelope that band
+        // is a spine, so the chain crosses the isle.
+        bool cordillera = quota[(int)LandformType.Mountain] > 1
+                          && Hash01(seed, 0x2B7F) < (ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f);
+
+        float Jitter(int r, uint salt, float amount)
+            => (Hash01(seed, salt ^ (uint)r * 2654435761u) - 0.5f) * amount;
+
+        void Take(LandformType t, Func<int, float> score)
         {
-            // Every landform is keyed to the envelope, not just mountains. This is
-            // what gives ReliefStyle visible work to do: the style decides where
-            // the high ground is, and the high ground is where mountains go. A
-            // `Ridge` envelope therefore lays a chain of them along its spine, and
-            // `Tilted` banks mountains against one edge with plains opposite.
-            float e = env[r];
-            var w = new float[5];
-            w[0] = baseWeights[0] * (1.70f - 1.30f * e);        // Plain: low ground
-            w[1] = baseWeights[1] * (0.50f + 1.00f * e);        // Hills: middling
-            w[2] = baseWeights[2] * (0.05f + 3.20f * e * e);    // Mountain: high only
-            w[3] = baseWeights[3] * (0.40f + 1.40f * e);        // Mesa: middling-high
-            // Basins favour low ground, and the coastal taper makes the envelope
-            // low at the coast — so they need a nudge inland, or most of them end
-            // up as a hollow with one side open to the sky. A soft bias, not a
-            // gate: lakes no longer depend on where a basin sits.
-            w[4] = baseWeights[4] * (1.60f - 1.20f * e)
-                 * FieldOps.SmoothStep(1f, 6f, nearestCoast[r]);
-            type[r] = PickWeighted(w, Hash01(seed, 0xA1B2u ^ (uint)r * 2654435761u));
+            int want = quota[(int)t];
+            if (want <= 0) return;
+            free.Sort((a, b) => score(b).CompareTo(score(a)));
+            int take = Math.Min(want, free.Count);
+            for (int i = 0; i < take; i++) type[free[i]] = t;
+            free.RemoveRange(0, take);
         }
 
-        RaiseCordillera(seed, p, env, type);
+        // Highest ground first, lowest last; hills then fall out in the middle.
+        Take(LandformType.Mountain, r => env[r] + (cordillera ? 0f : Jitter(r, 0xA1B2u, 0.30f)));
+        Take(LandformType.Mesa, r => env[r] + Jitter(r, 0xC5D6u, 0.35f));
+        // Basins want low ground that is also sheltered. The measure is the
+        // region's *mean* distance from the void, not its minimum: almost every
+        // patch touches the coast somewhere, so gating on the minimum is what
+        // made basins all but extinct — the weight was multiplied by zero.
+        Take(LandformType.Basin, r => -env[r] + 0.35f * FieldOps.SmoothStep(2f, 9f, inland[r])
+                                      + Jitter(r, 0xE7F8u, 0.30f));
+        Take(LandformType.Hills, r => env[r] + Jitter(r, 0x9AB4u, 0.40f));
+
         return type;
     }
 
     /// <summary>
-    /// Some islands get a deliberate range rather than whatever mountains the
-    /// weights happened to roll: the highest band of regions by envelope is
-    /// forced to <see cref="LandformType.Mountain"/>, and the massif merge then
-    /// welds them into one. Under a <c>Ridge</c> envelope that band is a spine,
-    /// so the result is a chain across the isle; under a dome it is a central
-    /// massif. Left to chance, adjacent regions rarely both roll mountain and
-    /// every peak comes out solitary.
+    /// Turns landform shares into whole region counts (largest remainder), then
+    /// guarantees that anything the character names actually appears — the point
+    /// of the quota. The seats come out of the largest holding, which is plains.
     /// </summary>
-    private static void RaiseCordillera(int seed, IslandParams p, float[] env, LandformType[] type)
+    private static int[] Apportion(float[] weights, int count)
     {
-        // Only a Highland has mountains at all, so only it can have a range.
-        if (ResolveCharacter(seed, p.Character) != TerrainCharacter.Highland) return;
+        var quota = new int[weights.Length];
+        if (count <= 0) return quota;
 
-        float chance = ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f;
-        if (Hash01(seed, 0x2B7F) >= chance) return;
+        float total = 0f;
+        foreach (float w in weights) total += w;
+        if (total <= 0f) { quota[(int)LandformType.Plain] = count; return quota; }
 
-        int count = env.Length;
-        var order = new int[count];
-        for (int i = 0; i < count; i++) order[i] = i;
-        Array.Sort(order, (a, b) => env[b].CompareTo(env[a]));
+        var frac = new float[weights.Length];
+        int given = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            float raw = weights[i] / total * count;
+            quota[i] = (int)raw;
+            frac[i] = raw - quota[i];
+            given += quota[i];
+        }
 
-        float share = 0.12f + 0.13f * Hash01(seed, 0x6D4E);
-        int take = Math.Clamp((int)MathF.Round(count * share), 1, count);
-        for (int i = 0; i < take; i++) type[order[i]] = LandformType.Mountain;
+        for (; given < count; given++)
+        {
+            int best = 0;
+            for (int i = 1; i < weights.Length; i++) if (frac[i] > frac[best]) best = i;
+            quota[best]++;
+            frac[best] = -1f;
+        }
+
+        // The guarantee. A character that names a landform gets one, as long as
+        // there are enough regions to go round at all.
+        for (int i = 0; i < weights.Length; i++)
+        {
+            if (weights[i] <= 0f || quota[i] > 0) continue;
+            int donor = 0;
+            for (int j = 1; j < weights.Length; j++) if (quota[j] > quota[donor]) donor = j;
+            if (quota[donor] <= 1) break;                // nothing left to spare
+            quota[donor]--;
+            quota[i]++;
+        }
+        return quota;
+    }
+
+    /// <summary>
+    /// The character's own balance, tilted by <c>LandformMix</c>. 0 pushes the
+    /// island toward its low landforms (plains, and basins where it has them),
+    /// 1 toward its high ones; 0.5 leaves the character as authored.
+    /// </summary>
+    private static float[] MixedWeights(TerrainCharacter c, float mix)
+    {
+        float[] w = (float[])TypeWeights(c).Clone();
+        float t = (Math.Clamp(mix, 0f, 1f) - 0.5f) * 2f;        // -1 .. 1
+
+        // How "high" each landform reads, which is what the mix slides along.
+        // Basins sit with the plains: a sunken floor is low ground.
+        ReadOnlySpan<float> rank = stackalloc float[] { -0.6f, 0.2f, 1f, 0.8f, -0.8f };
+        for (int i = 0; i < w.Length; i++) w[i] *= MathF.Exp(t * 1.9f * rank[i]);
+        return w;
     }
 
     /// <summary>
@@ -1086,12 +1270,12 @@ public sealed class IslandGenerator
     /// and any other neighbour is flattened to a plain, which is what puts the
     /// apron of open ground around a mesa that makes it read as one.
     /// </summary>
+    private static bool IsTable(LandformType t)
+        => t == LandformType.Mesa || t == LandformType.Basin;
+
     private static void RepairAdjacency(int[,] region, int count, HashSet<int>[] neighbours,
                                         LandformType[] type)
     {
-        static bool IsTable(LandformType t)
-            => t == LandformType.Mesa || t == LandformType.Basin;
-
         for (int r = 0; r < count; r++)
         {
             if (!IsTable(type[r])) continue;
@@ -1108,6 +1292,50 @@ public sealed class IslandGenerator
             foreach (int nb in neighbours[r])
                 if (type[nb] != LandformType.Plain && type[nb] != type[r])
                     type[nb] = LandformType.Plain;
+        }
+    }
+
+    /// <summary>
+    /// The adjacency repair flattens whatever sits beside a mesa or basin, and
+    /// that can take out the last region of a landform the character promised —
+    /// a <c>Downs</c> island whose single hills patch happened to touch a basin
+    /// came out as plains. The quota exists so a character means something, so
+    /// put one back: the largest plain that touches no mesa or basin, which is
+    /// exactly a region the repair would not object to.
+    /// </summary>
+    private static void RestoreMissingLandforms(IslandParams p, int seed, int[,] region, int count,
+                                                HashSet<int>[] neighbours, LandformType[] type,
+                                                int[] cells)
+    {
+        float[] weights = TypeWeights(ResolveCharacter(seed, p.Character));
+
+        for (int t = 0; t < weights.Length; t++)
+        {
+            var want = (LandformType)t;
+            if (weights[t] <= 0f || want == LandformType.Plain) continue;
+            if (Array.IndexOf(type, want) >= 0) continue;
+
+            int best = -1;
+            for (int r = 0; r < count; r++)
+            {
+                if (type[r] != LandformType.Plain || cells[r] <= 0) continue;
+                if (best >= 0 && cells[r] <= cells[best]) continue;
+
+                // The restored region has to satisfy the adjacency rules on its
+                // own, because nothing repairs them afterwards: a mesa or basin
+                // may only touch plains, and nothing else may touch a mesa or
+                // basin. Restoring blind is how a basin ends up beside a massif.
+                bool clear = true;
+                foreach (int nb in neighbours[r])
+                {
+                    bool ok = IsTable(want)
+                        ? type[nb] == LandformType.Plain
+                        : !IsTable(type[nb]);
+                    if (!ok) { clear = false; break; }
+                }
+                if (clear) best = r;
+            }
+            if (best >= 0) type[best] = want;
         }
     }
 
@@ -1230,17 +1458,42 @@ public sealed class IslandGenerator
         var placed = new bool[count];
         foreach (int r in mesas)
         {
-            int highest = int.MinValue;
+            // The ground a mesa stands on and the mesas beside it are measured
+            // separately. Lumping them together is what let a chain compound:
+            // each mesa cleared the last one by a full MesaHeight, and five slabs
+            // at a time a stepped tableland turns into a tower.
+            int groundTop = int.MinValue;       // highest neighbour that is not a mesa
+            int mesaTop = int.MinValue;         // highest mesa already raised
             foreach (int nb in neighbours[r])
             {
                 if (type[nb] == LandformType.Mountain) continue;
-                int top = type[nb] == LandformType.Mesa && !placed[nb]
-                    ? int.MinValue                                  // not yet raised; skip
-                    : plateau[nb] + (int)MathF.Round(Amplitude(type[nb]) * scale);
-                highest = Math.Max(highest, top);
+                if (type[nb] == LandformType.Mesa)
+                {
+                    if (placed[nb]) mesaTop = Math.Max(mesaTop, plateau[nb]);
+                    continue;
+                }
+                // Against the neighbour's *surface*, relief included — measuring
+                // against its rung alone would let a hill rise to meet the top.
+                groundTop = Math.Max(groundTop,
+                    plateau[nb] + (int)MathF.Round(Amplitude(type[nb], p) * scale));
             }
-            if (highest == int.MinValue) highest = plateau[r];
-            plateau[r] = highest + Math.Max(3, p.MesaHeight);
+
+            int step = Math.Max(3, p.MesaHeight);
+            int level;
+            if (groundTop != int.MinValue)
+            {
+                level = groundTop + step;
+                // Still clear a neighbouring mesa, but by half a step — the
+                // tableland is meant to read as terraced, not as a staircase of
+                // full escarpments — and never more than two steps above the
+                // plain the whole group stands on.
+                if (mesaTop >= level) level = mesaTop + Math.Max(2, step / 2);
+                level = Math.Min(level, groundTop + 2 * step);
+            }
+            else level = (mesaTop != int.MinValue ? mesaTop + Math.Max(2, step / 2)
+                                                  : plateau[r] + step);
+
+            plateau[r] = level;
             placed[r] = true;
         }
 
@@ -1253,22 +1506,38 @@ public sealed class IslandGenerator
         var sunk = new bool[count];
         foreach (int r in basins)
         {
-            int lowest = int.MaxValue;
+            int groundFloor = int.MaxValue;     // lowest neighbour that is not a basin
+            int basinFloor = int.MaxValue;      // lowest basin already sunk
             foreach (int nb in neighbours[r])
             {
                 if (type[nb] == LandformType.Mountain) continue;
-                if (type[nb] == LandformType.Basin && !sunk[nb]) continue;   // not yet sunk
-                lowest = Math.Min(lowest, plateau[nb]);
+                if (type[nb] == LandformType.Basin)
+                {
+                    if (sunk[nb]) basinFloor = Math.Min(basinFloor, plateau[nb]);
+                    continue;
+                }
+                groundFloor = Math.Min(groundFloor, plateau[nb]);
             }
-            if (lowest == int.MaxValue) lowest = plateau[r];
-            plateau[r] = lowest - Math.Max(3, p.BasinDepth);
+
+            int drop = Math.Max(3, p.BasinDepth);
+            int level;
+            if (groundFloor != int.MaxValue)
+            {
+                level = groundFloor - drop;
+                if (basinFloor <= level) level = basinFloor - Math.Max(2, drop / 2);
+                level = Math.Max(level, groundFloor - 2 * drop);
+            }
+            else level = (basinFloor != int.MaxValue ? basinFloor - Math.Max(2, drop / 2)
+                                                     : plateau[r] - drop);
+
+            plateau[r] = level;
             sunk[r] = true;
         }
 
         // Mountains take no rung: BuildSurface hangs them off the actual height of
         // the ground at their border. Giving them one put a step at the foot.
         var plan = new RegionPlan[count];
-        for (int r = 0; r < count; r++) plan[r] = new RegionPlan(type[r], plateau[r]);
+        for (int r = 0; r < count; r++) plan[r] = new RegionPlan(type[r], plateau[r], Find(r));
         return plan;
     }
 
@@ -1322,10 +1591,17 @@ public sealed class IslandGenerator
     }
 
     /// <summary>Relief amplitude in slabs for the region-fill landforms.</summary>
-    private static float Amplitude(LandformType type) => type switch
+    /// <summary>
+    /// Relief amplitude in slabs, before <see cref="ReliefScale"/>. Hills are the
+    /// only landform with a knob of their own: at <c>Hilliness</c> 0 they are
+    /// swells barely distinguishable from a plain, at 1 they are mounds. The
+    /// slope limit stays 1 either way — a mound is taller and steeper-sided, not
+    /// less walkable.
+    /// </summary>
+    private static float Amplitude(LandformType type, IslandParams p) => type switch
     {
         LandformType.Plain => 1.4f,
-        LandformType.Hills => 9f,
+        LandformType.Hills => 3f + 12f * Math.Clamp(p.Hilliness, 0f, 1f),
         _ => 1.4f,          // mesa and basin floors are flat; mountains bypass this
     };
 
@@ -1373,7 +1649,13 @@ public sealed class IslandGenerator
                                          RegionPlan[] plan, float[,] inward)
     {
         int n = p.Size;
-        float gain = 0.35f + 0.30f * p.Roughness;
+        // Hilliness is not only height: a rolling down and a field of mounds also
+        // differ in how much of the relief is high-frequency. Gain sets the fBm
+        // octave falloff, and the blend below leans on the detail octaves as
+        // hilliness rises, so mounds come out as distinct humps rather than one
+        // broad swell scaled up.
+        float hilly = Math.Clamp(p.Hilliness, 0f, 1f);
+        float gain = 0.35f + 0.30f * hilly;
         var detail = new Noise(seed + 101, frequency: 0.05f, octaves: 4, gain: gain);
         var coarse = new Noise(seed + 202, frequency: 0.018f, octaves: 2);
         var summit = new Noise(seed + 303, frequency: 0.09f, octaves: 3, gain: gain);
@@ -1390,7 +1672,7 @@ public sealed class IslandGenerator
         var amp = new float[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            if (land[x, z]) amp[x, z] = Amplitude(plan[region[x, z]].Type) * scale;
+            if (land[x, z]) amp[x, z] = Amplitude(plan[region[x, z]].Type, p) * scale;
         FieldOps.Blur(amp, land, passes: 6);
 
         // Pass 1 — everything that sits on a rung.
@@ -1401,7 +1683,8 @@ public sealed class IslandGenerator
             RegionPlan rp = plan[region[x, z]];
             if (rp.Type == LandformType.Mountain) { isMountain[x, z] = true; continue; }
 
-            float t = 0.6f * detail.At(x, z) + 0.4f * coarse.At(x, z);
+            float dw = 0.5f + 0.3f * hilly;
+            float t = dw * detail.At(x, z) + (1f - dw) * coarse.At(x, z);
             h[x, z] = SlabClamp(rp.Plateau + t * amp[x, z]);
         }
 
@@ -1510,9 +1793,47 @@ public sealed class IslandGenerator
     /// it only lowers cells, so it converges). Region borders are excluded, which
     /// is what leaves the plateau gaps standing as cliffs.
     /// </summary>
-    private static void LimitSlope(short[,] h, int[,] region, bool[,] land, RegionPlan[] plan)
+    /// <summary>
+    /// Whether the step between two regions is bound by the slope limit — that is,
+    /// whether a cliff is forbidden here.
+    ///
+    /// Sharing a rung group <i>is</i> the statement "no cliff belongs on this
+    /// border", so that is the test. Everything else is a cliff somebody asked
+    /// for: two rung groups are the plateau ladder, a mesa or basin border is its
+    /// own escarpment, and a mountain flank is the mountain.
+    /// </summary>
+    private static bool BorderIsBound(RegionPlan a, RegionPlan b)
+    {
+        if (a.Type == LandformType.Mountain || b.Type == LandformType.Mountain) return false;
+        if (a.Type is LandformType.Mesa or LandformType.Basin) return false;
+        if (b.Type is LandformType.Mesa or LandformType.Basin) return false;
+        return a.RungGroup == b.RungGroup;
+    }
+
+    /// <summary>
+    /// Lipschitz projection from above: repeatedly lower any cell standing more
+    /// than its region's slope limit above a neighbour. It only ever lowers, so
+    /// it converges.
+    ///
+    /// It reaches <b>across</b> a region border wherever <see cref="BorderIsBound"/>
+    /// allows. Sharing a rung equalises a border's <i>base</i>, but a hills patch
+    /// carries more relief than the plain beside it, and blurring the amplitude
+    /// field narrows that gap without closing it — which is where the handful of
+    /// hills cliffs the rules forbid were coming from. Enforcing the limit on the
+    /// border itself closes it by construction rather than by tuning.
+    ///
+    /// Cells flagged in <paramref name="exempt"/> are neither lowered nor used as
+    /// a bound. Two features need that: a lake bed sits three or four slabs under
+    /// its own shore, and a canyon floor seven under its lip — take either as a
+    /// bound and the limiter drags the whole rung group down into it a slab per
+    /// cell, which is how plains ended up below the basins they border.
+    /// </summary>
+    /// <returns>Whether anything was lowered.</returns>
+    private static bool LimitSlope(short[,] h, int[,] region, bool[,] land, RegionPlan[] plan,
+                                   bool[,]? exempt = null)
     {
         int n = h.GetLength(0);
+        bool any = false;
         for (int pass = 0; pass < 48; pass++)
         {
             bool changed = false;
@@ -1524,6 +1845,7 @@ public sealed class IslandGenerator
                 int x = forward ? a : n - 1 - a;
                 int z = forward ? b : n - 1 - b;
                 if (!land[x, z]) continue;
+                if (exempt != null && exempt[x, z]) continue;
 
                 int r = region[x, z];
                 if (plan[r].Type == LandformType.Mountain) continue;
@@ -1535,14 +1857,20 @@ public sealed class IslandGenerator
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
                     if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
-                    if (!land[nx, nz] || region[nx, nz] != r) continue;
+                    if (!land[nx, nz]) continue;
+                    if (exempt != null && exempt[nx, nz]) continue;
+
+                    int rn = region[nx, nz];
+                    if (rn != r && !BorderIsBound(plan[r], plan[rn])) continue;
                     cap = Math.Min(cap, h[nx, nz] + limit);
                 }
 
                 if (cap != int.MaxValue && cap < h[x, z]) { h[x, z] = (short)cap; changed = true; }
             }
             if (!changed) break;
+            any = true;
         }
+        return any;
     }
 
     /// <summary>
@@ -1550,10 +1878,12 @@ public sealed class IslandGenerator
     /// can be: too tall to walk, too short to read as a cliff, so it is neither
     /// free movement nor a deliberate obstacle.
     /// </summary>
-    private static void ResolveAmbiguousSteps(short[,] h, int[,] region, bool[,] land,
+    /// <returns>Whether anything was lowered.</returns>
+    private static bool ResolveAmbiguousSteps(short[,] h, int[,] region, bool[,] land,
                                               RegionPlan[] plan, short[,]? water = null)
     {
         int n = h.GetLength(0);
+        bool any = false;
         for (int pass = 0; pass < 16; pass++)
         {
             bool changed = false;
@@ -1590,7 +1920,9 @@ public sealed class IslandGenerator
                 }
             }
             if (!changed) break;
+            any = true;
         }
+        return any;
     }
 
     private static bool WantsCanyon(int seed, IslandParams p) => Hash01(seed, 0x4C17) < 0.20f;
@@ -1601,9 +1933,10 @@ public sealed class IslandGenerator
     /// boundary made legible, so cutting one straight across a region would
     /// undo the very distinction the patchwork exists to draw.
     /// </summary>
-    private static void CarveCanyon(int seed, IslandParams p, bool[,] land, int[,] region,
-                                    RegionPlan[] plan, short[,] h,
-                                    Dictionary<long, List<(int X, int Z)>> borders)
+    /// <summary>Returns the cells the trench actually took, or <c>null</c> if none was cut.</summary>
+    private static bool[,]? CarveCanyon(int seed, IslandParams p, bool[,] land, int[,] region,
+                                        RegionPlan[] plan, short[,] h,
+                                        Dictionary<long, List<(int X, int Z)>> borders)
     {
         List<(int X, int Z)>? chosen = null;
         int bestScore = 0;
@@ -1614,13 +1947,19 @@ public sealed class IslandGenerator
             int a = (int)(key >> 32), b = (int)(key & 0xFFFFFFFF);
 
             // Any pair of patches may be split by a canyon — unlike a cliff, which
-            // is restricted to plain-plain and mesa-mesa.
+            // is restricted to plain-plain and mesa-mesa. The exception is a mesa
+            // or basin rim: that border is already an escarpment, so a trench adds
+            // nothing there and only compounds the drop — a canyon cut along a
+            // basin's edge leaves the plain outside it standing *below* the basin
+            // floor, which reads as the escarpment pointing the wrong way.
+            if (IsTable(plan[a].Type) || IsTable(plan[b].Type)) continue;
+
             int score = cells.Count;
             if (plan[a].Plateau == plan[b].Plateau) score *= 4;   // otherwise invisible
             if (plan[a].Type == plan[b].Type) score *= 2;
             if (score > bestScore) { bestScore = score; chosen = cells; }
         }
-        if (chosen == null) return;
+        if (chosen == null) return null;
 
         int n = p.Size;
         // The seed set already covers both sides of the border, so it is two cells
@@ -1649,10 +1988,34 @@ public sealed class IslandGenerator
             }
         }
 
+        var cut = new bool[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            if (land[x, z] && dist[x, z] >= 0)
-                h[x, z] = SlabClamp(h[x, z] - depth);
+        {
+            if (!land[x, z] || dist[x, z] < 0) continue;
+            // Stop at an escarpment. A trench cut alongside a basin rim drops the
+            // plain *below* the basin floor, and the landform's whole read — a
+            // hollow sunk into the ground around it — inverts. A canyon that ends
+            // where it meets a cliff is what a canyon does anyway.
+            if (TouchesTable(region, plan, land, x, z, n)) continue;
+            h[x, z] = SlabClamp(h[x, z] - depth);
+            cut[x, z] = true;
+        }
+        return cut;
+    }
+
+    /// <summary>Whether a cell is in, or borders, a mesa or basin.</summary>
+    private static bool TouchesTable(int[,] region, RegionPlan[] plan, bool[,] land,
+                                     int x, int z, int n)
+    {
+        if (IsTable(plan[region[x, z]].Type)) return true;
+        for (int k = 0; k < 4; k++)
+        {
+            int nx = x + Dx[k], nz = z + Dz[k];
+            if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+            if (IsTable(plan[region[nx, nz]].Type)) return true;
+        }
+        return false;
     }
 
     // ---- Stage 4: keel / underside → one span per column -----------------
@@ -1689,7 +2052,10 @@ public sealed class IslandGenerator
 
         float scale = Math.Clamp(maxCoast / MathF.Max(3f, AutoRadius(p) * 0.75f), 0.25f, 1f);
         float edge = MathF.Max(1f, p.EdgeThickness);
-        float taper = Math.Clamp(p.KeelTaper, 0.3f, 3f);
+        // The taper is a constant, not a knob: it shapes a surface the player
+        // essentially never stands on, and every value in its old range read as
+        // the same spinning top from above.
+        const float taper = 0.85f;
 
         var keel = new short[n, n];
         for (int x = 0; x < n; x++)

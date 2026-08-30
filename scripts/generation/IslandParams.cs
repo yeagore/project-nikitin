@@ -4,10 +4,15 @@ namespace ProjectNikitin.Generation;
 
 /// <summary>
 /// Tunable inputs to <see cref="IslandGenerator"/>. A <c>[GlobalClass]</c>
-/// resource so it can be authored in the inspector (e.g. from the island lab).
-/// Heights are in <b>slabs</b> (see <see cref="Terrain.SlabHeight"/>). Only the
-/// fields used by pipeline stages 1–4 are present — see
-/// docs/island-generation.md §3.
+/// resource so it can be authored in the inspector, or saved as a <c>.tres</c>
+/// preset (see <c>resources/island_default.tres</c>). Heights are in <b>slabs</b>
+/// (see <see cref="Terrain.SlabHeight"/>) — see docs/island-generation.md §3.
+///
+/// Every field here is a knob a Domain's biome / archetype is expected to set.
+/// Things that define the terrain <i>grammar</i> rather than an island's looks
+/// are deliberately <b>not</b> here: the free-step size, the minimum patch area
+/// (derived from <see cref="RegionScale"/>), and the keel taper are constants,
+/// because a biome that changed them would change what a cliff <i>means</i>.
 /// </summary>
 [GlobalClass]
 public partial class IslandParams : Resource
@@ -32,7 +37,7 @@ public partial class IslandParams : Resource
     /// <summary>Single blob (0) to many separated islets (1).</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Fragmentation { get; set; } = 0f;
 
-    // ---- relief -------------------------------------------------------------
+    // ---- what the island is made of -----------------------------------------
 
     /// <summary>
     /// Which landforms the island is built from. <c>Auto</c> picks one per seed.
@@ -40,24 +45,47 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export] public TerrainCharacter Character { get; set; } = TerrainCharacter.Auto;
 
+    /// <summary>
+    /// How the character's landforms are shared out, from <b>low</b> (0 — mostly
+    /// plains, and basins where the character has them) to <b>high</b> (1 — as
+    /// much mountain / mesa / hill as the character allows). 0.5 is the
+    /// character's own balance.
+    ///
+    /// Proportions are a <i>quota</i>, not a per-region dice roll: every landform
+    /// a character names is guaranteed to appear, so a <c>Highland</c> can no
+    /// longer come out with no mountains, or with mountains and no hills.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float LandformMix { get; set; } = 0.5f;
+
     /// <summary>Overall vertical exaggeration of every landform's relief.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Relief { get; set; } = 0.5f;
 
-    /// <summary>Smooth (0) to jagged (1) surface (noise gain).</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Roughness { get; set; } = 0.5f;
+    /// <summary>
+    /// What hills do: 0 is barely-there swells, 1 is mounds — steep-sided humps
+    /// that still step one slab at a time, so they stay walkable everywhere. Also
+    /// drives how jagged the shared surface noise is, since a rolling down and a
+    /// field of mounds do not differ only in height.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Hilliness { get; set; } = 0.5f;
 
     /// <summary>
     /// Typical width of one landform region, in cells. Small values give a busy
-    /// patchwork; large ones give a few broad provinces.
+    /// patchwork; large ones give a few broad provinces. The smallest patch
+    /// allowed follows from this (see <see cref="MinRegionArea"/>).
     /// </summary>
     [Export(PropertyHint.Range, "6,40,1")] public int RegionScale { get; set; } = 16;
 
     /// <summary>
-    /// Smallest region the island may contain, in cells. Anything under this is
-    /// merged into the neighbour it shares the most border with, so the island
-    /// reads as a blanket of legible patches rather than a scatter of slivers.
+    /// Smallest region the island may contain, in cells — derived, not authored.
+    /// A patch under this is merged into the neighbour it shares the most border
+    /// with, so the island reads as a blanket of legible patches rather than a
+    /// scatter of slivers. It is a fixed share of a full region's area because
+    /// the two are not independent: what counts as a sliver depends entirely on
+    /// how big a patch is meant to be.
     /// </summary>
-    [Export(PropertyHint.Range, "12,400,1")] public int MinRegionArea { get; set; } = 55;
+    public int MinRegionArea => Mathf.Max(12, Mathf.RoundToInt(RegionScale * RegionScale * 0.215f));
+
+    // ---- elevation ----------------------------------------------------------
 
     /// <summary>
     /// Height of one step on the plateau ladder, in <b>slabs</b>. Regions sit on
@@ -81,13 +109,15 @@ public partial class IslandParams : Resource
 
     /// <summary>
     /// How far a mesa's flat top stands above the ground around it, in
-    /// <b>slabs</b>, taken literally. A mesa is a step up, not a peak.
+    /// <b>slabs</b>, taken literally. A mesa is a step up, not a peak — and a
+    /// chain of stepped mesas is capped at twice this above the plain it stands
+    /// on, so a tableland cannot compound itself into a tower.
     /// </summary>
     [Export(PropertyHint.Range, "3,24,1")] public int MesaHeight { get; set; } = 5;
 
     /// <summary>
     /// How far a basin's flat floor sits below the ground around it, in
-    /// <b>slabs</b>. The mesa rule inverted.
+    /// <b>slabs</b>. The mesa rule inverted, and capped the same way.
     /// </summary>
     [Export(PropertyHint.Range, "3,24,1")] public int BasinDepth { get; set; } = 5;
 
@@ -100,12 +130,6 @@ public partial class IslandParams : Resource
 
     /// <summary>Extra depth under the deepest interior, in <b>slabs</b>.</summary>
     [Export(PropertyHint.Range, "4,256,1")] public int KeelDepth { get; set; } = 34;
-
-    /// <summary>
-    /// Keel profile exponent. 1 is a straight cone; below 1 bulges out under the
-    /// shoulders; above 1 keeps the flanks thin and drives a sharper point.
-    /// </summary>
-    [Export(PropertyHint.Range, "0.3,3,0.05")] public float KeelTaper { get; set; } = 0.85f;
 
     /// <summary>How craggy the underside is. Scales with depth, so the lip stays clean.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float KeelRoughness { get; set; } = 0.45f;

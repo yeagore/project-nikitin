@@ -1,0 +1,245 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+
+namespace ProjectNikitin.Generation;
+
+/// <summary>One connected set of ground you can walk without infrastructure.</summary>
+/// <param name="Id">Index into <see cref="IslandData.Areas"/>; also the value in <see cref="IslandData.Walk"/>.</param>
+/// <param name="Area">Cells.</param>
+/// <param name="Low">Lowest surface slab in the set.</param>
+/// <param name="High">Highest surface slab in the set.</param>
+/// <param name="Min">Bounding box corner, cells.</param>
+/// <param name="Max">Bounding box corner, cells.</param>
+public readonly record struct WalkArea(int Id, int Area, short Low, short High,
+                                       Vector2I Min, Vector2I Max)
+{
+    /// <summary>
+    /// Big enough to be somewhere, rather than a ledge. Anything under this is
+    /// <b>broken ground</b>: the contour benches of a mountain flank, a shelf on
+    /// an escarpment. They are real terrain, but treating each as a place would
+    /// drown the map in hundreds of one-cell "districts".
+    /// </summary>
+    public bool IsDistrict => Area >= Traversal.MinDistrictArea;
+}
+
+/// <summary>
+/// A flat shelf: contiguous ground all at one slab level. What the settlement
+/// layer will place on. <c>Width</c> is the largest square that fits inside it,
+/// in cells — a long one-cell ledge has a big <c>Area</c> and a <c>Width</c> of 1.
+/// </summary>
+public readonly record struct Shelf(int Id, short Level, int Area, int Width,
+                                    Vector2I Min, Vector2I Max, Vector2I Center)
+{
+    /// <summary>Somewhere a settlement could actually prosper — see docs §1.4.</summary>
+    public bool Buildable => Area >= Traversal.MinShelfArea && Width >= Traversal.MinShelfWidth;
+}
+
+/// <summary>
+/// Reads walkability off finished terrain: which ground connects to which under
+/// the traversal rule, and which of it is flat enough to build on. Pure analysis
+/// — it never changes the terrain, so it can run on any <see cref="IslandData"/>.
+///
+/// The traversal rule (CLAUDE.md): a <b>one-slab</b> step is free, a face of two
+/// or more is an obstacle. Standing water is not walkable ground.
+/// </summary>
+public static class Traversal
+{
+    /// <summary>Below this, a walk area is broken ground rather than a place.</summary>
+    public const int MinDistrictArea = 20;
+
+    /// <summary>Smallest shelf a settlement could use, in cells.</summary>
+    public const int MinShelfArea = 24;
+
+    /// <summary>
+    /// Narrowest shelf a settlement could use. A one-cell ledge is not something
+    /// anyone prospers on, however long it runs.
+    /// </summary>
+    public const int MinShelfWidth = 3;
+
+    /// <summary>Value in <see cref="IslandData.Walk"/> for a flooded column.</summary>
+    public const int Water = -2;
+
+    private static readonly int[] Dx = { 1, -1, 0, 0 };
+    private static readonly int[] Dz = { 0, 0, 1, -1 };
+
+    /// <summary>Fills <c>Walk</c>, <c>Areas</c>, <c>Mainland</c>, <c>ShelfId</c> and <c>Shelves</c>.</summary>
+    public static void Analyse(IslandData d)
+    {
+        BuildWalkAreas(d);
+        BuildShelves(d);
+    }
+
+    /// <summary>True where a column is ground you could stand on.</summary>
+    private static bool Walkable(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        if (x < 0 || z < 0 || x >= n || z >= n) return false;
+        return d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand;
+    }
+
+    private static void BuildWalkAreas(IslandData d)
+    {
+        int n = d.Size;
+        var areas = new List<WalkArea>();
+        var queue = new Queue<(int X, int Z)>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            d.Walk[x, z] = d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                ? Water
+                : -1;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!Walkable(d, sx, sz) || d.Walk[sx, sz] != -1) continue;
+
+            int id = areas.Count;
+            int area = 0;
+            short low = short.MaxValue, high = short.MinValue;
+            var min = new Vector2I(sx, sz);
+            var max = new Vector2I(sx, sz);
+
+            d.Walk[sx, sz] = id;
+            queue.Enqueue((sx, sz));
+
+            while (queue.Count > 0)
+            {
+                var (x, z) = queue.Dequeue();
+                short top = d.SurfaceLevel(x, z);
+                area++;
+                if (top < low) low = top;
+                if (top > high) high = top;
+                min = new Vector2I(Math.Min(min.X, x), Math.Min(min.Y, z));
+                max = new Vector2I(Math.Max(max.X, x), Math.Max(max.Y, z));
+
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!Walkable(d, nx, nz) || d.Walk[nx, nz] != -1) continue;
+                    // The rule, and the only edge test there is: one slab is free.
+                    if (Math.Abs(d.SurfaceLevel(nx, nz) - top) > 1) continue;
+                    d.Walk[nx, nz] = id;
+                    queue.Enqueue((nx, nz));
+                }
+            }
+            areas.Add(new WalkArea(id, area, low, high, min, max));
+        }
+
+        // Ranked by area, so the lab can give the biggest places the clearest
+        // colours and lump the shrapnel together. Ids are rewritten to match, so
+        // area 0 is always the mainland.
+        var order = new List<WalkArea>(areas);
+        order.Sort((a, b) => b.Area.CompareTo(a.Area));
+
+        var remap = new int[areas.Count];
+        for (int i = 0; i < order.Count; i++) remap[order[i].Id] = i;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.Walk[x, z] >= 0) d.Walk[x, z] = remap[d.Walk[x, z]];
+
+        d.Areas.Clear();
+        for (int i = 0; i < order.Count; i++) d.Areas.Add(order[i] with { Id = i });
+        d.Mainland = d.Areas.Count > 0 ? 0 : -1;
+    }
+
+    private static void BuildShelves(IslandData d)
+    {
+        int n = d.Size;
+        var shelves = new List<Shelf>();
+        var queue = new Queue<(int X, int Z)>();
+        var cells = new List<Vector2I>();
+        var claimed = new bool[n, n];
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) d.ShelfId[x, z] = -1;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!Walkable(d, sx, sz) || claimed[sx, sz]) continue;
+
+            short level = d.SurfaceLevel(sx, sz);
+            cells.Clear();
+            claimed[sx, sz] = true;
+            queue.Enqueue((sx, sz));
+
+            while (queue.Count > 0)
+            {
+                var (x, z) = queue.Dequeue();
+                cells.Add(new Vector2I(x, z));
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!Walkable(d, nx, nz) || claimed[nx, nz]) continue;
+                    if (d.SurfaceLevel(nx, nz) != level) continue;
+                    claimed[nx, nz] = true;
+                    queue.Enqueue((nx, nz));
+                }
+            }
+
+            // Below half the settlement minimum a shelf is not worth carrying;
+            // the list exists for placement, not for a census of every flat cell.
+            if (cells.Count < MinShelfArea / 2) continue;
+
+            int id = shelves.Count;
+            Vector2I min = cells[0], max = cells[0];
+            foreach (Vector2I c in cells)
+            {
+                min = new Vector2I(Math.Min(min.X, c.X), Math.Min(min.Y, c.Y));
+                max = new Vector2I(Math.Max(max.X, c.X), Math.Max(max.Y, c.Y));
+                d.ShelfId[c.X, c.Y] = id;
+            }
+
+            (int width, Vector2I center) = WidestSquare(n, cells);
+            shelves.Add(new Shelf(id, level, cells.Count, width, min, max, center));
+        }
+
+        d.Shelves.Clear();
+        d.Shelves.AddRange(shelves);
+    }
+
+    /// <summary>
+    /// The largest square of shelf that fits inside it, by repeated 8-way erosion,
+    /// plus the cell at that square's centre. Erosion rather than area is what the
+    /// requirement actually asks for: a ledge fifty cells long and one deep has
+    /// ample area and is still not somewhere anyone can settle.
+    /// </summary>
+    private static (int Width, Vector2I Center) WidestSquare(int n, List<Vector2I> cells)
+    {
+        var alive = new HashSet<Vector2I>(cells);
+        Vector2I best = cells[0];
+        int rings = 0;
+
+        while (alive.Count > 0)
+        {
+            var next = new HashSet<Vector2I>();
+            foreach (Vector2I c in alive)
+            {
+                bool solid = true;
+                for (int dx = -1; dx <= 1 && solid; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    int nx = c.X + dx, nz = c.Y + dz;
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n
+                        || !alive.Contains(new Vector2I(nx, nz)))
+                    {
+                        solid = false;
+                        break;
+                    }
+                }
+                if (solid) next.Add(c);
+            }
+            if (next.Count == 0) break;
+
+            rings++;
+            // Eroding against the previous ring is what makes the count a radius
+            // rather than merely "has eight neighbours".
+            foreach (Vector2I c in next) { best = c; break; }
+            alive = next;
+        }
+        return (2 * rings + 1, best);
+    }
+}

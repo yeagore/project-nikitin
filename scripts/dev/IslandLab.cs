@@ -36,7 +36,22 @@ public partial class IslandLab : Node3D
 	private Vector3 _islandCenter = Vector3.Zero;
 	private float _islandRadius = 10f;
 	private bool _framedOnce;
-	private enum View { Height, Landform, Region }
+
+	private enum View
+	{
+		/// <summary>Height-tinted, the default look.</summary>
+		Height,
+		/// <summary>Flat colour per landform.</summary>
+		Landform,
+		/// <summary>The patchwork itself.</summary>
+		Region,
+		/// <summary>What connects to what under the traversal rule.</summary>
+		Walk,
+		/// <summary>Flat ground, and whether it is big and wide enough to build on.</summary>
+		Shelves,
+	}
+
+	private static readonly int ViewCount = Enum.GetValues<View>().Length;
 
 	private View _view = View.Height;
 	private Label _status = null!;
@@ -63,6 +78,50 @@ public partial class IslandLab : Node3D
 		float sat = 0.45f + (id * 7 % 3) * 0.12f;
 		float val = 0.62f + (id * 5 % 4) * 0.09f;
 		return Color.FromHsv(hue, sat, val);
+	}
+
+	/// <summary>Broken ground, and anything with no classification: one flat grey.</summary>
+	private static readonly Color Unremarkable = new(0.34f, 0.34f, 0.36f);
+
+	/// <summary>
+	/// Walkable areas, by area rank. Rank 0 is the mainland and always reads as
+	/// ground; the rest get widely separated hues.
+	///
+	/// <b>Only districts get a colour.</b> A mountain flank of four-slab risers is
+	/// a stack of contour benches, each of which is technically its own connected
+	/// area — colouring every one would paint the massif in fifty stripes and say
+	/// nothing. Everything under <see cref="Traversal.MinDistrictArea"/> is broken
+	/// ground: one grey, so the eye reads it as the single impassable mass it is.
+	/// </summary>
+	private static Color WalkColor(IslandData d, int id)
+	{
+		if (id == Traversal.Water) return new Color(0.16f, 0.34f, 0.52f);
+		if (id < 0 || id >= d.Areas.Count) return Unremarkable;
+		if (!d.Areas[id].IsDistrict) return Unremarkable;
+		if (id == d.Mainland) return new Color(0.42f, 0.62f, 0.28f);
+
+		float hue = (0.08f + id * 0.61803399f) % 1f;
+		return Color.FromHsv(hue, 0.62f, 0.88f);
+	}
+
+	/// <summary>
+	/// Flat ground. A buildable shelf — big enough and at least
+	/// <see cref="Traversal.MinShelfWidth"/> cells wide — gets a colour; a shelf
+	/// that is merely flat is dimmed, so what the settlement layer could actually
+	/// use stands out from what is only level.
+	/// </summary>
+	private static Color ShelfColor(IslandData d, int x, int z)
+	{
+		if (d.WaterLevel[x, z] != IslandData.NoLand) return new Color(0.16f, 0.34f, 0.52f);
+
+		int id = d.ShelfId[x, z];
+		if (id < 0 || id >= d.Shelves.Count) return Unremarkable;
+
+		Shelf shelf = d.Shelves[id];
+		if (!shelf.Buildable) return new Color(0.40f, 0.36f, 0.30f);
+
+		float hue = (0.30f + id * 0.61803399f) % 1f;
+		return Color.FromHsv(hue, 0.55f, 0.95f);
 	}
 
 	public override void _Ready()
@@ -122,11 +181,25 @@ public partial class IslandLab : Node3D
 			case Key.N: Seed = (int)(GD.Randi() & 0x7FFFFFFF); break;
 			case Key.R: Rebuild(); break;
 			case Key.F: _rig.Frame(_islandCenter, _islandRadius); break;
-			case Key.C: _view = (View)(((int)_view + 1) % 3); Rebuild(); break;
+			case Key.C: _view = (View)(((int)_view + 1) % ViewCount); Rebuild(); break;
 			// Force a character, so one kind can be inspected across many seeds
 			// instead of waiting for Auto to roll it.
 			case Key.V: CycleCharacter(); break;
+			// The two knobs worth eyeballing on the same island rather than by
+			// editing a resource and losing your place.
+			case Key.H: Cycle(v => Params.Hilliness = v, Params?.Hilliness ?? 0.5f, "Hilliness"); break;
+			case Key.M: Cycle(v => Params.LandformMix = v, Params?.LandformMix ?? 0.5f, "LandformMix"); break;
 		}
+	}
+
+	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>
+	private void Cycle(Action<float> set, float current, string label)
+	{
+		Params ??= new IslandParams();
+		float next = Mathf.Round(current * 4f + 1f) / 4f;
+		if (next > 1.001f) next = 0f;
+		set(next);
+		GD.Print($"[IslandLab] {label} = {next:0.00}");
 	}
 
 	private void CycleCharacter()
@@ -149,10 +222,10 @@ public partial class IslandLab : Node3D
 			h.Add(Params.Fragmentation);
 			h.Add(Params.Irregularity);
 			h.Add(Params.Character);
+			h.Add(Params.LandformMix);
 			h.Add(Params.Relief);
-			h.Add(Params.Roughness);
+			h.Add(Params.Hilliness);
 			h.Add(Params.RegionScale);
-			h.Add(Params.MinRegionArea);
 			h.Add(Params.CliffHeight);
 			h.Add(Params.PlateauLevels);
 			h.Add(Params.MountainHeight);
@@ -160,7 +233,6 @@ public partial class IslandLab : Node3D
 			h.Add(Params.BasinDepth);
 			h.Add(Params.EdgeThickness);
 			h.Add(Params.KeelDepth);
-			h.Add(Params.KeelTaper);
 			h.Add(Params.KeelRoughness);
 		}
 		return h.ToHashCode();
@@ -183,13 +255,43 @@ public partial class IslandLab : Node3D
 		if (_status != null)
 			_status.Text = $"{data.Character}   high ground: {data.Style}   "
 				+ $"seed {Seed}   view: {_view}   lakes: {lakes}"
-				+ (Params.Character == TerrainCharacter.Auto ? "" : "   [character pinned]");
+				+ (Params.Character == TerrainCharacter.Auto ? "" : "   [character pinned]")
+				+ $"\nhilliness {Params.Hilliness:0.00}   mix {Params.LandformMix:0.00}   "
+				+ WalkSummary(data);
 
 		if (!_framedOnce)
 		{
 			_rig.Frame(_islandCenter, _islandRadius);
 			_framedOnce = true;
 		}
+	}
+
+	/// <summary>
+	/// What the traversal analysis found, in one line: how much of the island is
+	/// one walkable piece, how much is broken ground, and how much of the flat
+	/// ground is big and wide enough to settle.
+	/// </summary>
+	private static string WalkSummary(IslandData d)
+	{
+		int land = 0;
+		for (int x = 0; x < d.Size; x++)
+		for (int z = 0; z < d.Size; z++) if (d.HasLand(x, z)) land++;
+		if (land == 0) return "no land";
+
+		int districts = 0, broken = 0;
+		foreach (WalkArea a in d.Areas)
+		{
+			if (a.IsDistrict) districts++;
+			else broken += a.Area;
+		}
+
+		int mainland = d.Mainland >= 0 ? d.Areas[d.Mainland].Area : 0;
+		int buildable = 0;
+		foreach (Shelf shelf in d.Shelves) if (shelf.Buildable) buildable++;
+
+		return $"walk: {districts} districts, mainland {100f * mainland / land:0}% of land, "
+			+ $"broken {100f * broken / land:0}% in {d.Areas.Count - districts} scraps   "
+			+ $"shelves: {buildable} buildable of {d.Shelves.Count}";
 	}
 
 	/// <summary>
@@ -300,6 +402,12 @@ public partial class IslandLab : Node3D
 							? RegionColor(d.Region[x, z]).Darkened(0.55f)
 							: RegionColor(d.Region[x, z]));
 						break;
+					case View.Walk:
+						col.Add(WalkColor(d, d.Walk[x, z]));
+						break;
+					case View.Shelves:
+						col.Add(ShelfColor(d, x, z));
+						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
 						col.Add(t < 0.5f ? low.Lerp(mid, t * 2f) : mid.Lerp(high, (t - 0.5f) * 2f));
@@ -341,8 +449,8 @@ public partial class IslandLab : Node3D
 		var label = new Label
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate + tilt   arrows tilt   wheel zoom   Shift faster"
-				 + "\nN new seed   V character   C view: height/landform/region"
-				 + "   F frame   R rebuild",
+				 + "\nN new seed   V character   H hilliness   M landform mix"
+				 + "   C view: height/landform/region/walk/shelves   F frame   R rebuild",
 			Position = new Vector2(12, 8),
 		};
 		label.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.85f));
@@ -353,7 +461,7 @@ public partial class IslandLab : Node3D
 
 		// What the island actually is, on screen: reading it off the console or
 		// inferring it by cycling variants is guesswork.
-		_status = new Label { Position = new Vector2(12, 52) };
+		_status = new Label { Position = new Vector2(12, 54) };
 		_status.AddThemeColorOverride("font_color", new Color(1f, 0.93f, 0.72f));
 		_status.AddThemeColorOverride("font_shadow_color", new Color(0f, 0f, 0f, 0.7f));
 		_status.AddThemeConstantOverride("shadow_offset_x", 1);

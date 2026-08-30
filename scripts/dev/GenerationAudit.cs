@@ -46,6 +46,8 @@ public partial class GenerationAudit : Node
         var basinDrop = new List<int>();
         int mesaTouchesMountain = 0, mesaTouchesOther = 0;
 
+        var hillsRelief = new List<int>();
+        var hillsSpan = new List<int>();
         var mountainRise = new List<int>();
         int footPairs = 0, footDrops = 0;
         var stepByBand = new Dictionary<int, List<int>>();
@@ -54,6 +56,20 @@ public partial class GenerationAudit : Node
         var shoreSteps = new List<int>();
 
         int landmasses = 0, diagonalLand = 0, diagonalWater = 0;
+
+        // Which landforms each character actually delivered, island by island.
+        var charIslands = new Dictionary<TerrainCharacter, int>();
+        var charHas = new Dictionary<TerrainCharacter, int[]>();
+
+        long walkLand = 0, walkMainland = 0, walkBroken = 0;
+        long mesaCells = 0, mesaOnMainland = 0;
+        int districts = 0, scraps = 0;
+        var mainlandShare = new List<int>();
+        var strandedShare = new List<int>();
+
+        int buildableShelves = 0, islandsWithShelf = 0;
+        var widestShelf = new List<int>();
+        var shelfOffMainland = new List<int>();
 
         ulong t0 = Time.GetTicksMsec();
 
@@ -93,7 +109,12 @@ public partial class GenerationAudit : Node
                     if (diff >= 3 && d.Region[x, z] != d.Region[nx, nz])
                     {
                         int a = (int)Form(x, z), b = (int)Form(nx, nz);
-                        string key = $"{TypeName[Math.Min(a, b)]}-{TypeName[Math.Max(a, b)]}";
+                        // A canyon wall is a cliff no rule forbids: the trench is cut
+                        // deliberately, and across any pair of patches. Bucket it as
+                        // itself, or it reads as a leak in the landform rules.
+                        string key = d.Canyon[x, z] || d.Canyon[nx, nz]
+                            ? "canyon (any pair)"
+                            : $"{TypeName[Math.Min(a, b)]}-{TypeName[Math.Max(a, b)]}";
                         cliffByBorder.TryGetValue(key, out int c);
                         cliffByBorder[key] = c + 1;
                     }
@@ -137,6 +158,10 @@ public partial class GenerationAudit : Node
 
                     if (o == t) continue;                       // stepped mesas / basins are fine
                     int delta = Top(x, z) - Top(nx, nz);
+                    if (t == LandformType.Basin && -delta < 2)
+                        GD.Print($"PROBE seed {FirstSeed + i} ({x},{z}) basin {Top(x, z)} vs {o} "
+                            + $"{Top(nx, nz)} w{d.WaterLevel[x, z]},{d.WaterLevel[nx, nz]} "
+                            + $"shelf{d.ShelfId[x, z]}");
                     var into = t == LandformType.Mesa ? worstMesa : worstBasin;
                     int signed = t == LandformType.Mesa ? delta : -delta;
                     if (!into.TryGetValue(r, out int cur) || signed < cur) into[r] = signed;
@@ -144,6 +169,30 @@ public partial class GenerationAudit : Node
             }
             mesaClear.AddRange(worstMesa.Values);
             basinDrop.AddRange(worstBasin.Values);
+
+            // ---- hills: how much relief a mound actually carries ---------------
+            // Amplitude is only half the story. Hills keep a slope limit of one
+            // slab, so a patch can never be taller than about half its own width
+            // in slabs however high Hilliness is set — the width is reported
+            // alongside so the ceiling is visible rather than inferred.
+            var hiOf = new Dictionary<int, int>();
+            var loOf = new Dictionary<int, int>();
+            var wideOf = new Dictionary<int, int>();
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!Land(x, z) || Form(x, z) != LandformType.Hills) continue;
+                int r = d.Region[x, z];
+                if (!hiOf.TryGetValue(r, out int hi) || Top(x, z) > hi) hiOf[r] = Top(x, z);
+                if (!loOf.TryGetValue(r, out int lo) || Top(x, z) < lo) loOf[r] = Top(x, z);
+                wideOf.TryGetValue(r, out int c);
+                wideOf[r] = c + 1;
+            }
+            foreach (var (r, hi) in hiOf)
+            {
+                hillsRelief.Add(hi - loOf[r]);
+                hillsSpan.Add((int)Math.Sqrt(wideOf[r]));
+            }
 
             // ---- mountains: rise above the foot, and the step profile ---------
             int[,] inward = InwardDistance(d, n);
@@ -210,6 +259,60 @@ public partial class GenerationAudit : Node
             lakes += lakeRegions.Count;
             if (lakeRegions.Count > 0) islandsWithLake++;
 
+            // ---- what the character delivered ----------------------------------
+            charIslands.TryGetValue(d.Character, out int seen);
+            charIslands[d.Character] = seen + 1;
+            if (!charHas.TryGetValue(d.Character, out int[] has))
+                charHas[d.Character] = has = new int[5];
+
+            var present = new bool[5];
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (Land(x, z)) present[(int)Form(x, z)] = true;
+            for (int t = 0; t < 5; t++) if (present[t]) has[t]++;
+
+            // ---- walkability ---------------------------------------------------
+            // The traversal rule made visible: how much of the island is one piece
+            // you can cross on foot, and how much is broken ground — the contour
+            // benches of a mountain flank, each its own connected set.
+            long islandLand = 0, islandMainland = 0;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!Land(x, z)) continue;
+                islandLand++;
+                int w = d.Walk[x, z];
+                bool onMain = w == d.Mainland && w >= 0;
+                if (onMain) islandMainland++;
+                if (w >= 0 && !d.Areas[w].IsDistrict) walkBroken++;
+
+                if (Form(x, z) != LandformType.Mesa) continue;
+                mesaCells++;
+                if (onMain) mesaOnMainland++;
+            }
+            walkLand += islandLand;
+            walkMainland += islandMainland;
+            if (islandLand > 0)
+            {
+                mainlandShare.Add((int)(100 * islandMainland / islandLand));
+                strandedShare.Add((int)(100 * (islandLand - islandMainland) / islandLand));
+            }
+            foreach (WalkArea a in d.Areas) { if (a.IsDistrict) districts++; else scraps++; }
+
+            // ---- shelves -------------------------------------------------------
+            int islandShelves = 0, widest = 0, offMain = 0;
+            foreach (Shelf shelf in d.Shelves)
+            {
+                widest = Math.Max(widest, shelf.Width);
+                if (!shelf.Buildable) continue;
+                islandShelves++;
+                if (d.Walk[shelf.Center.X, shelf.Center.Y] != d.Mainland) offMain++;
+            }
+            buildableShelves += islandShelves;
+            if (islandShelves > 0) islandsWithShelf++;
+            widestShelf.Add(widest);
+            shelfOffMainland.Add(offMain);
+
             // ---- continuity ----------------------------------------------------
             landmasses += CountComponents(d, n);
             diagonalLand += DiagonalOnly(n, (x, z) => Land(x, z));
@@ -243,6 +346,9 @@ public partial class GenerationAudit : Node
         GD.Print($"  mesa/basin touching a mountain (want 0): {mesaTouchesMountain}");
         GD.Print($"  mesa/basin touching another kind (want 0): {mesaTouchesOther}\n");
 
+        Report($"hills relief per patch (Hilliness {Params.Hilliness:0.00})", hillsRelief, "slabs");
+        Report("  that patch's width", hillsSpan, "cells");
+
         Report($"mountain rise above foot (MountainHeight {Params.MountainHeight})", mountainRise, "slabs");
         GD.Print($"  border cells where a massif sits below the ground it meets: "
             + $"{footDrops} of {footPairs}\n");
@@ -260,6 +366,35 @@ public partial class GenerationAudit : Node
         Report("  shore step above water", shoreSteps, "slabs");
         GD.Print($"  dry land BELOW a water surface (want 0): {leaks}");
         GD.Print($"  water touching the void (want 0):        {waterAtVoid}\n");
+
+        GD.Print("landforms delivered, by character (share of that character's islands)");
+        foreach (var (c, islands) in charIslands.OrderBy(k => k.Key.ToString()))
+        {
+            int[] has = charHas[c];
+            var parts = new List<string>();
+            for (int t = 0; t < 5; t++)
+                if (has[t] > 0) parts.Add($"{TypeName[t]} {100 * has[t] / islands}%");
+            GD.Print($"  {c,-10} {islands,3} islands   {string.Join(", ", parts)}");
+        }
+        GD.Print("");
+
+        GD.Print("walkability (one-slab step free, 2+ a wall; water is not ground)");
+        GD.Print($"  land on the mainland        {100.0 * walkMainland / walkLand,6:0.0}%");
+        Report("  mainland share per island", mainlandShare, "%");
+        Report("  stranded off the mainland", strandedShare, "%");
+        GD.Print($"  broken ground               {100.0 * walkBroken / walkLand,6:0.0}%"
+            + $"  in {scraps} scraps, against {districts} districts");
+        GD.Print($"  mesa top reachable on foot  "
+            + (mesaCells > 0 ? $"{100.0 * mesaOnMainland / mesaCells,6:0.0}% of mesa cells"
+                             : "no mesas")
+            + "\n");
+
+        GD.Print($"shelves (flat, >= {Traversal.MinShelfArea} cells and "
+            + $">= {Traversal.MinShelfWidth} wide): {buildableShelves} buildable, "
+            + $"on {islandsWithShelf} of {Seeds} islands");
+        Report("  widest square of flat ground", widestShelf, "cells");
+        Report("  buildable shelves off the mainland", shelfOffMainland, "per island");
+        GD.Print("");
 
         GD.Print($"continuity: {landmasses} landmasses for {Seeds} islands"
             + $"  (want {Seeds}); diagonal-only joins: land {diagonalLand}, water {diagonalWater}");
