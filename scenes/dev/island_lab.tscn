@@ -7,16 +7,24 @@
 [sub_resource type="Resource" id="Resource_params"]
 script = ExtResource("2_params")
 Size = 96
-Radius = 22.0
-Coverage = 0.55
-Fragmentation = 0.1
-Relief = 0.4
+Radius = 34.0
+Coverage = 0.62
+Irregularity = 0.55
+Fragmentation = 0.05
+Character = 0
+Relief = 0.5
 Roughness = 0.5
-HeightScale = 80
-TerraceCount = 3
-TerraceGrip = 0.4
-RimDepth = 20
-RimFalloff = 0.4
+RegionScale = 16
+MinRegionArea = 55
+CliffHeight = 4
+PlateauLevels = 2
+MountainHeight = 40
+MesaHeight = 5
+BasinDepth = 5
+EdgeThickness = 3
+KeelDepth = 34
+KeelTaper = 0.85
+KeelRoughness = 0.45
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 

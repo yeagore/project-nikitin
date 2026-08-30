@@ -23,15 +23,46 @@ public sealed class IslandData
     /// <summary>Surface material id of the top span. Single tier for now.</summary>
     public byte[,] Material { get; }
 
+    /// <summary>
+    /// The <see cref="LandformType"/> of the region this column belongs to. Drives
+    /// the dev lab's landform view, and is what settlement placement and pathing
+    /// will want to read rather than re-deriving slopes.
+    /// </summary>
+    public byte[,] Landform { get; }
+
+    /// <summary>
+    /// Top slab of standing water in a column, or <see cref="NoLand"/> for dry.
+    /// Water occupies <c>SurfaceLevel+1 … WaterLevel</c>, so it is a level rather
+    /// than a volume — one value per column, and no simulation.
+    /// </summary>
+    public short[,] WaterLevel { get; }
+
     /// <summary>Stage 1 land mask, kept for debugging / later stages.</summary>
     public bool[,] Land { get; }
+
+    /// <summary>
+    /// Which landform region each column belongs to, or <c>-1</c> for no land.
+    /// Regions are the patches the island is stitched from.
+    /// </summary>
+    public int[,] Region { get; }
+
+    /// <summary>The style actually used, with <c>Auto</c> already resolved.</summary>
+    public ReliefStyle Style { get; internal set; }
+
+    /// <summary>The character actually used, with <c>Auto</c> already resolved.</summary>
+    public TerrainCharacter Character { get; internal set; }
 
     public IslandData(int size)
     {
         Size = size;
         Spans = new Span[size, size][];
         Material = new byte[size, size];
+        Landform = new byte[size, size];
         Land = new bool[size, size];
+        Region = new int[size, size];
+        WaterLevel = new short[size, size];
+        for (int x = 0; x < size; x++)
+        for (int z = 0; z < size; z++) WaterLevel[x, z] = NoLand;
     }
 
     public bool HasLand(int x, int z) => Spans[x, z] is { Length: > 0 };
