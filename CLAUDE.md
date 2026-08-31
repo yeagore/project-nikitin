@@ -191,19 +191,25 @@ only the load-bearing ones survive.
 
 `Traversal.Analyse` reads the finished terrain back: `Walk` (on foot), `Reach`
 (once built), water bodies, ferry berths and `Shelves` (level enough to settle
-on). `GatePlacement` then puts one Entry and one to three Exits on the Domain —
-**a way in and a way out are guaranteed**, at most one per edge and on that edge,
-a third of the footprint apart, hanging ten cells off the rim with a 3 × 5
-landing strip where the coast allows it, or standing on the ground with a 3 × 3
-apron running inland from the portal. The Entry's
-**kind and edge are inputs**, because a Link joins two Gates and a Domain reached
-by travelling east comes out on its west side — and so are `ExitGates` and
-`ExitGate`. **Every one of those four is a request, not a preference:** each Exit
-walks the whole placement ladder on its own rather than the ladder stopping at
-the first Exit it produces, a named kind is held across every rung, and anything
-still not delivered goes into `Unmet` so the seed re-rolls. Measured, the Entry
-lands on the named edge 100% of the time; the one thing a coast often cannot give
-is three *hanging* Exits, and the lab says so when it happens.
+on). `GatePlacement` then puts **four hanging Gates on the Domain, one per edge**
+— the maximum — and everything else is a *subtraction* from that: an Exit the
+Domain does not need is deleted, and a Gate asked to be a land one is moved from
+the end of its flight path down onto its own landing strip. A Gate is **one
+block** (1 cell, 4 slabs), its strip is **1 × 3** running inland, and the strip is
+**levelled** rather than found level — a Gate is a built structure and so is the
+ground under it. The four are chosen as a **set** by a small backtracking search,
+because each has to out-reach every other on both axes and placing them one at a
+time paints the island into a corner.
+
+The Entry's **kind and edge are inputs**, because a Link joins two Gates and a
+Domain reached by travelling east comes out on its west side — and so are
+`ExitGates` and `ExitGate`. Since the sites are chosen before any of them has a
+role, the named edge simply *is* the Entry and the named kind is applied to it.
+Measured over 176 arrangement × character combinations: **four hanging Gates on
+100% of runs, every edge/kind/count request met on 100% of seeds at 1.00
+attempts, and every landing exactly 3 cells and dead level.** Gate placement is
+the one pass that both reads the traversal analysis and changes the terrain, so
+`Traversal.Analyse` runs again when it moved a slab.
 
 `Passages` is the payoff: the **least-infrastructure road from the Entry to each
 Exit**, walking free and every work one point. Five elevators inside fifteen
@@ -245,8 +251,8 @@ reachable from it.
    attaches to: coast, cliff, overhang, beach, ford, gate landing, ferry quay —
    everything else dimmed). Water is coloured by kind: pale a ford, mid a stream,
    deep a navigable reach, dark a lake.
-5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (3 × 5
-   where a vessel lands at a hanging Gate, 3 × 3 of forecourt at a land one),
+5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (its
+   1 × 3 landing strip, whichever kind of Gate it is),
    **K** ferry berths (quay and hull), **O** fords, **P** the roads between
    the Gates (pale yellow walk; red stair, gold bridge, cyan ferry), **X** the
    compass, each Gate's landward vector, and the **prevailing wind** drawn along
@@ -380,12 +386,12 @@ addons/           third-party plugins
 - **Slab** — the atomic terrain unit: a cell 1×1 in footprint, 0.25 tall (1:4).
   Terrain Y is measured in slab indices. **Biome** — a Domain's flora / fauna /
   climate.
-- **Gate kinds** — a **hanging Gate** floats off the rim and is flown through, so
-  the Domain owes it a landing strip (1 × 4 cells, inland of the coast opposite);
-  this is the **normal** case. A **land Gate** stands on the ground and is walked
-  through — the exception a coast happens to allow. A Link joins two Gates of the
-  *same* kind. One Gate per cardinal edge, near that edge: one Entry, and one to
-  three Exits.
+- **Gate kinds** — a **hanging Gate** floats ten cells off the rim and is flown
+  through, so the Domain owes it a landing strip (1 × 3 cells, running inland from
+  the coast under it); this is the **normal** case. A **land Gate** is the same
+  site with the portal moved down onto that strip, and is walked through. A Link
+  joins two Gates of the *same* kind. One Gate per cardinal edge, near that edge:
+  one Entry, and one to three Exits.
 - **Polity** — an NPC state ruling one or more Domains. **Metropole** — the
   Polity the player answers to.
 - **Cultural Archetype** — a people's defining template (e.g. Steelfolk,

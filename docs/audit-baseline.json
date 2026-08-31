@@ -10,7 +10,7 @@
   "heartland%": 95.0,
   "islandsOneWhole": 50,
   "lakes": 93,
-  "mainland%": 33.9,
+  "mainland%": 39.8,
   "navigableCells": 796,
   "noEntry": 0,
   "overhangColumns": 250,
@@ -18,9 +18,9 @@
   "riverCells": 4506,
   "riverStraight%": 60.0,
   "riverUphill": 2,
-  "roadsFree": 23,
+  "roadsFree": 32,
   "twoSlab%": 0.5,
-  "twoSlabOffMountain": 931,
+  "twoSlabOffMountain": 948,
   "unplayable": 0,
   "waterLeaks": 0
 }

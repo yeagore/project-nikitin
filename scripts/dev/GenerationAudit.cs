@@ -764,22 +764,31 @@ public partial class GenerationAudit : Node
                     hangingGates++;
                     // Hanging in the aether: there must be nothing under it.
                     if (Land(g.Center.X, g.Center.Z)) hangingOnLand++;
+                }
 
-                    // And a strip of level ground opposite, running inland.
-                    Vector2I outward = g.Outward, across = g.Across;
-                    int hx = g.Center.X - outward.X * GatePlacement.HangingOffset;
-                    int hz = g.Center.Z - outward.Y * GatePlacement.HangingOffset;
-                    bool strip = Land(hx, hz) && g.Landing >= 2;
+                // <b>Every Gate's landing, held to the letter.</b> Full length, no
+                // exceptions, and <i>dead</i> level rather than level to within the
+                // free step — the strips are built now, so "sometimes short" and
+                // "sometimes sloped" are not tolerances, they are bugs. Both kinds
+                // of Gate own one: a land Gate stands on the strip a vessel would
+                // otherwise have landed on.
+                {
+                    Vector2I outward = g.Outward;
+                    Vector2I head = g.Kind == GateKind.Hanging
+                        ? new Vector2I(g.Center.X, g.Center.Z)
+                          - outward * GatePlacement.HangingOffset
+                        : new Vector2I(g.Center.X, g.Center.Z);
+
+                    bool strip = Land(head.X, head.Y)
+                              && g.Landing == GatePlacement.StripLength;
                     if (strip)
                     {
-                        short level = Top(hx, hz);
-                        int half = (GatePlacement.StripWidth - 1) / 2;
-                        for (int along = 0; along < g.Landing && strip; along++)
-                        for (int side = -half; side <= half && strip; side++)
+                        short level = Top(head.X, head.Y);
+                        for (int along = 0; along < GatePlacement.StripLength && strip; along++)
                         {
-                            int sx = hx - outward.X * along + across.X * side;
-                            int sz = hz - outward.Y * along + across.Y * side;
-                            strip = Land(sx, sz) && Math.Abs(Top(sx, sz) - level) <= 1
+                            int sx = head.X - outward.X * along;
+                            int sz = head.Y - outward.Y * along;
+                            strip = Land(sx, sz) && Top(sx, sz) == level
                                     && d.WaterLevel[sx, sz] == IslandData.NoLand
                                     && d.Reach[sx, sz] == d.Heartland;
                         }
@@ -833,7 +842,7 @@ public partial class GenerationAudit : Node
                     int apart = Math.Abs(o.Apron.X - g.Apron.X)
                               + Math.Abs(o.Apron.Y - g.Apron.Y);
                     gateSpacing.Add(apart);
-                    if (apart < GatePlacement.CrowdedSeparation * n) gatesCrowded++;
+                    if (apart < GatePlacement.MinSeparation * n) gatesCrowded++;
                 }
             }
 
@@ -1094,16 +1103,16 @@ public partial class GenerationAudit : Node
         Report("  exits per island", exitCounts, "");
         GD.Print($"  two gates on one edge (want 0):             {sharedEdge}");
         GD.Print($"  entry gate not the kind asked for (want 0): {wrongEntryKind}");
-        Report($"  level ground at the gate (want >= {GatePlacement.ApronArea})", apronSizes, "cells");
+        Report("  buildable ground within 4 cells of the landing", apronSizes, "cells");
         GD.Print($"  gate off the heartland or in water (want 0): "
             + $"{gateOffHeartland + gateInWater}");
         GD.Print($"  hanging gate standing on land (want 0):     {hangingOnLand}");
         Report("  landing strip", stripLengths, "cells");
-        GD.Print($"  hanging gate with no landing strip (want 0):{stripMissing}");
+        GD.Print($"  gate with a short or sloped landing (want 0):  {stripMissing}");
         GD.Print($"  gate that is not the outermost on its own axis (want 0): {gateNotOutermost}");
         GD.Print($"  gate in a corner of its own edge (want 0):   {gateInCorner}");
         Report("  how far apart two gates are", gateSpacing, "cells");
-        GD.Print($"  two gates closer than the {GatePlacement.CrowdedSeparation:P0} floor"
+        GD.Print($"  two gates closer than the {GatePlacement.MinSeparation:P0} floor"
             + $" (want 0): {gatesCrowded / 2}");
         Report("  dry land left behind a gate", gateBehind, "%");
         GD.Print($"  islands with a landing strip: {airstripIslands} of {Seeds}"
@@ -1720,20 +1729,15 @@ public partial class GenerationAudit : Node
             for (int i = 0; i < FeasibilitySeeds; i++)
                 data.Add(new IslandGenerator().Generate(FirstSeed + i * 6151, p));
 
-            (string Label, bool Loose, bool Alone)[] rungs =
-            {
-                ("strict", false, false),
-                ("loose", true, false),
-                ("alone", true, true),
-            };
-            foreach (var (label, loose, alone) in rungs)
+            (string Label, bool Loose)[] rungs = { ("strict", false), ("loose", true) };
+            foreach (var (label, loose) in rungs)
             {
                 long usable = 0, fits = 0, strip = 0, flyable = 0;
                 int edgesOffering = 0;
                 foreach (IslandData d in data)
                 foreach (Cardinal edge in Enum.GetValues<Cardinal>())
                 {
-                    var (u, f, s, y) = GatePlacement.Funnel(d, edge, loose, alone);
+                    var (u, f, s, y) = GatePlacement.Funnel(d, edge, loose);
                     usable += u; fits += f; strip += s; flyable += y;
                     if (y > 0) edgesOffering++;
                 }

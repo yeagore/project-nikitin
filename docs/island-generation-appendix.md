@@ -222,43 +222,58 @@ The general lesson is the one the `Knobs` sweep exists for: **a parameter that
 drives only a count will saturate wherever the thing it counts has a spacing
 rule.** Check what the slider does at both ends, not at the default.
 
-### Four hanging Gates: what the maximum request actually costs
+### Four hanging Gates, and the rewrite that made them the default
 
 Asked for the hardest thing there is — an Entry and three Exits, one per edge,
-every one of them flown to — the generator delivers on **25% of runs** across all
-176 arrangement × character combinations (`GateMatrix` on the audit scene). Land
-Gates are unaffected: `entry land + 3 land` is met on 100% of seeds, at every
-count. So the shortfall is specifically about *hanging* Gates, and it is worth
-knowing exactly where it comes from, because three separate guesses were wrong.
-
-The funnel (`GatePlacement.Funnel`, printed per character) counts the cells
-surviving each test in turn. Reading it:
+every one of them flown to — the greedy placer delivered on **25% of runs** across
+all 176 arrangement × character combinations. It is now **100%**, at 1.00 attempts,
+and every reduction from it (fewer Exits, land Gates at either end, a named entry
+edge) is met on every seed. Getting there took finding out what was actually
+wrong, and three plausible answers were not it:
 
 | | |
 |---|---|
-| **Not the strip tolerance.** | Raising `StripTolerance` from 3 slabs to 5 changed the outcome by **nothing at all** — 25% and 41%, identical to the digit over 528 runs. The tolerance was never the filter; the "head must have aether directly outward" condition is, and that is a fact about where the coast is. |
-| **Not the separation, much.** | Dropping `GateSeparation` back from 0.42 to 0.30 bought 25% → 27% overall and 41% → 50% for three hanging Exits. Real but small, and it is the rule that keeps two Links out of one bay. |
-| **Not the coast.** | Counted with the other Gates removed (`alone`), **every edge of every island** offers a hanging Gate — 4.0 of 4 edges, 130–160 candidate cells each, on all eight characters. The coastline is never the reason. |
-| **It is the Gates blocking each other.** | With the real Gates in place the same count falls to ~1 edge of 4 and ~30 cells. Each Gate must out-reach every other on *both* axes, so placing one moves the line the next has to beat — and they are placed greedily, one at a time, with no regard for the ones still to come. |
+| **Not the strip tolerance.** | Raising `StripTolerance` from 3 slabs to 5 changed the outcome by **nothing at all** — 25% and 41%, identical to the digit over 528 runs. |
+| **Not the separation.** | Dropping `GateSeparation` back from 0.42 to 0.30 bought 25% → 27%. Real but small, and it is the rule that keeps two Links out of one bay. |
+| **Not the coast.** | Counted with the other Gates removed, **every edge of every island** offered a hanging Gate — 4.0 of 4 edges, 130–160 candidate cells each, on all eight characters. |
+| **Not the scoring.** | Weighting each Gate toward the middle of its own edge, on the theory that a Gate in a corner moves the line the next one has to beat, made it **worse**: three hanging Exits fell 41% → 33%. |
 
-Weighting the score toward the middle of each edge was tried on exactly that
-theory, and made it **worse** (three hanging Exits 41% → 33%): centring every
-Gate also pulls each one off whatever coast could host it.
+Two things were wrong, and both were structural.
 
-By arrangement the pattern is unambiguous, and it is the shape rather than the
-rules: layouts with land all the way round the perimeter do well (`BrokenRing`
-87%, `Ring` 54%, `Atoll` 50%), layouts with the land gathered in one place do
-badly (`Satellites`, `ThousandIsles`, `BrokenL`, `BrokenFractal` all 0–4%, and
-they place only 2.0–2.8 Gates of any kind). An `Archipelago` has no north-facing
-heartland coast inside the north band; nothing about Gate placement can conjure
-one.
+**The Gates were placed greedily.** Each has to out-reach every other on *both*
+axes, so the first one placed constrains the second, the second the third, and by
+the fourth there is nowhere left — with the other Gates in place the same funnel
+that showed 150 candidates per edge showed about 30, on one edge. Choosing the
+four as a **set** is the fix: each edge offers its best sixteen sites in score
+order and a depth-first search takes the first combination where every pair
+agrees. It is a search over at most 16⁴ with heavy pruning and a node budget, so
+it costs nothing measurable, and an edge with no workable candidate is left empty
+rather than failing the whole assignment.
 
-**The fix, not taken here.** Place the four Gates as a *set* rather than greedily
-— choose the combination that satisfies the mutual dominance rules, which is a
-small constraint solve over ~150 candidates per edge, not a search. The greedy
-order is what paints the island into a corner, and it is the only part of this
-that is a defect rather than a consequence. Logged rather than done because it is
-a rewrite of `Place`, not a tuning pass.
+**The strip had to be found rather than built.** A 3 × 5 berth that already
+agreed with itself to within three slabs left an island 14 to 20 viable cells
+across all four edges; four Gates out of that was a coincidence. It was also the
+wrong requirement in the first place — a Gate is a built structure and so is the
+ground under it. The strip is now 1 × 3 and is **levelled** once chosen, to the
+height of its innermost cell so the join to the island does not move. Gate
+placement therefore became the one pass that both reads the traversal analysis and
+changes the terrain, and `Place` returns whether it moved a slab so the analysis
+can be run again.
+
+Shrinking the portal from 3 × 12 to a single block is the third piece. A
+three-cell portal needs three cells of footing, three of clear flight path and a
+strip three across, and every one of those is a coast that has to agree with
+itself over a wider span.
+
+What it bought beyond the guarantee: the ground behind a Gate fell from a
+worst case of 20% of the Domain to **6%**, the mainland share rose from 33.9% to
+39.8%, and roads that can simply be walked went from 23 to 32 of about 120 —
+levelled strips join up ground that used to need a step built onto it.
+
+**What still cannot be done.** A Domain whose heartland has no coast facing one of
+the four ways cannot have a Gate on that edge. On a 128² footprint this never
+happens. At 64² it happens for `ThousandIsles` — sixteen islets on a small map —
+on 2 of 176 combinations.
 
 ### Gate parameters are requests, and requests get re-rolled
 
@@ -266,28 +281,27 @@ a rewrite of `Place`, not a tuning pass.
 **outside** the Domain — the world-tree decides which edge you arrive on and what
 kind of Gate you arrive through — so "usually" is not an answer for them.
 
-Three separate things were quietly not honouring them:
+Three separate things were quietly not honouring them, and all three were
+symptoms of searching for each Gate in turn against a set of rules that could
+refuse:
 
 - **The Exit ladder stopped too early.** The tier ladder was the outer loop and
   broke at the first rung that produced *any* Exit, so a Domain asked for three
   got one whenever the strict rung only allowed one. Median Exits per island: 1.
-  Each Exit now walks the ladder on its own. Median: 2.
 - **A named kind was traded at the first refusal.** `ExitGate = Land` tried Land
   then immediately Hanging *at the same rung*, rather than holding Land down the
-  whole ladder. A rolled kind still falls back on the spot — that is how a land
-  Gate comes to exist at all — but a named one does not.
+  whole ladder.
 - **`EntryEdge` was not in `Unmet`.** The kind was checked, the edge was not, so
-  `GatePlacement`'s last-resort fallbacks fired and nothing objected. Both are
-  checked now, along with the Exit count and kind, which means the generator
-  **re-rolls the seed** instead of handing back a Domain built to the wrong
-  specification.
+  the last-resort fallbacks fired and nothing objected.
 
-Measured over sixteen seeds per request (`GateRequests` on the audit scene): the
-Entry lands on the named edge 100% of the time and of the named kind 93–100%; an
-explicit `ExitGates` is met on every seed except three *hanging* Exits, which
-wants three coasts that will each take one and gets them about two thirds of the
-time. Where the coast genuinely will not oblige, the lab's readout says so rather
-than the panel and the island disagreeing in silence.
+The first two were fixed in the ladder and took the Entry edge to 100% and the
+kind to 93–100%. The **rewrite** removed the question instead: the four sites are
+chosen before any of them has a role, so a named edge simply *is* the Entry, a
+named kind is applied to it, and `ExitGates` is a subtraction. All four checks
+stayed in `Unmet`, and nothing now reaches them — measured over sixteen seeds per
+request, every edge, kind and count is delivered on **100%** of seeds at a mean of
+**1.00 attempts**. The lab's readout still says `COAST WOULD NOT` where a Domain
+genuinely cannot oblige, which is now only a small island with a missing coast.
 
 ### The mainland is where you land
 
@@ -311,6 +325,7 @@ else. They are re-anchored on the Entry Gate's apron once the Gates are placed.
 | **Overhangs anywhere with an 8-slab face** | Karst towers, basin rims and sinkhole walls all qualify on height, and a lip off a two-cell tower reads as a hole punched through it. Undercuts now need **backing**. |
 | **Streams fordable everywhere** | Which is the same as not being there: a watercourse that costs nothing to cross at any point on its length is a line drawn on the map. It also made roads walk *down* streams, since the bed was exactly as cheap as the bank. Now the crossing is a place. |
 | **A berth wherever the domino fits** | Three thousand per audit, nearly all on water you could walk round. Berths are now pruned against a ferry-less reach flood: 97 survive, on 2 of 60 islands. |
+| **A pad bigger than the Domain** | `PlaceLobes` kept every blob inside the footprint by clamping its centre to `[r + 3, n - 1 - r - 3]`, which is an empty range once a lobe is wider than half the map — so any `Size` small enough for the auto radius to fill it **crashed outright** (`Math.Clamp` throws when its minimum passes its maximum). At 64 cells the radius is 28.8, the pad 31.8 and the room 31.2. The pad is now capped at half the footprint, which puts an over-large lobe in the middle, where it belongs. Found by testing the Gate guarantee at a smaller `Size`. |
 | **Arches over open aether** | An arch out into the void puts rock in a column the land mask says is empty — no region, no landform, no keel — and everything that reads "has land ⇒ has a region" is then wrong about it. (It crashed the audit.) Arches span gorges and channels, which is the commoner form anyway. |
 | **`Spiral`** | A thin arm wound inward over two and a half turns. Keeping it one landmass took a coil thick enough and links dense enough that it came out as a `Rosette` with more steps — and cost twice the generation time doing it. Binned 2026-08-31. |
 | **`FluidKind`** | A Domain-wide `Water` / `Lava` / `Essence`. What shipped was two `if` statements (no fords, no ferries) and a dropdown with nothing visible behind it; the whole idea is the *look*, and there was no renderer for it. Removed 2026-08-31, to come back with the thing that makes it mean something. |
@@ -364,7 +379,7 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 | | |
 |---|---|
 | step grammar | **94.1% free**, 0.5% two-slab, 5.4% cliff, over 378k adjacent pairs |
-| two-slab steps off mountains | 931 — riverbanks and valley sides the pass is not allowed to cut |
+| two-slab steps off mountains | 948 — riverbanks and valley sides the pass is not allowed to cut |
 | cliffs between patches | plain-plain, plain-mesa, plain-basin, mesa-mesa — the pairs the rules allow |
 | rivers | 4.5k cells on 60 of 60 islands, 796 navigable, ~540 falls |
 | how a course runs | 60% straight / 40% turning |
@@ -373,10 +388,11 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 | surface | stone 11%, scree 15%, snow 13%, sand 21%, silt 5%, grass 3%, heath 23%, dust 2%, meadow 8% — none NEVER |
 | anchors | 29k coast (81% of it beached), 31k cliff, 250 overhang, 372 ford, 1.8k gate landing |
 | overhangs | ~250 columns with a second span |
-| walk / reach | **34% mainland on foot, 95% heartland with building**, 50 of 60 islands one whole |
+| walk / reach | **40% mainland on foot, 95% heartland with building**, 50 of 60 islands one whole |
 | what stays out of reach | mountain and karst tower — landforms whose point is the height |
-| Gates | 1 entry and 1-3 exits on every island (median 2 exits); 0 on a shared edge, 0 off the heartland |
-| Gates asked for | entry on the named edge 100%, of the named kind 93-100%; land Gates 100% at every count; four *hanging* Gates on 25% of runs — see above |
+| Gates | 1 entry and 1-3 exits on every island (median 2 exits); 0 on a shared edge, 0 off the heartland, 0 not outermost on their own axis |
+| Gate landings | every one exactly 3 cells and dead level — **0 short or sloped** |
+| Gates asked for | every edge, kind and count delivered on **100%** of seeds at 1.00 attempts; **four hanging Gates on 100%** of 176 arrangement x character combinations |
 | roads | one per Exit on every island, **0 exits without one**; median 1 work |
 | re-rolls | median 1 attempt, **0 seeds that never met the guarantees** |
 
@@ -404,11 +420,11 @@ built out of a great many overlapping blobs costs.
 
 | | |
 |---|---|
-| two-slab steps at a riverbank or valley side | 1,069 in 378k pairs, all where the ground the pass would have to cut is a landform, a bridgehead or standing water. It rose from ~730 when valleys started working; the alternative is eating the landform. |
+| two-slab steps at a riverbank or valley side | 948 in 378k pairs, all where the ground the pass would have to cut is a landform, a bridgehead or standing water. It rose from ~730 when valleys started working; the alternative is eating the landform. |
 | ~~3 crossings with banks more than 2 slabs apart~~ | **closed.** It came in with the sculpted landforms and went out with the crater cull and the beach reordering: 0 of 149. |
-| 1 gate pair on the separation floor, 2 in a corner | The relaxed placement rungs firing on coasts that will not take a Gate under the full rules. Both floors were tightened (a third of the footprint apart, and the edge band only ever widens) — what is left is the last rung doing its job. The alternative is a Domain with fewer Links, which is worse. |
+| 3 gates in a corner of their own edge | The relaxed placement rungs firing where a coast will not take four Gates under the full rules. No pair is inside the separation floor any more. The alternative is a Domain with fewer Links, which is worse. |
 | 2 river cells running uphill in 4,578 | Where a channel could not sink as far as the stretch above it — a bridgehead or a mesa rim in the way — and the second `Descend` did not fully flatten it. Was 1 before valleys worked. |
-| 3 hanging Exits delivered ~2/3 of the time | It wants three separate coasts that will each take a 3 × 5 strip with clear air off it. `Unmet` reports the shortfall and the seed re-rolls, so what is left is coasts that genuinely cannot. |
+| ~~3 hanging Exits delivered ~2/3 of the time~~ | **closed** by the set-wise placer and the built strip: 100% at every count, and 100% for four hanging Gates. |
 | a landmass adrift on the two most broken layouts | `BrokenFractal` and `ThousandIsles`, per the feasibility table. The Stage 11 guarantees still hold, so it is one islet of fifteen rather than a broken island. |
 | basins on a `Highlands` island | ~80% of islands, not 100% — adjacency cannot always place one beside a massif. *Accepted.* |
 | undersized patches on `ThousandIsles` / `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. *Accepted.* |

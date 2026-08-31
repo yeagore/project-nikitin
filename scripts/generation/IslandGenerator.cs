@@ -425,7 +425,15 @@ public sealed class IslandGenerator
 
         // Gates last of all: every rule about where one may go is a rule about
         // ground the player can actually use, so it needs the traversal answer.
-        GatePlacement.Place(seed, p, data);
+        //
+        // It is also the one pass that both *reads* the analysis and *changes* the
+        // terrain — it levels the landing strips it chose, because a Gate is a
+        // built structure and so is the ground under it. Where it moved slabs the
+        // analysis is simply run again: every number it produced was measured
+        // before those slabs moved, and a strip that a stair can no longer be
+        // footed on is exactly the sort of thing that has to be re-read rather
+        // than patched.
+        if (GatePlacement.Place(seed, p, data)) Traversal.Analyse(data);
 
         // And then the analysis is told where the run begins. The mainland is the
         // ground the Entry Gate lands you on, not the largest piece of the island
@@ -1054,8 +1062,16 @@ public sealed class IslandGenerator
         {
             // Keep every blob inside the footprint with a margin, or a nudge later
             // will push it into the wall.
-            float pad = r + 3f;
+            //
+            // <b>The margin cannot exceed half the footprint.</b> A lobe wider than
+            // the Domain wants a pad bigger than the room there is for it, and
+            // `Math.Clamp` throws when its minimum passes its maximum — so any
+            // `Size` small enough for the auto radius to fill it crashed outright.
+            // At 64 cells the radius is 28.8, the pad 31.8, and the room 31.2.
+            // Where a blob really is that big the only sensible place for it is the
+            // middle, which is what a pad of half the footprint says.
             int n = p.Size;
+            float pad = Math.Min(r + 3f, (n - 1) * 0.5f);
             x = Math.Clamp(x, pad, n - 1 - pad);
             z = Math.Clamp(z, pad, n - 1 - pad);
             made.Add(new Lobe(x, z, r,

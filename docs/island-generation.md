@@ -274,54 +274,68 @@ playable.
 
 ### Stage 8 — Gates
 
-A Gate is **3 cells wide, 1 deep, 12 slabs tall**. Every Domain gets one `Entry`
-and one to three `Exit`s, **at most one per edge and on that edge** — Domains sit
-on a plane at their world-tree position, so a Gate facing east that is not the
-easternmost thing on the map points back over the Domain it leaves.
+A Gate is **one block**: 1 cell wide, 1 deep, 4 slabs tall. Every Domain gets one
+`Entry` and one to three `Exit`s, **at most one per edge and on that edge** —
+Domains sit on a plane at their world-tree position, so a Gate facing east that is
+not the easternmost thing on the map points back over the Domain it leaves.
+
+**Four hanging Gates first, then take away.** This is the shape of the whole
+pass. Every Domain is given a hanging Gate on each of its four edges — the
+maximum — and the parameters *reduce* that: an Exit the Domain does not need is
+deleted, a Gate asked to be a `Land` one is moved from the end of its flight path
+down onto its own landing strip, and the Entry is whichever of the four the
+world-tree names. There is one site search, not two, and a land Gate is a hanging
+site with the portal walked back down it.
+
+The four are chosen as a **set** — a small backtracking search over the best
+sites per edge — rather than one at a time. Each Gate has to out-reach every
+other on both axes, so a greedy pass has the first Gate move the line the next
+one has to beat, and by the third there is nowhere left. Measured, greedy gave
+four hanging Gates on **25%** of Domains; set-wise gives **100%**, across all 176
+arrangement × character combinations, with no seed needing a re-roll.
 
 | kind | |
 |---|---|
-| `Hanging` | Floats ten cells off the rim; you fly through it. Needs clear air for the last four cells of the approach and a **3 × 5 landing strip** inland of the coast opposite |
-| `Land` | the exception a coast happens to allow. Three level cells, a clear outlook, and a **3 × 3 apron** running inland from the portal, level within the free step |
+| `Hanging` | Floats ten cells off the rim; you fly through it. Needs clear air for the last four cells of the approach and a **1 × 3 landing strip** running inland from the coast under it |
+| `Land` | the same site with the portal moved down onto that strip. You walk through it, and the ground you walk out onto is the ground a vessel would have landed on |
 
-> The land Gate's apron is new. It used to owe the Domain nothing but three level
-> cells to stand on, so one could be planted on a three-cell ledge with a cliff a
-> step behind it — the `ApronArea` shelf test passed, because a shelf is measured
-> *somewhere on the island* rather than at the Gate. Three by three is the
-> smallest thing you can walk out onto and turn round in, and it is marked in
-> `IslandData.Landings` beside the hanging Gates' strips.
+**The strip is built, not found.** Three cells of usable ground running inland,
+and once the site is chosen those three cells are **levelled** to the height of
+the innermost one — the end that joins the island, so the walk off the strip is
+exactly what the terrain made it and only the cells running out toward the rim
+move. It is never short and never sloped, and the audit asserts both to the
+letter rather than to within a slab.
 
-> Hanging was the norm at 75% when the portal sat four cells out on a 1 × 4
-> strip. At ten cells out, over a 3 × 5 strip, it is **38%** — three cells of
-> clear air either side for the last four cells of the approach is a real demand
-> on a coastline, and a ragged one often cannot meet it. That is the trade the
-> distance bought: the flight is visible, and fewer coasts can host one.
+> This is what made four hanging Gates possible. The old strip was 3 × 5 and had
+> to be *found* already level to within three slabs, which left a Domain four or
+> five viable sites in total — measured, an island offered 14 to 20 cells across
+> all four edges, so four Gates were a coincidence. It was also the wrong
+> requirement: a Gate is a built structure and so is the ground under it. Gate
+> placement is now the one pass that both reads the traversal analysis and changes
+> the terrain, so the analysis is run again afterwards.
 
 **The Entry's kind and edge are inputs** (`EntryGate`, `EntryEdge`): a Link joins
-two Gates, and a Domain reached by travelling east comes out on its west edge. A
-named edge gets the whole tier ladder to itself before any other is tried, and a
-named kind is held across every rung of it. **What is asked for is a guarantee,
-not a preference** — an Entry that came out on the wrong edge or of the wrong
-kind, or fewer Exits than `ExitGates` named, or an Exit that is not the
-`ExitGate` kind, all go into `Unmet`, so the seed re-rolls rather than handing
-back a Domain built to the wrong specification. Measured over sixteen seeds per
-request, the edge is delivered 100% of the time and the kind 93–100%.
+two Gates, and a Domain reached by travelling east comes out on its west edge.
+Since the four sites are chosen before any of them has a role, the named edge
+simply *is* the Entry and the named kind is applied to it — there is nothing to
+search for and nothing to trade away. `ExitGates` and `ExitGate` work the same
+way by subtraction. All four are still checked in `Unmet`, but nothing now
+reaches it: measured over sixteen seeds per request, **every edge, kind and count
+is delivered on 100% of seeds, with a mean of 1.00 attempts.**
 
-**A way in and a way out are guaranteed.** Where a coast will not take a Gate
-under the full rules, the rules give a rung at a time — apron, strip, the edge
-band widening to `RelaxedEdgeBand`, then the corner inset, then the separation
-falling to `CrowdedSeparation`. Three things never give: being outermost on its
-own axis, being on its own half of the island, and keeping a third of the
-footprint from the next Gate. The band **widens and never disappears** — dropping
-it outright once put 73% of the Domain behind the player as they arrived, at
-which point "the south Gate" names nothing.
+**A way in and a way out are guaranteed.** Where a coast will not take four Gates
+under the full rules, the rules give a rung at a time: the edge band widens to
+`RelaxedEdgeBand`, then the corner inset goes, then separation falls to
+`CrowdedSeparation` and finally to `MinSeparation`, at which point the dominance
+order gives too. The band widens and never disappears — dropping it outright once
+put 73% of the Domain behind the player as they arrived, at which point "the south
+Gate" names nothing; it is now at most 6%.
 
-> **Each Exit walks the ladder on its own.** The ladder used to be the outer loop
-> and stopped at the first rung that produced any Exit at all, so a Domain asked
-> for three got one whenever the strict rung only allowed one — over sixty seeds
-> the median island had a single Exit. It now has two, and an explicit `ExitGates`
-> is met on every seed except three hanging Exits, which wants three coasts that
-> will each take one and gets them about two thirds of the time.
+An edge with no candidate at all comes back empty, and that is the only way a
+Domain ends up with fewer than four sites: a heartland with no north-facing coast
+cannot have a north Gate, and no rule can conjure one. On a 128² footprint it
+never happens. At 64² it happens on `ThousandIsles` — sixteen islets on a small
+map — for 2 of 176 combinations.
 
 ### Stage 9 — The roads between the Gates
 

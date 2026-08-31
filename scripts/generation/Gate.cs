@@ -86,11 +86,21 @@ public readonly record struct Gate(GateKind Kind, GateRole Role, Cardinal Facing
                                    Vector3I Center, Vector2I Apron, int ApronArea,
                                    int Landing = 0)
 {
-    /// <summary>Cells across the portal.</summary>
-    public const int Width = 3;
+    /// <summary>Cells across the portal. <b>One.</b></summary>
+    public const int Width = 1;
 
-    /// <summary>Slabs tall — three world units, the same as its width.</summary>
-    public const int Height = 12;
+    /// <summary>
+    /// Slabs tall. <b>Four — one block</b>, since a slab is a quarter of a cell.
+    ///
+    /// It was three cells wide and twelve slabs tall, which is a triumphal arch
+    /// rather than a doorway, and it cost far more than it looked: a Gate that
+    /// wide needs three cells of level footing, three cells of clear flight path
+    /// and a strip three cells across to land on, and every one of those is a
+    /// coast that has to agree with itself over a wider span. Shrinking the portal
+    /// to a single block is what makes four hanging Gates something a Domain can
+    /// always offer rather than something a quarter of them could manage.
+    /// </summary>
+    public const int Height = 4;
 
     /// <summary>Outward normal: the way out of the Domain.</summary>
     public Vector2I Outward => Facing switch

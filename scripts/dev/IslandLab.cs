@@ -945,7 +945,8 @@ public partial class IslandLab : Node3D
 									 baseY + Gate.Height * sh * 0.5f,
 									 (g.Center.Z - half) * cs);
 
-			// Three cells across its face, one deep through it.
+			// One cell across its face, one deep through it, four slabs tall — a
+			// single block, which is what a Gate is now.
 			var size = new Vector3(
 				Mathf.Abs(g.Across.X) * Gate.Width * cs + Mathf.Abs(g.Outward.X) * cs,
 				Gate.Height * sh,

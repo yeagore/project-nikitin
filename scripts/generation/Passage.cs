@@ -132,10 +132,13 @@ internal static class Passages
         foreach (Vector2I cell in new[] { bank.A, bank.B })
             if (cell.X >= 0 && cell.Y >= 0 && cell.X < n && cell.Y < n)
                 reserved[cell.X, cell.Y] = true;
+        // The cells under the portal itself. A Gate is one cell wide now, so this
+        // is one cell — and for a hanging Gate it is out in the aether anyway,
+        // where the ground that matters is its landing strip and that is already
+        // reserved through `Landings` above.
         foreach (Gate g in d.Gates)
-        for (int side = -1; side <= 1; side++)
         {
-            Vector2I cell = new Vector2I(g.Center.X, g.Center.Z) + g.Across * side;
+            var cell = new Vector2I(g.Center.X, g.Center.Z);
             if (cell.X >= 0 && cell.Y >= 0 && cell.X < n && cell.Y < n)
                 reserved[cell.X, cell.Y] = true;
         }
