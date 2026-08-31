@@ -16,7 +16,8 @@ namespace ProjectNikitin.Dev;
 /// arrows tilt (far enough to look at the keel from below), wheel zoom, Shift
 /// for faster pan (see <see cref="CameraRig"/>). <b>N</b> rolls a new seed,
 /// <b>F</b> re-frames the island, <b>R</b> forces a rebuild of the same one, and
-/// <b>F1</b> shows the full key list.
+/// <b>Tab</b> hides the control panel. Every key is also a control on that
+/// panel; the panel is the interface and the keys are the shortcut.
 ///
 /// Renders one scaled <c>MultiMesh</c> box per span (keel → surface), in slab
 /// units — no mesher, no per-face culling; that comes later. NOT a <c>[Tool]</c>
@@ -59,6 +60,10 @@ public partial class IslandLab : Node3D
 		Reach,
 		/// <summary>Ground level enough to build a settlement on.</summary>
 		Shelves,
+		/// <summary>What the ground is made of.</summary>
+		Surface,
+		/// <summary>The feature anchors the content layer attaches things to.</summary>
+		Anchors,
 	}
 
 	private static readonly int ViewCount = Enum.GetValues<View>().Length;
@@ -68,14 +73,21 @@ public partial class IslandLab : Node3D
 	{
 		View.Height => "height    low ground dark, high ground pale",
 		View.Landform => "landform  green plain / dark hills / grey mountain / "
-					   + "brown mesa / blue basin; yellow = pass",
+					   + "brown mesa / blue basin / tan badlands / pale karst / "
+					   + "mauve massif / sand dunes / olive sinkholes; yellow = pass",
 		View.Region => "region    one hue per patch, borders darkened",
 		View.Walk => "walk      what you can cross on foot: green mainland, "
 				   + "a hue per other district, grey = broken ground",
 		View.Reach => "reach     what you can cross once built: green heartland, "
 					+ "red = out of reach whatever you build",
-		_ => "shelves   ground you could settle on; dim brown = level but too "
-		   + "small or too narrow",
+		View.Shelves => "shelves   ground you could settle on; dim brown = level but "
+					  + "too small or too narrow",
+		View.Surface => "surface   what the ground is made of: grey stone / pale scree / "
+					  + "white snow / sand / brown silt / dark green grass (by water) / "
+					  + "light green meadow / olive heath / tan dust",
+		_ => "anchors   what the content layer attaches to: cyan coast / red cliff / "
+		   + "magenta overhang / sand beach / yellow gate landing / green ford / "
+		   + "blue ferry quay. Unmarked ground is dimmed",
 	};
 
 	private View _view = View.Height;
@@ -84,15 +96,15 @@ public partial class IslandLab : Node3D
 	// does not show: where you could build across, where a vessel could set down,
 	// and which way is north.
 	private bool _showBridges;
-	private bool _showAirstrips;
+	private bool _showLandings;
+	private bool _showFerries;
+	private bool _showRoutes;
+	private bool _showFords;
 	private bool _showCompass = true;
-	private bool _showHelp;
+	private bool _showPanel = true;
 
 	private Label _status = null!;
 	private Label _legend = null!;
-	private Label _help = null!;
-	private Label _overlays = null!;
-	private Label _hint = null!;
 
 	/// <summary>Flat colours for the landform view, so landforms read as landforms.</summary>
 	private static Color LandformColor(LandformType type) => type switch
@@ -102,6 +114,11 @@ public partial class IslandLab : Node3D
 		LandformType.Mountain => new Color(0.52f, 0.50f, 0.55f),
 		LandformType.Mesa => new Color(0.68f, 0.45f, 0.26f),
 		LandformType.Basin => new Color(0.28f, 0.40f, 0.52f),
+		LandformType.Badlands => new Color(0.72f, 0.56f, 0.34f),
+		LandformType.Karst => new Color(0.58f, 0.66f, 0.62f),
+		LandformType.Massif => new Color(0.62f, 0.42f, 0.48f),
+		LandformType.Dunes => new Color(0.80f, 0.74f, 0.46f),
+		LandformType.Sinkholes => new Color(0.50f, 0.58f, 0.44f),
 		_ => new Color(0.5f, 0.5f, 0.5f),
 	};
 
@@ -129,8 +146,137 @@ public partial class IslandLab : Node3D
 	/// <summary>Overlay colours: a bridge deck, its two banks, and a landing strip.</summary>
 	private static readonly Color DeckTint = new(0.95f, 0.72f, 0.30f);
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);
-	private static readonly Color StripTint = new(0.35f, 0.85f, 0.95f, 0.85f);
 	private static readonly Color StripUsedTint = new(1f, 0.55f, 0.85f);
+
+	/// <summary>A ferry berth: the quay, and the water it puts a hull on.</summary>
+	private static readonly Color QuayTint = new(0.98f, 0.45f, 0.30f);
+	private static readonly Color HullTint = new(0.55f, 0.85f, 0.98f, 0.9f);
+
+	/// <summary>
+	/// The road from the entry Gate to an exit: the walk, and the works on it.
+	/// One colour per kind of crossing, because "what does this road cost?" is a
+	/// question about which of the three you have to build.
+	/// </summary>
+	private static readonly Color RoadTint = new(0.98f, 0.95f, 0.62f, 0.8f);
+	private static readonly Color StairTint = new(1f, 0.45f, 0.25f);
+	private static readonly Color SpanTint = new(1f, 0.80f, 0.20f);
+	private static readonly Color CrossingTint = new(0.30f, 0.95f, 0.85f);
+
+	/// <summary>A ford: the one place a stream can be crossed on foot.</summary>
+	private static readonly Color FordTint = new(0.85f, 0.95f, 0.60f);
+
+	/// <summary>
+	/// What the ground is made of and what the content layer can hang off it, in
+	/// one line — the counterpart to the `surface` and `anchors` views for someone
+	/// reading the numbers rather than the picture. The wind only appears where
+	/// there are dunes for it to have made.
+	/// </summary>
+	private static string GroundSummary(IslandData d)
+	{
+		int n = d.Size;
+		var made = new int[Enum.GetValues<SurfaceMaterial>().Length];
+		int land = 0, dunes = 0;
+
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+		{
+			if (!d.HasLand(x, z)) continue;
+			land++;
+			made[d.Material[x, z]]++;
+			if ((LandformType)d.Landform[x, z] == LandformType.Dunes) dunes++;
+		}
+		if (land == 0) return "ground: none";
+
+		var bits = new List<(string Name, int Cells)>();
+		foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
+			if (made[(int)m] > 0) bits.Add((m.ToString().ToLowerInvariant(), made[(int)m]));
+		bits.Sort((a, b) => b.Cells.CompareTo(a.Cells));
+
+		var parts = new List<string>();
+		foreach (var (name, cells) in bits) parts.Add($"{name} {100 * cells / land}%");
+
+		string wind = dunes > 0 ? $"   wind from {d.WindFrom}, dunes run {d.DuneRun}" : "";
+		return $"ground: {string.Join(", ", parts)}{wind}"
+			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} cliff, "
+			+ $"{d.Overhangs.Count} overhang, {Count(d.Beach)} beach, {Count(d.Ford)} ford, "
+			+ $"{Count(d.Landings)} gate landing, {d.Berths.Count} quay";
+	}
+
+	private static int Count(bool[,] flags)
+	{
+		int total = 0;
+		foreach (bool set in flags) if (set) total++;
+		return total;
+	}
+
+	/// <summary>
+	/// The feature anchors, flattened onto the footprint for the anchors view.
+	///
+	/// <para><b>These are the lists the content layer is meant to read.</b> A
+	/// forest does not go "at (43, 71)", it goes "on flat well-watered ground away
+	/// from the coast"; coral goes on a rim; vines hang under an overhang. So
+	/// generation answers the geometric questions once and content reads the
+	/// answers — which only works if the answers are right, and nothing showed
+	/// them before this view. A coast list that has quietly stopped including half
+	/// the coast is exactly the sort of thing that would go unnoticed until the
+	/// biome layer was built on top of it.</para>
+	///
+	/// <para>Later kinds win where a cell is several things at once, so a gate
+	/// landing on a beach reads as a landing: the built ground is the rarer fact
+	/// and the one worth seeing.</para>
+	/// </summary>
+	private static byte[,] AnchorGrid(IslandData d)
+	{
+		int n = d.Size;
+		var grid = new byte[n, n];
+
+		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = 1;
+		foreach (Vector2I c in d.CliffCells) grid[c.X, c.Y] = 2;
+		foreach (Vector2I c in d.Overhangs) grid[c.X, c.Y] = 3;
+
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+		{
+			if (d.Beach[x, z]) grid[x, z] = 4;
+			if (d.Ford[x, z]) grid[x, z] = 5;
+			if (d.Landings[x, z]) grid[x, z] = 6;
+			if (d.Ferry[x, z]) grid[x, z] = 7;
+		}
+		return grid;
+	}
+
+	/// <summary>One colour per anchor kind; everything else is dimmed ground.</summary>
+	private static Color AnchorColor(IslandData d, int x, int z, byte[,]? grid)
+	{
+		if (grid == null) return Unremarkable;
+		if (d.WaterLevel[x, z] != IslandData.NoLand) return new Color(0.16f, 0.24f, 0.38f);
+
+		return grid[x, z] switch
+		{
+			1 => new Color(0.30f, 0.82f, 0.88f),      // coast
+			2 => new Color(0.88f, 0.28f, 0.24f),      // cliff
+			3 => new Color(0.88f, 0.35f, 0.85f),      // overhang / arch
+			4 => new Color(0.90f, 0.82f, 0.55f),      // beach
+			5 => new Color(0.55f, 0.92f, 0.45f),      // ford
+			6 => new Color(0.98f, 0.86f, 0.25f),      // gate landing
+			7 => new Color(0.35f, 0.55f, 0.95f),      // ferry quay
+			_ => new Color(0.26f, 0.26f, 0.27f),      // unremarkable ground
+		};
+	}
+
+	/// <summary>What the ground is made of, for the surface view.</summary>
+	private static Color MaterialColor(SurfaceMaterial m) => m switch
+	{
+		SurfaceMaterial.Stone => new Color(0.46f, 0.46f, 0.48f),
+		SurfaceMaterial.Scree => new Color(0.62f, 0.60f, 0.55f),
+		SurfaceMaterial.Snow => new Color(0.92f, 0.94f, 0.96f),
+		SurfaceMaterial.Sand => new Color(0.85f, 0.78f, 0.55f),
+		SurfaceMaterial.Silt => new Color(0.52f, 0.44f, 0.32f),
+		SurfaceMaterial.Grass => new Color(0.36f, 0.56f, 0.26f),
+		SurfaceMaterial.Meadow => new Color(0.50f, 0.64f, 0.30f),
+		SurfaceMaterial.Heath => new Color(0.52f, 0.52f, 0.32f),
+		_ => new Color(0.68f, 0.58f, 0.42f),          // Dust
+	};
 
 	/// <summary>
 	/// Walkable areas, by area rank. Rank 0 is the mainland and always reads as
@@ -213,6 +359,9 @@ public partial class IslandLab : Node3D
 			Orientation = PlaneMesh.OrientationEnum.Y,
 		};
 		_waterQuad.Material = WaterMaterial(0.66f);
+		// Per-cell colour: a lake, a stream, a ford and a navigable reach are four
+		// different things and used to be one blue. See WaterColor.
+		if (_waterQuad.Material is StandardMaterial3D lit) lit.VertexColorUseAsAlbedo = true;
 		_water = new MultiMeshInstance3D
 		{
 			Name = "Water",
@@ -297,8 +446,17 @@ public partial class IslandLab : Node3D
 	public override void _UnhandledInput(InputEvent @event)
 	{
 		if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+		// Every key here is also a control on the panel, so whatever a key moves
+		// has to move the widget with it — see Sync.
 		switch (key.Keycode)
 		{
+			// The panel out of the way, for looking at the island rather than at
+			// the numbers.
+			case Key.Tab:
+			case Key.F1:
+				_showPanel = !_showPanel;
+				_panel.Visible = _showPanel;
+				return;
 			// Generation is a pure function of (seed, params), so R alone always
 			// rebuilds the same island. N rolls a new seed; _Process picks it up.
 			case Key.N: Seed = (int)(GD.Randi() & 0x7FFFFFFF); break;
@@ -317,11 +475,45 @@ public partial class IslandLab : Node3D
 			// something to try both ways rather than a preference.
 			case Key.T: CycleEntryGate(); break;
 			case Key.Y: CycleCrossings(); break;
+			// The plateau ladder, which is the least obvious knob on the island:
+			// stepping it here is the only way to see what a rung is worth.
+			case Key.L: CyclePlateaus(); break;
+			// Everything added after the first audit, in or out in one keypress.
+			case Key.U: CycleNewShapes(); break;
 			case Key.B: _showBridges = !_showBridges; Redraw(); break;
-			case Key.J: _showAirstrips = !_showAirstrips; Redraw(); break;
+			case Key.J: _showLandings = !_showLandings; Redraw(); break;
+			case Key.K: _showFerries = !_showFerries; Redraw(); break;
+			case Key.P: _showRoutes = !_showRoutes; Redraw(); break;
+			// <b>O, not D.</b> D is the camera's strafe — the rig reads it every
+			// frame through Input.IsKeyPressed, so binding an overlay to it meant
+			// walking right also flickered the fords on and off.
+			case Key.O: _showFords = !_showFords; Redraw(); break;
 			case Key.X: _showCompass = !_showCompass; Redraw(); break;
-			case Key.F1: _showHelp = !_showHelp; Redraw(); break;
+			// Headless verifies numbers and never appearance, which is the standing
+			// limit on any change to how terrain looks. A PNG is the cheapest way
+			// to review a look without a live session.
+			case Key.F2: Capture(); break;
 		}
+		Sync();
+	}
+
+	/// <summary>
+	/// Writes the current view to a PNG next to the project, and says where.
+	///
+	/// Headless generation can verify every number on the island and none of its
+	/// appearance, which is the standing limit on any change to how terrain looks —
+	/// "run it and look" needs a live session and a human. A screenshot is not a
+	/// substitute for looking, but it makes a look reviewable afterwards, and two
+	/// of them make a change comparable.
+	/// </summary>
+	private void Capture()
+	{
+		Image shot = GetViewport().GetTexture().GetImage();
+		string path = $"user://island-{Seed}-{_view.ToString().ToLowerInvariant()}.png";
+		Error err = shot.SavePng(path);
+		GD.Print(err == Error.Ok
+			? $"[IslandLab] wrote {ProjectSettings.GlobalizePath(path)}"
+			: $"[IslandLab] could not write {path}: {err}");
 	}
 
 	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>
@@ -360,6 +552,35 @@ public partial class IslandLab : Node3D
 			_ => GateKind.Auto,
 		};
 		GD.Print($"[IslandLab] EntryGate = {Params.EntryGate}");
+	}
+
+	/// <summary>
+	/// Steps the plateau ladder through 1..4 rungs. It is the hardest parameter on
+	/// the island to picture from its name — a rung is a level regions sit on, and
+	/// a difference of one rung between two neighbours is a cliff — so stepping it
+	/// on one seed and watching the terraces appear is the explanation.
+	/// </summary>
+	private void CyclePlateaus()
+	{
+		Params ??= new IslandParams();
+		Params.PlateauLevels = Params.PlateauLevels >= 4 ? 1 : Params.PlateauLevels + 1;
+		GD.Print($"[IslandLab] PlateauLevels = {Params.PlateauLevels} rungs "
+			+ $"of {Params.CliffHeight} slabs");
+	}
+
+	/// <summary>
+	/// Takes the newer arrangements and landforms in or out of <c>Auto</c>'s pool,
+	/// both at once. They are two flags on the resource; one key is enough here,
+	/// because what you want in the lab is to see the island with and without
+	/// everything that was added after the first audit.
+	/// </summary>
+	private void CycleNewShapes()
+	{
+		Params ??= new IslandParams();
+		bool on = !(Params.NewArrangements && Params.NewLandforms);
+		Params.NewArrangements = on;
+		Params.NewLandforms = on;
+		GD.Print($"[IslandLab] new arrangements and landforms {(on ? "on" : "off")}");
 	}
 
 	private void CycleCrossings()
@@ -402,6 +623,13 @@ public partial class IslandLab : Node3D
 			h.Add(Params.Crossings);
 			h.Add(Params.EntryGate);
 			h.Add(Params.ExitGates);
+			h.Add(Params.NewArrangements);
+			h.Add(Params.NewLandforms);
+			h.Add(Params.Lakes);
+			h.Add(Params.Valleys);
+			h.Add(Params.ExitGate);
+			h.Add(Params.EntryEdge);
+			h.Add(Params.OverhangDensity);
 			h.Add(Params.EdgeThickness);
 			h.Add(Params.KeelDepth);
 			h.Add(Params.KeelRoughness);
@@ -452,30 +680,54 @@ public partial class IslandLab : Node3D
 	{
 		if (_status == null) return;
 
+		// A shape only Auto-with-the-flag-on could have rolled is marked, so the
+		// checkbox has a visible consequence on the island as well as on the pool.
+		string newer = IslandGenerator.IsNewerShape(d.Arrangement)
+					|| IslandGenerator.IsNewerShape(d.Character) ? " (newer shape)" : "";
+
 		_status.Text =
-			$"{d.Character}   {d.Arrangement}   high ground: {d.Style}   seed {Seed}\n"
-			+ $"hilliness {Params.Hilliness:0.00}   mix {Params.LandformMix:0.00}   "
-			+ $"entry gate {Params.EntryGate}   crossings {Params.Crossings} "
-			+ $"({d.BridgeSpan} cells)   lakes {lakes}\n"
+			$"{d.Name}   seed {Seed}   {d.Arrangement}   {d.Character}{newer}: {Made(d)}"
+			+ $"   high ground {d.Style}"
+			+ (d.Rough ? "   ROUGH GOING" : "")
+			+ (d.Unmet.Length > 0 ? $"   UNMET: {d.Unmet}" : "")
+			+ $"\nladder {Params.PlateauLevels} rungs x {Params.CliffHeight} slabs   "
+			+ $"crossings {Params.Crossings} ({d.BridgeSpan} cells)   lakes {lakes}   "
+			+ $"built in {d.Attempts} attempt{(d.Attempts == 1 ? "" : "s")}\n"
 			+ WalkSummary(d) + "\n"
-			+ GateSummary(d);
+			+ GroundSummary(d) + "\n"
+			+ GateSummary(d) + "\n"
+			+ RoadSummary(d);
 
 		_legend.Text = ViewLegend(_view);
-		_overlays.Text = $"[B] bridges {(_showBridges ? "on" : "off")}    "
-			+ $"[J] airstrips {(_showAirstrips ? "on" : "off")}    "
-			+ $"[X] compass {(_showCompass ? "on" : "off")}";
+		Sync();
+	}
 
-		// The plate, not the label: hiding the text alone leaves an empty panel.
-		if (_help.GetParent() is Control plate) plate.Visible = _showHelp;
-		_hint.Visible = !_showHelp;
-		_help.Text = _showHelp
-			? "WASD move   Q/E rotate   MMB-drag rotate + tilt   arrows tilt   "
-			+ "wheel zoom   Shift faster\n"
-			+ "N new seed   R rebuild   F frame   C view\n"
-			+ "V character   G arrangement   H hilliness   M landform mix   "
-			+ "T entry gate   Y crossing ease\n"
-			+ "B bridges   J airstrips   X compass and gate vectors   F1 hide this"
-			: "";
+	/// <summary>
+	/// Which landforms this island actually ended up with, in size order.
+	///
+	/// A <c>TerrainCharacter</c> is a recipe, not a list of what came out — the
+	/// <c>Ziggurat</c> character carries plains, hills, a mountain and the stepped
+	/// massifs it is named for, and nothing on screen said which of those you were
+	/// looking at. This does.
+	/// </summary>
+	private static string Made(IslandData d)
+	{
+		var cells = new Dictionary<LandformType, int>();
+		for (int x = 0; x < d.Size; x++)
+		for (int z = 0; z < d.Size; z++)
+		{
+			if (!d.HasLand(x, z)) continue;
+			var form = (LandformType)d.Landform[x, z];
+			cells.TryGetValue(form, out int had);
+			cells[form] = had + 1;
+		}
+		if (cells.Count == 0) return "no land";
+
+		var order = new List<LandformType>(cells.Keys);
+		order.Sort((a, b) => cells[b].CompareTo(cells[a]));
+		var bits = new List<string>();
+		foreach (LandformType form in order) bits.Add(form.ToString().ToLowerInvariant());
+		return string.Join(", ", bits);
 	}
 
 	private static int RiverCells(IslandData d)
@@ -517,7 +769,51 @@ public partial class IslandLab : Node3D
 			+ $"reach {100f * heart / land:0}%   "
 			+ $"shelves {buildable} buildable of {d.Shelves.Count}   "
 			+ $"passes {d.Passes.Count}   bridges {d.Bridges.Count}   "
+			+ $"ferry berths {d.Berths.Count} on {d.WaterBodies} bodies   "
 			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim)";
+	}
+
+	/// <summary>
+	/// What each Link out costs to reach from the one the player arrives by, in
+	/// works: stairs, bridges and ferries. Zero means you can walk it on the day
+	/// you land.
+	/// </summary>
+	/// <summary>
+	/// What kind of water this is, in colour.
+	///
+	/// Every body of water used to be drawn in one blue, which is why a navigable
+	/// river was invisible: two cells of the same blue as the lake it came out of
+	/// and the stream it became. They are four different things to a player — one
+	/// you wade at a ford, one you ship goods on, one you ferry across, one you
+	/// keep out of — so they are four colours.
+	/// </summary>
+	private static Color WaterColor(IslandData d, int x, int z)
+	{
+		if (d.Ford[x, z]) return new Color(0.55f, 0.80f, 0.72f, 0.55f);      // pale, shallow
+		if (d.Navigable[x, z]) return new Color(0.10f, 0.45f, 0.60f, 0.85f); // deep, workable
+		if (d.River[x, z]) return new Color(0.35f, 0.66f, 0.80f, 0.70f);     // a stream
+		return new Color(0.13f, 0.30f, 0.55f, 0.80f);                        // standing water
+	}
+
+	private static string RoadSummary(IslandData d)
+	{
+		if (d.Passages.Count == 0) return "roads: none";
+
+		var bits = new List<string>();
+		foreach (Passage road in d.Passages)
+		{
+			int stairs = 0, spans = 0, ferries = 0;
+			foreach (Works w in road.Built)
+			{
+				if (w.Kind == WorksKind.Stair) stairs++;
+				else if (w.Kind == WorksKind.Bridge) spans++;
+				else ferries++;
+			}
+			Gate exit = d.Gates[road.Exit];
+			bits.Add($"{exit.Facing} cost {road.Cost}"
+				+ (road.Cost > 0 ? $" ({stairs}s {spans}b {ferries}f)" : ""));
+		}
+		return "roads from the entry: " + string.Join(",   ", bits);
 	}
 
 	/// <summary>
@@ -532,6 +828,7 @@ public partial class IslandLab : Node3D
 		const float cs = Terrain.CellSize;
 
 		var xf = new List<Transform3D>();
+		var col = new List<Color>();
 		var lakes = new HashSet<int>();
 
 		for (int x = 0; x < n; x++)
@@ -548,18 +845,29 @@ public partial class IslandLab : Node3D
 			xf.Add(new Transform3D(
 				Basis.Identity,
 				new Vector3((x - half) * cs, (level + 1) * sh, (z - half) * cs)));
+			col.Add(WaterColor(d, x, z));
 			// Rivers share the water plane but are not lakes; counting them would
 			// make the tally meaningless.
 			if (!d.River[x, z]) lakes.Add(d.Region[x, z]);
 		}
 
+		// <b>UseColors, and the colour actually set.</b> The material has asked for
+		// vertex colour as albedo since the four kinds of water were named, but
+		// nothing ever wrote a per-instance colour — so a ford, a stream, a
+		// navigable reach and a lake all came out the one blue the legend says they
+		// are not.
 		var mm = new MultiMesh
 		{
 			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+			UseColors = true,
 			Mesh = _waterQuad,
 			InstanceCount = xf.Count,
 		};
-		for (int i = 0; i < xf.Count; i++) mm.SetInstanceTransform(i, xf[i]);
+		for (int i = 0; i < xf.Count; i++)
+		{
+			mm.SetInstanceTransform(i, xf[i]);
+			mm.SetInstanceColor(i, col[i]);
+		}
 		_water.Multimesh = mm;
 		return lakes.Count;
 	}
@@ -709,29 +1017,72 @@ public partial class IslandLab : Node3D
 			}
 		}
 
-		if (_showAirstrips)
+		// The ground the Gates are served by: 3 by 5 where a vessel sets down at a
+		// hanging Gate, 3 by 3 of forecourt where a land Gate stands. Nothing else
+		// is marked — with a Gate guaranteed on every Domain, every *other* coast
+		// that would take a strip is an answer to a question nobody is asking.
+		if (_showLandings)
 		{
 			for (int x = 0; x < n; x++)
 			for (int z = 0; z < n; z++)
 			{
-				if (!d.Airstrip[x, z]) continue;
-				Mark(x, (d.SurfaceLevel(x, z) + 1) * sh + sh * 0.1f, z,
-					 new Vector3(cs * 0.85f, sh * 0.25f, cs * 0.85f), StripTint);
+				if (!d.Landings[x, z]) continue;
+				Mark(x, (d.SurfaceLevel(x, z) + 1) * sh + sh * 0.2f, z,
+					 new Vector3(cs * 0.8f, sh * 0.3f, cs * 0.8f), StripUsedTint);
 			}
+		}
 
-			// And the strips the Gates actually took, in a colour of their own.
-			foreach (Gate g in d.Gates)
+		// Fords: the one place a stream can be crossed on foot. Everywhere else a
+		// stream is an obstacle, which is what makes the crossing a place.
+		if (_showFords)
+		{
+			for (int x = 0; x < n; x++)
+			for (int z = 0; z < n; z++)
 			{
-				if (g.Kind != GateKind.Hanging) continue;
-				Vector2I head = new Vector2I(g.Center.X, g.Center.Z)
-								- g.Outward * GatePlacement.HangingOffset;
-				for (int along = 0; along < Mathf.Max(1, g.Landing); along++)
+				if (!d.Ford[x, z]) continue;
+				Mark(x, (d.WaterLevel[x, z] + 1) * sh + sh * 0.2f, z,
+					 new Vector3(cs * 0.7f, sh * 0.4f, cs * 0.7f), FordTint);
+			}
+		}
+
+		// Ferry berths: the quay and the water in front of it, drawn as the domino
+		// they are. Where a lake or a navigable river divides the Domain, these are
+		// the only places a crossing can be built at all.
+		if (_showFerries)
+		{
+			foreach (FerryBerth berth in d.Berths)
+			{
+				Mark(berth.Land.X,
+					 (Traversal.CrossLevel(d, berth.Land.X, berth.Land.Y) + 1) * sh + sh * 0.25f,
+					 berth.Land.Y, new Vector3(cs * 0.55f, sh * 0.5f, cs * 0.55f), QuayTint);
+				Mark(berth.Water.X, (berth.Level + 1) * sh + sh * 0.1f, berth.Water.Y,
+					 new Vector3(cs * 0.4f, sh * 0.3f, cs * 0.4f), HullTint);
+			}
+		}
+
+		// The roads between the Gates: the walk in pale yellow, and every crossing
+		// that has to be built before anyone can use it in its own colour. The
+		// count of those is the road's whole cost — see Passage.
+		if (_showRoutes)
+		{
+			foreach (Passage road in d.Passages)
+			{
+				foreach (Vector2I cell in road.Path)
+					Mark(cell.X, (Traversal.CrossLevel(d, cell.X, cell.Y) + 1) * sh + sh * 0.15f,
+						 cell.Y, new Vector3(cs * 0.35f, sh * 0.3f, cs * 0.35f), RoadTint);
+
+				foreach (Works works in road.Built)
 				{
-					Vector2I cell = head - g.Outward * along;
-					if (cell.X < 0 || cell.Y < 0 || cell.X >= n || cell.Y >= n) break;
-					if (!d.HasLand(cell.X, cell.Y)) break;
-					Mark(cell.X, (d.SurfaceLevel(cell.X, cell.Y) + 1) * sh + sh * 0.3f, cell.Y,
-						 new Vector3(cs * 0.6f, sh * 0.3f, cs * 0.6f), StripUsedTint);
+					Color tint = works.Kind switch
+					{
+						WorksKind.Stair => StairTint,
+						WorksKind.Bridge => SpanTint,
+						_ => CrossingTint,
+					};
+					foreach (Vector2I cell in new[] { works.From, works.To })
+						Mark(cell.X,
+							 (Traversal.CrossLevel(d, cell.X, cell.Y) + 1) * sh + sh * 0.55f,
+							 cell.Y, new Vector3(cs * 0.7f, sh * 0.8f, cs * 0.7f), tint);
 				}
 			}
 		}
@@ -764,6 +1115,12 @@ public partial class IslandLab : Node3D
 					Mark(cx, y, cz, new Vector3(cs * w, sh * 0.5f, cs * w), tint);
 				}
 			}
+
+			// And which way the wind blows, drawn over the dune fields it made.
+			// A dune field's grain is a fact about the Domain — one direction for
+			// the whole island, snapped to a compass point — and until now it was
+			// a local variable inside the surface pass that nothing could see.
+			DrawDuneGrain(d, Mark);
 		}
 
 		var mm = new MultiMesh
@@ -781,6 +1138,70 @@ public partial class IslandLab : Node3D
 		_marks.Multimesh = mm;
 
 		PlaceCompass(d);
+	}
+
+	/// <summary>
+	/// The prevailing wind, drawn as a run of arrows across each dune field.
+	///
+	/// The grain is one direction for the whole Domain and it is snapped to a
+	/// compass point, so an arrow is an honest picture of it rather than a
+	/// decoration: the ridges lie <i>across</i> these arrows, and the readout
+	/// names the same direction in letters.
+	///
+	/// Drawn from the centre of each dune patch, so a Domain with three dune
+	/// fields gets three arrows rather than one legend in a corner nobody
+	/// connects to the ground.
+	/// </summary>
+	private static void DrawDuneGrain(IslandData d, Action<float, float, float, Vector3, Color> mark)
+	{
+		int n = d.Size;
+		const float sh = Terrain.SlabHeight;
+		const float cs = Terrain.CellSize;
+		var wind = new Color(0.98f, 0.62f, 0.30f);
+
+		// The centre of each dune patch: the mean of its cells, per region, so one
+		// arrow lands on each field rather than one per cell.
+		var sumX = new Dictionary<int, long>();
+		var sumZ = new Dictionary<int, long>();
+		var count = new Dictionary<int, int>();
+
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+		{
+			if (!d.HasLand(x, z)) continue;
+			if ((LandformType)d.Landform[x, z] != LandformType.Dunes) continue;
+			int r = d.Region[x, z];
+			sumX[r] = sumX.GetValueOrDefault(r) + x;
+			sumZ[r] = sumZ.GetValueOrDefault(r) + z;
+			count[r] = count.GetValueOrDefault(r) + 1;
+		}
+
+		Vector2 dir = d.DuneVector;
+		foreach ((int r, int cells) in count)
+		{
+			if (cells < 12) continue;                     // a sliver is not a field
+			float cx = sumX[r] / (float)cells;
+			float cz = sumZ[r] / (float)cells;
+
+			// Long enough to read as a direction, short enough to stay on the
+			// patch: a shaft either side of the centre, tapering downwind.
+			int run = Math.Clamp((int)MathF.Sqrt(cells) - 1, 4, 14);
+			for (int step = -run; step <= run; step++)
+			{
+				float px = cx + dir.X * step;
+				float pz = cz + dir.Y * step;
+				int ix = Mathf.RoundToInt(px), iz = Mathf.RoundToInt(pz);
+				if (ix < 0 || iz < 0 || ix >= n || iz >= n || !d.HasLand(ix, iz)) continue;
+
+				short ground = d.SurfaceLevel(ix, iz);
+				if (ground == IslandData.NoLand) continue;
+
+				float t = (step + run) / (float)(2 * run);
+				float w = Mathf.Lerp(0.75f, 0.18f, t);     // widest upwind, a point downwind
+				mark(px, (ground + 1) * sh + sh * 0.9f,
+					 pz, new Vector3(cs * w, sh * 0.6f, cs * w), wind);
+			}
+		}
 	}
 
 	/// <summary>
@@ -826,14 +1247,46 @@ public partial class IslandLab : Node3D
 		}
 	}
 
-	private static string GateSummary(IslandData d)
+	/// <summary>
+	/// The Gates, and — where a Gate was <i>asked</i> for rather than rolled — what
+	/// was asked for beside what came out.
+	///
+	/// The Gate parameters are the only ones set from outside the Domain, so they
+	/// are the only ones where the panel saying one thing and the island another is
+	/// a bug rather than a seed. The island cannot always oblige (three hanging
+	/// Exits want three coasts that will take one), and when it cannot, saying so
+	/// here is the difference between a limit and a broken control.
+	/// </summary>
+	private string GateSummary(IslandData d)
 	{
 		if (d.Gates.Count == 0) return "gates: none";
 
 		var bits = new List<string>();
+		int exits = 0;
 		foreach (Gate g in d.Gates)
+		{
+			if (g.Role == GateRole.Exit) exits++;
 			bits.Add($"{g.Facing} {g.Kind}{(g.Role == GateRole.Entry ? "*" : "")}");
-		return "gates: " + string.Join(", ", bits) + "   (* = entry)";
+		}
+
+		var asked = new List<string>();
+		if (Params.EntryEdge != GateEdge.Auto || Params.EntryGate != GateKind.Auto)
+		{
+			Gate? entry = null;
+			foreach (Gate g in d.Gates) if (g.Role == GateRole.Entry) entry = g;
+
+			bool edgeOk = Params.EntryEdge == GateEdge.Auto
+				|| (entry != null && (int)entry.Value.Facing == (int)Params.EntryEdge - 1);
+			bool kindOk = Params.EntryGate == GateKind.Auto
+				|| (entry != null && entry.Value.Kind == Params.EntryGate);
+			if (!edgeOk || !kindOk)
+				asked.Add($"entry asked {Params.EntryEdge} {Params.EntryGate} — COAST WOULD NOT");
+		}
+		if (Params.ExitGates > 0 && exits < Params.ExitGates)
+			asked.Add($"asked {Params.ExitGates} exits, got {exits} — COAST WOULD NOT");
+
+		return "gates: " + string.Join(", ", bits) + "   (* = entry)"
+			+ (asked.Count > 0 ? "\n   " + string.Join(";   ", asked) : "");
 	}
 
 	private static bool OnRegionBorder(IslandData d, int x, int z)
@@ -868,6 +1321,12 @@ public partial class IslandLab : Node3D
 			}
 		}
 		float tintSpan = Math.Max(1, topMax - topMin);
+
+		// The anchor grid, built once rather than searched per column: three of the
+		// anchors are Lists of cells and one is a list of berths, so asking "is
+		// this cell an anchor?" from inside the draw loop would be a linear scan
+		// tens of thousands of times over.
+		byte[,]? anchor = _view == View.Anchors ? AnchorGrid(d) : null;
 
 		var low = new Color(0.24f, 0.20f, 0.13f);   // deep / dirt
 		var mid = new Color(0.30f, 0.42f, 0.18f);   // grass
@@ -913,6 +1372,12 @@ public partial class IslandLab : Node3D
 					case View.Shelves:
 						col.Add(ShelfColor(d, x, z));
 						break;
+					case View.Surface:
+						col.Add(MaterialColor((SurfaceMaterial)d.Material[x, z]));
+						break;
+					case View.Anchors:
+						col.Add(AnchorColor(d, x, z, anchor));
+						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
 						col.Add(t < 0.5f ? low.Lerp(mid, t * 2f) : mid.Lerp(high, (t - 0.5f) * 2f));
@@ -956,6 +1421,20 @@ public partial class IslandLab : Node3D
 	/// put two multi-line labels at hard-coded offsets, and every line the status
 	/// grew ran straight through the one above it.
 	/// </summary>
+	/// <summary>
+	/// The control panel, and the two text plates that go with it.
+	///
+	/// <para>Every knob in here is also a key, and the keys came first — but a key
+	/// list is a poor interface for twenty-odd settings, and cycling an enum of
+	/// twenty-three arrangements one keypress at a time is worse. So the panel is
+	/// the interface and the keys are the shortcut: both write the same
+	/// <see cref="Params"/>, and <see cref="Sync"/> pulls the widgets back into
+	/// line whenever a key moves something behind their back.</para>
+	///
+	/// <para>It lives in a <see cref="ScrollContainer"/> pinned to the left edge at
+	/// a fixed width, so it cannot grow into the view however long the lists get,
+	/// and it is collapsed by <b>Tab</b> when you want to look at the island.</para>
+	/// </summary>
 	private void BuildOverlayUi()
 	{
 		var layer = new CanvasLayer();
@@ -964,84 +1443,365 @@ public partial class IslandLab : Node3D
 		var frame = new MarginContainer();
 		frame.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		foreach (string side in new[] { "margin_left", "margin_top", "margin_right", "margin_bottom" })
-			frame.AddThemeConstantOverride(side, 12);
+			frame.AddThemeConstantOverride(side, 10);
 		frame.MouseFilter = Control.MouseFilterEnum.Ignore;
 		layer.AddChild(frame);
 
-		var rows = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-		rows.AddThemeConstantOverride("separation", 8);
-		frame.AddChild(rows);
+		var columns = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+		columns.AddThemeConstantOverride("separation", 10);
+		frame.AddChild(columns);
 
-		var top = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-		rows.AddChild(top);
-		_status = Panelled(top, Control.SizeFlags.ShrinkBegin, new Color(1f, 0.93f, 0.72f));
-		top.AddChild(new Control
+		// ---- left: the controls ------------------------------------------------
+		_panel = new PanelContainer
+		{
+			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(PanelWidth, 0),
+		};
+		_panel.AddThemeStyleboxOverride("panel", Plate());
+		columns.AddChild(_panel);
+
+		var scroll = new ScrollContainer
+		{
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+		};
+		_panel.AddChild(scroll);
+
+		var rows = new VBoxContainer
+		{
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+		};
+		rows.AddThemeConstantOverride("separation", 4);
+		scroll.AddChild(rows);
+
+		var doing = new HBoxContainer();
+		rows.AddChild(doing);
+		Button(doing, "New seed  (N)", () => { Seed = (int)(GD.Randi() & 0x7FFFFFFF); Sync(); });
+		Button(doing, "Frame  (F)", () => _rig.Frame(_islandCenter, _islandRadius));
+		Button(doing, "Rebuild  (R)", Rebuild);
+
+		Heading(rows, "what the island is");
+		_viewPick = Choice<View>(rows, "View  (C)", () => _view,
+			v => { _view = v; Rebuild(); });
+		_arrangePick = Choice<IslandArrangement>(rows, "Arrangement  (G)",
+			() => Params.Arrangement, v => Params.Arrangement = v);
+		_characterPick = Choice<TerrainCharacter>(rows, "Character  (V)",
+			() => Params.Character, v => Params.Character = v);
+
+		_newShapes = Check(rows, "Auto may roll the newer shapes  (U)",
+			() => Params.NewArrangements && Params.NewLandforms,
+			on => { Params.NewArrangements = on; Params.NewLandforms = on; });
+		_newShapes.TooltipText =
+			"Gates the dice, not the code. It widens the pool Auto draws from; "
+			+ "naming an arrangement or a character by hand still builds it, and "
+			+ "with both named this does nothing at all.";
+
+		// What the flag is worth on the settings as they stand. It is the one
+		// control whose effect is invisible — it changes a pool nothing on screen
+		// names — so the pool is what it says.
+		_poolNote = Caption("");
+		_poolNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_poolNote.AddThemeColorOverride("font_color", new Color(0.62f, 0.78f, 0.95f));
+		_poolNote.AddThemeFontSizeOverride("font_size", 12);
+		rows.AddChild(_poolNote);
+
+		Heading(rows, "relief");
+		_hilliness = Slide(rows, "Hilliness  (H)", 0f, 1f, 0.05f,
+			() => Params.Hilliness, v => Params.Hilliness = v);
+		_mix = Slide(rows, "Landform mix  (M)", 0f, 1f, 0.05f,
+			() => Params.LandformMix, v => Params.LandformMix = v);
+		_relief = Slide(rows, "Relief", 0f, 1f, 0.05f,
+			() => Params.Relief, v => Params.Relief = v);
+		_wet = Slide(rows, "Rivers", 0f, 1f, 0.05f,
+			() => Params.Rivers, v => Params.Rivers = v);
+		_lakes = Slide(rows, "Lakes", 0f, 1f, 0.05f,
+			() => Params.Lakes, v => Params.Lakes = v);
+		_valleys = Slide(rows, "Valleys", 0f, 1f, 0.05f,
+			() => Params.Valleys, v => Params.Valleys = v);
+		_rungs = Count(rows, "Plateau rungs  (L)", 1, 8,
+			() => Params.PlateauLevels, v => Params.PlateauLevels = v);
+		_cliff = Count(rows, "Cliff height, slabs", 3, 16,
+			() => Params.CliffHeight, v => Params.CliffHeight = v);
+		_patch = Count(rows, "Region scale, cells", 6, 40,
+			() => Params.RegionScale, v => Params.RegionScale = v);
+
+		Heading(rows, "gates and crossings");
+		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
+			() => Params.EntryGate, v => Params.EntryGate = v);
+		_entryEdge = Choice<GateEdge>(rows, "Entry edge",
+			() => Params.EntryEdge, v => Params.EntryEdge = v);
+		_exits = Count(rows, "Exit gates  (0 = per seed)", 0, 3,
+			() => Params.ExitGates, v => Params.ExitGates = v);
+		_exitKind = Choice<GateKind>(rows, "Exit gates are",
+			() => Params.ExitGate, v => Params.ExitGate = v);
+		_crossings = Choice<BridgeEase>(rows, "Crossings  (Y)",
+			() => Params.Crossings, v => Params.Crossings = v);
+
+		Heading(rows, "overlays");
+		_bridgeBox = Check(rows, "Bridge sites  (B)",
+			() => _showBridges, on => { _showBridges = on; Redraw(); });
+		_stripBox = Check(rows, "Gate landings  (J)",
+			() => _showLandings, on => { _showLandings = on; Redraw(); });
+		_ferryBox = Check(rows, "Ferry berths  (K)",
+			() => _showFerries, on => { _showFerries = on; Redraw(); });
+		_roadBox = Check(rows, "Roads between gates  (P)",
+			() => _showRoutes, on => { _showRoutes = on; Redraw(); });
+		_fordBox = Check(rows, "Fords  (O)",
+			() => _showFords, on => { _showFords = on; Redraw(); });
+		_compassBox = Check(rows, "Compass and gate vectors  (X)",
+			() => _showCompass, on => { _showCompass = on; Redraw(); });
+
+		Heading(rows, "camera");
+		var keys = new Label
+		{
+			Text = "WASD move   Q/E rotate   MMB-drag rotate and tilt\n"
+				 + "arrows tilt   wheel zoom   Shift faster\n"
+				 + "Tab hides this panel",
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+		};
+		keys.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.78f));
+		rows.AddChild(keys);
+
+		// ---- right: what the island turned out to be ---------------------------
+		var right = new VBoxContainer
 		{
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
-		});
-		_legend = Panelled(top, Control.SizeFlags.ShrinkEnd, new Color(0.82f, 0.92f, 1f));
+		};
+		right.AddThemeConstantOverride("separation", 8);
+		columns.AddChild(right);
 
-		// The stretcher: everything above it sits at the top, everything below at
-		// the bottom, whatever the window size.
-		rows.AddChild(new Control
+		// Both plates at the **top**. The status used to sit at the bottom, where
+		// the editor's own chrome above the running game pushes it off the screen —
+		// the last line of the readout was the one you most wanted to read.
+		_legend = Panelled(right, Control.SizeFlags.ShrinkEnd, new Color(0.82f, 0.92f, 1f));
+		_status = Panelled(right, Control.SizeFlags.ExpandFill, new Color(1f, 0.93f, 0.72f));
+		right.AddChild(new Control
 		{
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		});
 
-		var bottom = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-		rows.AddChild(bottom);
-		_help = Panelled(bottom, Control.SizeFlags.ShrinkBegin, new Color(0.88f, 0.88f, 0.9f));
-		bottom.AddChild(new Control
-		{
-			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-		});
-		_overlays = Panelled(bottom, Control.SizeFlags.ShrinkEnd, new Color(0.95f, 0.86f, 0.7f));
-
-		if (_help.GetParent() is Control helpPlate) helpPlate.Visible = false;
-		_legend.Text = ViewLegend(_view);
-		_overlays.Text = "";
-		_status.Text = "";
-
-		_hint = new Label
-		{
-			Text = "  F1 keys",
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-		};
-		_hint.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.45f));
-		bottom.AddChild(_hint);
-
-		// The legend can run long on the landform view; let it wrap rather than
-		// push the status panel off its own side of the screen.
 		_legend.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		_legend.CustomMinimumSize = new Vector2(360, 0);
+		_legend.CustomMinimumSize = new Vector2(420, 0);
+		_legend.HorizontalAlignment = HorizontalAlignment.Right;
+		_status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_legend.Text = ViewLegend(_view);
+		_status.Text = "";
+		Sync();
 	}
+
+	/// <summary>Cells of screen the control column takes, whatever the window is.</summary>
+	private const int PanelWidth = 330;
+
+	private PanelContainer _panel = null!;
+	private OptionButton _viewPick = null!, _arrangePick = null!, _characterPick = null!;
+	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
+	private OptionButton _exitKind = null!;
+	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
+	private HSlider _lakes = null!, _valleys = null!;
+	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
+	private Label _poolNote = null!;
+	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
+
+	/// <summary>
+	/// What the newer-shapes flag is currently worth, in the numbers it changes.
+	///
+	/// The flag gates <c>Auto</c>'s pool and nothing else, so with an arrangement
+	/// and a character both named by hand it is genuinely inert — and a checkbox
+	/// that is inert without saying so reads as a checkbox that is broken.
+	/// </summary>
+	private string PoolNote()
+	{
+		bool newer = Params.NewArrangements && Params.NewLandforms;
+		bool rollsShape = Params.Arrangement == IslandArrangement.Auto;
+		bool rollsMade = Params.Character == TerrainCharacter.Auto;
+
+		if (!rollsShape && !rollsMade)
+			return "no effect here: arrangement and character are both named, so "
+				+ "there is no dice roll left to gate.";
+
+		var bits = new List<string>();
+		if (rollsShape)
+			bits.Add($"{IslandGenerator.AutoArrangements(newer)} of "
+				+ $"{IslandGenerator.AutoArrangements(true)} arrangements");
+		if (rollsMade)
+			bits.Add($"{IslandGenerator.AutoCharacters(newer)} of "
+				+ $"{IslandGenerator.AutoCharacters(true)} characters");
+		return "Auto draws from " + string.Join(" and ", bits) + ".";
+	}
+	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
+	private bool _syncing;
+
+	/// <summary>
+	/// Pulls every widget back into line with what it displays.
+	///
+	/// The keys and the panel are two ways to the same settings, so pressing a key
+	/// has to move the widget as well — otherwise the dropdown says one thing and
+	/// the island is another, which is worse than having no dropdown. The
+	/// <see cref="_syncing"/> guard is what stops that write coming back round as
+	/// a change signal and undoing the key.
+	/// </summary>
+	private void Sync()
+	{
+		if (_viewPick == null || Params == null) return;
+		_syncing = true;
+
+		_viewPick.Selected = (int)_view;
+		_arrangePick.Selected = _arrangePick.GetItemIndex((int)Params.Arrangement);
+		_characterPick.Selected = _characterPick.GetItemIndex((int)Params.Character);
+		_entryKind.Selected = _entryKind.GetItemIndex((int)Params.EntryGate);
+		_entryEdge.Selected = _entryEdge.GetItemIndex((int)Params.EntryEdge);
+		_crossings.Selected = _crossings.GetItemIndex((int)Params.Crossings);
+		_exitKind.Selected = _exitKind.GetItemIndex((int)Params.ExitGate);
+
+		_hilliness.Value = Params.Hilliness;
+		_mix.Value = Params.LandformMix;
+		_relief.Value = Params.Relief;
+		_wet.Value = Params.Rivers;
+		_lakes.Value = Params.Lakes;
+		_valleys.Value = Params.Valleys;
+		_rungs.Value = Params.PlateauLevels;
+		_cliff.Value = Params.CliffHeight;
+		_patch.Value = Params.RegionScale;
+		_exits.Value = Params.ExitGates;
+
+		_newShapes.ButtonPressed = Params.NewArrangements && Params.NewLandforms;
+		_poolNote.Text = PoolNote();
+		_bridgeBox.ButtonPressed = _showBridges;
+		_stripBox.ButtonPressed = _showLandings;
+		_ferryBox.ButtonPressed = _showFerries;
+		_roadBox.ButtonPressed = _showRoutes;
+		_compassBox.ButtonPressed = _showCompass;
+		_fordBox.ButtonPressed = _showFords;
+
+		_syncing = false;
+	}
+
+	private static void Heading(Container into, string text)
+	{
+		var label = new Label { Text = text.ToUpperInvariant() };
+		label.AddThemeColorOverride("font_color", new Color(0.62f, 0.78f, 0.95f));
+		label.AddThemeFontSizeOverride("font_size", 12);
+		into.AddChild(new HSeparator());
+		into.AddChild(label);
+	}
+
+	private static void Button(Container into, string text, Action pressed)
+	{
+		var button = new Godot.Button { Text = text, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		button.Pressed += pressed;
+		into.AddChild(button);
+	}
+
+	/// <summary>A labelled dropdown over an enum, with <c>Auto</c> first where there is one.</summary>
+	private OptionButton Choice<T>(Container into, string text, Func<T> read, Action<T> write)
+		where T : struct, Enum
+	{
+		into.AddChild(Caption(text));
+		var pick = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		foreach (T value in Enum.GetValues<T>())
+			pick.AddItem(Spaced(value.ToString()!), Convert.ToInt32(value));
+		pick.Selected = pick.GetItemIndex(Convert.ToInt32(read()));
+		pick.ItemSelected += _ =>
+		{
+			if (_syncing) return;
+			write((T)Enum.ToObject(typeof(T), pick.GetSelectedId()));
+		};
+		into.AddChild(pick);
+		return pick;
+	}
+
+	private HSlider Slide(Container into, string text, float min, float max, float step,
+						  Func<float> read, Action<float> write)
+	{
+		Label caption = Caption($"{text}   {read():0.00}");
+		into.AddChild(caption);
+
+		var slider = new HSlider
+		{
+			MinValue = min,
+			MaxValue = max,
+			Step = step,
+			Value = read(),
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(0, 18),
+		};
+		slider.ValueChanged += v =>
+		{
+			caption.Text = $"{text}   {v:0.00}";
+			if (!_syncing) write((float)v);
+		};
+		into.AddChild(slider);
+		return slider;
+	}
+
+	private SpinBox Count(Container into, string text, int min, int max,
+						  Func<int> read, Action<int> write)
+	{
+		var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		Label caption = Caption(text);
+		caption.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		row.AddChild(caption);
+
+		var spin = new SpinBox { MinValue = min, MaxValue = max, Step = 1, Value = read() };
+		spin.ValueChanged += v => { if (!_syncing) write((int)v); };
+		row.AddChild(spin);
+		into.AddChild(row);
+		return spin;
+	}
+
+	private CheckBox Check(Container into, string text, Func<bool> read, Action<bool> write)
+	{
+		var box = new CheckBox { Text = text, ButtonPressed = read() };
+		box.Toggled += on => { if (!_syncing) write(on); };
+		into.AddChild(box);
+		return box;
+	}
+
+	private static Label Caption(string text)
+	{
+		var label = new Label { Text = text };
+		label.AddThemeColorOverride("font_color", new Color(0.85f, 0.87f, 0.9f));
+		label.AddThemeFontSizeOverride("font_size", 13);
+		return label;
+	}
+
+	/// <summary>"BrokenRing" reads as "Broken Ring" in a list a human has to scan.</summary>
+	private static string Spaced(string name)
+	{
+		var text = new System.Text.StringBuilder(name.Length + 4);
+		for (int i = 0; i < name.Length; i++)
+		{
+			if (i > 0 && char.IsUpper(name[i]) && !char.IsUpper(name[i - 1])) text.Append(' ');
+			text.Append(name[i]);
+		}
+		return text.ToString();
+	}
+
+	private static StyleBoxFlat Plate() => new()
+	{
+		BgColor = new Color(0f, 0f, 0f, 0.62f),
+		ContentMarginLeft = 10,
+		ContentMarginRight = 10,
+		ContentMarginTop = 8,
+		ContentMarginBottom = 8,
+		CornerRadiusTopLeft = 5,
+		CornerRadiusTopRight = 5,
+		CornerRadiusBottomLeft = 5,
+		CornerRadiusBottomRight = 5,
+	};
 
 	/// <summary>One label on a dark plate, so text stays readable over pale terrain.</summary>
 	private static Label Panelled(Container into, Control.SizeFlags flags, Color tint)
 	{
-		var plate = new StyleBoxFlat
-		{
-			BgColor = new Color(0f, 0f, 0f, 0.55f),
-			ContentMarginLeft = 10,
-			ContentMarginRight = 10,
-			ContentMarginTop = 6,
-			ContentMarginBottom = 6,
-			CornerRadiusTopLeft = 5,
-			CornerRadiusTopRight = 5,
-			CornerRadiusBottomLeft = 5,
-			CornerRadiusBottomRight = 5,
-		};
-
 		var panel = new PanelContainer
 		{
 			SizeFlagsHorizontal = flags,
-			SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+			SizeFlagsVertical = Control.SizeFlags.ShrinkEnd,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
-		panel.AddThemeStyleboxOverride("panel", plate);
+		panel.AddThemeStyleboxOverride("panel", Plate());
 		into.AddChild(panel);
 
 		var label = new Label { MouseFilter = Control.MouseFilterEnum.Ignore };

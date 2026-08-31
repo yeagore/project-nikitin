@@ -125,8 +125,287 @@ public static class Traversal
     public static void Analyse(IslandData d)
     {
         BuildWalkAreas(d);
+        BuildWaterBodies(d);
+        BuildBerths(d);
+        PruneBerths(d);
         BuildReachAreas(d);
         BuildShelves(d);
+    }
+
+    /// <summary>
+    /// Throws away every ferry berth that would not join anything.
+    ///
+    /// <para>A quay beside water is easy to find — the domino rule fits most of
+    /// every lake shore, and the first version recorded three thousand of them per
+    /// audit. Nearly all were on water you could simply walk round, which makes
+    /// them scenery: a ferry from a place to itself.</para>
+    ///
+    /// <para>So the reach flood is run <b>once without ferries</b>, and a body of
+    /// water keeps its berths only if they land in two or more different pieces of
+    /// that answer — the definition of the ferry being load-bearing. What is left
+    /// is the crossings that exist because the water is genuinely in the way, which
+    /// is the only kind worth drawing, costing or building.</para>
+    /// </summary>
+    private static void PruneBerths(IslandData d)
+    {
+        // Kept as a diagnostic, because "48 berths" and "48 berths out of 3,000
+        // sites, on the one island in sixty where water is genuinely in the way"
+        // are the same number saying two very different things — and the second is
+        // the one that tells you whether the pruning is right.
+        d.BerthSites = d.Berths.Count;
+        if (d.Berths.Count == 0) return;
+
+        int n = d.Size;
+        var dry = new int[n, n];
+        BuildReachAreas(d, ferries: false, into: dry);
+
+        // Which pieces of the ferry-less answer each body of water touches.
+        var touches = new Dictionary<int, HashSet<int>>();
+        foreach (FerryBerth berth in d.Berths)
+        {
+            if (berth.Body < 0) continue;
+            int piece = dry[berth.Land.X, berth.Land.Y];
+            if (piece < 0) continue;
+            if (!touches.TryGetValue(berth.Body, out HashSet<int>? seen))
+                touches[berth.Body] = seen = new HashSet<int>();
+            seen.Add(piece);
+        }
+
+        var kept = new List<FerryBerth>();
+        foreach (FerryBerth berth in d.Berths)
+            if (berth.Body >= 0 && touches.TryGetValue(berth.Body, out HashSet<int>? seen)
+                && seen.Count > 1)
+                kept.Add(berth);
+
+        d.Berths.Clear();
+        d.Berths.AddRange(kept);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) d.Ferry[x, z] = false;
+        foreach (FerryBerth berth in d.Berths) d.Ferry[berth.Land.X, berth.Land.Y] = true;
+    }
+
+    /// <summary>
+    /// Widest gap a bridge may span over <b>water</b>, in cells. Three, whatever
+    /// the Domain's <see cref="IslandData.BridgeSpan"/> allows over aether — and
+    /// never more than that span, since a Domain where one cell is the limit does
+    /// not get a longer bridge for being wet.
+    ///
+    /// A bridge over aether is a deck between two rims and can be built out from
+    /// either end; a bridge over water has piers in it, and past three cells the
+    /// thing you build is a ferry.
+    /// </summary>
+    public const int WaterBridgeSpan = 3;
+
+    /// <summary>
+    /// How far below a deck the ground under it must lie before that ground counts
+    /// as a <b>chasm</b> rather than as something in the way, in slabs.
+    ///
+    /// Five. A bridge from one cliff top to another across a canyon is the same
+    /// structure as a bridge between two islands — a level deck between two banks
+    /// — and the only thing that makes it a bridge rather than a detour is that
+    /// what is under it is far enough down to be worth spanning. Below five you
+    /// would walk down and up; at five the descent already costs a stair each way,
+    /// so one deck is the cheaper answer as well as the truer one.
+    /// </summary>
+    public const int ChasmDrop = 5;
+
+    /// <summary>
+    /// Whether a level deck could run from one cell to another <paramref name="reach"/>
+    /// cells away in a cardinal direction — the one place the three kinds of gap
+    /// are told apart.
+    ///
+    /// <list type="bullet">
+    /// <item><b>Aether</b> — no column at all. Spans up to the Domain's bridge span.</item>
+    /// <item><b>Water</b> — a flooded column whose surface is near the deck. Spans
+    /// up to <see cref="WaterBridgeSpan"/>, because a deck over water has piers in
+    /// it.</item>
+    /// <item><b>Chasm</b> — ground (wet or dry) lying <see cref="ChasmDrop"/> or
+    /// more below the deck: a canyon, a gorge, the plain between two mesas. Spans
+    /// like aether, since nothing has to stand in it either.</item>
+    /// </list>
+    ///
+    /// Anything else — ground at about deck height — is not a gap at all, and the
+    /// deck is refused.
+    /// </summary>
+    public static bool DeckFits(IslandData d, int x, int z, int dx, int dz, int reach, int span)
+    {
+        int n = d.Size;
+        int gap = reach - 1;
+        if (gap < 1) return true;
+        if (gap > span) return false;
+
+        int fx = x + dx * reach, fz = z + dz * reach;
+        int deck = Math.Min(CrossLevel(d, x, z), CrossLevel(d, fx, fz));
+        bool overWater = false;
+
+        for (int step = 1; step < reach; step++)
+        {
+            int mx = x + dx * step, mz = z + dz * step;
+            if (mx < 0 || mz < 0 || mx >= n || mz >= n) continue;
+            if (!d.HasLand(mx, mz)) continue;                       // aether
+
+            // What the deck has to clear: a water surface where there is one, the
+            // ground where there is not.
+            int head = d.WaterLevel[mx, mz] != IslandData.NoLand
+                ? d.WaterLevel[mx, mz]
+                : d.SurfaceLevel(mx, mz);
+            if (head <= deck - ChasmDrop) continue;                 // a chasm under the deck
+
+            if (Walkable(d, mx, mz)) return false;                  // ground in the way
+            overWater = true;
+        }
+        return !overWater || gap <= Math.Min(span, WaterBridgeSpan);
+    }
+
+    /// <summary>
+    /// How far above the water a quay may stand, in slabs. One is the shore the
+    /// terrain actually leaves — <c>LevelShores</c> brings every bank down to the
+    /// free step — and two is the slack for a bank a river cut and left proud.
+    /// Anything higher is a cliff over the water, and you do not land a barge at
+    /// the foot of one.
+    /// </summary>
+    public const int MaxQuayRise = 2;
+
+    /// <summary>
+    /// Water a ferry works on: standing water, or a river too deep to wade.
+    ///
+    /// A stream is forded for nothing, so a ferry across one would be
+    /// infrastructure bought to replace a free step — see <see cref="FerryBerth"/>.
+    /// </summary>
+    public static bool Sailable(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        if (x < 0 || z < 0 || x >= n || z >= n) return false;
+        if (!d.HasLand(x, z) || d.WaterLevel[x, z] == IslandData.NoLand) return false;
+        return !d.River[x, z] || d.Navigable[x, z];
+    }
+
+    /// <summary>
+    /// Labels every flooded column with the body of water it belongs to, and
+    /// <b>cuts a body at every waterfall</b>: the pool above a fall and the pool
+    /// below it are the same river and not the same water, because nothing sails
+    /// up a fall. That is the whole content of "two ferries are linked if they
+    /// connect through water without falls in between".
+    /// </summary>
+    private static void BuildWaterBodies(IslandData d)
+    {
+        int n = d.Size;
+
+        // The links a fall severs, both ways round, keyed by the two cells.
+        var cut = new HashSet<(int, int, int, int)>();
+        foreach (Fall f in d.Falls)
+        {
+            if (f.OffRim) continue;                       // it leaves the Domain
+            int tx = f.Cell.X + f.Flow.X, tz = f.Cell.Y + f.Flow.Y;
+            cut.Add((f.Cell.X, f.Cell.Y, tx, tz));
+            cut.Add((tx, tz, f.Cell.X, f.Cell.Y));
+        }
+
+        var queue = new Queue<(int X, int Z)>();
+        int bodies = 0;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!Sailable(d, sx, sz) || d.WaterBody[sx, sz] >= 0) continue;
+
+            int id = bodies++;
+            d.WaterBody[sx, sz] = id;
+            queue.Enqueue((sx, sz));
+
+            while (queue.Count > 0)
+            {
+                var (x, z) = queue.Dequeue();
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!Sailable(d, nx, nz) || d.WaterBody[nx, nz] >= 0) continue;
+                    if (cut.Contains((x, z, nx, nz))) continue;
+                    d.WaterBody[nx, nz] = id;
+                    queue.Enqueue((nx, nz));
+                }
+            }
+        }
+        d.WaterBodies = bodies;
+    }
+
+    /// <summary>
+    /// Every place a ferry station could stand: a walkable quay cell within
+    /// <see cref="MaxQuayRise"/> slabs of the water beside it, with somewhere to
+    /// unload behind it.
+    ///
+    /// That last clause is what a domino on its own does not say. A single slab of
+    /// ground surrounded by water is a rock, not a landing — and a chain of them
+    /// across a lagoon was exactly the thing that used to read as one connected
+    /// place. A quay needs a neighbour you can walk to.
+    /// </summary>
+    private static void BuildBerths(IslandData d)
+    {
+        int n = d.Size;
+        d.Berths.Clear();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            d.Ferry[x, z] = false;
+            if (!Walkable(d, x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
+
+            short level = CrossLevel(d, x, z);
+
+            // Somewhere to unload: one neighbour of dry, walkable ground at a free
+            // step. Without it the "quay" is a rock in the water.
+            bool yard = false;
+            for (int k = 0; k < 4 && !yard; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                yard = Walkable(d, nx, nz) && d.WaterLevel[nx, nz] == IslandData.NoLand
+                       && Math.Abs(CrossLevel(d, nx, nz) - level) <= 1;
+            }
+            if (!yard) continue;
+
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (!Sailable(d, nx, nz)) continue;
+
+                short surface = d.WaterLevel[nx, nz];
+                int rise = level - surface;
+                if (rise < 0 || rise > MaxQuayRise) continue;
+
+                d.Ferry[x, z] = true;
+                d.Berths.Add(new FerryBerth(new Vector2I(x, z), new Vector2I(nx, nz),
+                                            surface, d.WaterBody[nx, nz]));
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Re-anchors <see cref="IslandData.Mainland"/> and
+    /// <see cref="IslandData.Heartland"/> on the ground the player actually
+    /// arrives on, rather than on whichever piece happens to be biggest.
+    ///
+    /// <b>The mainland is where you land.</b> A run starts at the Entry Gate's
+    /// apron — the landing strip, or the Gate's own yard — and everything else is
+    /// somewhere you have to get to from there. Ranking by area answered a
+    /// different question ("what is the largest connected thing?") and could name
+    /// a mainland on the far side of a strait from the only way in, which makes
+    /// every number derived from it a number about somewhere else.
+    ///
+    /// Areas keep their area order, so <c>Areas[0]</c> is still the largest and
+    /// the ids are stable; only which one is <i>the</i> mainland moves. Run after
+    /// <c>GatePlacement</c>, since it is the Gate that decides.
+    /// </summary>
+    public static void AnchorOn(IslandData d, Vector2I cell)
+    {
+        if (cell.X < 0 || cell.Y < 0 || cell.X >= d.Size || cell.Y >= d.Size) return;
+        if (!Walkable(d, cell.X, cell.Y)) return;
+
+        int walk = d.Walk[cell.X, cell.Y];
+        int reach = d.Reach[cell.X, cell.Y];
+        if (walk >= 0) d.Mainland = walk;
+        if (reach >= 0) d.Heartland = reach;
     }
 
     /// <summary>
@@ -145,7 +424,10 @@ public static class Traversal
         if (x < 0 || z < 0 || x >= n || z >= n) return false;
         if (!d.HasLand(x, z)) return false;
         if (d.WaterLevel[x, z] == IslandData.NoLand) return true;
-        return d.River[x, z] && !d.Navigable[x, z];
+        // A stream is crossed at a ford and nowhere else: fordable-everywhere made
+        // a watercourse a line on the map rather than a feature of it, and let a
+        // road walk down the bed. See Rivers.MarkFords.
+        return d.Ford[x, z];
     }
 
     /// <summary>
@@ -241,21 +523,37 @@ public static class Traversal
     /// the *free* case; a cliff is meant to be an obstacle that costs something,
     /// not a wall. What matters is whether the cost can be paid at all.
     /// </summary>
-    private static void BuildReachAreas(IslandData d)
+    private static void BuildReachAreas(IslandData d, bool ferries = true,
+                                        int[,]? into = null)
     {
         int n = d.Size;
         int span = Math.Max(1, d.BridgeSpan);
+        int[,] label = into ?? d.Reach;
         var areas = new List<WalkArea>();
         var queue = new Queue<(int X, int Z)>();
 
+        // Every quay on one body of water is one ferry ride from every other.
+        var berthsByBody = new Dictionary<int, List<Vector2I>>();
+        var bodyAt = new Dictionary<Vector2I, int>();
+        if (ferries)
+            foreach (FerryBerth berth in d.Berths)
+            {
+                if (berth.Body < 0) continue;
+                if (!berthsByBody.TryGetValue(berth.Body, out List<Vector2I>? list))
+                    berthsByBody[berth.Body] = list = new List<Vector2I>();
+                list.Add(berth.Land);
+                bodyAt[berth.Land] = berth.Body;
+            }
+        var sailed = new HashSet<int>();
+
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            d.Reach[x, z] = d.HasLand(x, z) && !Walkable(d, x, z) ? Water : -1;
+            label[x, z] = d.HasLand(x, z) && !Walkable(d, x, z) ? Water : -1;
 
         for (int sx = 0; sx < n; sx++)
         for (int sz = 0; sz < n; sz++)
         {
-            if (!Walkable(d, sx, sz) || d.Reach[sx, sz] != -1) continue;
+            if (!Walkable(d, sx, sz) || label[sx, sz] != -1) continue;
 
             int id = areas.Count;
             int area = 0;
@@ -263,7 +561,7 @@ public static class Traversal
             var min = new Vector2I(sx, sz);
             var max = new Vector2I(sx, sz);
 
-            d.Reach[sx, sz] = id;
+            label[sx, sz] = id;
             queue.Enqueue((sx, sz));
 
             while (queue.Count > 0)
@@ -287,21 +585,30 @@ public static class Traversal
                         if (!Walkable(d, nx, nz)) continue;
 
                         bool bridged = reach > 1;
-                        if (bridged)
-                        {
-                            bool clear = true;
-                            for (int step = 1; step < reach && clear; step++)
-                                clear = !Walkable(d, x + Dx[k] * step, z + Dz[k] * step);
-                            if (!clear) continue;
-                        }
+                        if (bridged && !DeckFits(d, x, z, Dx[k], Dz[k], reach, span)) continue;
 
                         int rise = Math.Abs(CrossLevel(d, nx, nz) - top);
                         if (rise > (bridged ? MaxBridgeRise : InfrastructureStep)) continue;
-                        if (d.Reach[nx, nz] != -1) continue;
+                        if (label[nx, nz] != -1) continue;
 
-                        d.Reach[nx, nz] = id;
+                        label[nx, nz] = id;
                         queue.Enqueue((nx, nz));
                     }
+                }
+
+                // And the ferry: a quay reaches every other quay on its own water,
+                // however far off it is. This is what makes a lagoon a place you
+                // cross rather than a wall with stepping stones in it.
+                if (!d.Ferry[x, z]) continue;
+                if (!bodyAt.TryGetValue(new Vector2I(x, z), out int body)) continue;
+                if (!sailed.Add(body)) continue;
+                if (!berthsByBody.TryGetValue(body, out List<Vector2I>? far)) continue;
+
+                foreach (Vector2I quay in far)
+                {
+                    if (label[quay.X, quay.Y] != -1) continue;
+                    label[quay.X, quay.Y] = id;
+                    queue.Enqueue((quay.X, quay.Y));
                 }
             }
             areas.Add(new WalkArea(id, area, low, high, min, max));
@@ -314,7 +621,9 @@ public static class Traversal
         for (int i = 0; i < order.Count; i++) remap[order[i].Id] = i;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            if (d.Reach[x, z] >= 0) d.Reach[x, z] = remap[d.Reach[x, z]];
+            if (label[x, z] >= 0) label[x, z] = remap[label[x, z]];
+
+        if (into != null) return;                   // a scratch pass; nothing else to fill
 
         d.Reaches.Clear();
         for (int i = 0; i < order.Count; i++) d.Reaches.Add(order[i] with { Id = i });

@@ -59,6 +59,56 @@ public static class FieldOps
     }
 
     /// <summary>
+    /// Makes a field of <b>drops</b> — how far each cell is about to be lowered —
+    /// safe to apply to finished terrain, by forcing it to change by at most one
+    /// between neighbours.
+    ///
+    /// <para>Any pass that lowers some cells and not others puts a step at the
+    /// edge of the set it lowered, and that step is exactly the depth of the drop.
+    /// Lowering by bands does not help: a cell excluded for its own reasons — a
+    /// mesa rim, a bridgehead, a channel — sits at drop 0 beside a neighbour at
+    /// drop 3, and there is the cliff. (Measured, when beaches and valleys were
+    /// first written this way: two-slab steps went from 0.5% of the island to
+    /// 6.2%.)</para>
+    ///
+    /// <para>Clamping each cell to one more than its lowest neighbour makes the
+    /// drop field 1-Lipschitz, so the deepest part of a valley or a beach keeps
+    /// its depth and the edge tapers out a slab at a time — which is the free
+    /// step, and is also what a valley side looks like.</para>
+    /// </summary>
+    public static void Taper(int[,] drop, bool[,] land)
+    {
+        int n = drop.GetLength(0);
+        for (int pass = 0; pass < 32; pass++)
+        {
+            bool changed = false;
+            bool forward = (pass & 1) == 0;
+
+            for (int a = 0; a < n; a++)
+            for (int b = 0; b < n; b++)
+            {
+                int x = forward ? a : n - 1 - a;
+                int z = forward ? b : n - 1 - b;
+                if (!land[x, z] || drop[x, z] <= 0) continue;
+
+                int cap = int.MaxValue;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + (k == 0 ? 1 : k == 1 ? -1 : 0);
+                    int nz = k == 2 ? z + 1 : k == 3 ? z - 1 : z;
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!land[nx, nz]) continue;                 // the rim is not a neighbour
+                    cap = Math.Min(cap, drop[nx, nz] + 1);
+                }
+                if (cap == int.MaxValue || drop[x, z] <= cap) continue;
+                drop[x, z] = cap;
+                changed = true;
+            }
+            if (!changed) return;
+        }
+    }
+
+    /// <summary>
     /// In-place 3×3 box blur over the cells flagged in <paramref name="mask"/>,
     /// repeated <paramref name="passes"/> times. Used to take the integer steps
     /// out of a distance transform before anything reads it as a height.

@@ -32,6 +32,26 @@ public enum GateKind
     Hanging = 2,
 }
 
+/// <summary>
+/// Which edge a Gate is asked to stand on. <c>Cardinal</c> with an <c>Auto</c>,
+/// so it can be an input rather than a consequence.
+///
+/// The Entry's edge matters for the same reason its kind does: it is the *other*
+/// Domain's decision, not this one's. A Domain reached by travelling east comes
+/// out on its west edge, and nothing about the coast may move it — least of all
+/// changing the Gate's kind, which used to send it round to the far side of the
+/// island because that coast happened to score better.
+/// </summary>
+public enum GateEdge
+{
+    /// <summary>Let the seed pick, trying each edge in turn.</summary>
+    Auto = 0,
+    North = 1,
+    East = 2,
+    South = 3,
+    West = 4,
+}
+
 /// <summary>Whether the player arrives through this Gate or leaves by it.</summary>
 public enum GateRole
 {

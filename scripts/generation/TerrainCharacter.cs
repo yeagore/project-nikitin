@@ -19,11 +19,28 @@ public enum TerrainCharacter
     Plains = 1,
 
     /// <summary>Plains, with mesas standing out of them and basins sunk into them.</summary>
-    Tableland = 2,
+    Tablelands = 2,
 
     /// <summary>Plains and hills — rolling country, walkable everywhere.</summary>
     Downs = 3,
 
     /// <summary>Plains, hills, and mountains over one part of the island.</summary>
-    Highland = 4,
+    Highlands = 4,
+
+    // ---- characters built on the sculpted landforms -------------------------
+    // Gated out of Auto's pool by IslandParams.NewLandforms; still selectable by
+    // name, so a shape can be taken out of circulation without being taken out
+    // of the game.
+
+    /// <summary>Plains, mesas, and eroded badlands cut between them.</summary>
+    Badlands = 5,
+
+    /// <summary>Plains and hills with fields of karst towers standing out of them.</summary>
+    Karst = 6,
+
+    /// <summary>Plains and hills under stepped massifs, and a mountain behind them.</summary>
+    Massif = 7,
+
+    /// <summary>Plains, and long dune fields running one way across them.</summary>
+    Dunes = 8,
 }

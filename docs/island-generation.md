@@ -1,1271 +1,495 @@
-# Island Generation — technical spec
+# Island Generation — the spec
 
-Status: draft, 2026-08-30. Terrain unit is a **slab** (1×1 footprint, 0.25 tall —
-a 1:4 ratio). Stages 1–6 are implemented in slab units
-(`scripts/generation/`, `scenes/dev/island_lab.tscn`), including arrangements,
-passes, rivers, Gates, level crossings and the re-roll guarantees. **Stage 4b
-overhangs and the remaining feature anchors are the work left.** The working
-footprint is **128 × 128**, which costs about **70 ms** an island.
-Living document. Owns the implementation detail behind the Notion page
-*Mechanics and Concepts → Generation → Island Generation* (which stays a short
-requirements list). Design vocabulary and the world model are in `CLAUDE.md` and
-the Notion wiki.
+How a Domain is generated, in the order it happens. **The reasoning, the things
+that were tried and removed, the audit numbers and the ideas not yet taken are in
+[island-generation-appendix.md](island-generation-appendix.md)** — this file is
+meant to stay readable.
+
+Status: 2026-08-31. Every stage below is implemented in `scripts/generation/`,
+and `scenes/dev/island_lab.tscn` draws the result. The working footprint is
+**128 × 128** cells. What is left is the chunked mesher.
 
 ---
 
-## 1. Requirements
+## 1. The model
 
-From Notion, with the intent spelled out:
-
-1. **Varied size and density** — from one large "continent" filling the Domain to
-   a scattered "archipelago" of small islets, and everything between.
-2. **Varied surface relief** — from flat plains to mountains. Terrain steps in
-   **slab units of 0.25**, so a slope that gains one slab per cell (~14° grade)
-   reads as a smooth-ish hillside, not a cliff. Mountains are still stepped, but
-   finely; genuine sheer faces only appear where the surface jumps 2+ slabs
-   between neighbours (coastlines, terrace edges).
-3. **Variable edge thickness** — the island has a finite depth; how many slabs
-   deep it is at the rim (the cliff seen from the side, or from a Domain below)
-   is tunable and varies across one island.
-4. **Multiple habitable shelves** — several roughly-flat levels, like a mountain
-   with terraces. A shelf is *habitable* only if it is **≥ 3–4 cells wide** in a
-   mostly-flat patch; a 1-cell ledge is not something a settlement can prosper on
-   (a few polities may tolerate such terrain — a polity-specific exception, not
-   the default). Shelves may **gradually descend** — mostly flat with an
-   occasional single-slab step — rather than being dead level.
-
-**Overhangs and arches are wanted** — undercut cliffs, rock shelves, natural
-bridges. The data model (§2) represents them directly; Stage 4b generates them.
-Non-requirements for v1: branching cave *networks* / horizontal tunnels (would
-need voxels); half-slabs; multiple stone/soil strata; more than one terrain
-material tier.
-
----
-
-## 2. Data model — per-column span list
-
-A Domain footprint is **128 × 128 cells** (see §7 on the size disagreement). A
-dense 3D slab array is a non-starter and per-slab nodes are impossible. Terrain
-is stored **per column** as a short list of vertical solid runs:
-
-- `Spans[x,z]` — an array of `Span`, where `Span { short Bottom; short Top; }` is
-  one **contiguous** run of solid slabs, `Bottom..Top` inclusive, bounds given as
-  **slab indices** on Y (world Y = `index * Terrain.SlabHeight`).
-- Spans in a column are sorted bottom-up, never overlapping, never touching
-  (adjacent runs merge into one). An empty array means no land in that column.
-- **The air gap between two spans is what makes an overhang** — undercut cliff,
-  rock shelf, or (across several columns) a natural bridge / arch. Most columns
-  have exactly one span; only cliff and arch areas have two or three.
-- `Material[x,z]` — `byte`, surface material of the top span. Single tier for now
-  (grass over dirt).
-
-Derived, not stored: `SurfaceLevel(x,z)` = `Top` of the highest span (`NoLand` if
-none — the walkable surface); `KeelLevel(x,z)` = `Bottom` of the lowest span;
-local rim thickness in slabs = `Top - Bottom + 1` of the relevant span.
-
-**Storage:** a jagged 2D array (`Span[Size,Size][]`). Most columns are one span;
-call it ~1.3 spans/column average → ~128·128·1.3·4 B ≈ **90 KB per island** —
-orders of magnitude under a dense voxel grid, whole island resident, no
-streaming. If per-cell array churn becomes a problem, repack as CSR: one `Span[]`
-blob plus `int[,] start` / `byte[,] count`.
-
-**Still outside the model:** branching cave *networks* and horizontal tunnels
-within a single column footprint — those need voxels or another structure. A
-single vertical gap per column (overhang / shelf / arch underside) is fully
-representable; that covers the wanted decorations.
-
-Coordinates: `X, Z ∈ [0, 128)`. `Y` is a signed slab index (`short`), `Y = 0` the
-nominal float level the island sits around — it builds up into mountains
-(hundreds of slabs) and down into a keel. The Ecumene's "invisible bounding cube"
-is 128 units on a side = **512 slabs** tall; generation stays well inside that.
-
-Output type (shape, names provisional):
+A Domain is a square grid of **columns**. Each column holds a short list of solid
+`Span(bottom, top)` runs, and the bounds are **slab indices** — integers on Y, a
+quarter of a cell each.
 
 ```csharp
-public readonly record struct Span(short Bottom, short Top);   // slab indices
-
-public sealed class IslandData
-{
-    public int Size;                 // 128
-    public Span[,][] Spans;          // [Size, Size] -> runs, bottom-up, disjoint, may be empty
-    public byte[,]   Material;       // [Size, Size], top-span surface material
-
-    public short[,]  WaterLevel;   // top slab of standing water, NoLand = dry (§4c)
-    public bool[,]   Canyon;       // columns a trench was cut through
-    public bool[,]   River;        // columns carrying a watercourse
-    public bool[,]   Navigable;    // ... wide and deep enough for a barge
-    public List<Fall> Falls;       // every waterfall, rim ones included (§4c)
-
-    // where you would have to build (§4, §5b)
-    public List<Crossing>  Bridges;    // banks, deck level, span — enough to link every mass
-    public int             BridgeSpan; // cells one bridge reaches, from IslandParams.Crossings
-    public bool[,]         Airstrip;   // coast a vessel could set down on
-    public List<Gate>      Gates;      // one Entry, one to three Exits, one per edge
-
-    // walkability & shelves (§5, filled by Traversal.Analyse)
-    public int[,]          Walk;      // walk-area id, Traversal.Water, or -1
-    public List<WalkArea>  Areas;     // largest first; Areas[0] is the mainland
-    public int             Mainland;
-    public int[,]          Reach;     // the same, for a player who can build
-    public List<WalkArea>  Reaches;
-    public int             Heartland;
-    public int[,]          ShelfId;
-    public List<Shelf>     Shelves;
-
-    // Stage 6
-    public int    Attempts;   // islands built for this seed, 1 unless one was rejected
-    public string Unmet;      // guarantees still missed, empty when playable
-
-    // still to come (§5)
-    public List<Vector2I>   CoastCells;
-    public List<Vector2I>   CliffCells;
-    public List<Vector2I>   Overhangs;   // columns with more than one span
-    public GateAnchor       GateAnchor;
-
-    public const short NoLand = short.MinValue;
-
-    public short SurfaceLevel(int x, int z);   // Top of highest span, or NoLand
-    public short KeelLevel(int x, int z);      // Bottom of lowest span
-}
+public Span[,][] Spans;          // [x, z] -> runs, bottom-up, disjoint, non-touching
+public short SurfaceLevel(x, z); // top of the LOWEST span: the ground you stand on
+public short KeelLevel(x, z);    // bottom of the lowest span: the underside
 ```
+
+Almost every column has exactly one span, keel to surface. The air gap between
+two spans is an **overhang** or an **arch**, and only Stage 6 makes one. That is
+why `SurfaceLevel` reads the lowest span: under a lip, the ground is underneath,
+and every rule in the pipeline means the ground.
+
+| constant | value | |
+|---|---|---|
+| `CellSize` | 1.0 | one cell, in metres. In fiction, about an orchard. |
+| `SlabHeight` | 0.25 | one slab. Terrain Y is an integer count of these. |
+| free step | **1 slab** | walk it for nothing. Two or more needs building. |
+
+**The free step is the whole grammar.** A one-slab step is free, so terrain built
+under a one-slab slope limit is walkable everywhere by construction, and every
+cliff on the island is one some rule put there on purpose. That is what makes
+"where are the cliffs?" a decision the generator makes rather than an accident of
+the noise — see the appendix, *Why it is built this way*.
+
+Alongside the terrain, `IslandData` carries what the later stages worked out:
+
+```csharp
+byte[,]  Landform, Material;      // what this patch is, what its surface is made of
+short[,] WaterLevel;              // top slab of standing fluid, or NoLand
+bool[,]  River, Navigable, Ford;  // a course; too deep to wade; where you can
+bool[,]  Beach, Ferry, Landings;  // and the built-on / landed-on ground
+int[,]   Region, Walk, Reach, ShelfId, WaterBody, Flow;
+List<...> Areas, Reaches, Shelves, Bridges, Berths, Passages, Gates, Falls,
+          CoastCells, CliffCells, Overhangs, Passes;
+```
+
+Generation is a **pure function of `(seed, IslandParams)`**. Same inputs, same
+Domain, every time.
+
+---
+
+## 2. The pipeline
+
+### Stage 1 — Footprint
+
+The land mask is a set of **placed blobs**, one per landmass, chosen by
+`IslandArrangement`. Each blob is an ellipse with a radius that wanders on a
+noise field, so no coastline is a circle; where two blobs meet, the seam between
+them is either left alone (they fuse into one shape) or **carved into a strait**.
+That one flag is the whole difference between `Ring` and `BrokenRing`.
+
+| | layouts |
+|---|---|
+| one landmass | `Single` `Ring` `Arc` `Cross` `TShape` `LShape` `Fractal` `Rosette` `Star` |
+| several | `Satellites` `Twins` `Triplets` `Archipelago` `BrokenRing` `BrokenArc` `Atoll` `ThousandIsles` `Shards` `BrokenCross` `BrokenT` `BrokenL` `BrokenFractal` |
+
+`Cross`, `TShape`, `LShape` and `Star` are one shape with a different set of
+spokes — a wide hub with thick arms, **axis-aligned**, so an arm points at an
+edge and therefore at a Gate. `Fractal` walks a chain of overlapping blobs that
+turns as it goes; `Rosette` is a coil made short and fat, which comes out as a
+ring of deep bays.
+
+There were twenty-three. `Spiral` — the same coil wound thin over two and a half
+turns — is gone: keeping the arm continuous took a coil so thick and so densely
+linked that what came out was a `Rosette` with more steps, and two names for one
+shape is worse than one shape.
+
+Then: bites are taken out of a lone island by deleting whole regions, diagonal
+joins are filled, components under 30 cells are dropped, and **`LinkLandmasses`
+nudges the pieces together** until every one is within a bridge span of the rest.
+Whatever the arrangement, the pieces are linkable.
+
+*New layouts are gated by `IslandParams.NewArrangements`, which keeps them out of
+`Auto`'s pool without taking them out of the code.*
+
+### Stage 2 — Regions and landforms
+
+A warped-Voronoi partition at `RegionScale`, split into connected components and
+merged until nothing is under `MinRegionArea`. Each region gets a `LandformType`
+and a **rung** on the plateau ladder.
+
+**The plateau ladder** is the island's vertical vocabulary. A rung is a whole
+multiple of `CliffHeight` slabs above the coastal level, and `PlateauLevels` says
+how many rungs exist. Two neighbouring regions on the same rung are joined ground
+— the slope limiter reaches across the border and holds it to the free step. Two
+on different rungs are a cliff of exactly `CliffHeight`. So `PlateauLevels` is a
+knob for **how terraced the island is**: at 1 the only cliffs come from mesas,
+basins and mountains; at 2 (the default) escarpments are occasional; at 5 the
+island is a flight of terraces.
+
+| landform | built from | slope limit | reads as |
+|---|---|---|---|
+| `Plain` | rung + ~1.4 slabs of noise | 1 | flat, buildable, dull on purpose |
+| `Hills` | rung + up to ~15 slabs | 1 | rolling, walkable everywhere |
+| `Dunes` | rung + a wave along the Domain's wind | 1 | parallel ridges: level along, washboard across |
+| `Mountain` | an S-curve off the ground it meets, no rung | none | foothills, steep flanks, a rugged summit |
+| `Mesa` | above every neighbour, flat top | 1 | tableland ringed by cliff |
+| `Basin` | below every neighbour, flat floor | 1 | the mesa rule inverted |
+| `Badlands` | a plain, then **gullies cut into it** | sculpted | flat fingers, a maze of ravines |
+| `Karst` | a plain, then **towers raised out of it** | sculpted | a floor you walk, columns you cannot |
+| `Massif` | a plain, then **concentric terraces** | sculpted | a stepped massif; every riser wants a stair |
+| `Sinkholes` | a plain, then **round pits punched out** | sculpted | crossable, while watching your feet |
+
+**The Domain has a wind.** One grain for the whole island, so every dune field
+lies the same way, and **snapped to one of the eight compass points** — `E`, `NE`,
+`N`, … — rather than a free angle. A direction that cannot be named is a
+direction nothing can show or use: `IslandData.DuneGrain` carries it, `WindFrom`
+and `DuneRun` say it in letters, the lab's readout prints it and the compass
+overlay (**X**) draws an arrow along it across each dune field.
+
+**The four sculpted landforms carry cliffs *inside* a patch**, which relief under
+a slope limit cannot express. They are cut into a surface the limiter has already
+settled and then exempted from it — the mechanism a canyon already used. Two
+rules keep them honest: nothing is sculpted within the outermost ring of its own
+patch, so every border stays bound; and every cut is a **fixed depth**, because a
+tapering gully has a two-slab step somewhere along it by construction.
+
+`TerrainCharacter` says which landforms an island is built from — `Plains`,
+`Tablelands`, `Downs`, `Highlands`, `Badlands`, `Karst`, `Massif`, `Dunes` — and
+the shares are a **quota, not a dice roll**: every landform a character names is
+guaranteed at least one region. `LandformMix` slides the quota from low ground to
+high. *A character is a recipe, not a list of what came out: `Massif` gives you
+plains, hills and a mountain too, and the lab's status line names what an island
+actually got.* Gated by `IslandParams.NewLandforms`.
+
+### Stage 3 — Surface
+
+Relief per region under that region's slope limit, then:
+
+- **`LimitSlope`** — a Lipschitz projection from above: lower any cell standing
+  more than its limit above a neighbour. It reaches *across* a region border
+  wherever the two share a rung, which is what closes the last cliffs the rules
+  forbid.
+- **`ResolveAmbiguousSteps`** — removes two-slab steps. Two is the worst height a
+  step can be: too tall to walk, too short to read as a cliff.
+- **canyons and passes** — a canyon is a deliberate cliff where the rules would
+  forbid one; a pass is the opposite, a saddle cut so a cliff border has one
+  place you can walk across.
+- **`Sculpt`** — the four sculpted landforms, cut in and exempted.
+- **beaches** — where the ground reaches the rim gently (soft landform, level
+  neighbours), the outermost two cells step down. It is the difference between
+  land that stops and land that *meets* the aether, and it gives a quay somewhere
+  to sit.
+
+These run in a **settle loop** with `LevelBridgeheads`, because each pass can
+expose work for the others and all three only ever lower.
+
+### Stage 4 — Water
+
+Lakes first, then rivers, both cut across the finished patchwork.
+
+**A lake sinks into the interior of a flat patch, and the patch's own untouched
+rim is the containment.** No higher ground is needed, which is what lets lakes
+happen anywhere. The shore inset **wanders** on a noise field from 2 to 5 cells,
+so a lake is the patch's shape read through that field rather than a scale copy
+of a Voronoi polygon. One lake per patch, and a patch beside one that holds water
+stays dry — a row of pools at slightly different levels reads as flooding.
+`Lakes` scales how many.
+
+**Rivers are routed by a priority flood inward from the rim.** Terrain under a
+slope limit is mostly flats, so steepest descent stalls; flooding inward gives
+every cell a downstream neighbour by construction and passes straight through a
+lake. **Ties break on a noise field, which is what makes rivers bend** — a
+first-in-first-out tie-break makes the flood a breadth-first search whose tree is
+a fan of straight cardinal rays.
+
+Sources are **named**: every summit, and **one outflow per lake** (the cell whose
+downstream ground is lowest). Accumulation alone gives almost nothing on
+slope-limited terrain, and one outflow per shore cell gave a fan of parallel
+channels below every lake that read as a marsh.
+
+- **A river has a bed**: the channel is cut two slabs down and filled to one
+  below the ground, so the banks stand proud and the course reads as a channel.
+  The river cuts its banks to match, so no two-slab step is left behind.
+- **A stream is crossed at a ford** — one every ~11 cells, where both banks are
+  dry and within a slab of the water — and is an obstacle everywhere else.
+- **A navigable river** is two cells across, three slabs deep, and not fordable.
+  It occasionally splits round an **eyot**, an island of its own floodplain lying
+  along the course.
+- **Valleys**: the ground either side sinks toward a course, in bands tapered so
+  no step exceeds one slab. **The channel sinks with its valley** — the bank
+  already stands exactly one slab above the water, so lowering only the ground
+  beside a river cannot make a valley; it made an inverted one, a moat two cells
+  out with the ground rising back toward the water. The band the river is in goes
+  down one further than the bank, which is what puts the river at the bottom of
+  its own valley. Ground whose height is the point of it — a mesa rim, a tower, a
+  levelled bridgehead — does not come down, and no cell may sink past such a
+  neighbour by more than the free step.
+  **`Valleys` acts per watercourse, not per island.** Each drainage — a
+  4-connected component of the channel network — draws a rank and keeps it, and
+  the knob slides a window across those ranks (`3 × strength − 2 × rank`). So 0
+  gives none, a quarter gives about a third of the courses a narrow valley and
+  the rest none, a half gives three quarters of them valleys of differing depth,
+  and 1 cuts every course to its full reach. One reach for the whole Domain made
+  the knob all-or-nothing, which is not what a country looks like.
+- **Every river reaches the rim and pours off it**, because there is no sea. Rim
+  falls are drawn spilling past the keel into the aether.
+
+Everything is water. `FluidKind` — a Domain-wide `Water` / `Lava` / `Essence`
+that turned every watercourse into a wall — was removed: it was two lines of
+behaviour and no appearance, so what it actually shipped was a dropdown that did
+nothing you could see.
+
+### Stage 5 — Keel
+
+The island hangs as a spinning top: a thin lip at the coast (`EdgeThickness`)
+thickening inland to `KeelDepth`. The distance field is sampled through a domain
+warp so the underside is not a surface of revolution, and every column is kept at
+least `EdgeThickness` slabs thick.
+
+### Stage 6 — Overhangs and arches
+
+The only stage that gives a column two spans.
+
+- **Undercut.** A columnar model cannot cut sideways into a cliff, so it is built
+  the other way round: the columns *in front of* a face of 8 slabs or more get a
+  second span up at the cliff top, with air between it and their own ground. From
+  below that is an undercut; from above it is the cliff edge jutting out.
+- **Arch.** Two cliff tops within 2 slabs of each other with a gorge or a channel
+  between them, joined by a deck flush with the lower end.
+
+Both need **backing** — the high side must have two neighbours within a slab of
+its own top, and must not be a landform whose whole shape is the wall (karst,
+badlands, basin, sinkholes). Without that, a lip off a two-cell karst tower reads
+as a hole punched through it.
+
+> **What Stage 6 adds is not walkable.** It runs after the analysis on purpose:
+> the lip of an overhang is a roof, and pathing over a two-level column wants
+> spans as nodes rather than columns. That is a real problem and a separate one.
+
+### Stage 7 — Traversal
+
+Pure analysis. It changes nothing; it is how we find out whether the island is
+playable.
+
+- **`Walk`** — what connects on foot: neighbours within the free step. Water is
+  not ground; a stream is crossed at a ford.
+- **`Reach`** — what connects once you build. Three kinds of works:
+
+| works | rule |
+|---|---|
+| **stair / hoist** | a face of at most 8 slabs. Stands on two cells, neither of which may be a quay, a bridgehead or a Gate's ground |
+| **bridge** | land facing land, cardinally, across at most `Crossings` cells of **aether**, 3 cells of **water**, or a **chasm** — ground 5 slabs or more below the deck, which is how one cliff top is bridged to another |
+| **ferry** | between two quays on one body of water, however far apart |
+
+- **Water bodies.** 4-connected over standing fluid, and **a waterfall cuts a
+  body in two** — nothing sails up one.
+- **Ferry berths** are a domino: a walkable quay within two slabs of sailable
+  water, with somewhere to unload behind it. Berths are then **pruned**: the
+  reach flood is run once without ferries, and a body keeps its berths only if
+  they land in two or more different pieces of that answer. What survives is the
+  crossings that exist because the water is genuinely in the way.
+- **Shelves** — ground level enough to lay a settlement out on: each cell flat or
+  at one lone step. `Width` is the largest square that fits, because a fifty-cell
+  ledge one cell deep is nowhere anyone can settle.
+
+### Stage 8 — Gates
+
+A Gate is **3 cells wide, 1 deep, 12 slabs tall**. Every Domain gets one `Entry`
+and one to three `Exit`s, **at most one per edge and on that edge** — Domains sit
+on a plane at their world-tree position, so a Gate facing east that is not the
+easternmost thing on the map points back over the Domain it leaves.
+
+| kind | |
+|---|---|
+| `Hanging` | Floats ten cells off the rim; you fly through it. Needs clear air for the last four cells of the approach and a **3 × 5 landing strip** inland of the coast opposite |
+| `Land` | the exception a coast happens to allow. Three level cells, a clear outlook, and a **3 × 3 apron** running inland from the portal, level within the free step |
+
+> The land Gate's apron is new. It used to owe the Domain nothing but three level
+> cells to stand on, so one could be planted on a three-cell ledge with a cliff a
+> step behind it — the `ApronArea` shelf test passed, because a shelf is measured
+> *somewhere on the island* rather than at the Gate. Three by three is the
+> smallest thing you can walk out onto and turn round in, and it is marked in
+> `IslandData.Landings` beside the hanging Gates' strips.
+
+> Hanging was the norm at 75% when the portal sat four cells out on a 1 × 4
+> strip. At ten cells out, over a 3 × 5 strip, it is **38%** — three cells of
+> clear air either side for the last four cells of the approach is a real demand
+> on a coastline, and a ragged one often cannot meet it. That is the trade the
+> distance bought: the flight is visible, and fewer coasts can host one.
+
+**The Entry's kind and edge are inputs** (`EntryGate`, `EntryEdge`): a Link joins
+two Gates, and a Domain reached by travelling east comes out on its west edge. A
+named edge gets the whole tier ladder to itself before any other is tried, and a
+named kind is held across every rung of it. **What is asked for is a guarantee,
+not a preference** — an Entry that came out on the wrong edge or of the wrong
+kind, or fewer Exits than `ExitGates` named, or an Exit that is not the
+`ExitGate` kind, all go into `Unmet`, so the seed re-rolls rather than handing
+back a Domain built to the wrong specification. Measured over sixteen seeds per
+request, the edge is delivered 100% of the time and the kind 93–100%.
+
+**A way in and a way out are guaranteed.** Where a coast will not take a Gate
+under the full rules, the rules give a rung at a time — apron, strip, the edge
+band widening to `RelaxedEdgeBand`, then the corner inset, then the separation
+falling to `CrowdedSeparation`. Three things never give: being outermost on its
+own axis, being on its own half of the island, and keeping a third of the
+footprint from the next Gate. The band **widens and never disappears** — dropping
+it outright once put 73% of the Domain behind the player as they arrived, at
+which point "the south Gate" names nothing.
+
+> **Each Exit walks the ladder on its own.** The ladder used to be the outer loop
+> and stopped at the first rung that produced any Exit at all, so a Domain asked
+> for three got one whenever the strict rung only allowed one — over sixty seeds
+> the median island had a single Exit. It now has two, and an explicit `ExitGates`
+> is met on every seed except three hanging Exits, which wants three coasts that
+> will each take one and gets them about two thirds of the time.
+
+### Stage 9 — The roads between the Gates
+
+`Passages`: the cheapest road from the Entry's apron to each Exit's, where cheap
+means **needs the least building**. Walking is free; every work costs one point.
+`Cost = 0` means you can walk between your two Links on the day you land.
+
+The move set is exactly the reach rule, priced, so the two cannot disagree. Cost
+is packed **works first, then cells** — works alone leaves thousands of equally
+cheap answers and returns whichever it reached first. A ford costs eight cells of
+length, so a road crosses a stream rather than walking down it.
+
+**Five elevators inside fifteen cells is a flight**, and a road with one is
+telling you it is going the wrong way. `IslandData.Rough` says whether the Domain
+has any. Not a fault: a Domain is allowed to be hard country.
+
+### Stage 10 — Surfaces, anchors and names
+
+`Surfaces.Classify` fills `Material` from height, slope, distance to water and
+landform — stone, scree, snow, sand, silt, **grass** (within 3 cells of water),
+**meadow** (within 9), **heath** (beyond), dust. It also collects the **feature
+anchors**: `CoastCells`, `CliffCells`, `Overhangs`, alongside `Beach`, `Ford`,
+`Landings` and `Ferry`. A forest goes "on flat well-watered ground away from the
+coast", not at a coordinate, so generation answers the geometric questions once
+and content reads the lists rather than each system carrying its own copy of the
+terrain rules.
+
+> Three of these were broken until they were measured, and all three failed
+> silently. `slope >= 3` returned `Stone` from **both** arms of a ternary;
+> `damp <= Damp` and `damp <= Dry` **both** returned `Grass`, so the middle band
+> did not exist; and a cell the wetness flood never reached was given exactly
+> `Dry`, which reads as still-green — so `Heath`, the driest ground on a Domain,
+> was **0.0% of every island ever generated**. The lab's `surface` view and the
+> audit's material histogram exist so that the next one of these is caught by
+> looking rather than by reading the code.
+
+Both are viewable: `surface` paints the material, `anchors` paints what the
+content layer can attach to. The audit prints a share per material, with `NEVER`
+beside any that no island produced.
+
+`Names.Give` names the Domain, its districts and its bodies of water. Integers
+are right for the generator and wrong for everyone who has to talk about the
+output.
+
+### Stage 11 — Guarantees and re-roll
+
+`Generate` checks five things and **rebuilds the island from a derived seed** if
+any fails — up to four attempts, keeping the best. Still a pure function of
+`(seed, params)`.
+
+| guarantee | why it is the bar |
+|---|---|
+| exactly one Entry, of the kind asked for | a Link whose ends disagree is not a Link |
+| at least one Exit | a Domain with no way onward is a dead end in a tree |
+| a road from the Entry to every Exit | an Exit you cannot reach is the same dead end wearing a portal |
+| a buildable shelf on the heartland | somewhere the first company can be laid out |
+| the heartland covers ≥ 75% of the dry land | below that there is a second island nobody asked for |
+
+Nothing else. Re-rolling for *variety* is how a generator ends up producing one
+island.
+
+**The mainland is where you land.** `Mainland` and `Heartland` are re-anchored on
+the Entry Gate's apron once the Gates are placed — ranking by area answers a
+different question and can name a mainland across a strait from the only way in.
 
 ---
 
 ## 3. Parameters
 
-Generation is a **pure deterministic function**
-`IslandGenerator.Generate(int seed, IslandParams p) -> IslandData`. Same inputs →
-identical output, no time / random-device dependence, so it is safe for future
-multiplayer or replay use even though that is not a current requirement.
+`IslandParams` is a `[GlobalClass]` resource; the preset both dev scenes load is
+`resources/island_default.tres`. Heights are in **slabs**.
 
-`IslandParams` is a `[GlobalClass]` resource. Heights are in **slabs**.
-
-| param | rough range | drives |
+| param | range | drives |
 |---|---|---|
-| `Seed` | int | all noise offsets |
-| `Size` | 16 – 128 cells | footprint edge length |
-| `Radius` | 0 or 20 – 120 cells | land-mask radius (0 = auto, `Size * 0.45`) |
-| `Coverage` | 0 – 1 | fraction of the bounding disc that ends up as land |
-| `Irregularity` | 0 – 1 | disc ↔ elongated, deeply lobed coastline |
-| `Arrangement` | `IslandArrangement` | Single / Satellites / Twins / Triplets / Archipelago / Atoll |
-| `Character` | `TerrainCharacter` | which landforms the island is built from; `Auto` per seed |
-| `LandformMix` | 0 – 1 | how the character's landforms are shared out: low ↔ high ground |
-| `Relief` | 0 – 1 | vertical exaggeration of every landform's relief |
-| `Hilliness` | 0 – 1 | swells ↔ mounds: hills amplitude, and the surface's fine detail |
-| `RegionScale` | 6 – 40 cells | typical width of one landform region |
-| `CliffHeight` | 3 – 16 slabs | spacing of the plateau ladder; every region border cliff |
-| `PlateauLevels` | 1 – 8 | rungs on that ladder above the coastal level |
-| `MountainHeight` | 8 – 160 slabs | rise from a mountain's foot to its summit |
-| `MesaHeight` | 3 – 24 slabs | how far a mesa top clears the ground around it (capped at 2×) |
-| `BasinDepth` | 3 – 24 slabs | how far a basin floor sits below that ground (capped at 2×) |
-| `Rivers` | 0 – 1 | how wet: how much catchment a channel needs to become a river |
-| `Crossings` | `BridgeEase` | Easy / Medium / Hard = 1 / 3 / 6 cells a bridge may span |
-| `EntryGate` | `GateKind` | Land / Hanging — **an input**, set by the Domain that sent you |
-| `ExitGates` | 0 – 3 | Links onward; 0 picks 1–3 from the seed |
-| `EdgeThickness` | 1 – 32 slabs | column depth at the coastline (the thin lip) |
-| `KeelDepth` | 4 – 256 slabs | extra depth under the innermost interior |
-| `KeelRoughness` | 0 – 1 | craggedness of the underside, and how far its contours wander |
-| `OverhangDensity` | 0 – 1 | how often tall cliff faces get undercut or arched *(Stage 4b)* |
-| `OverhangDepth` | 1 – 8 cells | how far an undercut reaches back from the face *(Stage 4b)* |
-| `ArchSpan` | 2 – 10 cells | widest gap a natural bridge will span *(Stage 4b)* |
+| `Size` | 16 – 128 | footprint edge, in cells |
+| `Radius` | 0 = auto | land-mask radius |
+| `Coverage` | 0 – 1 | share of each blob's disc that becomes land |
+| `Irregularity` | 0 – 1 | disc ↔ deeply lobed coastline |
+| `Arrangement` | enum | the layout — see Stage 1 |
+| `NewArrangements` | bool | whether `Auto` may roll the newer layouts |
+| `Character` | enum | which landforms the island is built from |
+| `NewLandforms` | bool | whether `Auto` may roll the sculpted characters |
+| `LandformMix` | 0 – 1 | the quota, low ground ↔ high |
+| `Relief` | 0 – 1 | vertical exaggeration |
+| `Hilliness` | 0 – 1 | swells ↔ mounds |
+| `RegionScale` | 6 – 40 | typical width of one region, in cells |
+| `CliffHeight` | 3 – 16 | one rung of the plateau ladder |
+| `PlateauLevels` | 1 – 8 | how many rungs — how terraced the island is |
+| `MountainHeight` | 8 – 160 | foot to summit |
+| `MesaHeight` / `BasinDepth` | 3 – 24 | clearance above / below the ground around |
+| `Rivers` | 0 – 1 | how wet: the bar for a channel to be a river |
+| `Lakes` | 0 – 1 | how readily standing water collects |
+| `Valleys` | 0 – 1 | how far the ground falls toward a course |
 
-**`Crossings` is not only an analysis setting.** It says how far one bridge
-reaches, so it decides three things at once: how wide the straits between an
-arrangement's landmasses are allowed to open (Stage 1), how far apart the linker
-leaves the pieces, and what `Traversal` counts as reachable. An `Easy` Domain is
-an archipelago you can nearly step across and has no navigable rivers at all,
-because a two-cell river it could not bridge would cut the country in half with
-nothing to be done about it; a `Hard` Domain leaves real straits and expects real
-spans. Whatever the span, a deck is **level** — see Stage 5.
+| `Crossings` | enum | Easy / Medium / Hard = 1 / 3 / 6 cells a bridge spans |
+| `EntryGate` / `EntryEdge` | enum | **inputs**, set by the Domain that sent you |
+| `ExitGates` / `ExitGate` | 0 – 3, enum | how many Links onward, and of what kind |
+| `EdgeThickness` / `KeelDepth` / `KeelRoughness` | | the underside |
+| `OverhangDensity` / `OverhangDepth` / `ArchSpan` | | Stage 6 |
 
-**Not parameters, on purpose.** Some numbers define the terrain *grammar* rather
-than an island's looks, and a biome that varied them would change what a cliff
-*means*:
+**`Crossings` is not only an analysis setting.** It decides how wide the straits
+between an arrangement's landmasses may open, how far apart the linker leaves the
+pieces, and what counts as reachable. An `Easy` Domain has no navigable rivers at
+all, because a two-cell river it could not bridge would cut the country in half.
 
-| | |
-|---|---|
-| free-step size | 1 slab, everywhere. The whole landform scheme is built on it. |
-| `MinRegionArea` | derived: `0.215 · RegionScale²`. What counts as a sliver depends entirely on how big a patch is meant to be, so the two were never independent. |
-| `KeelTaper` | constant 0.85. It shapes a surface nobody stands on, and every value in its old range read the same from above. |
-| `MinShelfArea` / `MinShelfWidth` / `MinDistrictArea` | `Traversal` constants — 24 cells, 3 cells, 20 cells. Settlement thresholds; they belong to Stage 6's guarantees, not to a biome. |
-
-Four knobs were removed. `Roughness` set only the fBm gain, and the ≤1-slab
-slope limiter destroyed most of what it produced — it is folded into `Hilliness`,
-which is a knob you can see. `MinRegionArea` and `KeelTaper` became the derived
-values above. **`Fragmentation`** is replaced by `Arrangement`: one float asked
-to mean both "how broken up" and "into how many pieces" and delivered neither,
-and it was untested above the 0.25 continuity threshold anyway.
-
-**The preset lives at `resources/island_default.tres`**, and both dev scenes
-point at it, so the audit measures the same island you are tuning.
-
-`IslandParams` are themselves expected to be produced per Domain from its biome /
-archetype (arid mesa vs. lush lowland …). That mapping is **Domain generation**,
-a separate concern — this spec assumes `IslandParams` arrive ready.
+**Not parameters, on purpose:** the free step (1 slab, everywhere — the whole
+landform scheme is built on it), `MinRegionArea` (derived from `RegionScale`),
+the keel taper, and the settlement thresholds in `Traversal`. A biome that varied
+any of them would change what a cliff *means*.
 
 ---
 
-## 4. Pipeline
-
-### Stage 1 — Footprint mask → `bool Land[x,z]`  *(implemented)*
-
-**The footprint is a set of placed blobs, one per landmass**, chosen by
-`IslandArrangement`: `Single`, `Satellites`, `Twins`, `Triplets`, `Archipelago`,
-`Atoll`. Laid out deliberately rather than thresholded out of noise, because
-"one big island with three satellites" is a thing a Domain wants to *be*, and no
-single fragmentation number produces it reliably.
-
-1. **Irregular silhouette** per blob (scaled by `Irregularity`), which is what
-   stops the result reading as a disc:
-   - an **ellipse** at a seed-chosen aspect and rotation, so the island has a
-     long axis;
-   - a **lobed radius** — `rEff = radius * (1 ± 0.55 * lobeNoise(θ))` — giving
-     bays, capes and a wandering coast at the largest scale. The lobe noise is
-     sampled at `(cos θ, sin θ)` rather than at `θ`, so it is seamless where the
-     angle wraps;
-   - one or more **bites**, applied *after* the partition — see below. Bites are
-     for a single landmass only: a bite takes a third of what is left, measured
-     over the whole footprint, and on a `Twins` layout that is most of one island.
-
-   > **Separation is cut, not hoped for.** Those two amplitudes used to be damped
-   > hard whenever there was more than one blob — the ellipse to 1.22, the wander
-   > to 0.22 — because at full amplitude it is the *noise*, not the layout, that
-   > decides whether two islands are two islands, and a third of `Twins` came out
-   > as one peanut. It worked, and it made every multi-island arrangement a field
-   > of discs, which is the wrong trade: an arrangement is a statement about
-   > *where the land is*, and the noise is what stops any coastline being a
-   > circle. Neither should have to do the other's job.
-   >
-   > So the blobs keep a lone island's full stretch and wander, and where two of
-   > them meet, the seam between them is **carved into a strait** (5b below).
-   > `BuildMask` still re-rolls with a wider spread, up to three times, if the
-   > layout did not deliver the landmasses it promised — it now almost never has
-   > to.
-2. **Radial falloff** against that effective radius: `d = dist / rEff`;
-   `fall = 1 - smoothstep(0.40, 1, d)`. Keeps land off the bounding-box walls.
-3. **Domain-warped fBm** `n(x,z) ∈ [0,1]` — warp amplitude rises with
-   `Irregularity`, so coastlines meander at the small scale too.
-4. **Fragmentation:** `frag = lerp(1, ridgedBlobNoise, Fragmentation)`; multiplied
-   in, so higher `Fragmentation` breaks the mass into separated high spots.
-5. `field = fall * (0.35 + 0.65*n)`, where `fall` comes from the **nearest** blob
-   — a minimum, not a sum, so two islets do not fuse into a peanut merely by
-   being close. `threshold` = the `(1 - Coverage)` quantile of `field`
-   (one sort — no iterative search), taken **over the disc `d < 1` only**,
-   **and per blob**: one global cut makes `Coverage` a fraction of the whole
-   layout, so a lobe sitting under a low patch of the shape noise is simply
-   deleted. Sampling the whole grid pads the population with guaranteed
-   zeroes — the empty aether around the island — which pins the threshold at 0
-   and makes `Coverage` inert for most of its range.
-5b. **Straits, cut along the seam.** Each cell knows its nearest blob and its
-   runner-up; where the two normalised distances agree is the seam between them,
-   and multiplying the difference by the mean radius turns that back into a width
-   on the ground. A band either side of the seam is cleared, its width wandering
-   on its own noise between **1.05 cells and `Crossings` + 0.4**, so the water
-   pinches to a step across in places and opens to a channel in others.
-
-   It never closes: a strait that heals is an arrangement quietly delivering
-   fewer landmasses than it promised. And it never opens wider than a bridge
-   reaches, so the layout is crossable as it stands rather than having to be
-   dragged back together by the linker.
-
-   This is what lets `Twins` be **two halves of one ragged island with a crack
-   between them** rather than two ellipses in an empty field — the two coasts
-   match along the crack, because they are the same coast.
-
-5c. **An atoll's lagoon is cleared outright**, to a wobbled radius just inside
-   the ring. Leaving the middle to the shape noise filled it in about half the
-   time, and a filled atoll is an archipelago. The islets are also elongated
-   *along* the ring (an ellipse is stretched across its rotation, so rotating to
-   the radial direction does it), which makes each one an arc of a broken rim
-   instead of a bead on a necklace. Those two changes are the whole difference
-   between `Atoll` and `Archipelago`, which used to be a distinction only the
-   parameter names made.
-
-6. `Land = d < 1 && field > threshold && !strait`, with a one-cell border kept
-   empty so every land cell has a reachable coast for the Stage 4 BFS.
-6b. **Bites, taken patch by patch.** A draft partition (stage 2b) is run first,
-   and each bite deletes every region at least half inside it — rather than
-   subtracting the bite's shape from the mask. Subtracting leaves the bite's own
-   outline on the coast: an arc, however softly its edge is faded, and it slices
-   in half whatever patches it crosses. Deleting whole regions leaves a coastline
-   that runs along region borders, which are warped Voronoi edges and so already
-   organic. Measured over 60 seeds — spread of the new coast's distance from the
-   bite centre, where an arc scores near zero:
-
-   | | radial spread |
-   |---|---|
-   | subtracting a soft disc | 0.012 |
-   | deleting whole patches | **0.171** |
-
-   It also makes two bites on one island differ in size (spread 0.52 of the mean),
-   because what each removes depends on the patches it lands on rather than on
-   its own radius. About a third of first bites are placed well inside and kept
-   small, which takes out interior patches and punches a **hole** through the
-   island: 7 of 60 seeds.
-
-   Two guards, because one is not enough: no single bite may take a third of what
-   is left, *and* the bites together may not drop the island below 60% of the land
-   it started with. Three bites each under a per-bite cap still compound.
-   Measured: land kept has a minimum of 0.61 and a median of 0.90. Regions are
-   then rebuilt over what survives — the partition is deterministic, so this just
-   re-derives it.
-7. **Continuity.** A `Single` Domain is reduced to its largest 4-connected
-   component. Every other arrangement keeps its pieces — **and then has to earn
-   them.**
-
-   `LinkLandmasses` nudges the pieces bodily together until every one faces the
-   next across at most `Crossings` cells, cardinally, so an archipelago is an
-   island you build your way across rather than a set of separate worlds.
-   Translating preserves each islet's shape, where widening it or filling the gap
-   with a spit would leave a visible causeway. Two islands set diagonally apart
-   can miss each other on *both* axes, so the linker first slides one sideways
-   into a line of sight. It never deletes a stray mid-loop — doing that was how an
-   arrangement quietly delivered fewer landmasses than it promised.
-
-   The crossings it settles on are kept as `IslandData.Bridges`, one `Crossing`
-   each: two banks, the deck's level, and the span. Stage 2c unions the two banks
-   into one **rung group** so they agree on a level, and Stage 3 then levels the
-   two bridgeheads outright — see *Bridges are level* below.
-
-   `CloseDiagonalJoins` fills a corner where two cells of the **same** landmass
-   touch only diagonally. Only the same landmass: welding two separate islands
-   that touch at a corner does not heal anything, it deletes an island.
-
-   Audited, 60 seeds per arrangement: **every arrangement is 100% linked.**
-
-   | | masses per island | |
-   |---|---|---|
-   | `Single` | 1.0 | |
-   | `Twins` | **2.0** | the crack decides it now, so none fuse |
-   | `Triplets` | 3.0 | |
-   | `Satellites` | 3.7 | |
-   | `Archipelago` | 6.0 | |
-   | `Atoll` | 12 | a broken ring, and the strait breaks each arc again |
-
-   > **Performance.** `FacingPairs` finds every crossing in one sweep of the grid.
-   > Asking pair by pair is the obvious shape and it is cubic — `Triplets` spent
-   > **407 ms** an island re-scanning the field on every nudge, against 31 ms for
-   > everything else.
-8. *Not yet:* hole fill.
-
-### Stage 2 — Raw height → `float H[x,z]` in slabs, land only  *(implemented)*
-
-> **Elevation is not a smooth field that gets quantised.** Quantising makes step
-> sizes an accident of the gradient: terrain comes out uniformly two-to-three
-> slabs rugged — the worst case, since a 1-slab step is free and anything more
-> needs infrastructure, so *nothing* is freely walkable and nothing reads as a
-> deliberate cliff. Worse, under a radial envelope the contours of that field are
-> rings, so snapping them to levels produces visible concentric banding with flat
-> nothing in between. Both were observed. Stage 2 is therefore built out of
-> **regions with assigned characters**, and the envelope only says where the high
-> ground tends to be.
-
-**2a — Relief envelope** ∈ `[0,1]`, the macro trend only. `ReliefStyle` selects:
-
-| style | form |
-|---|---|
-| `CentralPeak` | one dome on the footprint centre |
-| `OffsetPeak` | dome pushed off-centre; one flank becomes a long slope |
-| `TwinPeaks` | two unequal domes, usually with a saddle between |
-| `Ridge` | a spine across the island: steep flanks, tapered ends |
-| `Plateau` | broad tableland ringed by a steep drop |
-| `Tilted` | one edge high, sloping steadily to the far side |
-
-Mixed 70/30 with a low-frequency noise so even `CentralPeak` is not perfectly
-concentric, then multiplied by a **coastal taper** (0.45 at the shoreline
-recovering over ~3.5 cells, measured on `toCoast`). `Auto` hashes the seed.
-
-**2b — Region partition.** Jittered-grid Voronoi at `RegionScale`, with the
-lookup position domain-warped so borders meander rather than being straight
-Voronoi edges. Then, so the island reads as a blanket of legible patches:
-
-1. split each Voronoi cell into **connected components** — the coastline routinely
-   cuts one in two, and a region must be a single patch;
-2. **merge** any component under `MinRegionArea` into the neighbour it shares the
-   most border with, repeatedly, until none is left. Isolated islets that have no
-   neighbour to merge into are left alone.
-
-Measured over 30 islands: 424 patches, smallest exactly `MinRegionArea`, median
-208 cells. No undersized patch survives.
-
-**2c — Region assignment.** Each region gets a `LandformType` and a rung on a
-plateau ladder spaced at `CliffHeight`:
-
-| landform | built from | slope limit | reads as |
-|---|---|---|---|
-| `Plain` | rung + ~1.4 slabs of noise | 1 | flat, buildable, crossable |
-| `Hills` | rung + ~9 slabs of noise | 1 | rolling but walkable everywhere |
-| `Mountain` | **S-curve, no rung of its own** | none | see below |
-| `Mesa` | **above every neighbour** + flat top | 1 | tableland ringed by cliff |
-| `Basin` | **below every neighbour** + flat floor | 1 | the mesa rule inverted |
-
-`TerrainCharacter` sets the base weights. Real terrain does not mix every
-landform at once, so each character is one plausible combination, with plains as
-the constant running through all of them:
-
-| character | contains |
-|---|---|
-| `Plains` | plains only |
-| `Tableland` | plains + mesas + basins |
-| `Downs` | plains + hills |
-| `Highland` | plains + hills + mountains |
-
-**It is the only landform knob.** `ReliefStyle` used to be a second one and was
-nearly inert — it only nudged rungs, which reads as elevation shifting between
-patches for no reason. It is now internal: each character picks from the subset
-of high-ground shapes that suits it (a `Highland` draws `Ridge`, `TwinPeaks` or
-`OffsetPeak`; `Plains` draws `Tilted` or `Plateau`), because where the high
-ground sits is a consequence of the character, not a separate decision.
-
-Every weight is then keyed to the envelope — plains favour low ground, hills the
-middle, mountains high ground only, mesas middling-high. That is what gives the
-style visible work: it decides where the high ground is, and the high ground
-decides what grows there.
-
-The rung follows the envelope plus a *small* nudge — a rung that is a pure
-function of the macro shape reads as contour banding, but a large nudge makes
-neighbours disagree constantly and every disagreement is a cliff.
-
-**By quota, not by dice.** The weights are turned into whole region *counts*
-(largest remainder), and every landform the character names is guaranteed at
-least one region. Independent per-region draws over ten-odd regions have enormous
-variance, and it showed: a `Highland` came out with no mountains on one seed and
-with mountains but no hills on the next, which makes the character an unreliable
-promise. `LandformMix` tilts the counts along a low-to-high axis — 0 pushes an
-island toward plains and basins, 1 toward hills, mesas and mountains — leaving
-0.5 as the character's own balance.
-
-The counts are then handed out **by rank on the envelope**: mountains to the
-highest ground, mesas next, basins to the low and sheltered, hills to what is
-left in the middle, plains to the remainder. Rank alone would band the island by
-elevation like a contour map, so the sort key carries a per-region jitter.
-
-The **cordillera** is the exception that wants no jitter. Weights alone rarely
-put two mountains side by side, so every peak came out solitary; taking the
-mountain quota as a strict top band of the envelope makes the chosen regions
-adjacent, and the massif merge welds them into one. That happens on 90% of
-`Highland` islands under a `Ridge` envelope and 55% otherwise — under `Ridge` the
-band is a spine, so the chain crosses the isle; under a dome it is a central
-massif.
-
-Audited over 60 islands: **`Downs` delivers hills on 100% of its islands,
-`Highland` delivers both hills and mountains on 100%, `Tableland` delivers mesas
-and basins on 100%.** The one landform that still misses is a basin on a
-`Highland` (61%), which is adjacency doing its job — there is not always a patch
-that can hold one without touching a massif.
-
-**Adjacency.** A mesa or basin may only touch plains (or each other). Where one
-abuts a mountain it gives way — a massif is the larger feature — and any other
-neighbour is flattened to plain, which is what puts the apron of open ground
-around a mesa that makes it read as one. Hills, plains and mountains may touch
-freely.
-
-That repair can take out the *last* region of a landform the character promised —
-a `Downs` island whose single hills patch happened to touch a basin came out as
-plains, which is what an earlier audit's 93% was. So the quota is checked again
-afterwards and one region is restored: the largest plain that satisfies the
-adjacency rules on its own, since nothing repairs them a second time.
-
-**Basins** are the mesa rule with the sign flipped: assigned highest-envelope
-first (so a run of them steps *down* one after another), sunk to
-`min(neighbour rung) − BasinDepth`, flat floor, inward-facing cliff all round.
-They favour low ground where mesas favour middling-high.
-
-> **They used to be extinct** — 1 across 60 islands. The weight was multiplied by
-> a coastal `smoothstep` on the region's **minimum** distance to the void, and
-> almost every patch touches the coast somewhere, so the product was zero for all
-> but a handful. Under the quota scheme shelter is a *ranking* term on the
-> region's **mean** distance instead, not a gate: 46 basins over 60 islands, and
-> every `Downs` and `Tableland` island has one.
-
-**Massifs.** Adjacent regions of the same type are unioned for `Mountain` and
-`Mesa`. A mountain penned inside one region has only a handful of cells of run
-for its entire rise, which leaves no room for a foot — it can only be a wall.
-
-**Mountains** take no rung of their own. A rung is a region's *base* level, but
-the terrain beside it sits on top of its own relief, so starting a mountain from
-a rung drops it below the plains it is supposed to rise out of — the foothills
-begin with a descent. Instead the massif is hung off a **foot field**: seeded
-from the real surface height each border cell touches, propagated inward, blurred
-so fronts meeting inside leave no seam, then restored to at least the seeded
-height (the blur is an average and would otherwise pull a border cell under its
-own neighbour). Then
-
-`h = foot + MountainHeight · u²(3−2u)`
-
-with noise near the summit only. Rounding that curve to slabs *is* the step
-profile, because step size is just the gradient — measured over 30 islands:
-
-| distance into massif | mean step | reads as |
-|---|---|---|
-| 0.0 – 0.1 | 0.88 slabs | foothills, free to walk |
-| 0.2 – 0.3 | 3.00 slabs | steepening |
-| 0.4 – 0.5 | 4.15 slabs | consecutive multi-slab risers |
-| 0.9 – 1.0 | 1.55 slabs | flatter but rugged summit |
-
-> A mountain that *begins* with a cliff is a mesa with hills on it.
-
-`MountainHeight` is literal: measured rise above the foot is a median 43 slabs
-for a setting of 40, and no border cell now sits below the ground it meets
-(0 of 1732, against 14.6% when mountains hung off a rung).
-
-**Mesas** are placed after every other rung is fixed, at
-`max(neighbour surface) + MesaHeight` — measured against neighbours' plateau
-*plus* their relief amplitude, so a mesa clears the tops of anything beside it,
-not just its base. `MesaHeight` is likewise literal: a mesa is a step up, not a
-peak.
-
-**The ground a mesa stands on and the mesas beside it are measured separately.**
-Lumping them together is what let a chain compound to **22 slabs**: each mesa
-cleared the last by a full `MesaHeight`, and at five slabs a time a stepped
-tableland becomes a tower. Now a neighbouring mesa is cleared by *half* a step,
-and nothing may stand more than `2 × MesaHeight` above the plain the group rests
-on. Basins are capped the same way, inverted.
-
-Audited over 60 islands: 22 mesas clearing their neighbours by min 5 / median 6 /
-**max 7** slabs, and 46 basins dropping min 4 / median 4 / max 7 — **none level
-with or below what it borders, none touching a mountain or any other landform
-kind.**
-
-### Stage 3 — Surface synthesis → `short SurfaceLevel[x,z]`  *(implemented)*
-
-1. `surface = regionPlateau + sharedNoise * amplitudeField`. The noise field is
-   **shared across every region**, so relief is continuous over a border. The
-   amplitude is a *blurred field*, not a per-region constant: a hills patch
-   swinging over nine slabs beside a plain swinging over one still steps several
-   slabs at their shared border, which would be a cliff where the rules forbid
-   one. Blurring makes hills subside into plains instead.
-
-   **Where cliffs may fall.** A rung difference between neighbours *is* a cliff,
-   so the rule — cliffs only between two plains, two mesas or two basins — is
-   enforced structurally: every other adjacent pair is unioned into a rung group,
-   and each group gets one rung.
-
-   Audited over 60 islands, **every cliff is now one somebody asked for:**
-
-   | border | cliffs | |
-   |---|---|---|
-   | plain-basin | 1991 | the basin's own escarpment |
-   | plain-plain | 1655 | by the rule — two rungs of the ladder |
-   | plain-mesa | 1085 | the mesa's own escarpment |
-   | canyon | 12 | a cut, not a step; allowed between any pair (§4 step 3) |
-   | mesa-mesa | 3 | by the rule |
-   | basin-basin | 2 | by the rule |
-   | hills borders | **0** | *was 14* |
-   | mountain borders | **0** | *was 3* |
-
-2. **Slope limit** — a Lipschitz projection from above: repeatedly lower any cell
-   standing more than the limit above a neighbour. It only lowers, so it
-   converges.
-
-   It runs *within* a region, and **across a border wherever the two sides were
-   unioned into one rung group** — which is precisely the statement that no cliff
-   belongs there. That second half is what closed the hills leaks. Sharing a rung
-   equalises a border's *base*, but hills carry more relief than the plain beside
-   them, and blurring the amplitude field narrows that gap without closing it; a
-   few hills borders still reached three slabs. Enforcing the limit on the border
-   itself closes it by construction rather than by tuning.
-
-   Cells flagged **exempt** — a lake bed, a canyon floor — are neither lowered nor
-   used as a bound. A bed sits three or four slabs under its own shore and a
-   canyon floor seven under its lip; take either as a bound and the limiter drags
-   the whole rung group down into it a slab per cell. That was observed: plains
-   ended up *below* the basins they bordered, and the escarpment read inside out.
-3. **Canyon** *(20% of seeds)* — a trench `1.8 × CliffHeight` deep and 2–4 cells
-   wide, carved **along a region border**, preferring one that is otherwise
-   invisible: same landform, same rung. The seed set already spans both sides of
-   the border, so it is two cells across before the BFS widens it at all — a
-   canyon is a crack, not a valley. A canyon is a boundary made legible, so cutting one straight across
-   a region would undo the distinction the patchwork exists to draw. Unlike a
-   cliff, a canyon may fall between **any** two patches — it is a cut, not a step,
-   so it does not imply the two sides sit at different levels.
-4. **Resolve two-slab steps** outside mountains, by lowering the higher cell.
-   Two slabs is the worst height a step can be — too tall to walk, too short to
-   read as a cliff — so it is neither free movement nor a deliberate obstacle.
-   Three or more is left alone.
-
-   Steps 2 and 4 are **run alternately to a fixpoint**, not once each. Resolving a
-   two lowers a cell, which can leave a *three* behind it on a border the rules
-   forbid a cliff on; closing that can in turn expose a new two. Both passes only
-   ever lower, so alternating them terminates.
-
-Audited over 60 islands (224k adjacent pairs, real generator — see
-`scenes/dev/generation_audit.tscn`): **90.8% of steps are free (0–1 slabs), 8.7%
-are cliffs (3+), and two-slab steps outside mountains number 0 in 204,130.** The
-free share dipped a point from the previous audit only because basins now exist,
-and every basin brings an escarpment.
-
-*Not yet:* gentle descent within a plateau.
-
-### Stage 4 — Keel / underside → one span per column  *(implemented)*
-
-A Domain hangs in aether as a **spinning top**: a thin lip at the coastline
-descending inland to a deep keel under the interior.
-
-1. `toCoast[x,z]` = distance in cells to the nearest non-land cell, as a **smooth
-   float field**: a chamfer (3,4) transform (4-neighbour BFS is Manhattan, whose
-   contours are diamonds — that is where the *pyramid* came from) followed by a
-   blur to remove the integer steps. Computed once, shared with Stage 2's coastal
-   taper.
-2. The field is sampled at a **domain-warped position**, amplitude
-   `radius * (0.25 + 0.45 * KeelRoughness)`. This is the step that stops the
-   underside being a surface of revolution: displacing where the field is read
-   bends its contours, whereas adding noise to the depth afterwards only ripples
-   a shape that is still concentric. Measured on a test island, warping raises the
-   spread of keel depth within a radial band from 1.2 to ~5 slabs while leaving
-   the rim-to-centre trend untouched.
-3. `t = sampled / maxToCoast`, swayed by a low-frequency noise — 0 at the
-   shoreline, 1 at the innermost point. Normalising against the island's *own*
-   maximum makes the keel come to a tip rather than bottoming out on a plateau.
-4. `depth = EdgeThickness + KeelDepth * scale * t^KeelTaper`, where
-   `scale = clamp(maxToCoast / (radius * 0.75), 0.25, 1)` shrinks the keel for
-   small landmasses — an islet gets an islet's keel, not a full-length spike.
-   Noise scaled by `KeelRoughness * depth` crags the underside while leaving the
-   lip clean.
-5. `keel = min(-round(depth), SurfaceLevel - EdgeThickness)`; emit
-   `Spans[x,z] = [Span(keel, surface)]`. Stage 4b is the only stage that produces
-   more than one span.
-
-> **The underside is an absolute level, not a thickness below the surface.**
-> Subtracting a thickness mirrors the surface's relief downwards, so any central
-> peak lifts the underside with it and the island ends up **concave** — a bowl,
-> thickest at the rim, with the interior hanging above the coastline's own keel.
-> That is what the first implementation did. Driving the floor to an absolute
-> depth and clamping for minimum thickness gives the intended silhouette.
-
-### Stage 4b — Overhangs & arches (splits / adds spans)  *(not yet)*
-
-Runs only near `CliffCells` and short gaps between landmasses. Bounded so the
-island stays legible:
-
-1. **Undercuts.** For a cliff column, sample a low-frequency 3D noise over its
-   span; where it crosses a threshold in a horizontal band *within* `OverhangDepth`
-   of the exposed face, delete that band, splitting the span — the upper part is
-   an overhang. Keep ≥ `MinLedgeThickness` slabs solid above and below each cut;
-   ≤ 1–2 cuts per column; frequency ∝ `OverhangDensity`.
-2. **Arches / natural bridges.** Find a gap ≤ `ArchSpan` cells between two land
-   columns whose top spans are within a few slabs of each other; add a bridging
-   span a few slabs thick near the top, air beneath. Skip arches that would block
-   a `GateAnchor` sightline.
-
-Everything added here is real walkable, rendered, collidable terrain.
-
-### Stage 5 — Walkability & shelves  *(implemented)* + feature anchors *(not yet)*
-
-`Traversal.Analyse(IslandData)` is **pure analysis**: it reads finished terrain
-and changes nothing, so it can run on any `IslandData` and sits outside the
-pipeline proper. It fills two things.
-
-**Walk areas** — `int[,] Walk` plus `List<WalkArea> Areas`, largest first, so
-`Areas[0]` is the mainland. Two columns share an id exactly when you can walk
-between them: 4-connected, land, not flooded, and `|Δsurface| ≤ 1`. That single
-edge test *is* the traversal rule.
-
-> **Most walk areas are not places.** A mountain flank climbs in 4–5 slab risers,
-> so each contour bench between two risers is its own connected set — 2,745 of
-> them across 60 islands, against 194 areas of any size. `WalkArea.IsDistrict`
-> (≥ `MinDistrictArea`, 20 cells) is the line between a district and **broken
-> ground**, and the lab paints all broken ground one grey so a massif reads as
-> the single impassable mass it is rather than as fifty stripes.
-
-**Shelves — the generator's answer to "where could a town go?"** `int[,] ShelfId`
-plus `List<Shelf> Shelves`. This is the only thing in the pipeline that says
-anything about *building*, as opposed to about walking: the settlement layer will
-read it instead of re-deriving slopes, and `GatePlacement` already does — a
-Gate's apron is the shelf that serves it, which is why a Gate never opens onto a
-hillside.
-
-A shelf is **ground level enough to lay a settlement out on**, which is not the
-same as flat. Requirement §1.4 asks for terrain "mostly flat with an occasional
-single-slab step" — a yard, a terrace, a river meadow that loses a slab as it
-runs — so the test is per cell: a cell is shelf ground when **at most one** of its
-four neighbours stands at a different level, and none differs by more than a
-slab. Neighbouring shelf cells then join when they are within a slab of each
-other, so a shelf may descend gently and still be one shelf.
-
-> That replaces "contiguous ground all at *one* exact level", which was the
-> documented §4d gap: a shelf could not descend at all, so a terrace losing a slab
-> across its length was reported as two. The per-cell test is what keeps a
-> hillside out — on hills every cell steps against most of its neighbours — while
-> letting the terrace through. Water is never shelf, so a ford and a lake bed
-> both break one rather than being built on.
-
-`Width` is the largest square that fits inside, by repeated 8-way erosion, and
-`Buildable` means ≥ `MinShelfArea` (24 cells) and ≥ `MinShelfWidth` (3) across.
-Erosion rather than area is what §1.4 actually asks for — a ledge fifty cells long
-and one deep has ample area and is still nowhere anyone can settle. `Drop` says
-how much the shelf loses end to end.
-
-Audited over 60 islands: **531 buildable shelves, at least one on every island**,
-widest square min 5 / median 13 / max 33 cells, and a descent across one shelf of
-median 1 and at most 7 slabs. Level ground is not the scarce resource.
-
-**Reach areas** — the same connectivity question asked of a player who can
-*build*. Two ground cells join when the face between them is at most
-`InfrastructureStep` (8 slabs — a stair or a hoist), or when land faces land
-across at most `Crossings` cells of water or aether, cardinally. A diagonal
-crossing is not something you build on a square grid without it reading as a
-mistake.
-
-> **Bridges are level.** A bridge is a run of slabs at one level going from land
-> to land in one direction — it is not a ramp and it does not climb — so you step
-> **one slab** onto the deck at one end and one off it at the other, and
-> `MaxBridgeRise` is 2. It used to be the full stair height, which quietly meant
-> a "bridge" whose far end stood eight slabs up: a lift with a deck attached.
->
-> Holding decks level was tried once before and abandoned because it made most
-> archipelagos unlinkable — two islets have no reason to agree on a rung. The
-> answer is not to relax the rule but to **make the banks agree**:
-> `LevelBridgeheads` cuts a 3×3 pad at each bridgehead down to the lower of the
-> two, inside the settle loop so the passes that follow ease whatever step it
-> leaves and cannot un-level one bank afterwards. It only ever lowers, never into
-> a lake shore or a basin's escarpment, and it gives up rather than cut a bank
-> down by more than a stair's height.
->
-> Two more things had to hold for it to work. A river may not cut a bridgehead —
-> a channel there takes two slabs off the bank that was just levelled — and
-> `RestoreMissingLandforms` may not hand a bridgehead patch the island's missing
-> mountain, which is how one crossing ended up twelve slabs above the islet it
-> served. Measured over 60 islands: **80 crossings, 0 with banks more than 2
-> slabs apart, 0 with a deck more than a slab off a bank**, and every arrangement
-> 100% linked.
-
-> **This is the connectivity the design should be held to.** Walking is the
-> *free* case; a cliff is meant to cost something, not to be a wall.
->
-> | | on foot | with building |
-> |---|---|---|
-> | land on the largest area | 54% | **94%** |
-> | median island | 50% | **95%** |
-> | islands that are one whole | — | **57 of 60** |
-> | mesa tops | 0% | **99.5%** |
->
-> And what no amount of building reaches is **91% mountain**, which is the
-> intent. A summit is meant to be a summit. (A mesa top is now reached on foot
-> essentially never, against 8% before — level decks and a stricter shelf test
-> both cut the accidental cases. It costs a stair, which is the design position.)
-
-### Stage 5b — Gates  *(implemented)*
-
-A **Gate** is the built structure at one end of a Link: **3 cells wide, 1 deep,
-12 slabs tall** — a square portal, since a slab is a quarter of a cell. Every
-Domain gets one `Entry` and one to three `Exit`s, and **at most one per edge**:
-Domains sit on a plane at their world-tree position, so two Gates facing the same
-way would be two Links to the same place.
-
-| kind | |
-|---|---|
-| `Hanging` | **The normal case.** Floats four cells off the rim; you fly through it. Needs aether under all three of its cells, a flyable approach, and a **landing strip** of level ground running inland from the coast opposite. |
-| `Land` | The exception, a quarter of the time. Stands on the ground; you walk through it. Needs three level cells to stand on, a clear outlook — nothing over its sill for ten cells — and level ground behind it to start a company. |
-
-**Hanging is the norm.** Crossing a Link is a flight; a Gate you walk through is
-what a particular coast happens to allow. So an Exit hangs unless the coast will
-not have it, and an `Auto` Entry hangs three times in four. Measured: 122 hanging
-against 56 standing, over 60 islands.
-
-**The landing strip is 1 × 4**, running inland from the coast cell directly
-opposite the Gate's centre — the ground under its centre line and nothing more. It
-was 8 × 3, which is an aerodrome: a vessel needs somewhere to set down, and the
-long strip was quietly the hardest thing on the whole island to find. It still
-tolerates a slab along its length, which is the free step anyway.
-
-`IslandData.Airstrip` marks **every** coast cell that would take one, in any
-direction, whether or not a Gate went there — so "where else could a Link have
-come out?" is a question the data answers. The lab draws it on **J**. A median
-island offers 524 cells of it.
-
-**The Entry's kind is an input, not a choice.** A Link joins two Gates, so the one
-you arrive at has to match the one you left — hence `IslandParams.EntryGate`,
-which the Domain that sends you sets and this Domain is generated around. `Auto`
-is for a Home Domain, which has nothing to match.
-
-Placement runs **after** `Traversal`, because every rule is about ground the
-player can actually use: a Gate on a stranded ledge, or opening onto a cliff
-face, is not a place to start a run. All of them require the heartland, dry
-ground, and an apron of ≥ 60 level cells — and the apron is a `Shelf`, read off
-`ShelfId` rather than flooded per candidate, which is the same answer computed
-tens of thousands of times an island.
-
-#### On the side of the map it names
-
-A Gate faces a cardinal edge because Domains sit on a plane at their world-tree
-position. That means "east" is a claim about **where on this Domain the Gate is**,
-and three rules enforce it — each of which failed separately before they existed:
-
-| | |
-|---|---|
-| **In its own band** | Within 22% of the island's width (never less than 8 cells) of the outermost usable ground on that side. A south Gate halfway up the island leaves a third of the Domain *behind* the player as they arrive. |
-| **Off the corners** | Inside the middle of its edge, 16% trimmed from each end. A Gate in a corner faces two ways at once and crowds whichever Gate holds the next edge round. |
-| **Outermost on its own axis** | Further east than every other Gate, if it is the east Gate — checked both ways, so neither Gate may overtake the other on the axis the other is named for. On a ragged coast this does **not** follow from the first two. |
-
-Two Gates also keep 30% of the footprint between them. Scoring within what is
-allowed prefers ground further out and nearer the middle of the edge, with the
-apron as a tie-break.
-
-Measured over 60 islands, 178 Gates: **0** in a corner, **0** not outermost on
-its own axis, **0** pairs too close, and the dry land left behind a Gate is a
-median of **0%** and at most 10%.
-
-> **Three things had to give to keep the Entry guarantee.** A dead-level strip is
-> near-impossible on ground tapering toward a coast — 24 of 60 islands could not
-> host a hanging Entry at all — so a strip tolerates a slab, which is the free
-> step anyway. The approach is tested against the **sill height** rather than
-> against land as such, since a low spit under the flight path is scenery. And
-> where a coast still will not take it, the Entry gives up its comfort in tiers —
-> apron, then strip length — **never its kind**.
-
-Audited over 60 islands, with `EntryGate` forced each way: exactly one Entry
-every time, exits 1–3, **0** shared edges, **0** Entries of the wrong kind, **0**
-Gates off the heartland or in water, **0** hanging Gates standing on land, **0**
-without a strip. Apron a median of 465 cells; every island offers a landing
-strip.
-
-*Still to come:* `CoastCells` (docks), `CliffCells` (essencercoral and hanging
-growth attach here; a cheap version also gates Stage 4b), and `Overhangs`
-(columns with more than one span — and where pathing must treat two walkable
-levels in one cell).
-
-### Stage 6 — Guarantees & re-roll  *(implemented)*
-
-`Generate` builds the island, checks three things, and **re-rolls** a Domain that
-fails any of them — up to four attempts, keeping the best if the budget runs out.
-It is still a pure function of `(seed, params)`: a rejected island is rebuilt from
-a seed *derived* from the one asked for, so the same seed gives the same Domain
-every time; it may simply not be the first island that seed describes.
-
-| guarantee | why it is the bar |
-|---|---|
-| exactly one Entry, of the kind `EntryGate` asked for | a Domain with no way in is not a Domain, and a Link whose ends disagree is not a Link |
-| a buildable shelf on the heartland | somewhere the first company can actually be laid out |
-| the heartland covers ≥ 75% of the dry land | below that there is a second island on the Domain that nobody asked for |
-
-Nothing else. Re-rolling for *variety* — how many lakes, where the mountains
-came out — is how a generator ends up producing one island; and four failures in
-a row mean the parameters are asking for something the pipeline cannot give,
-which more dice will not fix. `IslandData.Attempts` and `.Unmet` carry the answer
-rather than hiding it.
-
-Audited over 60 islands: **islands built per seed min 1, median 1, max 2**, and
-**0 seeds that never met the guarantees**.
-
----
-
-## 4c. Water — lakes and rivers  *(implemented)*
-
-A Domain floats in aether, which settles nothing about water *on* it: rain has to
-land somewhere and run somewhere. The constraint that makes this interesting is
-that there is no sea to run to — **every watercourse ends by pouring off the
-rim into the aether.** That is a strong silhouette and worth building toward.
-
-### Data
-
-One extra plane on `IslandData`:
-
-```csharp
-public short[,] WaterLevel { get; }   // top slab of water, NoLand = dry
-```
-
-Water occupies `SurfaceLevel+1 … WaterLevel` in a column. It is a *level*, not a
-volume, so it costs one short per column and needs no simulation. The mesher
-emits it as a separate translucent surface, and only its top face plus the faces
-against air need geometry.
-
-### Lakes *(implemented)*
-
-**A lake sinks into the interior of a flat patch — plain, mesa or basin — leaving
-a two-cell ring of that patch's own ground dry around it. That ring is the
-containment.** Which is what makes it work anywhere: no rim of higher ground is
-needed, no distance from the coast, no particular landform. Water can never reach
-anything outside the patch, because a flooded cell is at least two cells from the
-patch border and so is surrounded by the patch's own shore.
-
-> The first attempt filled *basins only*, using the surrounding escarpment as the
-> rim. It produced 6 lakes across 60 islands: basins are a minority landform, and
-> requiring one that also sits clear of the void left almost nothing. Hosting the
-> lake inside any flat patch gives **138 lakes on 52 of 60 islands.**
-
-- `level = shoreMin − 1`; the bed is cut two or three slabs below that, so the
-  terrain drops three or four from the ring — never the ambiguous two.
-- **The innermost dry ring is levelled to exactly `level + 1`.** Left at its
-  natural height it stands one *or two* above the water, and a two-slab shore is
-  the one step height the grammar exists to avoid — a beach you cannot walk onto.
-  Median shore step is 1 slab, maximum 2 (at islet banks).
-- The flooded set is the **largest 4-connected component** of the patch's
-  interior. A pinched patch otherwise leaves two pools meeting at a corner, and a
-  corner is not a join you can swim through, so
-  any water cell still joined only diagonally is raised to shore height afterwards
-  — draining it to bed height instead would leave dry ground below the water
-  beside it.
-- **No chains.** A patch that borders one already holding water stays dry. Each
-  lake fills to its own patch's rim, so a row of neighbouring patches that all
-  flood is a row of pools at slightly different levels stepping across the
-  island — and that reads as **flooding**, not as lakes. Linking such a pair
-  instead (one level, a channel notched between them) was the previous answer,
-  and it makes the two pools one body: the same sheet of water spread over more
-  of the island, which is the look this removes. `CutLakeChannels` is gone with
-  it. Measured: 118 lakes on 52 of 60 islands, against 134 on 47 when they could
-  chain.
-- **Mesas get a tarn, not a lake**, and only a tenth as often as a plain. Flooding
-  a whole mesa interior drops the bed to near the surrounding plain and the
-  landform stops reading as a tableland at all: it becomes a wall around a pit.
-  Capped to a disc of radius 1.6–2.8, so ~10 cells.
-- Roughly a third of lakes keep an **islet** — cells left uncarved deep inside,
-  raised so they break the surface. Circular with a noise wobble: a Chebyshev
-  radius makes literal squares.
-- Lakes cut the surface *after* the step-grammar passes, so the ambiguous-step
-  pass runs once more over what they left, taught to skip lake beds and never to
-  lower a shore into its own water.
-
-Audited over 60 islands: **67 lakes across 7,267 cells on 39 of the 60**, with
-**0 cells of dry land below a water surface, 0 water touching the void, and 0
-diagonal-only joins in water**. Shore steps are a median of 1 slab, but reach 4
-at the worst — the levelling only covers cells directly touching the pool, so an
-islet bank or a channel rim can still stand higher. Not yet fixed.
-
-### Ramps — tried and removed
-
-A causeway from a mesa's edge down to the plain, two cells wide, dropping one
-slab per cell. It worked, and cost almost nothing: 14 ramps over 60 islands added
-only 4 two-slab steps in 359,633 pairs. **It was removed because it reads as a
-staircase, not a ramp.**
-
-That is not a tuning failure, it is the grid. A mesa stands 5–6 slabs, so a
-1-slab-per-cell grade covers the drop in 5–6 cells — five or six discrete risers
-in a row, which is a staircase by any reading. For it to read as a slope the
-grade would have to be roughly a slab every three cells, i.e. 15–18 cells of run,
-which is longer than the open ground beside most mesas; and anything shallower
-than one slab per cell cannot be expressed at all, since the slab *is* the
-vertical quantum.
-
-So a walkable approach to a mesa needs one of:
-
-- **much longer, shallower ramps**, which means reserving space for them at patch
-  assignment rather than carving them in afterwards;
-- **sub-slab geometry** — a sloped mesh over the slab grid, a rendering change
-  rather than a generation one;
-- **built infrastructure** — stairs or a lift as a player-placed structure, which
-  sidesteps the terrain question entirely and may be the better answer.
-
-Leaving mesas unreachable on foot is a legitimate design position and is the
-current state — and the numbers back it: a mesa top is reachable on foot 8% of
-the time and **reachable with a stair 99.4%** of the time. A mesa is a
-destination you pay to get onto, which is content rather than a defect.
-
-### Passes — the ramp done as a landform  *(implemented)*
-
-The ramp failed on its **shape**, not its grade. A narrow causeway sticking out
-into a plain shows every riser in profile, and five risers in a row is a
-staircase however you tune it. A *pass* takes the same grade and makes it a
-landform: a broad radial sag, some fifteen to twenty cells across, centred on a
-point of a cliff border, whose outline is a noise-wobbled radius so it is not a
-disc. The ground either side of the path descends with it, so the eye reads a
-col instead of a stair.
-
-- The radius is `drop + 4`, so the grade stays under a slab per cell — the sag
-  has to be longer than it is deep or it is a staircase again.
-- Only **rung-ladder** cliffs qualify: both sides plain or hills, different rung
-  groups, drop of 3 or more. A two-slab step is resolved to walkable by the
-  grammar anyway, so a pass cut there only scars the ground. Mesas and basins are
-  excluded on purpose: a mesa with a pass cut into it stops being a mesa.
-- The slope limiter is told to reach **across** the border inside a pass. It is
-  the one place a cliff border is deliberately bound.
-- Like a canyon, a pass cuts a patch's rim, so a patch with one through it holds
-  no lake.
-
-**Occasional by design.** Passes are flavour, not the connectivity answer — that
-is infrastructure. Cutting one on every border would flatten the island into a
-single walkable district and throw away the plateau ladder. Audited: **24 passes
-on 21 of 60 islands, all 24 joining their two patches into one walk area**, and
-the steepest step inside a pass is 1 slab.
-
-**Rendering.** Water is one flat quad per cell at the surface, *not* a box. Boxes
-share interior faces with their neighbours and alpha blending draws every one of
-them, so the doubled alpha paints a dark grid line along each cell edge. Coplanar
-quads do not overlap. Culling is disabled so the surface is visible from beneath.
-
-### Rivers  *(implemented)*
-
-Rivers run **across** patches, not along their borders, and are therefore cut
-*after* the patchwork rather than constraining it. (The alternative — cutting
-them first so regions are drawn around them — was considered and rejected: a
-river that only ever follows a boundary reads as a seam, and it would make the
-partition answer to the hydrology instead of the other way round.)
-
-**Routing is a priority flood inward from the rim, not a steepest-descent walk.**
-Terrain built under a one-slab slope limit is mostly flats and shallow pits, so
-descent stalls constantly and the flat-resolver becomes the whole algorithm.
-Flooding inward gives every cell a downstream neighbour by construction. Each
-cell is queued at `max(its own level, the level water had to clear to reach it)`;
-carrying that maximum forward is what makes a depression fill and spill at its
-lowest rim, and it is why a lake needs no special case — **water enters, crosses
-and leaves**, so lake-to-lake links fall out for free. Ties break first-in
-first-out, so a flat drains evenly outward instead of picking a corner.
-
-> **Accumulation alone gives almost nothing, and structurally so.** Every rim
-> cell is an outlet, so water leaves by the shortest way out, and slope-limited
-> terrain has no valleys to gather it — the drainage fans out from each coast
-> cell and no catchment ever grows large. Measured: a median of **13** river
-> cells an island, and **11** navigable cells across 60 seeds.
->
-> So the sources are **named** rather than emergent. Every summit and every lake
-> outflow starts a watercourse and is traced to the rim whatever its catchment,
-> which is what makes a river run the length of an island. Accumulation still
-> decides how wide it gets on the way down, and traced courses meeting add up.
-
-- **A river has a bed.** The channel is cut **two** slabs below the ground it
-  crosses and filled to **one** below it, so the banks stand a slab proud of the
-  water. At one slab, filled to the level of the ground beside it, the water read
-  as a sheet poured over the terrain rather than as a river in a channel — a
-  bucket emptied onto a hillside. A navigable river is cut a slab deeper again:
-  two slabs of water, which is the draught a barge wants.
-- **The river cuts its banks too.** A bed two slabs down leaves a **two-slab
-  step** wherever the bank beside it happened to stand a slab proud, which is the
-  one step height the grammar exists to avoid. So any dry cell beside the channel
-  comes down to exactly one slab above the water, and the correction then walks
-  outward against a step of exactly two — never against three or more, which is a
-  cliff the rules put there. It dies out within a cell or two of the water except
-  up a steady hillside, where it walks the slope down a slab and changes nothing
-  about how the slope reads. It will not cut a mesa's rim, a basin's wall or a
-  mountain's flank: those are landforms, and a stream against one leaves a
-  waterfall, not an ambiguity.
-- **A stream is still fordable.** You step down a slab into the water and up a
-  slab out of it, so `Traversal.CrossLevel` measures a ford at its **water
-  surface**, not at its bed — a watercourse running the length of an island
-  should not cut it in two. Fording took islands that are one reachable whole
-  from 48 to 54 of 60 when it was introduced.
-- **A navigable river is not.** Where flow passes the navigable threshold the
-  channel widens to two cells — meant for barges and by the same token too wide
-  to wade. The widened cell takes the level of the channel it was widened from,
-  so the pair is one surface rather than a step down the river's own length. Two
-  cells is inside the bridge span at `Medium` and `Hard`; on an `Easy` Domain,
-  where a bridge spans one cell, there are **no navigable rivers at all**,
-  because one would cut the country in half with nothing to be done about it.
-- **Termination.** A river reaching the rim becomes a fall. It never reaches a
-  sea, because there isn't one.
-
-Audited over 60 islands at 128²:
-
-| | |
-|---|---|
-| rivers | 8,317 cells, on **60 of 60** islands, median 89 an island |
-| navigable | 844 cells |
-| falls | 1,733, of which **1,451 pour off the rim** |
-| rivers reaching the rim | **60 of 60 islands** — there is no sea; they must |
-| channel not cut below its own water | 0 |
-| water running uphill | 6 in 8,317 (was 14) |
-| two-slab steps left at a bank | 291 in 413,724 pairs — where the bank is a landform the river may not cut |
-
-> The audit measures the step grammar at the height you actually **cross** a
-> column at — a ford's water surface, not its bed. Measuring the bed reported a
-> two-slab step at every bank standing a slab proud: 1,373 false positives.
-
-### Waterfalls  *(implemented, and now drawn)*
-
-A `Fall` is a record, not a marker: the column the water leaves from, the level
-of its lip, the level it reaches, the direction it is going, and how wide it is.
-Two kinds.
-
-| | |
-|---|---|
-| **inner** | A drop of `FallDepth` (3 slabs) or more to the next cell downstream — the cliff a mountain stream comes over. Its `Bottom` is the pool below. |
-| **off the rim** | The end of every river there is. Its `Bottom` is set once the keel is known: the underside of the Domain, plus a 16-slab tail, after which it is aether's problem. |
-
-They were being *found* before and nothing drew them, which is why none had ever
-been seen. The lab now stands a translucent quad on end across the flow at each
-lip, as wide as the channel and as tall as the drop; a rim fall runs on past the
-keel. **A Domain seen from below should have water spilling from its rim** —
-that single image probably does more for "these are floating islands" than
-anything else in the renderer, and there are now 1,451 of them over 60 islands to
-look at.
-
-Open questions: where the water *comes from* in fiction (condensation out of
-aether? an Essence cycle?); whether lakes should be fresh-water sites that
-settlements need, which would make them a placement constraint rather than
-decoration; and whether rivers should be cut before landform assignment so
-patches can be drawn around them instead of over them.
-
----
-
-## 4d. Auditing the guarantees
-
-Every "measured" figure above comes from **`scenes/dev/generation_audit.tscn`**,
-which runs the real generator over 60 seeds and measures `IslandData` directly:
-
-```
-godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
-```
-
-It needs no rendering, takes about 1.5 s, and prints the step grammar, cliff
-borders by landform pair, patch sizes, mesa/basin clearances, mountain rise and
-step profile, lake containment, which landforms each character actually
-delivered, walkability, shelves, and landmass continuity.
-
-> **Read the numbers, don't assume them.** These figures were originally produced
-> by a stand-alone harness that re-implemented the pipeline against substitute
-> noise, because `FastNoiseLite` needs the engine. That validated the
-> *architecture* but not the shipped output, and when the real generator was
-> finally measured several claims turned out optimistic — lakes were half as
-> common, mesa clearance ran to 22 slabs rather than 6, basins had effectively
-> vanished, and the cliff rule leaked in 17 places. The audit scene measures
-> `IslandData` and so re-implements nothing; there is nothing left to drift.
-
-It also prints an ASCII **silhouette** of one island per arrangement when
-`Silhouettes` is set on the scene. Headless gives no rendering, so how terrain
-*looks* still needs a human at the editor — but the *shape* of a footprint is a
-fact about the mask, and printing it is how a change to the arrangements can be
-checked at all without opening the lab.
-
-### Closed, as of this audit
-
-| was | now |
-|---|---|
-| 14 hills cliffs the rules forbid | **0** — the slope limit runs across bound borders |
-| mesa clearance compounding to 22 slabs | **max 11** — ground and neighbouring mesas measured separately, capped at 2× |
-| 1 basin in 60 islands | **80**, on every `Downs` and `Tableland` island |
-| lake shores reaching 4 slabs | **max 1** — levelling runs last, over all patches |
-| 3 diagonal-only land joins | **0** — the corner is filled before the component filter |
-| `Twins` fusing on a fifth of seeds | **2.0 masses** — the strait decides it, not the noise |
-| a shelf could not descend | shelf is per-cell "flat or one lone step"; median drop 1, max 7 slabs |
-| a bridge deck that climbed 8 slabs | **level**: banks agree to 2, deck within 1 of each, 0 exceptions in 80 |
-| nothing re-rolled a bad island | Stage 6: median 1 attempt, max 2, **0** seeds left unplayable |
-| falls found but never drawn | rendered, 1,451 of them off the rim |
-| a basin sagged flush with the plain by a pass | passes no longer cut mesa or basin ground; drop min 1, median 5 |
-
-Two bugs surfaced while fixing those, and are fixed too: a canyon cutting a
-patch's rim set that patch's lake level to the bottom of the trench (a canyon is
-a drain — a cut patch now holds no water), and a canyon cut alongside a basin rim
-dropped the plain *below* the basin floor, inverting the escarpment.
-
-### Open gaps
-
-| | |
-|---|---|
-| two-slab steps at a riverbank | 291 in 413,724 pairs, all where the bank is a mesa rim, a basin wall or a mountain flank — ground the river is not allowed to cut. The alternative is eating the landform. |
-| water running uphill | 6 cells in 8,317, at confluences: `Descend` only orders a course against the neighbour it actually drains into, so a side neighbour can still stand a slab higher |
-| basins on a `Highland` | 94% of islands, not 100% — adjacency cannot always place one beside a massif |
-| one basin in 80 at drop 1 | a pass sagging its wobbled edge up to a basin rim; every other basin clears its surroundings by 3 or more |
-| Stage 4b | overhangs and arches — **the one substantial thing left**, and the one that touches the mesher |
-| feature anchors | `CoastCells`, `CliffCells`, `Overhangs` |
-
-**Reachability is answered.** 94% of land is on the heartland, a median island
-reaches 95% of itself, 57 of 60 are a single whole, and 91% of what stays out is
-mountain. Cliffs are costs, not walls.
-
----
-
-## 5. Rendering handoff (the mesher is its own task)
+## 4. Rendering handoff
 
 `IslandData` feeds the terrain renderer; it does **not** spawn per-slab nodes.
 
-- **Face selection**, per column, per span `s`:
-  - top face at `s.Top + 1`; bottom face at `s.Bottom` (the lowest span has air
-    below; a higher span has the inter-span gap below it — that gap's ceiling is
-    the overhang underside).
-  - side faces toward each 4-neighbour: walk this column's spans and the
-    neighbour's spans together, emit a face for every slab sub-range of
-    `s.Bottom..s.Top` the neighbour does **not** cover (whole range if the
-    neighbour has no land).
-- **Greedy merge** matters more than in a cube model: columns are ~4× taller in
-  slab count, so merge vertical runs of identical exposed faces before
-  triangulating, then merge coplanar quads across cells.
-- **Chunking:** 16×16 or 32×32 cell chunks; one `ArrayMesh` + one collider each.
-- **Collision:** custom trimesh per chunk (a `HeightMapShape3D` models a single
-  surface only — no rim, underside or overhangs). Prototype: box colliders per
-  merged run.
-- **Current first cut** (`IslandLab.cs`): one `MultiMeshInstance3D`, one
-  **scaled** unit-box instance per span (`Basis.Identity.Scaled(1, spanHeight, 1)`
-  at the span's world-Y centre), height-tinted. No mesher, no culling; solid at a
-  glance and cheap enough for the 96² lab. Overhangs render for free once Stage 4b
-  produces multi-span columns.
+- **Faces**, per column per span: top at `Top + 1`, bottom at `Bottom` (the gap
+  under a higher span is the overhang's underside), sides wherever the
+  neighbouring column's spans do not cover that slab range.
+- **Chunks** of 16 × 16 columns → one `ArrayMesh` + one trimesh collider each, so
+  an edit re-meshes one chunk.
+- **Water** is a separate translucent surface at `WaterLevel + 1`; only its top
+  face and the faces against air need geometry.
+- The dev lab does none of this — it draws one scaled `MultiMesh` box per span,
+  which is why it costs what it costs. The mesher is the next piece of work.
 
 ---
 
-## 6. File layout
+## 5. File layout
 
 ```
 scripts/generation/            namespace ProjectNikitin.Generation
-  Terrain.cs                    CellSize (1.0) / SlabHeight (0.25) constants
-  Span.cs                       readonly record struct Span(short Bottom, short Top)
-  IslandParams.cs               [GlobalClass] resource — the §3 knobs
-  IslandData.cs                 §2 output + metadata types
-  Noise.cs                      FastNoiseLite wrapper (fBm / ridged / domain-warp), [0,1]
-  FieldOps.cs                   smoothstep, quantile-threshold, blur
-  IslandGenerator.cs           Generate(seed, params) — stages 1-4, and the Stage 6 re-roll
-  IslandArrangement.cs          Single / Satellites / Twins / Triplets / Archipelago / Atoll
-  Traversal.cs                  Stage 5 analysis: walk areas, reach areas, shelves
-  BridgeEase.cs                 Easy / Medium / Hard = 1 / 3 / 6 cells of span
-  Crossing.cs                   a bridge site: two banks, a deck level, a span
-  Rivers.cs                     drainage routing, channels, banks, falls
-  Fall.cs                       one waterfall: lip, floor, direction, width, off-rim or not
-  Gate.cs                       Gate, GateKind, GateRole, Cardinal
-  GatePlacement.cs              Stage 5b: where the Links come out, and where they could
+  Terrain.cs                   CellSize / SlabHeight
+  Span.cs, IslandData.cs       the columnar model and everything derived from it
+  IslandParams.cs              the §3 knobs
+  Noise.cs, FieldOps.cs        FastNoiseLite wrapper; smoothstep, quantile, blur, taper
+  IslandGenerator.cs           Generate(seed, params): stages 1-5 and the re-roll
+  IslandArrangement.cs         the named layouts
+  LandformType.cs              the ten landforms
+  TerrainCharacter.cs          which of them an island is built from
+  ReliefStyle.cs               where the high ground sits (internal)
+  Rivers.cs                    routing, channels, fords, eyots, valleys, falls
+  Fall.cs                      one waterfall
+  Overhangs.cs                 stage 6
+  Traversal.cs                 stage 7: walk, reach, water bodies, berths, shelves
+  BridgeEase.cs, Crossing.cs   how far a bridge reaches, and one bridge site
+  Ferry.cs                     a berth: a quay, its water, the body it reaches
+  Gate.cs, GatePlacement.cs    stage 8
+  Passage.cs                   stage 9: the least-works road, and the works on it
+  Surfaces.cs, Names.cs        stage 10
 scripts/terrain/               (later) the chunked span-aware mesher + colliders
-scripts/dev/IslandLab.cs       runtime harness for the scene below
-scripts/dev/GenerationAudit.cs headless guarantee audit (§4d)
-resources/island_default.tres  the IslandParams preset both dev scenes load
-scenes/dev/island_lab.tscn     MultiMesh terrain + camera rig
-scenes/dev/generation_audit.tscn
+scripts/dev/IslandLab.cs       the lab
+scripts/dev/GenerationAudit.cs the headless audit — see the appendix
+resources/island_default.tres  the preset both dev scenes load
+docs/audit-baseline.json       the last accepted audit numbers
 ```
 
 ---
 
-## 7. Open questions
+## 6. What is next
 
-- **Domain size.** This spec uses a **128 × 128** footprint (position: vasin;
-  Maxim favours smaller; Notion's "Ecumene" still says 16³–64³). Vertical extent:
-  the bounding cube is 512 slabs, but generation only uses a band around Y = 0 —
-  how tall a band is a tuning question, not a hard limit.
-- *(answered)* **Connectivity.** Measured both ways: 54% of land is walkable
-  from the mainland, **94% is reachable once stairs and bridges are built**, and
-  91% of the remainder is mountain. The position taken is that a cliff is a cost,
-  not a wall — infrastructure is the answer, passes are occasional flavour, and a
-  mesa top is a destination you pay to reach. Stage 6 now re-rolls an island that
-  leaves more than a quarter of itself off the heartland.
-- **How hard should crossing be, by default?** `Crossings` is a real knob now
-  (1 / 3 / 6 cells) and `Medium` is the preset, chosen because it leaves visible
-  straits without asking for six-cell spans on every archipelago. Whether that is
-  the *Home Domain's* setting, or whether difficulty should climb with distance
-  through the world-tree, is a design question and not a generation one.
-- **Where water comes from**, in fiction. Condensation out of aether? An Essence
-  cycle? Rivers exist mechanically and pour off the rim; nothing says why.
-- **Are lakes and rivers a settlement constraint?** Fresh water as a placement
-  requirement would make them load-bearing rather than decorative.
-- **What a Gate costs to use, and what an Exit needs.** Placement guarantees an
-  apron and a landing strip; nothing yet says what a company must build there.
-- **Terrace elevations.** Noise-driven vs. evenly spaced vs. authored per biome.
-- **Free-step size.** Assumed **one slab** (0.25 u) is free movement, two+ is an
-  obstacle. Confirm; it sets where cliffs vs. walkable slopes fall.
-- **Link edges.** Do all four edges need a reserved coastal `GateAnchor`, or only
-  edges that actually get a Gate?
-- **Half-slabs.** Out for now. If added, `Span` bounds become fixed-point or grow
-  a half-step flag, and Stage 3 gets finer.
-- **Overhang pathing.** A two-span column has two walkable levels; reachability
-  and later nav must treat spans, not columns, as nodes. Not yet designed.
-- **Arch plausibility.** Stage 4b bridges by rule; nothing checks the result
-  looks load-bearing. May need a min-support / aesthetic pass.
+1. **The chunked span-aware mesher + colliders** — the biggest piece left, and
+   the only thing that will answer the performance question for real.
+2. **Settlement placement.** Everything it needs exists: shelves, berths, roads,
+   Gate aprons.
+3. **The biome layer** above `Material` — the living things, as opposed to the
+   ground.
+4. Span-aware pathing, which is what would make an overhang walkable.
 
----
-
-## 8. Build order (this branch)
-
-1. ✅ `Terrain`, `Span`, `IslandParams` (`[GlobalClass]`), `IslandData`;
-   `IslandGenerator.Generate`.
-2. ✅ Stages 1–4 in slab units: mask → height → terrace snap → keel (with
-   distance-to-coast rim) → one `Span` per land column.
-3. ✅ `scenes/dev/island_lab.tscn` + `IslandLab.cs`: one scaled `MultiMesh` box
-   per span (keel → surface), height-tinted; auto-rebuilds when `Seed`/`Params`
-   change, or on the **R** key; `LookAt` camera rig for fly-around.
-4. ✅ Landform patches, lakes, the step grammar closed (§4d), and Stage 5
-   walkability + shelves, with the lab's `walk` and `shelves` views to see them.
-5. ✅ Reachability measured and answered (§7); passes; arrangements with a bridge
-   guarantee; rivers, falls and fording; Gates. Footprint moved to 128².
-6. ✅ Arrangements cut apart by straits rather than damped into discs; level
-   bridges with a `Crossings` ease; Gates disciplined to their own edge, hanging
-   by default, on a 1×4 strip; lakes that no longer chain; rivers with a bed and
-   cut banks; falls rendered; shelves that may descend; the Stage 6 re-rolls.
-   The lab grew overlays for the crossings, the airstrips and the compass.
-
-Then: the **chunked span-aware mesher + colliders** — the biggest single piece
-left, and the only thing that will answer the performance question for real;
-Stage 4b overhangs; the remaining feature anchors (`CoastCells`, `CliffCells`,
-`Overhangs`); settlement placement hooks.
+The appendix lists the ideas that have been logged and not taken, and the gaps
+the last audit found.

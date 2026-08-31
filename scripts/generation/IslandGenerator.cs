@@ -117,15 +117,46 @@ public sealed class IslandGenerator
     {
         var missing = new List<string>();
 
-        int entries = 0;
-        bool rightKind = true;
+        // <b>The Entry is checked against what was asked for, not against itself.</b>
+        // Its kind and its edge are both the sending Domain's decision — a Link
+        // joins two Gates of one kind, and a Domain reached by travelling east
+        // comes out on its west side — so an Entry that is neither is a Domain
+        // built to the wrong specification, and the answer to that is another roll
+        // of the dice rather than a shrug. The edge used to be missing from here
+        // entirely, which is why asking for a southern Entry so often produced a
+        // northern one: GatePlacement's fallbacks fired and nothing objected.
+        int entries = 0, exits = 0, wrongExitKind = 0;
+        bool rightKind = true, rightEdge = true;
         foreach (Gate g in d.Gates)
         {
-            if (g.Role != GateRole.Entry) continue;
+            if (g.Role == GateRole.Exit)
+            {
+                exits++;
+                if (p.ExitGate != GateKind.Auto && g.Kind != p.ExitGate) wrongExitKind++;
+                continue;
+            }
             entries++;
             if (p.EntryGate != GateKind.Auto && g.Kind != p.EntryGate) rightKind = false;
+            if (p.EntryEdge != GateEdge.Auto && (int)g.Facing != (int)p.EntryEdge - 1)
+                rightEdge = false;
         }
         if (entries != 1 || !rightKind) missing.Add("entry gate");
+        if (!rightEdge) missing.Add("entry on the edge asked for");
+
+        // A Domain with no Link onward is a dead end in a tree that is meant to be
+        // the whole map, and an Exit the player cannot walk or build their way to
+        // from where they landed is the same thing wearing a portal.
+        if (exits < 1) missing.Add("way out");
+        else if (d.Passages.Count < exits) missing.Add("a road to every exit");
+
+        // The Exits asked for, in number and in kind. Unlike the Entry these are
+        // this Domain's own preference rather than another Domain's decision, so
+        // they are worth a re-roll and not worth failing over — Generate keeps the
+        // island with the fewest unmet guarantees, so a coast that genuinely
+        // cannot take three Exits still ends up with the best two it has.
+        if (p.ExitGates > 0 && exits < Math.Clamp(p.ExitGates, 1, 3))
+            missing.Add("the exits asked for");
+        if (wrongExitKind > 0) missing.Add("exits of the kind asked for");
 
         bool buildable = false;
         foreach (Shelf shelf in d.Shelves)
@@ -162,10 +193,10 @@ public sealed class IslandGenerator
         var data = new IslandData(n)
         {
             Style = ResolveStyle(seed, p),
-            Character = ResolveCharacter(seed, p.Character),
+            Character = ResolveCharacter(seed, p),
         };
 
-        IslandArrangement how = ResolveArrangement(seed, p.Arrangement);
+        IslandArrangement how = ResolveArrangement(seed, p);
         data.Arrangement = how;
         // Specks are not islets: BuildMask already drops anything under
         // MinIsletCells, so what comes back is landmasses only.
@@ -238,7 +269,8 @@ public sealed class IslandGenerator
                 if (!land[c.X, c.Y]) continue;
                 int r = region[c.X, c.Y];
                 bridgeheads.Add(r);
-                if (IsTable(types[r]) || types[r] == LandformType.Mountain)
+                if (IsTable(types[r]) || types[r] == LandformType.Mountain
+                    || IsSculpted(types[r]))
                     types[r] = LandformType.Plain;
             }
         }
@@ -255,8 +287,15 @@ public sealed class IslandGenerator
                                            neighbours, types, bridges);
         float[,] inward = InwardDistance(land, region, regionCount);
 
-        short[,] surface = BuildSurface(seed, p, land, region, plan, inward);
+        short[,] surface = BuildSurface(seed, p, land, region, plan, inward, out int duneGrain);
+        data.DuneGrain = duneGrain;
         LimitSlope(surface, region, land, plan);
+
+        // The sculpted landforms are cut into the settled plain, like a canyon and
+        // for the same reason: their cliffs are inside a patch, where relief under
+        // a slope limit cannot put one.
+        bool[,] sculpted = Sculpt(seed, p, land, region, plan, surface, inward);
+
         bool[,]? canyon = WantsCanyon(seed, p)
             ? CarveCanyon(seed, p, land, region, plan, surface, borders)
             : null;
@@ -265,10 +304,14 @@ public sealed class IslandGenerator
         // A canyon floor is exempt from the limiter — take it as a bound and the
         // whole rung group is dragged into it. A pass is the exact opposite: it
         // exists to be walked, so the limiter is told to reach across its border.
+        // A gully, a tower and a terrace are exempt on the canyon's terms.
         var exempt = new bool[n, n];
-        if (canyon != null) Array.Copy(canyon, exempt, canyon.Length);
+        Array.Copy(sculpted, exempt, sculpted.Length);
+        if (canyon != null)
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++) exempt[x, z] |= canyon[x, z];
         LimitSlope(surface, region, land, plan, exempt, pass);
-        ResolveAmbiguousSteps(surface, region, land, plan);
+        ResolveAmbiguousSteps(surface, region, land, plan, null, exempt);
 
         // Lakes sink into the surface, so they run before the keel measures column
         // thickness — and after every step-grammar pass, which they must not undo.
@@ -301,11 +344,18 @@ public sealed class IslandGenerator
         // bridge is several slabs at one level, and the two passes that follow are
         // free to lower one bank and not the other, which is how a crossing ended
         // up with its two ends three slabs apart after they had been made to agree.
+        // Beaches, before the settle loop rather than after it. Tapering the drop
+        // keeps the *change* to a slab between neighbours, which is not the same as
+        // keeping the *result* under one — two one-slab steps add. Cutting them
+        // here means the limiter and the ambiguous-step pass clean up behind, which
+        // is what those passes are for.
+        MakeBeaches(land, surface, water, region, plan, data.Beach);
+
         for (int settle = 0; settle < 6; settle++)
         {
             bool moved = LevelBridgeheads(land, surface, water, region, plan, bridges);
             moved |= LimitSlope(surface, region, land, plan, exempt, pass);
-            moved |= ResolveAmbiguousSteps(surface, region, land, plan, water);
+            moved |= ResolveAmbiguousSteps(surface, region, land, plan, water, exempt);
             if (!moved) break;
         }
         // Rivers last: they are cut across the finished patchwork, and they carry
@@ -332,6 +382,11 @@ public sealed class IslandGenerator
 
         Rivers.Carve(seed, p, land, surface, water, data.River, data.Navigable,
                      data.Flow, data.Falls, span, form, keep);
+
+        // The valley and bank passes only ever lower, and a cell lowered beside a
+        // channel can end up under the water next to it. The same correction the
+        // lakes use, run once more over what the rivers left.
+        RaiseSunkenShores(land, surface, water);
 
         short[,] keel = BuildKeel(seed, p, land, surface, toCoast);
 
@@ -360,6 +415,10 @@ public sealed class IslandGenerator
         // out of the world. The keel is only known now.
         Rivers.DropFallsPastTheKeel(data);
 
+        // Where a stream can be crossed on foot — before the traversal analysis,
+        // which is what reads it.
+        Rivers.MarkFords(data);
+
         // Stage 5: read back what the terrain turned out to be. Pure analysis —
         // it changes nothing, so it stays outside the pipeline proper.
         Traversal.Analyse(data);
@@ -367,6 +426,30 @@ public sealed class IslandGenerator
         // Gates last of all: every rule about where one may go is a rule about
         // ground the player can actually use, so it needs the traversal answer.
         GatePlacement.Place(seed, p, data);
+
+        // And then the analysis is told where the run begins. The mainland is the
+        // ground the Entry Gate lands you on, not the largest piece of the island
+        // — see Traversal.AnchorOn.
+        foreach (Gate g in data.Gates)
+        {
+            if (g.Role != GateRole.Entry) continue;
+            Traversal.AnchorOn(data, g.Apron);
+            break;
+        }
+
+        // The roads between the Gates, now that both the Gates and what it costs
+        // to cross the ground between them are known.
+        Passages.Find(data);
+
+        // What the ground is made of, and the anchors the content layer attaches
+        // to. Reads the finished terrain and changes nothing.
+        Surfaces.Classify(data);
+        Names.Give(seed, data);
+
+        // Stage 4b, last of all: the only stage that gives a column more than one
+        // span. It runs after the analysis on purpose — the lip of an overhang is
+        // a roof, not ground, and what walks on it is a later question.
+        Overhangs.Carve(seed, p, data);
         return data;
     }
 
@@ -378,8 +461,16 @@ public sealed class IslandGenerator
     /// level, and the terrain is untouched. That keeps the step grammar and the
     /// keel exactly as verified.
     ///
-    /// A lake keeps this many cells of the patch's own rim dry, all the way round.
+    /// A lake keeps at least this many cells of the patch's own rim dry, all
+    /// the way round.
     private const int ShoreMargin = 2;
+
+    /// <summary>
+    /// And how many further cells the shore may wander in, per cell of coast.
+    /// This is what keeps a lake from being a scale copy of the polygon it sits
+    /// in — see the noise field in <see cref="PlaceLakes"/>.
+    /// </summary>
+    private const float ShoreWander = 3.4f;
 
     /// <summary>
     /// Sinks a lake into the interior of a flat patch — plain, mesa or basin —
@@ -407,6 +498,17 @@ public sealed class IslandGenerator
                                        bool[,]? canyon)
     {
         int n = p.Size;
+
+        // <b>How wet, once, because it drives three separate things.</b> Lakes used
+        // to be a count and nothing else: the knob changed how many patches held
+        // water and never how much water a patch held, and since a patch beside a
+        // lake stays dry the count saturates — over the top quarter of the slider
+        // the island gained 10% more water and looked identical. It now also sets
+        // which patches are big enough to bother with and how far the shore stands
+        // in, so the top of the range is a Domain of broad lakes rather than the
+        // same tarns counted again.
+        float wet = Math.Clamp(p.Lakes, 0f, 1f);
+
         var water = new short[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++) water[x, z] = IslandData.NoLand;
@@ -436,19 +538,26 @@ public sealed class IslandGenerator
             for (int z = 0; z < n; z++)
                 if (canyon[x, z] && land[x, z]) drained[region[x, z]] = true;
 
+        // How much interior a patch needs before it is worth flooding. A dry Domain
+        // only puts water in a patch with room for a lake; a wet one puts a pool in
+        // anything that will hold one.
+        int minInterior = Mathf.RoundToInt(Mathf.Lerp(40f, 12f, wet));
+
         var wants = new bool[count];
         for (int r = 0; r < count; r++)
         {
             if (drained[r]) continue;
             LandformType t = plan[r].Type;
             if (t != LandformType.Plain && t != LandformType.Mesa && t != LandformType.Basin) continue;
-            if (interior[r] < 25 || shore[r] == int.MaxValue) continue;
+            if (interior[r] < minInterior || shore[r] == int.MaxValue) continue;
 
             // Rare on mesas, and a tarn rather than a lake when it happens.
             // Flooding a whole mesa interior turns the landform into a bowl: the
             // bed lands near the surrounding plain and the mesa reads as a wall
             // around a pit rather than as a tableland.
-            float chance = t == LandformType.Mesa ? 0.10f : 0.22f;
+            // `Lakes` slides the whole thing: 0 leaves the Domain dry, 1 fills
+            // every flat patch that could hold water. 0.5 is the old fixed rate.
+            float chance = (t == LandformType.Mesa ? 0.10f : 0.22f) * wet * 2f;
             wants[r] = Hash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
         }
 
@@ -475,10 +584,29 @@ public sealed class IslandGenerator
             bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
         }
 
+        // <b>How far in the water starts, per cell, not per island.</b> A lake
+        // used to be exactly the patch's interior at a fixed inset, which makes
+        // its outline a scale copy of the patch border — and a patch border is a
+        // Voronoi edge, so lakes came out as polygons with long straight sides.
+        // Wandering the inset instead means the shore is the patch's shape read
+        // through a noise field: bays where the margin runs wide, points where it
+        // runs narrow. The minimum is still ShoreMargin, so the dry ring that
+        // holds the water in is exactly as thick as it ever was.
+        // A wet Domain's shore wanders less far in, so each lake fills more of the
+        // patch that holds it: the same outline, drawn closer to the rim. The
+        // minimum is still ShoreMargin whatever the setting, so the dry ring that
+        // holds the water in is exactly as thick as it ever was.
+        var ragged = new Noise(seed + 4242, frequency: 0.13f, octaves: 3);
+        float wander = ShoreWander * Mathf.Lerp(1.35f, 0.45f, wet);
+        var margin = new int[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            margin[x, z] = ShoreMargin + (int)(ragged.At(x, z) * wander);
+
         // Which interior cells actually become water: the largest 4-connected
         // component of each patch's interior. A pinched patch can otherwise leave
         // two pools meeting only at a corner, which reads as a broken lake.
-        bool[,] pool = LakeBody(land, region, inset, wants, count);
+        bool[,] pool = LakeBody(land, region, inset, wants, count, margin);
 
         // Mesa tarns are kept to a few cells around their centre rather than
         // taking the whole interior.
@@ -532,8 +660,46 @@ public sealed class IslandGenerator
         }
 
         RemoveDiagonalWater(surface, water, region, level);
+        RaiseSunkenShores(land, surface, water);
         LevelShores(land, surface, water);
         return water;
+    }
+
+    /// <summary>
+    /// Lifts any dry cell beside a lake that sits at or below its surface.
+    ///
+    /// The shore ring is what holds a lake in, and it holds because the patch is
+    /// flat give or take a slab — but "give or take a slab" is not "never below",
+    /// and a wandering shoreline leaves more of the patch's own interior dry than
+    /// a fixed inset did. A dry cell standing under the water beside it is a hole
+    /// in the bank, so it is brought up to the free step above the surface, which
+    /// is where <see cref="LevelShores"/> would have put it coming the other way.
+    /// </summary>
+    private static void RaiseSunkenShores(bool[,] land, short[,] surface, short[,] water)
+    {
+        int n = land.GetLength(0);
+        for (int pass = 0; pass < 4; pass++)
+        {
+            bool changed = false;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!land[x, z] || water[x, z] != IslandData.NoLand) continue;
+
+                int floor = int.MinValue;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (water[nx, nz] != IslandData.NoLand)
+                        floor = Math.Max(floor, water[nx, nz] + 1);
+                }
+                if (floor == int.MinValue || surface[x, z] >= floor) continue;
+                surface[x, z] = SlabClamp(floor);
+                changed = true;
+            }
+            if (!changed) break;
+        }
     }
 
     /// <summary>
@@ -643,7 +809,8 @@ public sealed class IslandGenerator
     /// patch can leave two interior blobs meeting only at a corner; flooding both
     /// reads as one broken lake, so only the main body is kept.
     /// </summary>
-    private static bool[,] LakeBody(bool[,] land, int[,] region, int[,] inset, bool[] wants, int count)
+    private static bool[,] LakeBody(bool[,] land, int[,] region, int[,] inset, bool[] wants,
+                                    int count, int[,] margin)
     {
         int n = land.GetLength(0);
         var body = new bool[n, n];
@@ -656,7 +823,7 @@ public sealed class IslandGenerator
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            if (seen[x, z] || inset[x, z] < ShoreMargin) continue;
+            if (seen[x, z] || inset[x, z] < margin[x, z]) continue;
             int r = region[x, z];
             if (!wants[r]) continue;
 
@@ -671,7 +838,7 @@ public sealed class IslandGenerator
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
                     if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
-                    if (inset[nx, nz] < ShoreMargin || region[nx, nz] != r) continue;
+                    if (inset[nx, nz] < margin[nx, nz] || region[nx, nz] != r) continue;
                     seen[nx, nz] = true;
                     stack.Push((nx, nz));
                 }
@@ -799,6 +966,56 @@ public sealed class IslandGenerator
     }
 
     /// <summary>
+    /// A footprint's blobs and what to do where two of them meet.
+    ///
+    /// <b>Straits are a property of the arrangement, not of the geometry.</b> The
+    /// same ring of blobs is a <see cref="IslandArrangement.Ring"/> if the seams
+    /// are left alone and a <see cref="IslandArrangement.BrokenRing"/> if they are
+    /// cut, and an <see cref="IslandArrangement.Atoll"/> if they are cut narrowly
+    /// enough that the islets still all but touch. So the layout says.
+    /// </summary>
+    private readonly struct Layout
+    {
+        public readonly Lobe[] Lobes;
+
+        /// <summary>Radius of water cleared in the middle, or 0 for none.</summary>
+        public readonly float Lagoon;
+
+        /// <summary>Whether the seam between two blobs is carved into a strait.</summary>
+        public readonly bool Straits;
+
+        /// <summary>
+        /// Widest that strait may open, in cells; 0 takes the Domain's bridge
+        /// span, which is the width that keeps every arrangement crossable.
+        /// </summary>
+        public readonly float StraitWide;
+
+        /// <summary>
+        /// A floor under <see cref="IslandParams.Coverage"/> for this layout, or 0
+        /// to take it as authored.
+        ///
+        /// Coverage is applied <i>per blob</i> — each keeps that share of its own
+        /// disc — which is what stops one lobe being deleted by a low patch of the
+        /// shape noise. On a thick blob the leftovers are a ragged coast; on a
+        /// thin arm they are holes, and the arm stops being one landmass: a
+        /// <c>Fractal</c> two cells wide came out as twenty separate islets. A
+        /// layout whose shape depends on being <b>continuous</b> says so here, and
+        /// takes its coastline from its wandering radius instead.
+        /// </summary>
+        public readonly float Solid;
+
+        public Layout(Lobe[] lobes, float lagoon, bool straits, float straitWide = 0f,
+                      float solid = 0f)
+        {
+            Lobes = lobes;
+            Lagoon = lagoon;
+            Straits = straits;
+            StraitWide = straitWide;
+            Solid = solid;
+        }
+    }
+
+    /// <summary>
     /// Where the footprint's blobs go, per <see cref="IslandArrangement"/>. Laid
     /// out deliberately rather than thresholded out of noise: "one big island with
     /// three satellites" is a thing a Domain wants to *be*, and no single
@@ -809,13 +1026,12 @@ public sealed class IslandGenerator
     /// with; the coastline noise then decides whether they touch, nearly touch, or
     /// need nudging.
     /// </summary>
-    private static Lobe[] PlaceLobes(int seed, IslandParams p, IslandArrangement how,
-                                     float radius, float cx, float cz, float spread,
-                                     out float lagoon)
+    private static Layout PlaceLobes(int seed, IslandParams p, IslandArrangement how,
+                                     float radius, float cx, float cz, float spread)
     {
         float irr = Math.Clamp(p.Irregularity, 0f, 1f);
         bool alone = how == IslandArrangement.Single;
-        lagoon = 0f;
+        float lagoon = 0f;
 
         // <b>Separation is cut, not hoped for.</b> Where two lobes meet, the seam
         // between them is carved into a strait (see BuildMaskOnce), so a lobe with
@@ -853,13 +1069,21 @@ public sealed class IslandGenerator
         /// the ring reads as a chain of arcs rather than as a necklace of beads.
         void Ring(int count, float ringRadius, float blobRadius, float spread, uint salt,
                   float tangential = 0f)
+            => Sweep(count, ringRadius, blobRadius, spread, salt, tangential, Mathf.Tau);
+
+        /// As <c>Ring</c>, over part of the circle: <paramref name="arc"/> radians
+        /// of it, starting where the seed says. A full <c>Tau</c> is the ring; less
+        /// is a crescent, and the jitter is scaled with the sweep so a short arc
+        /// does not shake its blobs out of line.
+        void Sweep(int count, float ringRadius, float blobRadius, float spread, uint salt,
+                   float tangential, float arc)
         {
             float phase = Hash01(seed, salt) * Mathf.Tau;
+            float step = arc >= Mathf.Tau - 0.001f ? arc / count : arc / Math.Max(1, count - 1);
             for (int i = 0; i < count; i++)
             {
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
-                float a = phase + Mathf.Tau * i / count
-                          + (Hash01(seed, s) - 0.5f) * Mathf.Tau / count * 0.7f;
+                float a = phase + step * i + (Hash01(seed, s) - 0.5f) * step * 0.7f;
                 float rr = ringRadius * (1f - spread * 0.5f + spread * Hash01(seed, s ^ 0x5u));
                 float br = blobRadius * (0.75f + 0.5f * Hash01(seed, s ^ 0x9u));
                 // An ellipse is squashed along its rotation and stretched across
@@ -870,6 +1094,65 @@ public sealed class IslandGenerator
                     : 0f;
                 Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s,
                     aspect, tangential > 0f ? a : float.NaN);
+            }
+        }
+
+        /// A hub with arms off it, at the given fractions of a turn. The whole
+        /// cross / T / L / star family is this one shape with a different set of
+        /// spokes — and the *broken* forms are the same again with the seams cut,
+        /// which is why they share a case.
+        ///
+        /// An ellipse is squashed along its own rotation, so an arm is rotated to
+        /// the *tangent* to make it point outward. The hub is deliberately wide
+        /// and the arms are thick: a cross of thin arms reads as a starfish, and
+        /// what is wanted is country with four ways out of it.
+        void Arms(float[] spokes, uint salt)
+        {
+            // **Axis-aligned, always.** A cross rotated 30° is a cross that has
+            // stopped meaning "four arms, one per compass point" and started
+            // meaning "some arms" — and since the Gates are on the four edges, an
+            // arm pointing at an edge is the whole use of the shape.
+            Add(cx, cz, radius * 0.40f, salt, 1f, 0f);
+            float reach = radius * 0.58f * spread;
+
+            for (int i = 0; i < spokes.Length; i++)
+            {
+                float a = spokes[i] * Mathf.Tau;
+                uint s = salt ^ (uint)(i + 1) * 2654435761u;
+                float arm = reach * (0.82f + 0.30f * Hash01(seed, s));
+                Add(cx + MathF.Cos(a) * arm, cz + MathF.Sin(a) * arm,
+                    radius * 0.34f, s, 1.7f, a + Mathf.Pi * 0.5f);
+            }
+        }
+
+        /// A coil of blobs from the rim inward.
+        ///
+        /// <paramref name="sweep"/> is how many turns it makes and
+        /// <paramref name="thick"/> how fat the arm is, and those two numbers are
+        /// the whole difference between a rosette and a spiral. At one and a bit
+        /// turns with a thick arm the lobes overlap into a ring of round bays — a
+        /// flower, which is what this produced when it was *meant* to be a spiral
+        /// and was good enough to keep. At two and a half turns with a thin arm
+        /// the coil stays open and the coast runs alongside itself.
+        void Coil(uint salt, float sweep, float thick, int links)
+        {
+            const float inner = 0.08f;
+            float phase = Hash01(seed, salt ^ 0x11u) * Mathf.Tau;
+            float outer = radius * 0.86f * spread;
+
+            // For the turns to stay apart, the radius has to fall faster per turn
+            // than the arm is wide: (outer - inner) / sweep > 2 * thick. Stopping
+            // the coil short of the centre is what buys that room — wound all the
+            // way in, the last turns touch and the spiral fills itself in.
+            for (int i = 0; i < links; i++)
+            {
+                float t = i / (float)(links - 1);
+                float a = phase + t * Mathf.Tau * sweep;
+                float rr = Mathf.Lerp(outer, radius * inner, t);
+                uint s = salt ^ (uint)(i + 3) * 2654435761u;
+                Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr,
+                    radius * thick * (0.85f + 0.3f * Hash01(seed, s)), s, 1.8f,
+                    a + Mathf.Pi * 0.5f);
             }
         }
 
@@ -919,7 +1202,7 @@ public sealed class IslandGenerator
             // rather than a bead, and the water inside is cleared outright — a
             // ring of blobs alone leaves the middle to the shape noise, which
             // fills it in about as often as not.
-            case IslandArrangement.Atoll:
+            case IslandArrangement.BrokenRing:
             {
                 float ring = radius * 0.76f * spread;
                 float blob = radius * 0.30f;
@@ -928,11 +1211,190 @@ public sealed class IslandGenerator
                 break;
             }
 
+            // The same rim, unbroken: more arcs, overlapping, and the seams left
+            // alone. What you get is one landmass with a lake of aether in the
+            // middle of it — a coast on both sides, which is a thing no other
+            // arrangement produces.
+            case IslandArrangement.Ring:
+            {
+                float ring = radius * 0.74f * spread;
+                float blob = radius * 0.34f;
+                Ring(9 + (int)(Hash01(seed, 0x5100u) * 4f), ring, blob, 0.07f, 0x5101u, 2.2f);
+                lagoon = MathF.Max(4f, ring - blob * 0.75f);
+                break;
+            }
+
+            // Part of a ring: a crescent round an open bay. Two thirds of the
+            // circle or so — much less reads as a fat island with a dent, much
+            // more closes into a ring.
+            case IslandArrangement.Arc:
+            case IslandArrangement.BrokenArc:
+            {
+                bool whole = how == IslandArrangement.Arc;
+                float ring = radius * 0.74f * spread;
+                float blob = radius * (whole ? 0.34f : 0.30f);
+                float arc = Mathf.Tau * (0.52f + 0.18f * Hash01(seed, 0x5200u));
+                int count = (whole ? 7 : 5) + (int)(Hash01(seed, 0x5201u) * 3f);
+                Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 2.1f, arc);
+                lagoon = MathF.Max(4f, ring - blob * (whole ? 0.75f : 0.55f));
+                break;
+            }
+
+            // Beads on a string. The islets are round rather than drawn out along
+            // the rim, they are placed so their capes overlap, and the strait
+            // between each pair is cut to a single step of water — so the ring
+            // reads as a row of separate islands that very nearly touch, which is
+            // the thing a real atoll looks like from above.
+            case IslandArrangement.Atoll:
+            {
+                float ring = radius * 0.74f * spread;
+                float blob = radius * 0.29f;
+                Ring(7 + (int)(Hash01(seed, 0x5300u) * 3f), ring, blob, 0.05f, 0x5301u, 1.15f);
+                lagoon = MathF.Max(4f, ring - blob * 0.62f);
+                break;
+            }
+
+            // Too many islands to name, in three loose rings so the middle is as
+            // busy as the rim. Each is small enough to be one place and large
+            // enough to survive the islet filter.
+            case IslandArrangement.ThousandIsles:
+                Ring(3 + (int)(Hash01(seed, 0x6000u) * 2f), radius * 0.26f * spread,
+                     radius * 0.13f, 0.5f, 0x6001u);
+                Ring(5 + (int)(Hash01(seed, 0x6002u) * 3f), radius * 0.58f * spread,
+                     radius * 0.13f, 0.45f, 0x6003u);
+                Ring(6 + (int)(Hash01(seed, 0x6004u) * 4f), radius * 0.88f * spread,
+                     radius * 0.12f, 0.40f, 0x6005u);
+                break;
+
+            // One mass with four arms on the cardinal axes. The arms are elongated
+            // *radially* — an ellipse is squashed along its own rotation, so the
+            // rotation given is the tangent — and they overlap the hub, so what
+            // comes out is one landmass with four long peninsulas and four deep
+            // bays between them.
+            case IslandArrangement.Cross:
+            case IslandArrangement.BrokenCross:
+                Arms(new[] { 0f, 0.25f, 0.5f, 0.75f }, 0x7000u);
+                break;
+
+            // Three arms: a bar with a stem off the middle of it.
+            case IslandArrangement.TShape:
+            case IslandArrangement.BrokenT:
+                Arms(new[] { 0f, 0.25f, 0.75f }, 0x7100u);
+                break;
+
+            // Two, meeting at a right angle: a corner of land round one wide bay.
+            case IslandArrangement.LShape:
+            case IslandArrangement.BrokenL:
+                Arms(new[] { 0f, 0.25f }, 0x7200u);
+                break;
+
+            // Five or six, so no two face each other and every bay is a wedge.
+            case IslandArrangement.Star:
+            {
+                int points = 5 + (int)(Hash01(seed, 0x7300u) * 2f);
+                var spokes = new float[points];
+                for (int i = 0; i < points; i++) spokes[i] = (float)i / points;
+                Arms(spokes, 0x7301u);
+                break;
+            }
+
+            // A snake. Each blob is placed a stride on from the last, the heading
+            // turning by up to a right angle each time and bouncing off the edge of
+            // the footprint, so the land doubles back on itself and the coast has
+            // as much length as the island has area. The blobs overlap, so it is
+            // one winding landmass rather than a row of islets.
+            case IslandArrangement.Fractal:
+            case IslandArrangement.BrokenFractal:
+            {
+                float blob = radius * 0.24f;
+                float heading = Angle(0x8000u);
+                float wx = cx + MathF.Cos(heading + Mathf.Pi) * radius * 0.45f;
+                float wz = cz + MathF.Sin(heading + Mathf.Pi) * radius * 0.45f;
+                int links = 6 + (int)(Hash01(seed, 0x8001u) * 3f);
+
+                for (int i = 0; i < links; i++)
+                {
+                    uint s = 0x8002u ^ (uint)(i + 1) * 2654435761u;
+                    float br = blob * (0.78f + 0.44f * Hash01(seed, s));
+                    Add(wx, wz, br, s, 1.5f, heading + Mathf.Pi * 0.5f);
+
+                    // Turn, then step. Turning first is what makes the chain wind
+                    // rather than fan out from its first blob.
+                    heading += (Hash01(seed, s ^ 0x3Bu) - 0.5f) * Mathf.Pi * 0.62f;
+                    float stride = br * 1.35f;
+                    float nx = wx + MathF.Cos(heading) * stride;
+                    float nz = wz + MathF.Sin(heading) * stride;
+                    // Bounce off the footprint rather than clamping into it: a
+                    // clamped walk piles every remaining blob against one wall.
+                    float pad = radius * 0.30f;
+                    if (nx < cx - radius + pad || nx > cx + radius - pad)
+                    {
+                        heading = Mathf.Pi - heading;
+                        nx = wx + MathF.Cos(heading) * stride;
+                        nz = wz + MathF.Sin(heading) * stride;
+                    }
+                    if (nz < cz - radius + pad || nz > cz + radius - pad)
+                    {
+                        heading = -heading;
+                        nx = wx + MathF.Cos(heading) * stride;
+                        nz = wz + MathF.Sin(heading) * stride;
+                    }
+                    wx = nx;
+                    wz = nz;
+                }
+                break;
+            }
+
+            case IslandArrangement.Rosette:
+                Coil(0xA000u, sweep: 1.35f, thick: 0.23f,
+                     links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
+                break;
+
+            // One island cracked. The blobs are laid over each other in a tight
+            // cluster and the seams are cut narrow, so what parts the pieces reads
+            // as a fracture rather than as a channel.
+            case IslandArrangement.Shards:
+                Add(cx, cz, radius * 0.44f, 0x9000u);
+                Ring(3 + (int)(Hash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
+                     radius * 0.42f, 0.18f, 0x9002u);
+                break;
+
             default:
                 Add(cx, cz, radius, 0x0001u);
                 break;
         }
-        return made.ToArray();
+
+        // Which arrangements are one landmass with a shape, and which are several
+        // pieces. The seam carving is the whole difference — see Layout.
+        bool cut = how switch
+        {
+            IslandArrangement.Single => false,
+            IslandArrangement.Ring => false,
+            IslandArrangement.Arc => false,
+            IslandArrangement.Cross => false,
+            IslandArrangement.Fractal => false,
+            IslandArrangement.TShape => false,
+            IslandArrangement.LShape => false,
+            IslandArrangement.Rosette => false,
+            IslandArrangement.Star => false,
+            _ => true,
+        };
+        // An atoll's islets all but touch, and a shard's crack is a crack.
+        float narrow = how switch
+        {
+            IslandArrangement.Atoll => 1.7f,
+            IslandArrangement.Shards => 1.9f,
+            _ => 0f,
+        };
+        // The layouts that are a shape rather than a scatter: a thin arm perforated
+        // by the coverage threshold stops being an arm.
+        float solid = how switch
+        {
+            IslandArrangement.Fractal => 0.86f,
+            IslandArrangement.BrokenFractal => 0.86f,
+            _ => 0f,
+        };
+        return new Layout(made.ToArray(), lagoon, cut, narrow, solid);
     }
 
     /// <summary>
@@ -947,7 +1409,18 @@ public sealed class IslandGenerator
         IslandArrangement.Triplets => 3,
         IslandArrangement.Satellites => 3,
         IslandArrangement.Archipelago => 4,
-        IslandArrangement.Atoll => 4,
+        IslandArrangement.BrokenRing => 4,
+        IslandArrangement.BrokenArc => 3,
+        IslandArrangement.Atoll => 5,
+        IslandArrangement.ThousandIsles => 8,
+        IslandArrangement.Shards => 4,
+        IslandArrangement.BrokenCross => 4,
+        IslandArrangement.BrokenT => 3,
+        IslandArrangement.BrokenL => 2,
+        IslandArrangement.BrokenFractal => 4,
+        // Ring, Arc, Cross and Fractal are one landmass with a shape: their blobs
+        // are meant to fuse, so counting pieces would push them apart until they
+        // stopped being the shape they name.
         _ => 1,
     };
 
@@ -991,7 +1464,9 @@ public sealed class IslandGenerator
         float cx = (n - 1) * 0.5f, cz = (n - 1) * 0.5f;
         float irr = Math.Clamp(p.Irregularity, 0f, 1f);
 
-        Lobe[] lobes = PlaceLobes(seed, p, how, radius, cx, cz, spread, out float lagoon);
+        Layout layout = PlaceLobes(seed, p, how, radius, cx, cz, spread);
+        Lobe[] lobes = layout.Lobes;
+        float lagoon = layout.Lagoon;
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
         var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
@@ -1003,7 +1478,9 @@ public sealed class IslandGenerator
         // that would only have to be dragged shut again by the linker. Keeping the
         // widest part just inside the span means the arrangement's own geometry is
         // crossable as it stands.
-        float straitCells = MathF.Max(1.4f, (int)p.Crossings + 0.4f);
+        float straitCells = layout.StraitWide > 0f
+            ? layout.StraitWide
+            : MathF.Max(1.4f, (int)p.Crossings + 0.4f);
 
         // Bites are not taken here: cutting a shape out of the raw mask leaves an
         // arc across whatever patches it crosses. They are applied to whole
@@ -1045,7 +1522,7 @@ public sealed class IslandGenerator
             // strait that heals is an arrangement that quietly delivered fewer
             // landmasses than it promised, which is exactly what used to happen to
             // Twins.
-            if (lobes.Length > 1 && second < float.MaxValue)
+            if (layout.Straits && lobes.Length > 1 && second < float.MaxValue)
             {
                 float seam = (second - d) * 0.5f * (rd + rSecond);
                 float width = StraitNarrowest
@@ -1078,7 +1555,7 @@ public sealed class IslandGenerator
         // shape noise is simply deleted — which is what left a third of Twins with
         // one island. Per lobe it means what it says: this share of each blob
         // becomes land.
-        float want = 1f - Math.Clamp(p.Coverage, 0.01f, 0.99f);
+        float want = 1f - Math.Clamp(MathF.Max(p.Coverage, layout.Solid), 0.01f, 0.99f);
         var threshold = new float[lobes.Length];
         for (int i = 0; i < lobes.Length; i++)
             threshold[i] = FieldOps.Quantile(candidates[i], want);
@@ -1435,10 +1912,12 @@ public sealed class IslandGenerator
                 // how a third of Twins came out with a single island. Slide the
                 // stray sideways instead, along whichever axis it is *closer* to
                 // aligned on, until it does have a line of sight.
-                int stray = -1;
-                float bestDist = float.MaxValue;
-                Vector2 strayMid = default, linkedMid = default;
-
+                // Every stray, nearest first — not just the nearest one. An islet
+                // pinned against the footprint wall cannot move toward a linked
+                // body that lies further out, and giving up there abandoned every
+                // *other* stray with it, which is how a seventeen-island layout
+                // came out with one piece adrift.
+                var strays = new List<(int Part, Vector2 Mine, Vector2 Theirs, float Dist)>();
                 for (int i = 0; i < parts.Count; i++)
                 {
                     if (linked.Contains(i)) continue;
@@ -1446,27 +1925,31 @@ public sealed class IslandGenerator
                     foreach (int j in linked)
                     {
                         Vector2 other = Centroid(parts[j]);
-                        float dist = mid.DistanceTo(other);
-                        if (dist >= bestDist) continue;
-                        bestDist = dist;
-                        stray = i;
-                        strayMid = mid;
-                        linkedMid = other;
+                        strays.Add((i, mid, other, mid.DistanceTo(other)));
                     }
                 }
-                if (stray < 0) return;
+                strays.Sort((a, b) => a.Dist.CompareTo(b.Dist));
 
-                float ax = linkedMid.X - strayMid.X, az = linkedMid.Y - strayMid.Y;
-                int sx = MathF.Abs(ax) <= MathF.Abs(az) ? Math.Sign(ax) : 0;
-                int sz = sx == 0 ? Math.Sign(az) : 0;
+                bool slid = false;
+                foreach (var (part, mine, theirs, _) in strays)
+                {
+                    float ax = theirs.X - mine.X, az = theirs.Y - mine.Y;
+                    int sx = MathF.Abs(ax) <= MathF.Abs(az) ? Math.Sign(ax) : 0;
+                    int sz = sx == 0 ? Math.Sign(az) : 0;
+                    if (sx == 0 && sz == 0) continue;
 
-                if (sx == 0 && sz == 0) return;
-                // If the slide is blocked, try the other axis before giving up.
-                // Deleting a stray here was costing whole islands: an arrangement
-                // that promised two landmasses would quietly deliver one.
-                if (!Translate(mask, parts[stray], sx, sz)
-                    && !Translate(mask, parts[stray], Math.Sign(ax) - sx, Math.Sign(az) - sz))
-                    return;
+                    // If the slide is blocked, try the other axis before moving on.
+                    // Deleting a stray here was costing whole islands: an
+                    // arrangement that promised two landmasses would quietly
+                    // deliver one.
+                    if (Translate(mask, parts[part], sx, sz)
+                        || Translate(mask, parts[part], Math.Sign(ax) - sx, Math.Sign(az) - sz))
+                    {
+                        slid = true;
+                        break;
+                    }
+                }
+                if (!slid) return;              // nothing adrift can move at all
                 continue;
             }
 
@@ -2075,7 +2558,7 @@ public sealed class IslandGenerator
     {
         float[] env = RegionEnvelope(land, region, count, envelope);
         float[] inland = RegionMean(land, region, count, toCoast);
-        TerrainCharacter character = ResolveCharacter(seed, p.Character);
+        TerrainCharacter character = ResolveCharacter(seed, p);
         float[] weights = MixedWeights(character, p.LandformMix);
 
         int[] quota = Apportion(weights, count);
@@ -2107,7 +2590,16 @@ public sealed class IslandGenerator
 
         // Highest ground first, lowest last; hills then fall out in the middle.
         Take(LandformType.Mountain, r => env[r] + (cordillera ? 0f : Jitter(r, 0xA1B2u, 0.30f)));
+        // A stepped massif belongs with the mountains: high ground, and adjacent
+        // ones weld into one so the terraces run round the whole thing.
+        Take(LandformType.Massif, r => env[r] + Jitter(r, 0xD3A9u, 0.25f));
         Take(LandformType.Mesa, r => env[r] + Jitter(r, 0xC5D6u, 0.35f));
+        // Karst stands on middling ground and badlands on the tableland above the
+        // plains, which is where both weather out of in the first place.
+        Take(LandformType.Karst, r => env[r] + Jitter(r, 0xB4E2u, 0.40f));
+        Take(LandformType.Badlands, r => env[r] + Jitter(r, 0xF10Cu, 0.40f));
+        // A sinkhole field takes the low open country the water drained into.
+        Take(LandformType.Sinkholes, r => -env[r] + Jitter(r, 0x77B1u, 0.45f));
         // Basins want low ground that is also sheltered. The measure is the
         // region's *mean* distance from the void, not its minimum: almost every
         // patch touches the coast somewhere, so gating on the minimum is what
@@ -2115,6 +2607,9 @@ public sealed class IslandGenerator
         Take(LandformType.Basin, r => -env[r] + 0.35f * FieldOps.SmoothStep(2f, 9f, inland[r])
                                       + Jitter(r, 0xE7F8u, 0.30f));
         Take(LandformType.Hills, r => env[r] + Jitter(r, 0x9AB4u, 0.40f));
+        // Dunes take what is left of the low ground: a dune field is what a plain
+        // becomes where nothing else is happening to it.
+        Take(LandformType.Dunes, r => -env[r] + Jitter(r, 0x5C3Du, 0.40f));
 
         return type;
     }
@@ -2177,7 +2672,8 @@ public sealed class IslandGenerator
 
         // How "high" each landform reads, which is what the mix slides along.
         // Basins sit with the plains: a sunken floor is low ground.
-        ReadOnlySpan<float> rank = stackalloc float[] { -0.6f, 0.2f, 1f, 0.8f, -0.8f };
+        ReadOnlySpan<float> rank = stackalloc float[]
+            { -0.6f, 0.2f, 1f, 0.8f, -0.8f, 0.3f, 0.5f, 0.95f, 0f, -0.2f };
         for (int i = 0; i < w.Length; i++) w[i] *= MathF.Exp(t * 1.9f * rank[i]);
         return w;
     }
@@ -2225,7 +2721,7 @@ public sealed class IslandGenerator
                                                 HashSet<int>[] neighbours, LandformType[] type,
                                                 int[] cells, HashSet<int> bridgeheads)
     {
-        float[] weights = TypeWeights(ResolveCharacter(seed, p.Character));
+        float[] weights = TypeWeights(ResolveCharacter(seed, p));
 
         for (int t = 0; t < weights.Length; t++)
         {
@@ -2550,6 +3046,16 @@ public sealed class IslandGenerator
     {
         LandformType.Plain => 1.4f,
         LandformType.Hills => 3f + 12f * Math.Clamp(p.Hilliness, 0f, 1f),
+        // Dunes are hills with a grain: the same one-slab grammar, less height,
+        // and a wavelength that only runs one way (see BuildSurface).
+        LandformType.Dunes => 3f + 6f * Math.Clamp(p.Hilliness, 0f, 1f),
+        // A badlands finger has a little relief on top of it; a karst floor and a
+        // ziggurat terrace are as flat as a mesa, because the shape is the cut.
+        LandformType.Badlands => 2.2f,
+        LandformType.Karst => 1.4f,
+        LandformType.Massif => 0f,
+        // A crater's apron is flat ground; a sinkhole field is a plain with holes.
+        LandformType.Sinkholes => 1.4f,
         _ => 1.4f,          // mesa and basin floors are flat; mountains bypass this
     };
 
@@ -2564,17 +3070,40 @@ public sealed class IslandGenerator
 
     private static float ReliefScale(IslandParams p) => 0.4f + 1.3f * Math.Clamp(p.Relief, 0f, 1f);
 
-    /// <summary>Plain / Hills / Mountain / Mesa / Basin weights. Zero means "never here".</summary>
+    /// <summary>
+    /// Landform weights per character, indexed by <see cref="LandformType"/>:
+    /// plain / hills / mountain / mesa / basin / badlands / karst / ziggurat /
+    /// dunes. Zero means "never here".
+    /// </summary>
     private static float[] TypeWeights(TerrainCharacter c) => c switch
     {
-        TerrainCharacter.Plains => new[] { 1.00f, 0f, 0f, 0f, 0f },
-        TerrainCharacter.Tableland => new[] { 0.56f, 0f, 0f, 0.24f, 0.20f },
+        TerrainCharacter.Plains => new[] { 1.00f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f },
+        TerrainCharacter.Tablelands => new[] { 0.56f, 0f, 0f, 0.24f, 0.20f, 0f, 0f, 0f, 0f, 0f },
         // A hollow among hills is a tarn, and it is the only place standing water
         // can collect — without one, three islands in four have no lake at all.
-        TerrainCharacter.Downs => new[] { 0.42f, 0.48f, 0f, 0f, 0.10f },
-        TerrainCharacter.Highland => new[] { 0.26f, 0.42f, 0.25f, 0f, 0.07f },
-        _ => new[] { 1.00f, 0f, 0f, 0f, 0f },
+        TerrainCharacter.Downs => new[] { 0.42f, 0.48f, 0f, 0f, 0.10f, 0f, 0f, 0f, 0f, 0f },
+        TerrainCharacter.Highlands => new[] { 0.26f, 0.42f, 0.25f, 0f, 0.07f, 0f, 0f, 0f, 0f, 0f },
+        // Eroded country: fingers of tableland with gullies between them, and the
+        // mesas they weathered out of still standing.
+        TerrainCharacter.Badlands => new[] { 0.40f, 0f, 0f, 0.16f, 0f, 0.44f, 0f, 0f, 0f, 0f },
+        // Towers and dolines are the same limestone read from two sides, so a
+        // karst Domain gets both: the ground you cannot climb and the ground you
+        // cross watching your feet.
+        TerrainCharacter.Karst => new[] { 0.30f, 0.14f, 0f, 0f, 0.04f, 0f, 0.30f, 0f, 0f, 0.22f },
+        TerrainCharacter.Massif => new[] { 0.28f, 0.24f, 0.16f, 0f, 0f, 0f, 0f, 0.32f, 0f, 0f },
+        TerrainCharacter.Dunes => new[] { 0.44f, 0.10f, 0f, 0f, 0.04f, 0f, 0f, 0f, 0.42f, 0f },
+        _ => new[] { 1.00f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f },
     };
+
+    /// <summary>
+    /// The landforms whose shape is cut or raised into a finished plain rather
+    /// than generated as relief — see <see cref="LandformType.Badlands"/>. They
+    /// carry cliffs <i>inside</i> a patch, so anything that flattens a region for
+    /// a reason (a bridgehead) has to treat them like a mountain.
+    /// </summary>
+    private static bool IsSculpted(LandformType t)
+        => t is LandformType.Badlands or LandformType.Karst or LandformType.Massif
+             or LandformType.Sinkholes;
 
     private static LandformType PickWeighted(float[] w, float u)
     {
@@ -2594,7 +3123,7 @@ public sealed class IslandGenerator
     // ---- Stage 3: surface within regions --------------------------------------
 
     private static short[,] BuildSurface(int seed, IslandParams p, bool[,] land, int[,] region,
-                                         RegionPlan[] plan, float[,] inward)
+                                         RegionPlan[] plan, float[,] inward, out int duneGrain)
     {
         int n = p.Size;
         // Hilliness is not only height: a rolling down and a field of mounds also
@@ -2623,6 +3152,21 @@ public sealed class IslandGenerator
             if (land[x, z]) amp[x, z] = Amplitude(plan[region[x, z]].Type, p) * scale;
         FieldOps.Blur(amp, land, passes: 6);
 
+        // The grain of a dune field: one direction for the whole Domain, because
+        // what makes dunes dunes is that they all lie the same way.
+        //
+        // <b>Snapped to a compass point.</b> It used to be a free angle, which is
+        // more natural and unnameable: nothing on screen or in the data said which
+        // way the wind blew, and a field of ridges at 37° reads as noise with a
+        // bias. On one of the eight compass points it is a fact about the Domain —
+        // "the wind is from the north-east" — that the readout can say, the
+        // compass overlay can draw, and the content layer can use.
+        int point = (int)(Hash01(seed, 0xD0E5u) * 8f) & 7;
+        float grain = point * (Mathf.Tau / 8f);
+        float gcos = MathF.Cos(grain), gsin = MathF.Sin(grain);
+        duneGrain = point;
+        var drift = new Noise(seed + 404, frequency: 0.035f, octaves: 2);
+
         // Pass 1 — everything that sits on a rung.
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -2631,8 +3175,23 @@ public sealed class IslandGenerator
             RegionPlan rp = plan[region[x, z]];
             if (rp.Type == LandformType.Mountain) { isMountain[x, z] = true; continue; }
 
-            float dw = 0.5f + 0.3f * hilly;
-            float t = dw * detail.At(x, z) + (1f - dw) * coarse.At(x, z);
+            float t;
+            if (rp.Type == LandformType.Dunes)
+            {
+                // A wave along the grain rather than a blob field: the crest line
+                // is what a dune has and a hill does not. The phase wanders, so
+                // the ridges bend and occasionally fork instead of ruling the
+                // patch into stripes.
+                float along = x * gcos + z * gsin;
+                float phase = along * (Mathf.Tau / DuneWavelength)
+                              + (drift.At(x, z) - 0.5f) * 4f;
+                t = 0.5f + 0.5f * MathF.Sin(phase);
+            }
+            else
+            {
+                float dw = 0.5f + 0.3f * hilly;
+                t = dw * detail.At(x, z) + (1f - dw) * coarse.At(x, z);
+            }
             h[x, z] = SlabClamp(rp.Plateau + t * amp[x, z]);
         }
 
@@ -2658,6 +3217,277 @@ public sealed class IslandGenerator
             h[x, z] = SlabClamp(foot[x, z] + p.MountainHeight * s + rugged);
         }
         return h;
+    }
+
+    /// <summary>Cells from one dune crest to the next, across the grain.</summary>
+    private const float DuneWavelength = 15f;
+
+    /// <summary>
+    /// Steps down onto a beach, and how many cells of coast one takes.
+    ///
+    /// A Domain's coast is a cliff to the keel everywhere, which is why every
+    /// shoreline reads the same. Where the ground arrives at the rim gently — a
+    /// plain, hills or dunes, level with its neighbours — the outermost cells step
+    /// down a slab instead, and that one slab is the difference between land that
+    /// stops and land that *meets* the aether. It is free-step ground, so nothing
+    /// about walking changes; it gives a quay somewhere natural to sit and the
+    /// silhouette a softer edge where the terrain earns one.
+    /// </summary>
+    private const int BeachWidth = 2;
+
+    /// <summary>
+    /// Steps the outermost cells of a gentle coast down, one slab per cell.
+    ///
+    /// <b>Grammar-safe by construction:</b> the drop is a whole band at a time, so
+    /// two cells in the same band keep the height they had relative to each other
+    /// and the only new step is the one slab between one band and the next — which
+    /// is the free step. Steep coasts, mesa rims, basin walls and anything already
+    /// under water are left alone: a beach is what a *shallow* shore does.
+    /// </summary>
+    private static void MakeBeaches(bool[,] land, short[,] surface, short[,] water,
+                                    int[,] region, RegionPlan[] plan, bool[,] beach)
+    {
+        int n = land.GetLength(0);
+        var toRim = new int[n, n];
+        var q = new Queue<(int X, int Z)>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            toRim[x, z] = -1;
+            if (!land[x, z]) continue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx >= 0 && nz >= 0 && nx < n && nz < n && land[nx, nz]) continue;
+                toRim[x, z] = 0;
+                q.Enqueue((x, z));
+                break;
+            }
+        }
+        while (q.Count > 0)
+        {
+            var (x, z) = q.Dequeue();
+            if (toRim[x, z] >= BeachWidth) continue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!land[nx, nz] || toRim[nx, nz] >= 0) continue;
+                toRim[nx, nz] = toRim[x, z] + 1;
+                q.Enqueue((nx, nz));
+            }
+        }
+
+        // Only where the coast arrives gently: soft ground, dry, and no cell in
+        // the band standing more than a slab off its neighbours.
+        var gentle = new bool[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z] || toRim[x, z] < 0 || toRim[x, z] >= BeachWidth) continue;
+            if (water[x, z] != IslandData.NoLand) continue;
+
+            LandformType type = plan[region[x, z]].Type;
+            if (type is not (LandformType.Plain or LandformType.Hills or LandformType.Dunes))
+                continue;
+
+            bool even = true;
+            for (int k = 0; k < 4 && even; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                even = Math.Abs(surface[nx, nz] - surface[x, z]) <= 1
+                       && water[nx, nz] == IslandData.NoLand;
+            }
+            gentle[x, z] = even;
+        }
+
+        // How far each cell wants to come down, tapered so the edge of the beach
+        // is a free step rather than a two-slab drop — see FieldOps.Taper.
+        // <b>One slab, not a ramp.</b> A graduated beach spends two slabs of height
+        // over two cells of coast, and two slabs is the entire tolerance a landing
+        // strip has — so every beached coast stopped being able to host a hanging
+        // Gate, and hanging Gates fell from most of them to a quarter. A flat
+        // shelf a single slab down still reads as a beach and leaves the strip
+        // somewhere to sit.
+        var drop = new int[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (gentle[x, z]) drop[x, z] = 1;
+        FieldOps.Taper(drop, land);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (drop[x, z] <= 0) continue;
+            surface[x, z] = SlabClamp(surface[x, z] - drop[x, z]);
+            beach[x, z] = true;
+        }
+    }
+
+    /// <summary>Slabs a badlands gully is cut below the fingers either side of it.</summary>
+    private const int GullyDepth = 5;
+
+    /// <summary>Slabs a karst tower stands above the floor it grows out of.</summary>
+    private const int TowerRise = 13;
+
+    /// <summary>Slabs from one ziggurat terrace to the next.</summary>
+    private const int TerraceRiser = 4;
+
+    /// <summary>Slabs a sinkhole drops below the ground it is punched out of.</summary>
+    private const int SinkDepth = 6;
+
+    /// <summary>
+    /// Cuts and raises the sculpted landforms into the finished plain.
+    ///
+    /// <para><b>Why this is a separate pass.</b> Every other landform is relief
+    /// under a slope limit, which is what makes the step grammar hold by
+    /// construction — and it is also why the ladder can only put a cliff at a
+    /// patch <i>border</i>. A gully, a tower and a terrace riser are cliffs
+    /// <i>inside</i> a patch, so they cannot come from relief at all. They are
+    /// cut into a surface the limiter has already settled, and the cells they
+    /// touch are then exempted from it, exactly as a canyon is — that is the
+    /// mechanism the pipeline already had for "a cliff somebody asked for".</para>
+    ///
+    /// <para><b>Nothing is sculpted on a patch border.</b> The outermost ring of
+    /// every patch is left at the level the limiter agreed with the neighbours,
+    /// so a badlands beside a plain still meets it at a walkable step and the
+    /// cliff rule holds at every border it has. All the drama is interior.</para>
+    /// </summary>
+    /// <returns>The cells that were cut or raised, to be exempted from the limiter.</returns>
+    private static bool[,] Sculpt(int seed, IslandParams p, bool[,] land, int[,] region,
+                                  RegionPlan[] plan, short[,] h, float[,] inward)
+    {
+        int n = p.Size;
+        var carved = new bool[n, n];
+        float scale = ReliefScale(p);
+
+        bool any = false;
+        foreach (RegionPlan rp in plan) if (IsSculpted(rp.Type)) { any = true; break; }
+        if (!any) return carved;
+
+        // One field per landform, so two of them on one island do not share a
+        // pattern. The gullies are ridged noise — its creases are the drainage
+        // lines a badlands erodes along.
+        var gully = new Noise(seed + 611, frequency: 0.16f, octaves: 3, ridged: true)
+            .WithWarp(amplitude: 6f, frequency: 0.05f);
+        // Low enough that a tower is a few cells across rather than a needle: one
+        // cell is an orchard, and a column an orchard wide is a chimney.
+        var towers = new Noise(seed + 733, frequency: 0.18f, octaves: 2);
+        var terrace = new Noise(seed + 857, frequency: 0.055f, octaves: 3);
+
+        // How far into a patch the sculpting starts, as a share of its half-width.
+        // `inward` is 0 at the border and 1 at the middle.
+        const float Rim = 0.18f;
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z]) continue;
+            int r = region[x, z];
+            RegionPlan rp = plan[r];
+            if (!IsSculpted(rp.Type)) continue;
+
+            float u = inward[x, z];
+            if (u <= Rim) continue;                     // the rim is the patch's word to its neighbours
+
+            switch (rp.Type)
+            {
+                // A maze of gullies: wherever the ridged field creases, the ground
+                // drops a fixed depth. Fixed, not tapered — a tapering gully has a
+                // two-slab step somewhere along its length by construction, and
+                // two slabs is the one height the grammar forbids.
+                case LandformType.Badlands:
+                    if (gully.At(x, z) > 0.62f) continue;
+                    h[x, z] = SlabClamp(h[x, z] - (int)MathF.Round(GullyDepth * (0.7f + 0.5f * scale)));
+                    carved[x, z] = true;
+                    break;
+
+                // Towers: the high ground of a blobby field, raised bodily off the
+                // floor. The threshold is high, so what is left is columns of a
+                // few cells rather than a plateau with holes in it.
+                case LandformType.Karst:
+                {
+                    float t = towers.At(x, z);
+                    if (t < 0.62f) continue;
+                    // Taller where the field is stronger, but each tower is one
+                    // height throughout: the sides are meant to be sheer.
+                    int rise = (int)MathF.Round(TowerRise * (0.6f + 0.9f * scale)
+                                                * (0.75f + 0.5f * towers.At(x * 0.13f, z * 0.13f)));
+                    h[x, z] = SlabClamp(h[x, z] + Math.Max(4, rise));
+                    carved[x, z] = true;
+                    break;
+                }
+
+                // Concentric terraces. The contour is the patch's own inward
+                // distance warped by noise, so the rings follow the shape of the
+                // massif and wander in and out of it rather than being circles.
+                case LandformType.Massif:
+                {
+                    float warped = Math.Clamp(u + (terrace.At(x, z) - 0.5f) * 0.34f, 0f, 1f);
+                    int rings = 3 + (int)(scale * 2.5f);
+                    int ring = (int)(warped * rings);
+                    if (ring <= 0) continue;
+                    h[x, z] = SlabClamp(h[x, z] + ring * TerraceRiser);
+                    carved[x, z] = true;
+                    break;
+                }
+
+                // Round pits punched out of open ground: the same limestone as the
+                // karst, read from above instead of from the side. The threshold is
+                // low and the field is smooth, so what drops out is isolated holes
+                // rather than the connected maze a badlands makes.
+                case LandformType.Sinkholes:
+                {
+                    if (towers.At(x + 512f, z - 512f) > 0.30f) continue;
+                    h[x, z] = SlabClamp(h[x, z] - (int)MathF.Round(
+                        SinkDepth * (0.7f + 0.6f * scale)));
+                    carved[x, z] = true;
+                    break;
+                }
+            }
+        }
+
+        // A one-cell terrace is a ledge, and a one-cell gully is a hole. Anything
+        // the fields left isolated is filled back in, which is cheaper than
+        // tuning the thresholds to never produce one.
+        Despeckle(land, region, h, carved);
+        return carved;
+    }
+
+    /// <summary>
+    /// Undoes any sculpted cell with no sculpted neighbour at its own level. A
+    /// lone pit or pillar reads as a mistake at this scale — one cell is an
+    /// orchard — and it is also the shape most likely to leave an ambiguous step
+    /// behind it.
+    /// </summary>
+    private static void Despeckle(bool[,] land, int[,] region, short[,] h, bool[,] carved)
+    {
+        int n = land.GetLength(0);
+        var lone = new List<(int X, int Z, int To)>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!carved[x, z]) continue;
+
+            int kin = 0, floor = int.MinValue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (carved[nx, nz] && h[nx, nz] == h[x, z]) kin++;
+                else if (!carved[nx, nz]) floor = Math.Max(floor, (int)h[nx, nz]);
+            }
+            if (kin == 0 && floor != int.MinValue) lone.Add((x, z, floor));
+        }
+
+        foreach (var (x, z, to) in lone)
+        {
+            h[x, z] = SlabClamp(to);
+            carved[x, z] = false;
+        }
     }
 
     /// <summary>
@@ -2832,7 +3662,8 @@ public sealed class IslandGenerator
     /// </summary>
     /// <returns>Whether anything was lowered.</returns>
     private static bool ResolveAmbiguousSteps(short[,] h, int[,] region, bool[,] land,
-                                              RegionPlan[] plan, short[,]? water = null)
+                                              RegionPlan[] plan, short[,]? water = null,
+                                              bool[,]? exempt = null)
     {
         int n = h.GetLength(0);
         bool any = false;
@@ -2844,6 +3675,9 @@ public sealed class IslandGenerator
             {
                 if (!land[x, z] || plan[region[x, z]].Type == LandformType.Mountain) continue;
                 if (water != null && water[x, z] != IslandData.NoLand) continue;   // lake bed
+                // A gully floor, a tower top, a canyon bed: cut on purpose, and
+                // neither resolved away nor measured against.
+                if (exempt != null && exempt[x, z]) continue;
 
                 // A shore may not be lowered into its own lake, and ground beside a
                 // basin may not be lowered to within a cliff of the floor it looks
@@ -2867,6 +3701,7 @@ public sealed class IslandGenerator
                     int nx = x + Dx[k], nz = z + Dz[k];
                     if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
                     if (!land[nx, nz] || plan[region[nx, nz]].Type == LandformType.Mountain) continue;
+                    if (exempt != null && exempt[nx, nz]) continue;
 
                     if (h[x, z] - h[nx, nz] == 2 && h[x, z] - 1 >= keepAbove)
                     {
@@ -3263,39 +4098,126 @@ public sealed class IslandGenerator
         ReliefStyle[] pool = character switch
         {
             TerrainCharacter.Plains => new[] { ReliefStyle.Tilted, ReliefStyle.Plateau },
-            TerrainCharacter.Tableland => new[]
+            TerrainCharacter.Tablelands => new[]
                 { ReliefStyle.Plateau, ReliefStyle.CentralPeak, ReliefStyle.Tilted },
             TerrainCharacter.Downs => new[]
                 { ReliefStyle.OffsetPeak, ReliefStyle.TwinPeaks, ReliefStyle.Tilted },
+            // Badlands and dunes are country, not relief: they want a broad even
+            // ground to spread over rather than a peak to climb.
+            TerrainCharacter.Badlands => new[] { ReliefStyle.Plateau, ReliefStyle.Tilted },
+            TerrainCharacter.Dunes => new[] { ReliefStyle.Tilted, ReliefStyle.Plateau },
+            TerrainCharacter.Karst => new[]
+                { ReliefStyle.Plateau, ReliefStyle.Tilted, ReliefStyle.OffsetPeak },
             _ => new[] { ReliefStyle.Ridge, ReliefStyle.TwinPeaks, ReliefStyle.OffsetPeak },
         };
         return pool[(int)(Hash(seed, 0x5EED) % (uint)pool.Length)];
     }
 
     private static ReliefStyle ResolveStyle(int seed, IslandParams p)
-        => StyleFor(seed, ResolveCharacter(seed, p.Character));
+        => StyleFor(seed, ResolveCharacter(seed, p));
 
     /// <summary>
-    /// Auto picks a layout, weighted toward a single landmass: an archipelago is
-    /// the interesting case, not the common one.
+    /// The layouts <c>Auto</c> may roll, and how often. Weighted toward a single
+    /// landmass: an archipelago is the interesting case, not the common one.
+    ///
+    /// The first six are the set the generator was built and audited on; the rest
+    /// are the newer shapes, and <see cref="IslandParams.NewArrangements"/> takes
+    /// them out of the pool in one move without taking them out of the code — a
+    /// layout you can no longer roll is still a layout you can ask for by name in
+    /// the lab.
     /// </summary>
-    private static IslandArrangement ResolveArrangement(int seed, IslandArrangement requested)
+    private static readonly (IslandArrangement How, float Weight)[] ArrangementPool =
     {
-        if (requested != IslandArrangement.Auto) return requested;
+        (IslandArrangement.Single, 34f),
+        (IslandArrangement.Satellites, 10f),
+        (IslandArrangement.Twins, 8f),
+        (IslandArrangement.Triplets, 6f),
+        (IslandArrangement.Archipelago, 6f),
+        (IslandArrangement.BrokenRing, 5f),
+        // --- newer shapes, gated by NewArrangements -------------------------
+        (IslandArrangement.Ring, 4f),
+        (IslandArrangement.Arc, 4f),
+        (IslandArrangement.BrokenArc, 4f),
+        (IslandArrangement.Atoll, 4f),
+        (IslandArrangement.ThousandIsles, 4f),
+        (IslandArrangement.Cross, 4f),
+        (IslandArrangement.Fractal, 4f),
+        (IslandArrangement.Shards, 3f),
+        (IslandArrangement.TShape, 3f),
+        (IslandArrangement.LShape, 3f),
+        (IslandArrangement.BrokenCross, 3f),
+        (IslandArrangement.BrokenT, 3f),
+        (IslandArrangement.BrokenL, 3f),
+        (IslandArrangement.BrokenFractal, 3f),
+        (IslandArrangement.Rosette, 3f),
+        (IslandArrangement.Star, 3f),
+    };
 
-        float u = Hash01(seed, 0x7A1Du);
-        return u < 0.46f ? IslandArrangement.Single
-             : u < 0.62f ? IslandArrangement.Satellites
-             : u < 0.74f ? IslandArrangement.Twins
-             : u < 0.83f ? IslandArrangement.Triplets
-             : u < 0.93f ? IslandArrangement.Archipelago
-             : IslandArrangement.Atoll;
+    /// <summary>How many of <see cref="ArrangementPool"/> are the audited originals.</summary>
+    private const int ClassicArrangements = 6;
+
+    /// <summary>
+    /// What <see cref="IslandParams.NewArrangements"/> and
+    /// <see cref="IslandParams.NewLandforms"/> actually change, in numbers.
+    ///
+    /// Both flags gate <c>Auto</c>'s dice and nothing else, which is exactly why
+    /// they read in the lab as a checkbox that does nothing: with an arrangement
+    /// and a character named by hand there is no dice roll left to gate. These
+    /// exist so the lab can say so — see <c>IslandLab.PoolNote</c>.
+    /// </summary>
+    public static int AutoArrangements(bool newer)
+        => newer ? ArrangementPool.Length : ClassicArrangements;
+
+    /// <inheritdoc cref="AutoArrangements"/>
+    public static int AutoCharacters(bool newer)
+        => newer ? Enum.GetValues<TerrainCharacter>().Length - 1 : ClassicCharacters;
+
+    /// <summary>Whether <c>Auto</c> could only have rolled this layout with the flag on.</summary>
+    public static bool IsNewerShape(IslandArrangement how)
+    {
+        for (int i = 0; i < ClassicArrangements; i++)
+            if (ArrangementPool[i].How == how) return false;
+        return how != IslandArrangement.Auto;
     }
 
-    private static TerrainCharacter ResolveCharacter(int seed, TerrainCharacter requested)
-        => requested != TerrainCharacter.Auto
-            ? requested
-            : (TerrainCharacter)(1 + (int)(Hash(seed, 0xC7A2) % 4u));
+    /// <inheritdoc cref="IsNewerShape(IslandArrangement)"/>
+    public static bool IsNewerShape(TerrainCharacter c)
+        => c != TerrainCharacter.Auto && (int)c > ClassicCharacters;
+
+    private static IslandArrangement ResolveArrangement(int seed, IslandParams p)
+    {
+        if (p.Arrangement != IslandArrangement.Auto) return p.Arrangement;
+
+        int upto = p.NewArrangements ? ArrangementPool.Length : ClassicArrangements;
+        float total = 0f;
+        for (int i = 0; i < upto; i++) total += ArrangementPool[i].Weight;
+
+        float pick = Hash01(seed, 0x7A1Du) * total;
+        for (int i = 0; i < upto; i++)
+        {
+            pick -= ArrangementPool[i].Weight;
+            if (pick <= 0f) return ArrangementPool[i].How;
+        }
+        return IslandArrangement.Single;
+    }
+
+    /// <summary>How many characters are the four the pipeline was first audited on.</summary>
+    private const int ClassicCharacters = 4;
+
+    /// <summary>
+    /// Which character an island is, with <c>Auto</c> resolved.
+    /// <see cref="IslandParams.NewLandforms"/> keeps the sculpted ones out of the
+    /// dice without keeping them out of the game — asking for one by name still
+    /// builds it.
+    /// </summary>
+    private static TerrainCharacter ResolveCharacter(int seed, IslandParams p)
+    {
+        if (p.Character != TerrainCharacter.Auto) return p.Character;
+        int upto = p.NewLandforms
+            ? Enum.GetValues<TerrainCharacter>().Length - 1      // minus Auto
+            : ClassicCharacters;
+        return (TerrainCharacter)(1 + (int)(Hash(seed, 0xC7A2) % (uint)upto));
+    }
 
     /// <summary>Deterministic per-island scalar in <c>[0, 1)</c> for a given salt.</summary>
     private static float Hash01(int seed, uint salt) => (Hash(seed, salt) & 0xFFFFFF) / 16777216f;

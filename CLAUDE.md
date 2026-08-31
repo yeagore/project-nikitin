@@ -124,86 +124,101 @@ the editor. `scripts/CameraRig.cs` aims itself with `LookAt` for this reason.
 
 ### Rendering an island (the current epic)
 
-Full spec: **`docs/island-generation.md`** — data model, generation pipeline,
-parameters, rendering handoff, first implementation slice. Being built on the
-`island-generation` branch.
+Full spec: **`docs/island-generation.md`** — the model, the pipeline in the order
+it runs, the parameters, the rendering handoff. The reasoning, the things tried
+and removed, the audit numbers and the ideas not yet taken are in
+**`docs/island-generation-appendix.md`**. Being built on the `island-generation`
+branch.
 
-In short: generation is a pure function `Generate(seed, IslandParams)` producing
-the columnar `IslandData` (Y in slab indices); a separate chunked mesher turns
-that into per-chunk `ArrayMesh` + trimesh colliders (only exposed faces).
-**Never one node per slab.**
+Generation is a pure function `Generate(seed, IslandParams)` producing the
+columnar `IslandData` (Y in slab indices); a separate chunked mesher will turn
+that into per-chunk `ArrayMesh` + trimesh colliders. **Never one node per slab.**
 
-Current state — the island is a **blanket of landform patches**, not a quantised
-height field. Regions come from a warped Voronoi; each gets a `LandformType`
-(Plain, Hills, Mountain, Mesa, Basin) and a rung on a plateau ladder, and relief
-is generated under that landform's slope limit. This is what keeps steps
-meaningful: a 1-slab step is free, so terrain is walkable by default and cliffs
-only appear where they were decided — audited, and **every cliff in 60 islands is
-now one the rules allow**. Mountains take no rung — they rise on an S-curve from
-the ground they actually meet. Lakes sink into a patch's interior, the untouched
-rim being what holds the water.
+**The free step is the whole grammar.** A one-slab step is free and two or more
+needs building, so terrain generated under a one-slab slope limit is walkable by
+construction and every cliff is one some rule put there on purpose. The island is
+a blanket of **landform patches** — a warped Voronoi, each patch with a
+`LandformType` and a rung on a plateau ladder — not a quantised height field,
+which makes step sizes an accident of the gradient and contours into rings.
 
-Landforms are handed out **by quota, not by per-region dice**: every landform a
-`TerrainCharacter` names is guaranteed to appear, and `LandformMix` slides the
-proportions from low ground to high. `ReliefStyle` is internal and follows from
-the character.
+**Ten landforms.** Six are relief under a slope limit: `Plain`, `Hills`,
+`Mountain`, `Mesa`, `Basin`, `Dunes`. Four are **sculpted** — cut into a surface
+the limiter has already settled, then exempted from it, which is how they carry
+cliffs *inside* a patch: `Badlands` (flat fingers, a maze of gullies), `Karst` (a
+floor you walk with towers you cannot), `Massif` (concentric terraces climbing to
+a summit), `Sinkholes` (round pits in open ground). Nothing is sculpted on a
+patch's outer ring, so every border stays bound. `TerrainCharacter` says which an
+island is built from, **by quota**: every landform a character names is
+guaranteed to appear. A character is a *recipe*, not a list of what came out — the
+lab names the landforms an island actually got.
 
-The footprint is a set of **placed blobs**, one per landmass, chosen by
-`IslandArrangement` — Single, Satellites, Twins, Triplets, Archipelago, Atoll.
-The blobs keep a lone island's full stretch and wander, and where two of them
-meet the seam is **carved into a strait** whose width wanders between one cell
-and the bridge span. So `Twins` is two halves of one ragged island with a crack
-between them rather than two discs, an `Atoll` is a broken ring of tangential
-arcs round a cleared lagoon, and **every arrangement is linkable by bridge**
-without the linker having to drag anything.
+**Twenty-two arrangements**, one shape per `IslandArrangement`: `Single`,
+`Satellites`, `Twins`, `Triplets`, `Archipelago`, `Ring`, `BrokenRing`, `Arc`,
+`BrokenArc`, `Atoll`, `ThousandIsles`, `Cross`, `TShape`, `LShape`,
+`BrokenCross`, `BrokenT`, `BrokenL`, `Fractal`, `BrokenFractal`,
+`Rosette`, `Star`, `Shards`. Blobs are placed deliberately and the seam where two
+meet is either left alone (they fuse) or **carved into a strait** — that one flag
+is the whole difference between `Ring` and `BrokenRing`. Crosses, Ts, Ls and
+stars are axis-aligned, so an arm points at an edge and therefore at a Gate.
+`NewArrangements` / `NewLandforms` keep the newer shapes out of **`Auto`'s pool**
+without taking them out of the code — they gate the dice and nothing else, so
+with an arrangement and a character both named by hand they do nothing at all,
+which is what the lab's panel now says under the checkbox. (`Spiral` was binned
+2026-08-31: keeping the coil continuous made it a `Rosette` with extra steps.)
 
-`Traversal.Analyse` then reads the finished terrain back: which ground connects
-to which on foot (`WalkArea`), which connects **once stairs and bridges are
-built** (`Reach` / heartland), and which is level enough to build on (`Shelf` —
-"flat, or one lone step", so a gently descending terrace counts and a hillside
-does not). It changes nothing — it is how we find out whether the island is
-playable. The answer: 54% of land is walkable from the mainland, **94% is
-reachable with infrastructure**, and 91% of what stays out is mountain. A cliff
-is a cost, not a wall.
+**Water.** Lakes sink into a flat patch's interior with the patch's own rim as
+containment, and the shore inset wanders so a lake is not a scale copy of a
+Voronoi polygon. Rivers are routed by a priority flood inward from the rim, with
+**ties broken on a noise field — which is what makes them bend**. Sources are
+named: every summit, and **one outflow per lake**. A river has a bed; a stream is
+crossed **at a ford** (one every ~11 cells) and is an obstacle everywhere else; a
+navigable river is two cells wide, not fordable, and sometimes splits round an
+**eyot**. The ground sinks toward a course in tapered bands (`Valleys`) — **and
+the channel sinks with them**, one band deeper than its own bank, because a bank
+already stands one slab above the water and a valley that only lowers the ground
+beside a river comes out as a moat around it. Every river reaches the rim and
+pours off it, because there is no sea. Everything is water: `FluidKind` (lava,
+essence) was removed 2026-08-31 — it was two `if`s and a dropdown with nothing
+visible behind it, and the whole idea is the look.
 
-**A bridge is a run of slabs at one level** — `IslandParams.Crossings` says how
-far one reaches (Easy 1 / Medium 3 / Hard 6 cells) and the generator levels both
-bridgeheads so you step a slab onto the deck and a slab off it. That single knob
-also sets how wide the straits open and how far apart the linker leaves the
-pieces.
+**Three kinds of works cross what you cannot walk.** A **bridge** is a level run
+of slabs spanning aether (up to `Crossings` cells), water (3), or a **chasm** —
+ground 5 slabs or more below the deck, which is how one cliff top is bridged to
+another. A **stair** climbs 8 slabs and stands on two cells that nothing else is
+built on. A **ferry** runs between two quays on one body of water; a waterfall
+cuts a body in two, and berths are pruned against a ferry-less reach flood so
+only the load-bearing ones survive.
 
-`Rivers` routes drainage by a priority flood inward from the rim, so water
-crosses lakes rather than stopping at them. Sources are named — every summit and
-lake outflow — because accumulation alone gives nothing on slope-limited terrain.
-**A river has a bed:** the channel is cut two slabs down and filled to one below
-the bank, and the river cuts its banks to match, so a stream still fords at one
-slab. A navigable river is two cells wide and is not fordable at all. **Every
-river reaches the rim and pours off it**, because there is no sea — and those
-rim falls are now drawn, spilling past the keel into the aether. Lakes no longer
-chain: a patch beside one that holds water stays dry, because a row of pools
-stepping across the island reads as flooding.
+`Traversal.Analyse` reads the finished terrain back: `Walk` (on foot), `Reach`
+(once built), water bodies, ferry berths and `Shelves` (level enough to settle
+on). `GatePlacement` then puts one Entry and one to three Exits on the Domain —
+**a way in and a way out are guaranteed**, at most one per edge and on that edge,
+a third of the footprint apart, hanging ten cells off the rim with a 3 × 5
+landing strip where the coast allows it, or standing on the ground with a 3 × 3
+apron running inland from the portal. The Entry's
+**kind and edge are inputs**, because a Link joins two Gates and a Domain reached
+by travelling east comes out on its west side — and so are `ExitGates` and
+`ExitGate`. **Every one of those four is a request, not a preference:** each Exit
+walks the whole placement ladder on its own rather than the ladder stopping at
+the first Exit it produces, a named kind is held across every rung, and anything
+still not delivered goes into `Unmet` so the seed re-rolls. Measured, the Entry
+lands on the named edge 100% of the time; the one thing a coast often cannot give
+is three *hanging* Exits, and the lab says so when it happens.
 
-`GatePlacement` puts one Entry and one to three Exit Gates on the Domain, at most
-one per edge and **on that edge**: within a band of the outermost ground on its
-own side, off the corners, and strictly the outermost Gate on its own axis, so
-the east Gate is the easternmost thing there is. A Gate is 3 × 1 cells and 12
-slabs tall. **Hanging is the norm** — flying through is how you cross a Link —
-and a hanging Gate needs only a 1 × 4 landing strip inland of the coast opposite;
-land Gates are the quarter of cases a coast happens to allow. `IslandData.Airstrip`
-marks every coast that would take a strip, whether a Gate went there or not. The
-**Entry's kind is an input** (`IslandParams.EntryGate`) because a Link joins two
-Gates and they must match.
+`Passages` is the payoff: the **least-infrastructure road from the Entry to each
+Exit**, walking free and every work one point. Five elevators inside fifteen
+cells is a *flight*, which marks the Domain `Rough`. `Surfaces` then classifies
+what the ground is made of and collects the feature anchors (`CoastCells`,
+`CliffCells`, `Overhangs`); `Names` names the Domain and its parts. Stage 6
+overhangs and arches give some columns a second span — rendered and collidable,
+**not yet walkable**, because pathing over a two-level column wants spans as
+nodes and that is its own problem.
 
-Finally, `Generate` **re-rolls an unplayable Domain** (Stage 6): one Entry of the
-right kind, a buildable shelf on the heartland, and three quarters of the land
-reachable from it, or the seed is derived forward and the island rebuilt — up to
-four attempts, still a pure function of `(seed, params)`.
-
-The dev lab (`scenes/dev/island_lab.tscn`) draws one scaled `MultiMesh` box per
-span, flat quads for water, vertical sheets for falls, a box per Gate, and
-togglable overlays for the crossings, the airstrips and the compass. Still to
-come: the chunked mesher, overhangs (stage 4b), the remaining feature anchors,
-settlement placement.
+Finally `Generate` **re-rolls an unplayable Domain**, or one built to the wrong
+specification: one Entry of the right kind *on the right edge*, at least one Exit
+and as many as `ExitGates` asked for, of the kind `ExitGate` asked for, a road to
+every Exit, a buildable shelf on the heartland, and three quarters of the land
+reachable from it.
 
 **Launching the island lab:**
 
@@ -211,52 +226,69 @@ settlement placement.
    `dotnet build "Project Nikitin.csproj"`).
 2. In the FileSystem dock open `scenes/dev/island_lab.tscn`, then press **F6**
    ("Run Current Scene"). It is not the project's main scene, so F5 won't run it.
-3. Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
-   arrows** tilt (far enough to look up at the keel), **wheel** zoom, **Shift**
-   faster. **N** new seed, **V** cycle `TerrainCharacter`, **G** cycle
-   `IslandArrangement`, **H** cycle `Hilliness`, **M** cycle `LandformMix`,
-   **T** cycle `EntryGate` (Auto → Hanging → Land), **Y** cycle `Crossings`
-   (Easy / Medium / Hard), **C** cycle view, **F** re-frame, **R** rebuild the
-   same island. **F1** shows the whole key list on screen.
-4. Views on **C**: `height` / `landform` (passes tinted pale yellow) / `region` /
-   **`walk`** (what connects on foot — mainland green, other districts their own
-   hue, all broken ground one grey) / **`reach`** (what connects once you build —
-   green heartland, red for what building cannot reach, which should be mountain
-   and little else) / **`shelves`** (ground level enough to settle on; dim brown
-   is level but too small or too narrow). Gates draw as portals in every view:
-   **gold** for the entry, **cyan** for exits, pale for hanging ones.
-5. Overlays, each a toggle: **B** the crossings (deck slabs in orange at the
-   level they run at, bridgeheads in pale yellow), **J** the airstrips (every
-   coast a vessel could set down on in cyan, the strips the Gates actually took
-   in pink), **X** the compass — N/E/S/W off the four edges, plus a tapering
-   arrow from each Gate showing the way it opens **landward**, which is the
-   direction the player is walking when they arrive.
-6. The text sits in four panels that cannot overlap: what the island is (top
-   left), what the current view means (top right), which overlays are on (bottom
-   right), the keys (bottom left, on **F1**).
+3. **The control panel down the left is the interface** — dropdowns for the view,
+   arrangement, character, entry kind and edge, exit kind and crossing
+   ease; sliders for hilliness, mix, relief, rivers, lakes and valleys; spin
+   boxes for the plateau rungs, cliff height, region scale and exit count; a
+   checkbox each for the newer shapes and every overlay. **Tab** hides it. Every
+   control is also a key, and both write the same `Params`: **N** new seed, **R**
+   rebuild, **F** frame, **C** view, **V** character, **G** arrangement, **H**
+   hilliness, **M** mix, **L** rungs, **U** new shapes, **T** entry kind, **Y**
+   crossings, **B J K O P X** the overlays, **F2** a screenshot.
+   Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
+   arrows** tilt, **wheel** zoom, **Shift** faster. (Fords moved from **D** to
+   **O** — D is the camera's strafe, so the two fought.)
+4. Views: `height` / `landform` / `region` / `walk` (what connects on foot) /
+   `reach` (what connects once you build — red is out of reach whatever you
+   build) / `shelves` / `surface` (what the ground is made of: stone, scree, snow,
+   sand, silt, grass, meadow, heath, dust) / `anchors` (what the content layer
+   attaches to: coast, cliff, overhang, beach, ford, gate landing, ferry quay —
+   everything else dimmed). Water is coloured by kind: pale a ford, mid a stream,
+   deep a navigable reach, dark a lake.
+5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (3 × 5
+   where a vessel lands at a hanging Gate, 3 × 3 of forecourt at a land one),
+   **K** ferry berths (quay and hull), **O** fords, **P** the roads between
+   the Gates (pale yellow walk; red stair, gold bridge, cyan ferry), **X** the
+   compass, each Gate's landward vector, and the **prevailing wind** drawn along
+   each dune field (the ridges lie across it).
+6. The readout is at the **top right**: what the view means, then what this island
+   turned out to be — its name, arrangement, the landforms it actually got, the
+   ladder, walk and reach shares, shelves, berths, rivers, Gates, and what each
+   road out costs. `ROUGH GOING` means a road climbs five elevators in fifteen
+   cells; `COAST WOULD NOT` means a Gate you asked for is not the Gate you got.
+7. **The window is 1152 × 648 and will not stretch?** That is the editor
+   *embedding* the game, not the project — the base viewport is 1920 × 1080 and
+   the UI scales. Editor Settings → Run → Window Placement → **Game Embed Mode:
+   Disabled** runs it as its own OS window.
 
 **Where the numbers live.** `resources/island_default.tres` is the `IslandParams`
-preset, and **both** the lab and the audit scene load it — so the audit measures
-the island you are tuning. Two ways to change it:
-
-- **Durably:** select the `.tres` in the FileSystem dock and edit it in the
-  Inspector. Saved to disk, picked up by the next run and by the audit.
-- **Throwaway:** with the lab *running*, use the **Remote** tab of the Scene dock,
-  select `IslandLab`, and edit `Seed` or the fields inside `Params`. The island
-  rebuilds on every change and nothing is written to disk. This is the one to use
-  while you are hunting for a look.
+preset, and **both** the lab and the audit load it — so the audit measures the
+island you are tuning. Edit the `.tres` in the Inspector to change it durably, or
+use the lab's own panel (or the **Remote** tab of the Scene dock) for a throwaway
+experiment that is never written to disk.
 
 CLI: `godot --path . scenes/dev/island_lab.tscn`
 
 **Checking generation without looking at it:**
 `scenes/dev/generation_audit.tscn` runs the real generator over 60 seeds headless
-and prints the measured guarantees — step grammar, cliff borders, patch sizes,
-mesa/basin clearance, mountain profile, lake containment, rivers and falls,
-shelves, crossings, Gates, re-rolls, continuity. Run it after any change to
-`IslandGenerator`. Set its `Silhouettes` flag to also print an ASCII map of one
-island per arrangement: appearance still needs a human at the editor, but the
-*shape* of a footprint is measurable headless. See `docs/island-generation.md`
-§4d, which also lists the gaps the last audit found.
+and prints the measured guarantees. Run it after any change to the generator. It
+also prints **what moved since the last accepted run** against
+`docs/audit-baseline.json` — a diff, not a test; set `AcceptBaseline` to accept
+the current numbers. Seven opt-in flags print what a summary cannot show:
+`Silhouettes` (one island per arrangement), `Waterways` (one island's water, full
+resolution), `Sculpts` (a close-up of each sculpted landform), `Feasibility`
+(every arrangement × every character, flagging the combinations the pipeline
+finds hard), `GateRequests` (ask for each Entry edge and kind and each Exit count
+and kind, and report what came out), `GateMatrix` (ask every arrangement ×
+character for **four hanging Gates** — the maximum request — and then check the
+reductions; it also prints the funnel saying *why* a coast refuses one) and
+`Knobs` (sweep `Lakes` / `Rivers` / `Valleys` from 0 to 1 and print what each one
+moves — **this is how you check a slider does anything**, and it is how the
+inverted valley pass was found).
+Appearance still needs a human at the editor — or **F2** in the lab.
+See `docs/island-generation-appendix.md` §D for what the audit currently says and
+which gaps are open.
+
 
 `scenes/terrain/grass_block.tscn` predates the slab decision — it is still a
 1×1×1 cube and should be reshaped to a 1×0.25×1 slab (and `main.tscn`'s camera
@@ -279,18 +311,27 @@ scripts/
     Terrain.cs                  CellSize / SlabHeight constants.
     Span.cs, IslandData.cs      Per-column span-list terrain model (+ water, regions).
     IslandParams.cs             [GlobalClass] generator inputs.
-    LandformType.cs             Plain / Hills / Mountain / Mesa / Basin.
+    LandformType.cs             Plain / Hills / Mountain / Mesa / Basin / Badlands / Karst /
+                                Massif / Dunes / Sinkholes.
     TerrainCharacter.cs         Which landforms an island is built from.
     ReliefStyle.cs              Where the high ground sits (internal, per character).
     Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
     IslandGenerator.cs          Generate(seed, params) — mask, patches, relief, lakes, keel, re-roll.
-    IslandArrangement.cs        Single / Satellites / Twins / Triplets / Archipelago / Atoll.
-    Traversal.cs                Stage 5: walk areas, reach areas, buildable shelves.
+    IslandArrangement.cs        The twenty-two named layouts.
+    Traversal.cs                Stage 5: walk areas, reach areas, water bodies, ferry
+                                berths, buildable shelves.
     BridgeEase.cs               Easy / Medium / Hard — cells one bridge spans.
     Crossing.cs                 A bridge site: two banks, a deck level, a span.
-    Rivers.cs                   Drainage routing, channels, banks, waterfalls.
+    Ferry.cs                    A ferry berth: a quay, its water, the body it reaches.
+    Surfaces.cs                 What the ground is made of, and the feature anchors.
+    Names.cs                    Names for the Domain, its districts and its water.
+    Rivers.cs                   Drainage routing, channels, banks, eyots, waterfalls.
     Fall.cs                     One waterfall; the off-rim ones are the silhouette.
-    Gate.cs / GatePlacement.cs  Where the Links come out, and where they could.
+    Gate.cs / GatePlacement.cs  Where the Links come out.
+    Passage.cs                  The least-works road from the Entry to each Exit, and
+                                the works — stair, bridge, ferry — along it.
+    Overhangs.cs                Undercut lips and arches — the only stage that gives
+                                a column two spans.
   dev/IslandLab.cs              Runtime harness for scenes/dev/island_lab.tscn.
   dev/GenerationAudit.cs        Headless audit of the measured guarantees.
 resources/
@@ -301,7 +342,9 @@ scenes/
   dev/island_lab.tscn          Island generation harness.
   dev/generation_audit.tscn    Headless guarantee audit (see docs §4d).
 docs/
-  island-generation.md         Terrain generation + rendering spec.
+  island-generation.md         The generation spec: model, pipeline, parameters.
+  island-generation-appendix.md  Why, what was tried, the audit, the ideas.
+  audit-baseline.json          The last accepted audit numbers.
 CLAUDE.md                      This file.
 ```
 
@@ -400,17 +443,22 @@ and to answer/close the matching **Open Question**.
   `docs/island-generation.md`. Done: footprint → landform patches → relief under
   per-landform slope limits → lakes → keel, plus the lab and the audit scene.
 
-Stages 1–6 are done, and the §4d gaps with them: the cliff rule holds, mesas no
-longer compound, basins exist, lake shores are one slab, passes cross the ladder
-occasionally, every arrangement is bridge-linked, rivers have beds and pour off
-the rim, every Domain has its Gates on the edges they name, bridges are level,
-shelves may descend, and an unplayable island is re-rolled. The working footprint
-is **128²** at about **70 ms** an island.
+All eleven stages are done: footprint, regions and landforms, surface, water,
+keel, overhangs, traversal, Gates, the roads between them, surfaces and names,
+and the re-roll guarantees. So are beaches, valleys, fords, ferries, the feature
+anchors, the audit baseline and lab screenshots. The working footprint is
+**128²**.
 
 Next, in rough order: the **chunked span-aware mesher + colliders** — the biggest
 piece left, and the only thing that will answer the performance question for
-real; Stage 4b overhangs; the remaining feature anchors (`CoastCells`,
-`CliffCells`, `Overhangs`); settlement placement hooks.
+real; **settlement placement**, which is the first thing that would show whether
+the terrain rules make good play rather than good pictures; the **biome layer**
+above `Material` — what grows where, as opposed to what the ground is; and
+**span-aware pathing**, which is what would make an overhang walkable.
+
+**Ideas logged rather than done** — a real cost model for works, the world-tree
+above the Domain, fjords, and a page of thinking about otherworldly terrain — are
+in `docs/island-generation-appendix.md` §E and §F, with the reasoning.
 
 ---
 

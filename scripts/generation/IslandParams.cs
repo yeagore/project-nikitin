@@ -45,6 +45,29 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export] public IslandArrangement Arrangement { get; set; } = IslandArrangement.Auto;
 
+    /// <summary>
+    /// Whether <c>Auto</c> may roll the newer layouts — <c>Ring</c>, <c>Arc</c>,
+    /// <c>BrokenArc</c>, <c>Atoll</c>, <c>ThousandIsles</c>, <c>Cross</c>,
+    /// <c>Fractal</c>, <c>Shards</c>. Off leaves the six the pipeline was
+    /// originally audited on.
+    ///
+    /// <b>It gates the dice, not the code.</b> Naming one of the newer layouts in
+    /// <see cref="Arrangement"/> still builds it, so this is a way to take a batch
+    /// of new shapes out of general circulation while keeping them a keypress away
+    /// in the lab.
+    /// </summary>
+    [Export] public bool NewArrangements { get; set; } = true;
+
+    /// <summary>
+    /// Whether <c>Auto</c> may roll the characters built on the sculpted
+    /// landforms — <c>Badlands</c>, <c>Karst</c>, <c>Ziggurat</c>, <c>Dunes</c>.
+    /// Off leaves the four the pipeline was originally audited on.
+    ///
+    /// As with <see cref="NewArrangements"/>, it gates the dice and not the code:
+    /// naming one in <see cref="Character"/> still builds it.
+    /// </summary>
+    [Export] public bool NewLandforms { get; set; } = true;
+
     // ---- what the island is made of -----------------------------------------
 
     /// <summary>
@@ -136,6 +159,24 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
 
+    /// <summary>
+    /// How readily standing water collects: 0 is a Domain with no lakes at all, 1
+    /// puts one in every flat patch that could hold it. Separate from
+    /// <see cref="Rivers"/> because a wet Domain and a lake-strewn one are not the
+    /// same place — moorland is all lakes and no rivers, and a mountain Domain is
+    /// the other way round.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Lakes { get; set; } = 0.5f;
+
+    /// <summary>
+    /// How far the ground falls toward a watercourse before it reaches it: 0
+    /// leaves every river an incision in flat ground, 1 gives it five cells of
+    /// valley either side. Kept modest by default — a valley is what makes a river
+    /// read as the lowest place around, and at full strength it starts eating the
+    /// landform patchwork the whole scheme is built on.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Valleys { get; set; } = 0.4f;
+
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>
@@ -163,8 +204,31 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export] public GateKind EntryGate { get; set; } = GateKind.Auto;
 
+    /// <summary>
+    /// Which edge the player arrives on. <b>An input for the same reason
+    /// <see cref="EntryGate"/> is:</b> a Domain reached by travelling east comes
+    /// out on its west edge, and that is the sending Domain's business. Pinning it
+    /// also means changing the Gate's <i>kind</i> no longer moves it to the far
+    /// side of the island because that coast happened to score better.
+    ///
+    /// <c>Auto</c> tries each edge in a seed-chosen order, which is what a Home
+    /// Domain wants. Where the named edge cannot host the Gate at all, the others
+    /// are still tried — a Domain with no way in would be worse than one whose way
+    /// in faces the wrong way.
+    /// </summary>
+    [Export] public GateEdge EntryEdge { get; set; } = GateEdge.Auto;
+
     /// <summary>Links onward, 1 to 3. 0 picks a count from the seed.</summary>
     [Export(PropertyHint.Range, "0,3,1")] public int ExitGates { get; set; } = 0;
+
+    /// <summary>
+    /// What kind the Exits are. <c>Auto</c> hangs them unless a coast will not
+    /// have it, which is the norm; naming <c>Land</c> or <c>Hanging</c> makes every
+    /// Exit that kind where the coast allows it. Unlike the Entry this is not an
+    /// input from elsewhere — it is this Domain telling the ones it links to what
+    /// they will be arriving through.
+    /// </summary>
+    [Export] public GateKind ExitGate { get; set; } = GateKind.Auto;
 
     // ---- underside / keel ---------------------------------------------------
     // The island hangs in aether as a spinning top: a thin lip at the coastline
@@ -178,4 +242,22 @@ public partial class IslandParams : Resource
 
     /// <summary>How craggy the underside is. Scales with depth, so the lip stays clean.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float KeelRoughness { get; set; } = 0.45f;
+
+    // ---- overhangs and arches (Stage 4b) ------------------------------------
+
+    /// <summary>
+    /// How often a tall cliff face is undercut, and a short gap arched over.
+    /// 0 leaves every column a single solid run, keel to surface.
+    ///
+    /// Both features are added <b>after</b> the traversal analysis, so they are
+    /// rendered and collidable but not yet walkable — pathing over a two-level
+    /// column wants spans as nodes rather than columns, which is its own problem.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float OverhangDensity { get; set; } = 0.35f;
+
+    /// <summary>How far a lip reaches out from the face it hangs off, in cells.</summary>
+    [Export(PropertyHint.Range, "1,8,1")] public int OverhangDepth { get; set; } = 2;
+
+    /// <summary>Widest gap a natural bridge will span, in cells.</summary>
+    [Export(PropertyHint.Range, "2,10,1")] public int ArchSpan { get; set; } = 4;
 }

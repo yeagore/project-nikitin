@@ -24,8 +24,65 @@ public sealed class IslandData
     /// </summary>
     public Span[,][] Spans { get; }
 
-    /// <summary>Surface material id of the top span. Single tier for now.</summary>
+    /// <summary>
+    /// What the top of each column is made of — a <see cref="SurfaceMaterial"/>.
+    /// Derived from height, slope, distance to water and landform once the terrain
+    /// is finished; see <c>Surfaces</c>.
+    /// </summary>
     public byte[,] Material { get; }
+
+    /// <summary>
+    /// Land cells with aether beside them, and cells with a face of three slabs or
+    /// more. The <b>feature anchors</b>: a forest goes "on flat well-watered ground
+    /// away from the coast", not at a coordinate, so generation answers the
+    /// geometric questions once and the content layer reads the lists instead of
+    /// each system carrying its own copy of the terrain rules.
+    /// </summary>
+    public List<Vector2I> CoastCells { get; } = new();
+
+    /// <summary>Cells standing three slabs or more above a neighbour.</summary>
+    public List<Vector2I> CliffCells { get; } = new();
+
+    /// <summary>What this Domain is called.</summary>
+    public string Name { get; internal set; } = "";
+
+    /// <summary>
+    /// Which way the Domain's dune fields lie, as one of eight compass points
+    /// (0 = east, counting anticlockwise in eighths of a turn — the same
+    /// convention as an angle on the X/Z plane).
+    ///
+    /// <b>One direction for the whole Domain</b>, because what makes dunes dunes
+    /// is that they all lie the same way; and snapped to a compass point rather
+    /// than a free angle, because a direction that cannot be named is a direction
+    /// nothing can show or use. Ridges run <i>across</i> it: this is the wind.
+    /// Meaningless on a Domain with no dune patches.
+    /// </summary>
+    public int DuneGrain { get; internal set; }
+
+    /// <summary>The eight compass points, indexed by <see cref="DuneGrain"/>.</summary>
+    private static readonly string[] Compass =
+        { "E", "NE", "N", "NW", "W", "SW", "S", "SE" };
+
+    /// <summary>
+    /// Where the wind blows from, in compass letters — the opposite of the way the
+    /// grain runs, since a dune's crest faces the wind.
+    /// </summary>
+    public string WindFrom => Compass[(DuneGrain + 4) & 7];
+
+    /// <summary>And the way the crest lines themselves run, across the wind.</summary>
+    public string DuneRun => Compass[(DuneGrain + 2) & 7] + "-" + Compass[(DuneGrain + 6) & 7];
+
+    /// <summary>The grain as a unit vector on the X/Z plane, for drawing it.</summary>
+    public Vector2 DuneVector => Vector2.FromAngle(DuneGrain * Mathf.Tau / 8f);
+
+    /// <summary>
+    /// A name per walk area, parallel to <see cref="Areas"/>; empty for the
+    /// broken ground that is not a district.
+    /// </summary>
+    public List<string> Districts { get; } = new();
+
+    /// <summary>A name per body of water, parallel to <see cref="WaterBody"/> ids.</summary>
+    public List<string> WaterNames { get; } = new();
 
     /// <summary>
     /// The <see cref="LandformType"/> of the region this column belongs to. Drives
@@ -77,11 +134,67 @@ public sealed class IslandData
     public int BridgeSpan { get; internal set; } = Traversal.DefaultBridgeSpan;
 
     /// <summary>
-    /// Ground a vessel could set down on: cells belonging to some viable landing
-    /// strip running inland from the rim. Every hanging Gate stands opposite one
-    /// of these, and the rest are where another could go.
+    /// Ground the Domain's Gates are served by, and nothing else: the 3 × 5 strip
+    /// a hanging Gate's vessel sets down on, and the 3 × 3 forecourt a land Gate
+    /// stands on.
+    ///
+    /// It used to mark every coast that <i>would</i> take a strip, which painted
+    /// most of the coastline and answered a question — "where else could a Link
+    /// have come out?" — that stopped being interesting once a Gate was
+    /// guaranteed. What matters now is the ground the arriving player uses.
     /// </summary>
-    public bool[,] Airstrip { get; }
+    public bool[,] Landings { get; }
+
+    /// <summary>
+    /// Which body of water each flooded column belongs to, or <c>-1</c> for dry
+    /// ground and aether. Two columns share an id exactly when a hull could go
+    /// from one to the other: a <b>waterfall cuts a body in two</b>, since nothing
+    /// sails up one.
+    /// </summary>
+    public int[,] WaterBody { get; }
+
+    /// <summary>How many separate bodies of water the Domain has.</summary>
+    public int WaterBodies { get; internal set; }
+
+    /// <summary>
+    /// Where a ferry could tie up: a quay cell and the water in front of it. See
+    /// <see cref="FerryBerth"/> — this is the third kind of crossing, beside the
+    /// bridge and the stair, and the only one that crosses water no bridge can
+    /// span.
+    /// </summary>
+    public List<FerryBerth> Berths { get; } = new();
+
+    /// <summary>The quay cell of every berth, for the lab overlay and the audit.</summary>
+    public bool[,] Ferry { get; }
+
+    /// <summary>
+    /// How many berth sites the domino rule found <i>before</i> pruning — see
+    /// <see cref="Traversal"/>. A diagnostic: <see cref="Berths"/> is what
+    /// survived, and the two together say whether a Domain has no ferries because
+    /// its water is crossable or because the pruning is too hungry.
+    /// </summary>
+    public int BerthSites { get; internal set; }
+
+    /// <summary>
+    /// Coast cells stepped down onto a beach: where the ground meets the aether
+    /// gently rather than breaking off. One of the feature anchors — a quay, a
+    /// landing, and whatever the biome layer grows on sand belong here.
+    /// </summary>
+    public bool[,] Beach { get; }
+
+    /// <summary>
+    /// Stream cells you can cross on foot. A stream is an obstacle everywhere
+    /// else — see <see cref="Rivers.FordSpacing"/>.
+    /// </summary>
+    public bool[,] Ford { get; }
+
+    /// <summary>
+    /// Every column carrying more than one span: an undercut cliff, or a cell of
+    /// an arch. The first of the feature anchors — biome features attach to kinds
+    /// of surface rather than to coordinates, and the underside of an overhang is
+    /// where vines and fungal mats belong.
+    /// </summary>
+    public List<Vector2I> Overhangs { get; } = new();
 
     /// <summary>
     /// Columns carrying a watercourse. A river column is flooded like a lake —
@@ -170,6 +283,12 @@ public sealed class IslandData
     /// </summary>
     public List<Gate> Gates { get; } = new();
 
+    /// <summary>
+    /// The cheapest road from the Entry Gate to each Exit Gate, one per Exit —
+    /// cheapest meaning "fewest things to build". See <see cref="Passage"/>.
+    /// </summary>
+    public List<Passage> Passages { get; } = new();
+
     /// <summary>The arrangement actually used, with <c>Auto</c> already resolved.</summary>
     public IslandArrangement Arrangement { get; internal set; }
 
@@ -191,6 +310,16 @@ public sealed class IslandData
     /// <summary>The character actually used, with <c>Auto</c> already resolved.</summary>
     public TerrainCharacter Character { get; internal set; }
 
+    /// <summary>
+    /// Whether any road between two Gates climbs a <b>flight</b> — five elevators
+    /// or more inside fifteen cells (see <see cref="Passage.Flights"/>). It is not
+    /// a fault: a Domain is allowed to be hard country. It is a fact about this
+    /// Domain that the settlement and difficulty layers will want, because a
+    /// Domain whose only road is a staircase costs the player something before
+    /// they have built anything.
+    /// </summary>
+    public bool Rough { get; internal set; }
+
     public IslandData(int size)
     {
         Size = size;
@@ -204,7 +333,11 @@ public sealed class IslandData
         Pass = new bool[size, size];
         River = new bool[size, size];
         Navigable = new bool[size, size];
-        Airstrip = new bool[size, size];
+        Landings = new bool[size, size];
+        Ferry = new bool[size, size];
+        Ford = new bool[size, size];
+        Beach = new bool[size, size];
+        WaterBody = new int[size, size];
         Flow = new int[size, size];
         Walk = new int[size, size];
         Reach = new int[size, size];
@@ -216,14 +349,23 @@ public sealed class IslandData
             Walk[x, z] = -1;
             Reach[x, z] = -1;
             ShelfId[x, z] = -1;
+            WaterBody[x, z] = -1;
         }
     }
 
     public bool HasLand(int x, int z) => Spans[x, z] is { Length: > 0 };
 
-    /// <summary>Top slab of the highest span, or <see cref="NoLand"/>.</summary>
+    /// <summary>
+    /// Top slab of the <b>lowest</b> span — the ground you stand on.
+    ///
+    /// For every column with one span, which is every column until Stage 4b runs,
+    /// that is simply the surface. For a column with an overhang over it, the
+    /// ground is underneath and the lip is a roof: reading the highest span would
+    /// report the roof as the surface, and every rule in the pipeline — the step
+    /// grammar, shelves, Gates, the roads — means the ground.
+    /// </summary>
     public short SurfaceLevel(int x, int z)
-        => HasLand(x, z) ? Spans[x, z][^1].Top : NoLand;
+        => HasLand(x, z) ? Spans[x, z][0].Top : NoLand;
 
     /// <summary>Bottom slab of the lowest span, or <see cref="NoLand"/>.</summary>
     public short KeelLevel(int x, int z)

@@ -38,26 +38,66 @@ internal static class GatePlacement
 
     /// <summary>
     /// Cells of landing strip, running inland from the coast directly opposite
-    /// the Gate. Four: a vessel needs somewhere to set down, not an aerodrome,
-    /// and a strip long enough to be a runway was quietly the hardest thing on
-    /// the whole island to find.
+    /// the Gate. Five long and <see cref="StripWidth"/> across: an aethership sets
+    /// down on it, so it is a berth for a vessel rather than the footprint of a
+    /// doorway.
     /// </summary>
-    public const int StripLength = 4;
+    public const int StripLength = 5;
 
     /// <summary>
-    /// And how wide. One cell — the strip is the ground under the Gate's centre
-    /// line and nothing more.
+    /// And how wide. Three — the width of the portal itself, so what comes
+    /// through the Gate has ground under all of it.
     /// </summary>
-    public const int StripWidth = 1;
+    public const int StripWidth = 3;
 
-    /// <summary>How far off the rim a hanging Gate floats.</summary>
-    public const int HangingOffset = 4;
+    /// <summary>
+    /// Slabs of height the strip may span end to end. Three, not two: a coast that
+    /// steps down onto a beach spends a slab of the allowance before the terrain
+    /// has said anything, and at two that alone was enough to stop most beached
+    /// coasts hosting a hanging Gate. Three still refuses a hillside — a Shelf
+    /// would too — and it is measured across the whole strip, so the ground under
+    /// a vessel is even whichever cell it touches down on.
+    /// </summary>
+    private const int StripTolerance = 3;
+
+    /// <summary>
+    /// How far off the rim a hanging Gate floats, in cells. <b>Ten.</b> Four put
+    /// the portal close enough to the coast to read as a doorway standing just
+    /// off the step; at ten it hangs in the aether, which is the whole point of
+    /// it — you fly to a hanging Gate, and the flight is meant to be visible.
+    /// </summary>
+    public const int HangingOffset = 10;
+
+    /// <summary>
+    /// How much of that offset has to be clear air under the flight path. The
+    /// whole run out to the portal is checked against the sill, but only the last
+    /// few cells have to be over nothing: a spit of low ground two cells off the
+    /// coast is scenery a vessel flies over, and refusing it would put the Gate
+    /// rules back to where a ragged coastline could veto a Link.
+    /// </summary>
+    public const int HangingClearance = 4;
 
     /// <summary>
     /// How far in front of a land Gate has to be clear of higher ground. A Gate
     /// facing a wall four cells away opens onto nothing.
     /// </summary>
     public const int Approach = 10;
+
+    /// <summary>
+    /// Cells of apron a land Gate has to stand on: <see cref="StripWidth"/> across
+    /// by this many running <i>inland</i>, the portal's own row included, level
+    /// within the free step.
+    ///
+    /// <b>A land Gate needs a forecourt for the same reason a hanging one needs a
+    /// strip.</b> A hanging Gate has owed the Domain a 3 × 5 landing since it
+    /// existed; a land Gate owed it nothing but three level cells to stand on, so
+    /// one could be planted on a three-cell ledge with a cliff a step behind it —
+    /// the ground a shelf-area apron of sixty cells was meant to guarantee, and
+    /// does not, because a shelf is measured somewhere on the island rather than
+    /// here. Three by three is the smallest thing you can walk out onto and turn
+    /// round in.
+    /// </summary>
+    public const int LandApron = 3;
 
     /// <summary>
     /// How far back from the outermost usable ground on its own side a Gate may
@@ -67,6 +107,17 @@ internal static class GatePlacement
     /// </summary>
     private const float EdgeBand = 0.22f;
 
+    /// <summary>
+    /// And the widest that band ever gets, once the rules start giving.
+    ///
+    /// <b>The band widens; it never disappears.</b> Dropping it outright let a
+    /// Gate stand anywhere on the island so long as it out-reached the other
+    /// Gates, and measured over 60 seeds that put up to 73% of the Domain behind
+    /// the player as they arrived — at which point "the south Gate" names nothing.
+    /// At 0.45 the Gate is still on its own half of the island.
+    /// </summary>
+    private const float RelaxedEdgeBand = 0.45f;
+
     /// <summary>And never less than this many cells, on a small or ragged island.</summary>
     private const int MinEdgeBand = 8;
 
@@ -74,15 +125,37 @@ internal static class GatePlacement
     /// How much of each end of an edge is corner rather than edge, as a share of
     /// the island's width across that edge. A Gate in the corner faces two ways
     /// at once and crowds whichever Gate holds the next edge round.
+    ///
+    /// <b>Raised from 0.16.</b> At a sixth of the edge, "the middle two thirds"
+    /// still reached close enough to a corner that a north Gate and an east Gate
+    /// could end up looking at each other across a headland — which is what two
+    /// Links out of one bay reads as.
     /// </summary>
-    private const float CornerInset = 0.16f;
+    private const float CornerInset = 0.22f;
 
     /// <summary>
     /// Cells two Gates must keep between them. They already sit on separate edges;
     /// this is what stops two of them meeting near the corner where those edges
     /// join, as a share of the footprint.
+    ///
+    /// <b>Raised from 0.30.</b> Measured as a Manhattan distance, 0.30 of a 128²
+    /// Domain is 38 cells — which two Gates on adjacent edges reach by sitting
+    /// 19 cells either side of the corner they share, and 19 cells is not a
+    /// separate part of the island.
     /// </summary>
-    private const float GateSeparation = 0.30f;
+    private const float GateSeparation = 0.42f;
+
+    /// <summary>
+    /// And the floor under it once the rules have given as far as they give.
+    ///
+    /// <b>This is the rule that was actually letting Gates crowd.</b> The last
+    /// tier used to drop the separation to four cells — the width of the portal
+    /// and one — which is not a relaxation of "keep your distance" but a repeal of
+    /// it. A third of the footprint is still a long walk, and it is what a Gate
+    /// on a coast that will not take one has to find. It is public so the audit can
+    /// check the rule that is actually in force rather than a number of its own.
+    /// </summary>
+    public const float CrowdedSeparation = 0.32f;
 
     /// <summary>
     /// Cells by which a Gate has to out-reach every other Gate in its own
@@ -110,10 +183,48 @@ internal static class GatePlacement
             => dir.X != 0 ? MaxX - MinX : MaxZ - MinZ;
     }
 
+    /// <summary>
+    /// How far the rules may be bent to get a Gate placed at all.
+    ///
+    /// <b>A Domain must have a way in and a way out.</b> That is not negotiable —
+    /// a Domain with no Exit is a leaf of a tree that is supposed to be the whole
+    /// map — so when a coast will not take a Gate under the full rules, the rules
+    /// give one at a time and in a fixed order, worst-founded first. What never
+    /// gives is <see cref="Dominant"/>: a Gate that is not the outermost thing on
+    /// its own axis points back over the Domain it leaves, which would be a Link
+    /// to the wrong place rather than a Link in an awkward place.
+    /// </summary>
+    private enum Ease
+    {
+        /// <summary>Every rule: the band, the corners, the separation, the order.</summary>
+        Full = 0,
+
+        /// <summary>
+        /// The edge band <b>widens</b> to <see cref="RelaxedEdgeBand"/> — the Gate
+        /// may sit further back from the outermost ground on its own side, but is
+        /// still on that side. The corners do <b>not</b> go with it.
+        ///
+        /// These used to be one step, and relaxing "not far enough out" therefore
+        /// also repealed "not in a corner", which are different complaints: the
+        /// first is about how much Domain is behind you as you arrive and the
+        /// second is about two Links sharing a headland. A ragged coast usually
+        /// only needs the first.
+        /// </summary>
+        Band = 1,
+
+        /// <summary>The corners go too: a coast may only offer its ends.</summary>
+        Anywhere = 2,
+
+        /// <summary>
+        /// The separation from other Gates falls to <see cref="CrowdedSeparation"/>.
+        /// Still outermost on its own axis, and still a quarter of the map from
+        /// the next Gate.
+        /// </summary>
+        Crowded = 3,
+    }
+
     public static void Place(int seed, IslandParams p, IslandData d)
     {
-        MarkAirstrips(d);
-
         // Hanging by default, both for the Entry the seed is free to choose and
         // for every Exit: crossing a Link is a flight, and a Gate you walk through
         // is the local exception a coast happens to allow.
@@ -126,7 +237,8 @@ internal static class GatePlacement
             : 1 + (int)(Hash01(seed, 0x6A7Eu) * 3f);
 
         // The order the edges are tried in, rotated per seed so the entry is not
-        // always north.
+        // always north — unless the Domain that sent the player named an edge, in
+        // which case it goes first and the rest are only a fallback.
         int first = (int)(Hash01(seed, 0x3D1Fu) * 4f) & 3;
         var edges = new List<Cardinal>();
         for (int i = 0; i < 4; i++) edges.Add((Cardinal)((first + i) & 3));
@@ -134,67 +246,106 @@ internal static class GatePlacement
         Frame bounds = Bounds(d);
         var taken = new HashSet<Cardinal>();
 
-        // The Entry first, and on any edge that will have it. Its kind is fixed by
-        // the Domain that sent you, so it gets the pick of the coast — and if no
-        // coast will take it comfortably, the requirement that gives is the
-        // comfort, not the kind. A Link whose two ends disagree is not a Link.
-        // Comfort first, then room to land, then bare possibility.
-        (int Apron, int Strip)[] tiers =
+        // What a Gate has to find, from comfortable down to bare possibility. Room
+        // to start a company, then room to land, then somewhere on the coast at
+        // all. Each step gives one thing: the ladder is walked in order, so what
+        // an awkward coast costs is legible in which rung the Gate came off.
+        (int Apron, int Strip, Ease Ease)[] tiers =
         {
-            (ApronArea, StripLength),
-            (ApronArea / 2, StripLength),
-            (ApronArea / 2, StripLength - 1),
-            (Gate.Width * Gate.Width, 2),
+            (ApronArea, StripLength, Ease.Full),
+            (ApronArea / 2, StripLength, Ease.Full),
+            (ApronArea / 2, StripLength - 1, Ease.Full),
+            (ApronArea / 2, StripLength - 1, Ease.Band),
+            (ApronArea / 2, StripLength - 2, Ease.Anywhere),
+            (Gate.Width * Gate.Width, 2, Ease.Anywhere),
+            (Gate.Width * Gate.Width, 1, Ease.Crowded),
         };
 
-        foreach ((int apron, int strip) in tiers)
+        // <b>A named kind is held; a rolled one is not.</b> Where the caller passes
+        // Auto the kind is this Domain's own dice — the coast refusing a hanging
+        // Gate is simply how a land Gate comes to exist, so the other kind is tried
+        // on the spot. Where the caller names a kind it is a request, and a request
+        // is held across every rung of the ladder rather than traded at the first
+        // one that says no; Unmet is what reports it if the coast never obliges.
+        bool PlaceGate(GateRole role, IEnumerable<Cardinal> pool, GateKind kind)
         {
-            foreach (Cardinal edge in edges)
+            bool rolled = kind == GateKind.Auto;
+
+            foreach ((int apron, int strip, Ease ease) in tiers)
             {
-                if (!TryPlace(seed, d, bounds, edge, entryKind, GateRole.Entry, out Gate gate,
-                              apron, strip))
-                    continue;
-                d.Gates.Add(gate);
-                taken.Add(edge);
-                break;
+                foreach (Cardinal edge in pool)
+                {
+                    if (taken.Contains(edge)) continue;
+                    GateKind want = !rolled
+                        ? kind
+                        : Hash01(seed, 0x91C0u ^ (uint)edge * 2654435761u) < LandGateShare
+                            ? GateKind.Land
+                            : GateKind.Hanging;
+                    GateKind fallback = want == GateKind.Land ? GateKind.Hanging : GateKind.Land;
+
+                    if (!TryPlace(seed, d, bounds, edge, want, role, out Gate gate,
+                                  apron, strip, ease)
+                        && !(rolled && TryPlace(seed, d, bounds, edge, fallback, role, out gate,
+                                                apron, strip, ease)))
+                        continue;
+                    d.Gates.Add(gate);
+                    taken.Add(edge);
+                    return true;
+                }
             }
-            if (d.Gates.Count > 0) break;
-        }
-        if (d.Gates.Count == 0)
-        {
-            // The island genuinely cannot host that kind anywhere — no strip at
-            // all, or no coast facing out. Take the other rather than leave the
-            // Domain unreachable: a Domain with no way in is not a Domain.
-            GateKind fallback = entryKind == GateKind.Land ? GateKind.Hanging : GateKind.Land;
-            foreach (Cardinal edge in edges)
-            {
-                if (!TryPlace(seed, d, bounds, edge, fallback, GateRole.Entry, out Gate gate))
-                    continue;
-                d.Gates.Add(gate);
-                taken.Add(edge);
-                break;
-            }
+            return false;
         }
 
-        foreach (Cardinal edge in edges)
+        // ---- the Entry ---------------------------------------------------------
+        // Both its kind and its edge are the *sending* Domain's decision, so both
+        // are held across the whole tier ladder before either is given up — and
+        // giving either up is now reported to IslandGenerator.Unmet, which re-rolls
+        // the seed rather than quietly handing back a Gate that is not the one
+        // asked for. That is the fix: the fallbacks below are the fourth attempt's
+        // last resort, not the first attempt's shrug.
+        //
+        // The kind is held longer than the edge. A Link joins two Gates of the same
+        // kind, so an Entry of the wrong kind is a Domain you cannot actually
+        // arrive at; an Entry on the wrong edge is a Domain you arrive at from an
+        // odd side, which is worse geometry and still a Link.
+        GateKind otherKind = entryKind == GateKind.Land ? GateKind.Hanging : GateKind.Land;
+        if (p.EntryEdge != GateEdge.Auto)
         {
-            if (d.Gates.Count > exits) break;             // entry + exits
-            if (taken.Contains(edge)) continue;
-
-            // An exit hangs unless the coast will not have it, in which case it
-            // stands: a Link is still better than no Link.
-            GateKind want = Hash01(seed, 0x91C0u ^ (uint)edge * 2654435761u) < LandGateShare
-                ? GateKind.Land
-                : GateKind.Hanging;
-            GateKind other = want == GateKind.Land ? GateKind.Hanging : GateKind.Land;
-
-            if (TryPlace(seed, d, bounds, edge, want, GateRole.Exit, out Gate gate)
-                || TryPlace(seed, d, bounds, edge, other, GateRole.Exit, out gate))
-            {
-                d.Gates.Add(gate);
-                taken.Add(edge);
-            }
+            var only = new[] { (Cardinal)((int)p.EntryEdge - 1) };
+            _ = PlaceGate(GateRole.Entry, only, entryKind)               // as asked
+             || PlaceGate(GateRole.Entry, edges, entryKind)              // kind kept
+             || PlaceGate(GateRole.Entry, only, otherKind)               // edge kept
+             || PlaceGate(GateRole.Entry, edges, otherKind);             // neither
         }
+        else
+        {
+            _ = PlaceGate(GateRole.Entry, edges, entryKind)
+             || PlaceGate(GateRole.Entry, edges, otherKind);
+        }
+
+        // ---- the Exits ---------------------------------------------------------
+        // <b>One ladder per Exit, not one ladder for all of them.</b> The ladder
+        // used to be the outer loop and it stopped at the first tier that produced
+        // any Exit at all — so a Domain asked for three got one whenever the strict
+        // tier only allowed one, whatever the other three edges would have taken a
+        // rung lower. Measured over 60 seeds that was the common case: the median
+        // island had one Exit. Each Exit now walks the ladder on its own, so the
+        // count asked for is delivered wherever the coast can deliver it.
+        int made = 0;
+        while (made < exits && PlaceGate(GateRole.Exit, edges, p.ExitGate)) made++;
+
+        // A way out is a guarantee; the kind of way out is a preference. So the
+        // named kind is held across the whole ladder above — no more trading it
+        // away at the first tier that says no — and only a Domain left with no Link
+        // at all gives it up.
+        if (made == 0 && p.ExitGate != GateKind.Auto)
+            while (made < exits && PlaceGate(GateRole.Exit, edges, GateKind.Auto)) made++;
+
+        // And the ground each Gate is served by: the strip a hanging Gate's vessel
+        // sets down on, and the forecourt a land Gate stands on. Only what the
+        // Gates actually took — marking every coast that would have done painted
+        // most of the coastline and answered a question nobody was asking.
+        MarkLandings(d);
     }
 
     /// <summary>
@@ -203,12 +354,72 @@ internal static class GatePlacement
     /// </summary>
     private const float LandGateShare = 0.25f;
 
+    /// <summary>
+    /// Why a coast will not take a hanging Gate, counted stage by stage — the
+    /// funnel from "usable ground" down to "a Gate could stand here".
+    ///
+    /// <b>This exists because "only a quarter of Domains can host four hanging
+    /// Gates" is a fact without a cause.</b> Four separate tests stand between a
+    /// coast cell and a hanging Gate, and a summary that says how many Gates were
+    /// placed cannot say which of the four did the refusing — so tuning any of
+    /// them is guesswork. Run over a character that fails, the funnel names the
+    /// stage in one line.
+    ///
+    /// The apron test is left out, since the apron is a property of the island
+    /// rather than of the coast. <paramref name="loose"/> counts at the bottom rung
+    /// of the ladder instead of the top — a one-cell strip and the crowded edge
+    /// rules — which is what separates "this coast is too rough for a full strip"
+    /// from "this coast cannot host a Gate at all".
+    ///
+    /// Note that the Gates already on the Domain count against the separation and
+    /// dominance rules, so this answers "where could the *next* Gate go", which is
+    /// the question when four are wanted and three were placed.
+    /// </summary>
+    public static (int Usable, int Fits, int Strip, int Flyable) Funnel(
+        IslandData d, Cardinal edge, bool loose = false, bool alone = false)
+    {
+        int n = d.Size;
+        Frame bounds = Bounds(d);
+        var probe = new Gate(GateKind.Hanging, GateRole.Exit, edge, default, default, 0);
+        Vector2I outward = probe.Outward, across = probe.Across;
+
+        int length = loose ? 1 : StripLength;
+        Ease ease = loose ? Ease.Crowded : Ease.Full;
+
+        // `alone` asks the question the other way round: could this edge host a
+        // Gate if no other Gate existed? The difference between that and the
+        // ordinary count is exactly what the Gates already placed are costing —
+        // which is the difference between "this coast cannot" and "the rules will
+        // not let a fourth Gate in beside the other three".
+        var others = alone ? new List<Gate>(d.Gates) : null;
+        if (alone) d.Gates.Clear();
+
+        int usable = 0, fits = 0, strip = 0, flyable = 0;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!Usable(d, x, z)) continue;
+            usable++;
+            if (!Fits(d, bounds, edge, x, z, outward, across, ease)) continue;
+            fits++;
+            if (!HasStrip(d, x, z, outward, across, length)) continue;
+            strip++;
+            short level = StripTop(d, x, z, outward, across, length);
+            if (!Flyable(d, x, z, outward, across, level)) continue;
+            flyable++;
+        }
+
+        if (others != null) { d.Gates.Clear(); d.Gates.AddRange(others); }
+        return (usable, fits, strip, flyable);
+    }
+
     private static bool TryPlace(int seed, IslandData d, Frame bounds, Cardinal edge,
                                  GateKind kind, GateRole role, out Gate gate,
-                                 int minApron = ApronArea, int strip = StripLength)
+                                 int minApron = ApronArea, int strip = StripLength,
+                                 Ease ease = Ease.Full)
         => kind == GateKind.Land
-            ? TryLand(seed, d, bounds, edge, role, minApron, out gate)
-            : TryHanging(seed, d, bounds, edge, role, minApron, strip, out gate);
+            ? TryLand(seed, d, bounds, edge, role, minApron, ease, out gate)
+            : TryHanging(seed, d, bounds, edge, role, minApron, strip, ease, out gate);
 
     /// <summary>
     /// The three rules that keep a Gate on the side of the map it names.
@@ -222,27 +433,41 @@ internal static class GatePlacement
     /// ragged coast.
     /// </summary>
     private static bool Fits(IslandData d, Frame bounds, Cardinal edge, int x, int z,
-                             Vector2I outward, Vector2I across)
+                             Vector2I outward, Vector2I across, Ease ease = Ease.Full)
     {
         if (!bounds.Any) return true;
 
         int along = x * outward.X + z * outward.Y;
-        int band = Math.Max(MinEdgeBand, (int)(EdgeBand * bounds.Extent(outward)));
-        if (along < bounds.Extreme(outward) - band) return false;
+        {
+            float share = ease < Ease.Band ? EdgeBand : RelaxedEdgeBand;
+            int floor = ease < Ease.Band ? MinEdgeBand : MinEdgeBand * 2;
+            int band = Math.Max(floor, (int)(share * bounds.Extent(outward)));
+            if (along < bounds.Extreme(outward) - band) return false;
+        }
 
-        int side = x * across.X + z * across.Y;
-        int span = bounds.Extent(across);
-        int inset = (int)(CornerInset * span);
-        int high = bounds.Extreme(across);
-        if (side > high - inset || side < high - span + inset) return false;
+        if (ease < Ease.Anywhere)
+        {
+            int side = x * across.X + z * across.Y;
+            int span = bounds.Extent(across);
+            int inset = (int)(CornerInset * span);
+            int high = bounds.Extreme(across);
+            if (side > high - inset || side < high - span + inset) return false;
+        }
 
-        int apart = (int)(GateSeparation * d.Size);
+        int apart = (int)((ease < Ease.Crowded ? GateSeparation : CrowdedSeparation) * d.Size);
         foreach (Gate g in d.Gates)
         {
             // Far enough from the others, and strictly the outermost in its own
             // direction — measured both ways, so neither Gate may overtake the
             // other on the axis the other is named for.
-            if (Math.Abs(g.Center.X - x) + Math.Abs(g.Center.Z - z) < apart) return false;
+            //
+            // <b>Distance is measured on the ground, not through the aether.</b>
+            // A hanging Gate's Center is its portal, ten cells off the rim, while
+            // the candidate here is a coast cell — so comparing the two measured
+            // partly along a flight path and gave an answer up to ten cells out
+            // from the walk it is meant to stand for. Apron is the ground each
+            // Gate is served by, which is the thing that can be too close.
+            if (Math.Abs(g.Apron.X - x) + Math.Abs(g.Apron.Y - z) < apart) return false;
 
             int mine = along;
             int theirs = g.Center.X * outward.X + g.Center.Z * outward.Y;
@@ -279,7 +504,7 @@ internal static class GatePlacement
     /// outlook over the rim, and enough level ground behind it to start a company.
     /// </summary>
     private static bool TryLand(int seed, IslandData d, Frame bounds, Cardinal edge,
-                                GateRole role, int minApron, out Gate gate)
+                                GateRole role, int minApron, Ease ease, out Gate gate)
     {
         gate = default;
         int n = d.Size;
@@ -292,7 +517,7 @@ internal static class GatePlacement
         for (int z = 0; z < n; z++)
         {
             if (!Usable(d, x, z)) continue;
-            if (!Fits(d, bounds, edge, x, z, outward, across)) continue;
+            if (!Fits(d, bounds, edge, x, z, outward, across, ease)) continue;
 
             short level = d.SurfaceLevel(x, z);
 
@@ -322,6 +547,9 @@ internal static class GatePlacement
             }
             if (!clear || overAether == 0) continue;      // must face the rim, not inland
 
+            // And somewhere to stand once you are through it. See LandApron.
+            if (!HasApron(d, x, z, outward, across, LandApron, level)) continue;
+
             int apron = ApronAt(d, x, z, level);
             if (apron < minApron) continue;
 
@@ -342,7 +570,8 @@ internal static class GatePlacement
     /// in — the ground under the Gate's centre line, and nothing more.
     /// </summary>
     private static bool TryHanging(int seed, IslandData d, Frame bounds, Cardinal edge,
-                                   GateRole role, int minApron, int stripLength, out Gate gate)
+                                   GateRole role, int minApron, int stripLength, Ease ease,
+                                   out Gate gate)
     {
         gate = default;
         int n = d.Size;
@@ -354,13 +583,19 @@ internal static class GatePlacement
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            if (!Fits(d, bounds, edge, x, z, outward, across)) continue;
+            if (!Fits(d, bounds, edge, x, z, outward, across, ease)) continue;
             if (!HasStrip(d, x, z, outward, across, stripLength)) continue;
 
-            short level = d.SurfaceLevel(x, z);
+            // The sill is measured from the **highest** ground on the strip, not
+            // from the coast cell. A beach steps the coast down by up to two
+            // slabs, so measuring at the head drops the sill by the same two and
+            // the approach then collides with ordinary ground three cells inland —
+            // which is how beaches quietly turned most hanging Gates into land
+            // ones. A vessel comes in over the strip, so the strip is the datum.
+            short level = StripTop(d, x, z, outward, across, stripLength);
             if (!Flyable(d, x, z, outward, across, level)) continue;
 
-            int apron = ApronAt(d, x, z, level);
+            int apron = ApronAt(d, x, z, d.SurfaceLevel(x, z));
             if (apron < minApron) continue;
 
             float score = Score(seed, bounds, x, z, outward, across, apron, 0x3300u);
@@ -398,17 +633,75 @@ internal static class GatePlacement
         int hx = x + outward.X, hz = z + outward.Y;
         if (hx >= 0 && hz >= 0 && hx < n && hz < n && d.HasLand(hx, hz)) return false;
 
-        short level = d.SurfaceLevel(x, z);
+        // <b>A slab between neighbours, not a slab across the whole strip.</b>
+        // Measuring every cell against the head refuses any strip that ramps —
+        // and a coast that steps down onto a beach ramps by construction, which
+        // is what started pushing Gates onto the relaxed placement rules the
+        // moment beaches existed. A vessel setting down cares that the ground is
+        // even underfoot, which is what the two-slab range across the whole strip
+        // says. Testing each cell against the ones beside it as well was tried and
+        // is too strict: the cells at the edge of the strip are then held to the
+        // ground *outside* it, and hanging Gates fell from 105 to 42.
         int half = (StripWidth - 1) / 2;
+        short lowest = short.MaxValue, highest = short.MinValue;
+
         for (int along = 0; along < length; along++)
         for (int side = -half; side <= half; side++)
         {
             int sx = x - outward.X * along + across.X * side;
             int sz = z - outward.Y * along + across.Y * side;
             if (!Usable(d, sx, sz)) return false;
-            if (Math.Abs(d.SurfaceLevel(sx, sz) - level) > 1) return false;
+
+            short here = d.SurfaceLevel(sx, sz);
+            lowest = Math.Min(lowest, here);
+            highest = Math.Max(highest, here);
+            if (highest - lowest > StripTolerance) return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// The forecourt a land Gate stands on: <see cref="StripWidth"/> cells across
+    /// by <paramref name="depth"/> running <i>inland</i>, the portal's own row
+    /// included, every cell usable and within the free step of the sill.
+    ///
+    /// The free step and not dead level, for the same reason the landing strip
+    /// allows a slab: ground a walker would not notice is not a reason to refuse a
+    /// Link. What it does refuse is the case this was written for — a portal on a
+    /// three-cell ledge with a cliff one step behind it, which the sixty-cell
+    /// shelf test passed because a shelf is measured somewhere on the island
+    /// rather than here.
+    /// </summary>
+    private static bool HasApron(IslandData d, int x, int z, Vector2I outward, Vector2I across,
+                                 int depth, short level)
+    {
+        int half = (StripWidth - 1) / 2;
+        for (int along = 0; along < depth; along++)
+        for (int side = -half; side <= half; side++)
+        {
+            int ax = x - outward.X * along + across.X * side;
+            int az = z - outward.Y * along + across.Y * side;
+            if (!Usable(d, ax, az)) return false;
+            if (Math.Abs(d.SurfaceLevel(ax, az) - level) > 1) return false;
+        }
+        return true;
+    }
+
+    /// <summary>The highest ground anywhere on the landing strip.</summary>
+    private static short StripTop(IslandData d, int x, int z, Vector2I outward,
+                                  Vector2I across, int length)
+    {
+        int half = (StripWidth - 1) / 2;
+        short top = d.SurfaceLevel(x, z);
+        for (int along = 0; along < length; along++)
+        for (int side = -half; side <= half; side++)
+        {
+            int sx = x - outward.X * along + across.X * side;
+            int sz = z - outward.Y * along + across.Y * side;
+            if (!Usable(d, sx, sz)) continue;
+            top = Math.Max(top, d.SurfaceLevel(sx, sz));
+        }
+        return top;
     }
 
     /// <summary>
@@ -436,44 +729,53 @@ internal static class GatePlacement
             if (d.SurfaceLevel(gx, gz) >= sill) return false;
         }
 
-        // The portal itself still hangs clear: aether under all three cells.
+        // The portal itself hangs clear, and so does the air immediately behind
+        // it: aether under all three cells for the last stretch of the approach.
+        for (int step = HangingOffset - HangingClearance + 1; step <= HangingOffset; step++)
         for (int side = -1; side <= 1; side++)
         {
-            int gx = x + outward.X * HangingOffset + across.X * side;
-            int gz = z + outward.Y * HangingOffset + across.Y * side;
+            int gx = x + outward.X * step + across.X * side;
+            int gz = z + outward.Y * step + across.Y * side;
             if (gx >= 0 && gz >= 0 && gx < n && gz < n && d.HasLand(gx, gz)) return false;
         }
         return true;
     }
 
     /// <summary>
-    /// Every coast cell a vessel could set down at, in any direction: the ground
-    /// a hanging Gate could be given, of which the Gates that exist took one each.
-    /// The lab draws these, because "where else could a Link have come out?" is a
-    /// question about the island that is otherwise invisible.
+    /// The ground the Domain's Gates are actually served by: the strip a hanging
+    /// Gate's vessel sets down on, and the forecourt a land Gate stands on. Both
+    /// are <see cref="StripWidth"/> across and run inland from the portal; only
+    /// their length differs, and only because a vessel needs a berth and a walker
+    /// needs somewhere to turn round.
+    ///
+    /// It used to mark every coast that <i>would</i> take a strip — which painted
+    /// most of the coastline, and answered "where else could a Link have come
+    /// out?" rather than "where does this one land?". With a Gate now guaranteed
+    /// on every Domain, the second question is the one worth drawing.
     /// </summary>
-    private static void MarkAirstrips(IslandData d)
+    private static void MarkLandings(IslandData d)
     {
         int n = d.Size;
-        for (int edge = 0; edge < 4; edge++)
+        int half = (StripWidth - 1) / 2;
+
+        foreach (Gate g in d.Gates)
         {
-            var probe = new Gate(GateKind.Hanging, GateRole.Exit, (Cardinal)edge,
-                                 default, default, 0);
-            Vector2I outward = probe.Outward, across = probe.Across;
+            Vector2I outward = g.Outward, across = g.Across;
 
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
+            // A hanging Gate's strip starts at the coast cell the portal hangs off;
+            // a land Gate's apron starts under the portal itself.
+            Vector2I head = g.Kind == GateKind.Hanging
+                ? new Vector2I(g.Center.X, g.Center.Z) - outward * HangingOffset
+                : new Vector2I(g.Center.X, g.Center.Z);
+            int length = g.Kind == GateKind.Hanging ? Math.Max(1, g.Landing) : LandApron;
+
+            for (int along = 0; along < length; along++)
+            for (int side = -half; side <= half; side++)
             {
-                if (!HasStrip(d, x, z, outward, across, StripLength)) continue;
-                if (!Flyable(d, x, z, outward, across, d.SurfaceLevel(x, z))) continue;
-                if (ApronAt(d, x, z, d.SurfaceLevel(x, z)) < ApronArea) continue;
-
-                for (int along = 0; along < StripLength; along++)
-                {
-                    int sx = x - outward.X * along, sz = z - outward.Y * along;
-                    if (sx < 0 || sz < 0 || sx >= n || sz >= n) break;
-                    d.Airstrip[sx, sz] = true;
-                }
+                Vector2I cell = head - outward * along + across * side;
+                if (cell.X < 0 || cell.Y < 0 || cell.X >= n || cell.Y >= n) continue;
+                if (!d.HasLand(cell.X, cell.Y)) continue;
+                d.Landings[cell.X, cell.Y] = true;
             }
         }
     }
@@ -491,6 +793,12 @@ internal static class GatePlacement
         int side = x * across.X + z * across.Y;
         float middle = bounds.Extreme(across) - bounds.Extent(across) * 0.5f;
 
+        // Weighting the middle harder was tried, on the theory that a Gate at the
+        // far corner of its own side moves the line the next Gate round has to
+        // beat. It does — but at 1.0 four hanging Gates got *rarer* (three hanging
+        // Exits fell from 41% of seeds to 33%), because centring every Gate also
+        // pulls each one off whatever coast could actually host it. The blocker is
+        // the mutual dominance rule and the arrangement's geometry, not this.
         return along
                - MathF.Abs(side - middle) * 0.35f
                + apron * 0.01f

@@ -40,7 +40,15 @@ internal static class Rivers
     /// still inside the bridge span, so it divides the country without cutting
     /// it off.
     /// </summary>
-    private const float NavigableShare = 0.30f;
+    /// <remarks>
+    /// Lowered from 0.30 when each lake stopped spilling from every shore cell.
+    /// A dozen outflows per lake meant a dozen traced courses converging below it,
+    /// and the threshold was tuned against that inflation: with one outflow apiece
+    /// it took five courses meeting to make a navigable reach, and navigable rivers
+    /// all but vanished (146 cells across 60 islands). At 0.16 it takes three,
+    /// which is a river below a confluence or two — the thing it is meant to be.
+    /// </remarks>
+    private const float NavigableShare = 0.16f;
 
     /// <summary>A drop this deep along a watercourse is a fall rather than a rapid.</summary>
     public const int FallDepth = 3;
@@ -93,7 +101,7 @@ internal static class Rivers
 
         var order = new List<Vector2I>(n * n);
         var down = new Vector2I[n, n];
-        Route(n, land, surface, water, order, down);
+        Route(seed, n, land, surface, water, order, down);
         if (order.Count == 0) return;
 
         // Accumulate upstream-first, which is the routing order reversed: the
@@ -155,6 +163,10 @@ internal static class Rivers
 
         Widen(n, land, water, surface, flow, down, channel, navigable, navigableAt, twin);
 
+        // Eyots: where a navigable river splits round an island of its own bank.
+        var eyot = new bool[n, n];
+        Braid(seed, n, land, water, surface, down, channel, navigable, twin, keep, eyot);
+
         var before = (short[,])surface.Clone();
 
         for (int x = 0; x < n; x++)
@@ -188,8 +200,567 @@ internal static class Rivers
         }
 
         Descend(n, order, down, river, water, surface);
+        Beach(n, water, river, surface, eyot);
+        CutValleys(seed, p, n, land, surface, water, river, navigable, form, keep);
+        // <b>And again, because the valley moved the channel.</b> A course sinks
+        // with its valley, and the taper holds that sink to a slab a cell — so
+        // where a bridgehead or a mesa rim stops one stretch going down as far as
+        // the stretch above it, the water would be climbing. Descend is the pass
+        // whose whole job is that, and it is cheap enough to run twice.
+        Descend(n, order, down, river, water, surface);
         CutBanks(n, land, surface, water, river, form, keep);
         FindFalls(n, land, surface, water, river, navigable, down, falls);
+    }
+
+    /// <summary>Cells either side of a course the valley reaches, at full strength.</summary>
+    private const int ValleyReach = 5;
+
+    /// <summary>
+    /// Bands of valley a course carries: the full <paramref name="reach"/> where a
+    /// barge could work it, one less for a brook. A navigable river has cut its
+    /// own valley for longer, and a stream you can step across should not read as
+    /// the bottom of the same landscape.
+    /// </summary>
+    private static int Budget(int reach, bool navigable)
+        => reach <= 0 ? 0 : navigable ? reach : Math.Max(1, reach - 1);
+
+    /// <summary>
+    /// Labels each 4-connected component of the channel network: one river and
+    /// everything that drains into it, down to the rim it pours off.
+    ///
+    /// This is what lets `Valleys` act per watercourse rather than per island —
+    /// see <see cref="CutValleys"/>. It is a component of the *drawn* channel
+    /// rather than a true catchment, so two courses that happen to touch count as
+    /// one river; on terrain where every course ends at the rim that is nearly
+    /// always the same answer, and it is the answer the eye gives too.
+    /// </summary>
+    private static int[,] LabelBasins(int n, bool[,] river, out int count)
+    {
+        var basin = new int[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) basin[x, z] = -1;
+
+        count = 0;
+        var stack = new Stack<Vector2I>();
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!river[sx, sz] || basin[sx, sz] >= 0) continue;
+
+            int id = count++;
+            basin[sx, sz] = id;
+            stack.Push(new Vector2I(sx, sz));
+            while (stack.Count > 0)
+            {
+                Vector2I c = stack.Pop();
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!river[nx, nz] || basin[nx, nz] >= 0) continue;
+                    basin[nx, nz] = id;
+                    stack.Push(new Vector2I(nx, nz));
+                }
+            }
+        }
+        return basin;
+    }
+
+    /// <summary>
+    /// Whether a valley may take this cell down with it: ground whose height is
+    /// not the point of it, not a bridgehead, and not already under standing
+    /// water. A channel counts — the river sinks with its own valley.
+    ///
+    /// <b>The bridgeheads matter as much as the landforms.</b> A crossing's banks
+    /// are levelled so a deck can be walked onto at either end, so they are pinned
+    /// exactly like a mesa rim is — and a valley that sank the ground beside one
+    /// left the bank standing over a hole it had just dug. That was most of the
+    /// two-slab steps the valley pass was adding.
+    /// </summary>
+    private static bool Sinkable(byte[,] form, bool[,] river, short[,] water, bool[,] keep,
+                                 int x, int z)
+    {
+        if (keep[x, z]) return false;
+        if (river[x, z]) return true;
+        if (water[x, z] != IslandData.NoLand) return false;
+        var type = (LandformType)form[x, z];
+        return type is LandformType.Plain or LandformType.Hills or LandformType.Dunes;
+    }
+
+    /// <summary>
+    /// Sinks the ground either side of a watercourse, so a river runs along the
+    /// bottom of something.
+    ///
+    /// <para>Cutting a channel two slabs into flat ground makes an <i>incision</i>
+    /// — the water is lower than the land and nothing else about the land knows
+    /// it. Real country falls toward its rivers for a long way before it reaches
+    /// them, and that is most of what makes a river read as the lowest place
+    /// around rather than as a groove.</para>
+    ///
+    /// <para><b>It goes down in whole bands, which is what keeps it safe.</b>
+    /// Every cell the same distance from the water drops by the same amount, so
+    /// two cells inside one band keep the height they had relative to each other
+    /// and the only step the pass creates is the single slab between one band and
+    /// the next — the free step. That is why this can run over finished terrain at
+    /// all: it cannot invent a cliff. What it will not touch is ground whose
+    /// height is the landform (a mesa rim, a basin wall, a gully, a tower), a
+    /// bridgehead, or anything already under water.</para>
+    ///
+    /// <para><b>The channel sinks with its valley, and that is the whole of it.</b>
+    /// This used to hold the river where it was and lower only the ground beside
+    /// it — which cannot make a valley, because the bank already stands exactly one
+    /// slab above the water and so has nowhere to go. The "never into standing
+    /// water" guard therefore pinned the innermost band at zero, the taper read
+    /// that zero as a constraint and capped each band at one more than the band
+    /// inside it, and the profile came out <i>inverted</i>: a moat two or three
+    /// cells out from the river with the ground rising back toward the water.
+    /// Measured over twelve seeds, the ground five cells from a river stood
+    /// 0.06 slabs <i>lower</i> than the ground beside it at full strength — the
+    /// slider's whole range was worth nothing, and what it did do was the opposite
+    /// of what it says. Sinking the channel by one band more than the bank beside
+    /// it is what makes the river the lowest thing in its own valley.</para>
+    /// </summary>
+    private static void CutValleys(int seed, IslandParams p, int n, bool[,] land,
+                                   short[,] surface, short[,] water, bool[,] river,
+                                   bool[,] navigable, byte[,] form, bool[,] keep)
+    {
+        float strength = Math.Clamp(p.Valleys, 0f, 1f);
+        if (strength <= 0.001f) return;
+
+        // <b>Per watercourse, not per island.</b> One reach for the whole Domain
+        // made the knob all-or-nothing: below a threshold no river had a valley
+        // and above it every river had the same one, which is not what a country
+        // looks like. Each drainage — a 4-connected component of the channel
+        // network, which is one river and its tributaries down to the rim — draws
+        // a rank in [0,1) and keeps it, and `Valleys` slides a window across those
+        // ranks. So 0 gives none; a quarter gives the low-ranked few a narrow
+        // valley each; a half has some narrow and some wide; and 1 cuts every
+        // course to its full depth.
+        int[,] basin = LabelBasins(n, river, out int basins);
+        var carve = new float[basins];
+        for (int b = 0; b < basins; b++)
+        {
+            float rank = Hash01(seed, 0x7A11Eu ^ (uint)b * 2654435761u);
+            // Three times the strength against twice the rank, so the window both
+            // slides and widens: at a quarter about a third of the courses have a
+            // shallow valley and the rest none; at a half three quarters do, at
+            // depths from a nick to the full cut; by three quarters all of them do.
+            // A plain (2s - rank) window gave every river a valley from a half
+            // onward, which is the all-or-nothing this was meant to fix.
+            carve[b] = Math.Clamp(strength * 3f - rank * 2f, 0f, 1f);
+        }
+
+        var dist = new int[n, n];
+        var wide = new bool[n, n];
+        var reachOf = new int[n, n];
+        var q = new Queue<Vector2I>();
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            dist[x, z] = -1;
+            reachOf[x, z] = 0;
+            if (!river[x, z]) continue;
+
+            int cut = (int)MathF.Round(ValleyReach * carve[basin[x, z]]);
+            if (cut <= 0) continue;                     // this river keeps its incision
+
+            dist[x, z] = 0;
+            wide[x, z] = navigable[x, z];
+            reachOf[x, z] = cut;
+            q.Enqueue(new Vector2I(x, z));
+        }
+
+        while (q.Count > 0)
+        {
+            Vector2I c = q.Dequeue();
+            int budget = Budget(reachOf[c.X, c.Y], wide[c.X, c.Y]);
+            if (dist[c.X, c.Y] >= budget) continue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!land[nx, nz] || dist[nx, nz] >= 0) continue;
+                dist[nx, nz] = dist[c.X, c.Y] + 1;
+                wide[nx, nz] = wide[c.X, c.Y];
+                reachOf[nx, nz] = reachOf[c.X, c.Y];
+                q.Enqueue(new Vector2I(nx, nz));
+            }
+        }
+
+        // The deepest any course on this island cuts, which is how far the
+        // monotone pass below has to walk.
+        int reach = 0;
+        for (int b = 0; b < basins; b++)
+            reach = Math.Max(reach, (int)MathF.Round(ValleyReach * carve[b]));
+        if (reach <= 0) return;
+
+        // How far each cell wants to sink, before anything is applied. The channel
+        // itself is band 0 and sinks furthest, which is what makes the rest a
+        // valley rather than a moat.
+        var want = new int[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            int band = dist[x, z];
+            if (band < 0) continue;
+            int budget = Budget(reachOf[x, z], wide[x, z]);
+            if (band > budget) continue;
+            if (!land[x, z]) continue;
+
+            if (!Sinkable(form, river, water, keep, x, z)) continue;
+
+            // Never into a *lake* beside it. The river is not a floor any more —
+            // it is coming down with us — but standing water is.
+            //
+            // <b>And never a new cliff against ground that cannot come with it.</b>
+            // A mesa top, a karst tower or a levelled bridgehead inside the bands
+            // keeps its height — that height is the point of it — so a cell beside
+            // one that sinks freely turns a border you could walk across into a
+            // face you cannot. Measured: allowing it took the island's two-slab
+            // steps off mountains from 727 to 1951. The cell may still end one slab
+            // below such a neighbour, which is the free step and no wall.
+            int floor = int.MinValue;
+            int room = int.MaxValue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (water[nx, nz] != IslandData.NoLand && !river[nx, nz])
+                    floor = Math.Max(floor, water[nx, nz] + 1);
+
+                if (!Sinkable(form, river, water, keep, nx, nz)
+                    && surface[x, z] - surface[nx, nz] <= 1)
+                    room = Math.Min(room, surface[x, z] - surface[nx, nz] + 1);
+            }
+            if (floor != int.MinValue) room = Math.Min(room, surface[x, z] - floor);
+
+            // The channel is band 0 and sinks one further than the bank beside it,
+            // which is what makes the rest a valley rather than a moat.
+            want[x, z] = Math.Clamp(budget - band + 1, 0, Math.Max(0, room));
+        }
+
+        // <b>Never deeper than the band inside it.</b> A valley is a profile that
+        // only ever falls as you walk toward the water, and the caps above are
+        // per-cell — a bank with a lake behind it can take less than the band
+        // outside it wants, and without this the ground would rise inward again.
+        // Walking the bands outward and holding each to what its inner neighbour
+        // got is what keeps the shape whatever the ground allows.
+        for (int band = 1; band <= reach; band++)
+        {
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (dist[x, z] != band || want[x, z] <= 0) continue;
+                int inner = 0;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (dist[nx, nz] == band - 1) inner = Math.Max(inner, want[nx, nz]);
+                }
+                want[x, z] = Math.Min(want[x, z], inner);
+            }
+        }
+
+        // Tapered, so the valley side falls a slab at a time and the edge of the
+        // pass is not a cliff — see FieldOps.Taper. It only ever *reduces* a cell,
+        // and it reduces to one more than its smallest neighbour, so a band can
+        // never be pulled below the one outside it: the profile above survives.
+        FieldOps.Taper(want, land);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (want[x, z] <= 0) continue;
+            surface[x, z] = (short)(surface[x, z] - want[x, z]);
+            // The channel takes its water down with it, or the valley fills.
+            if (river[x, z]) water[x, z] = (short)(water[x, z] - want[x, z]);
+        }
+
+        // Tapering keeps the *change* to a slab between neighbours, which is not
+        // the same as keeping the *result* under one: a cell that already stood a
+        // slab above its neighbour and sinks a slab less than it does now stands
+        // two. This is the same correction CutBanks makes at the water's edge,
+        // walked over the valley instead — lower the ambiguous cell by one, and
+        // keep going while that leaves another behind it.
+        for (int pass = 0; pass < 8; pass++)
+        {
+            bool changed = false;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!land[x, z] || river[x, z] || keep[x, z]) continue;
+                if (water[x, z] != IslandData.NoLand) continue;
+                var type = (LandformType)form[x, z];
+                if (type is not (LandformType.Plain or LandformType.Hills
+                                 or LandformType.Dunes)) continue;
+
+                int floor = int.MinValue;
+                bool ambiguous = false;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                    if (water[nx, nz] != IslandData.NoLand)
+                        floor = Math.Max(floor, water[nx, nz] + 1);
+                    if (surface[x, z] - surface[nx, nz] == 2) ambiguous = true;
+                }
+                if (!ambiguous || surface[x, z] - 1 < floor) continue;
+                surface[x, z]--;
+                changed = true;
+            }
+            if (!changed) break;
+        }
+    }
+
+    /// <summary>Cells of stream between one ford and the next.</summary>
+    public const int FordSpacing = 11;
+
+    /// <summary>
+    /// Marks the places a stream can be crossed on foot.
+    ///
+    /// <para><b>A stream used to be fordable everywhere</b>, which is the same as
+    /// not being there: a watercourse that costs nothing to cross at any point on
+    /// its length is a line drawn on the map rather than a feature of it. It also
+    /// made roads walk *down* streams, since the bed was exactly as cheap as the
+    /// bank. Now the crossing is a place — a ford every <see cref="FordSpacing"/>
+    /// cells or so, and the stream is an obstacle between them.</para>
+    ///
+    /// <para>A ford has to be a ford: both banks across the flow dry, walkable,
+    /// and within a slab of the water, so you step down into it and up out the
+    /// other side. Where the cell the spacing picked will not do, the next one
+    /// along is tried.</para>
+    /// </summary>
+    public static void MarkFords(IslandData d)
+    {
+        int n = d.Size;
+
+        var seen = new bool[n, n];
+        var queue = new Queue<Vector2I>();
+        var order = new List<Vector2I>();
+
+        bool Stream(int x, int z)
+            => x >= 0 && z >= 0 && x < n && z < n && d.River[x, z] && !d.Navigable[x, z];
+
+        // Whether you could actually get across here: dry, walkable ground within
+        // a slab of the water on both sides of the channel.
+        bool Crossable(int x, int z)
+        {
+            short level = d.WaterLevel[x, z];
+            if (level == IslandData.NoLand) return false;
+
+            for (int axis = 0; axis < 2; axis++)
+            {
+                int dx = axis == 0 ? 1 : 0, dz = axis == 0 ? 0 : 1;
+                if (Bank(x - dx, z - dz, level) && Bank(x + dx, z + dz, level)) return true;
+            }
+            return false;
+        }
+
+        bool Bank(int x, int z, short level)
+        {
+            if (x < 0 || z < 0 || x >= n || z >= n) return false;
+            if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) return false;
+            return Math.Abs(d.SurfaceLevel(x, z) - level) <= 1;
+        }
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!Stream(sx, sz) || seen[sx, sz]) continue;
+
+            // One course at a time, in the order the flood reaches it, so the
+            // spacing is measured along the water rather than across the grid.
+            order.Clear();
+            seen[sx, sz] = true;
+            queue.Enqueue(new Vector2I(sx, sz));
+            while (queue.Count > 0)
+            {
+                Vector2I c = queue.Dequeue();
+                order.Add(c);
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (!Stream(nx, nz) || seen[nx, nz]) continue;
+                    seen[nx, nz] = true;
+                    queue.Enqueue(new Vector2I(nx, nz));
+                }
+            }
+
+            // A ford at the head of the course and then one every spacing along
+            // it, sliding forward past any cell that will not take one. A short
+            // course still gets one: a stream nobody can cross is a wall, and a
+            // wall is not what a stream is.
+            int since = FordSpacing;
+            bool any = false;
+            foreach (Vector2I c in order)
+            {
+                since++;
+                if (since < FordSpacing) continue;
+                if (!Crossable(c.X, c.Y)) continue;
+                d.Ford[c.X, c.Y] = true;
+                since = 0;
+                any = true;
+            }
+            if (any) continue;
+
+            foreach (Vector2I c in order)
+                if (Crossable(c.X, c.Y)) { d.Ford[c.X, c.Y] = true; break; }
+        }
+    }
+
+    /// <summary>
+    /// How often a navigable reach splits round an island, per candidate cell.
+    /// </summary>
+    private const float EyotChance = 0.22f;
+
+    /// <summary>
+    /// Splits a navigable river round an <b>eyot</b> — an island of its own
+    /// floodplain, left standing while the water goes both ways round it.
+    ///
+    /// A navigable river is already two cells across: an axis carrying the course
+    /// and a partner beside it (<see cref="Widen"/>). A braided reach is that
+    /// widened once more, on the <i>far</i> side of the axis, and the partner in
+    /// the middle then left dry — so the water runs in two channels with land
+    /// between them, which is what an eyot is. The island is a strip a few cells
+    /// long lying <b>along</b> the course, so it inherits the river's bends and
+    /// comes out as a spindle rather than as a block; the first and last cell of
+    /// the reach stay water, which is where the two channels part and rejoin.
+    ///
+    /// It also does the other half of "wider rivers": a braided reach is three
+    /// cells across, which is past the bridge span — and crossable anyway,
+    /// because the island in the middle is somewhere to land a span on.
+    /// </summary>
+    private static void Braid(int seed, int n, bool[,] land, short[,] water, short[,] surface,
+                              Vector2I[,] down, bool[,] channel, bool[,] navigable,
+                              Vector2I[,] twin, bool[,] keep, bool[,] eyot)
+    {
+        // Which cell was widened from which: Widen records the partner's debt to
+        // the axis, and the braid needs to look it up the other way round.
+        var mate = new Vector2I[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) mate[x, z] = new Vector2I(-1, -1);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            Vector2I a = twin[x, z];
+            if (a.X >= 0) mate[a.X, a.Y] = new Vector2I(x, z);
+        }
+
+        var axis = new List<Vector2I>();
+        var isle = new List<Vector2I>();
+        var far = new List<Vector2I>();
+        var spent = new bool[n, n];
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!channel[sx, sz] || !navigable[sx, sz]) continue;
+            if (mate[sx, sz].X < 0) continue;                    // not an axis cell
+            if (Hash01(seed, 0xE70Au ^ (uint)(sx * 73856093 ^ sz * 19349663)) > EyotChance)
+                continue;
+
+            axis.Clear();
+            isle.Clear();
+            far.Clear();
+            var c = new Vector2I(sx, sz);
+            int want = 4 + (int)(Hash01(seed, 0xE70Bu ^ (uint)(sx * 31 + sz)) * 4f);
+
+            for (int step = 0; step < want; step++)
+            {
+                if (c.X < 0 || c.Y < 0 || c.X >= n || c.Y >= n) break;
+                if (!channel[c.X, c.Y] || !navigable[c.X, c.Y] || spent[c.X, c.Y]) break;
+
+                Vector2I t = mate[c.X, c.Y];
+                if (t.X < 0 || spent[t.X, t.Y]) break;
+                // The far bank, directly opposite the partner across the axis.
+                var f = new Vector2I(2 * c.X - t.X, 2 * c.Y - t.Y);
+                if (f.X < 0 || f.Y < 0 || f.X >= n || f.Y >= n) break;
+                if (!land[f.X, f.Y] || channel[f.X, f.Y] || keep[f.X, f.Y]) break;
+                if (water[f.X, f.Y] != IslandData.NoLand) break;
+                // Never widen into a bank standing over the river: that leaves a
+                // notch in a hillside rather than a second channel.
+                if (surface[f.X, f.Y] > surface[c.X, c.Y]) break;
+                // The island has to be one piece, so each cell of it must touch
+                // the last. A course that turns can put two partners diagonally
+                // apart, and two corners touching is not an island.
+                if (isle.Count > 0)
+                {
+                    Vector2I had = isle[^1];
+                    if (Math.Abs(had.X - t.X) + Math.Abs(had.Y - t.Y) != 1) break;
+                }
+
+                axis.Add(c);
+                isle.Add(t);
+                far.Add(f);
+                c = down[c.X, c.Y];
+            }
+
+            // Two cells of island and a cell of water at each end, at least.
+            if (isle.Count < 4) continue;
+
+            for (int i = 0; i < isle.Count; i++)
+            {
+                spent[axis[i].X, axis[i].Y] = true;
+                spent[isle[i].X, isle[i].Y] = true;
+                // The ends stay water: that is where the river parts and rejoins.
+                if (i == 0 || i == isle.Count - 1) continue;
+
+                Vector2I t = isle[i], f = far[i];
+                channel[t.X, t.Y] = false;
+                navigable[t.X, t.Y] = false;
+                twin[t.X, t.Y] = new Vector2I(-1, -1);
+                eyot[t.X, t.Y] = true;
+
+                channel[f.X, f.Y] = true;
+                navigable[f.X, f.Y] = true;
+                twin[f.X, f.Y] = axis[i];
+                spent[f.X, f.Y] = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Stands every eyot one slab clear of the water round it, once the channels
+    /// have settled. Its own ground was floodplain — level with what became the
+    /// bed — so left alone it would be a shoal under the surface rather than an
+    /// island in it.
+    /// </summary>
+    private static void Beach(int n, short[,] water, bool[,] river, short[,] surface,
+                              bool[,] eyot)
+    {
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!eyot[x, z]) continue;
+
+            int around = int.MinValue;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (river[nx, nz] && water[nx, nz] != IslandData.NoLand)
+                    around = Math.Max(around, water[nx, nz]);
+            }
+            if (around == int.MinValue) continue;
+            surface[x, z] = (short)(around + 1);
+        }
+    }
+
+    private static float Hash01(int seed, uint salt)
+    {
+        unchecked
+        {
+            uint h = (uint)seed * 2654435761u ^ salt;
+            h ^= h >> 15;
+            h *= 0x2C1B3C6Du;
+            h ^= h >> 12;
+            h *= 0x297A2D39u;
+            h ^= h >> 15;
+            return (h & 0xFFFFFF) / 16777216f;
+        }
     }
 
     /// <summary>
@@ -330,12 +901,21 @@ internal static class Rivers
     }
 
     /// <summary>
-    /// Where watercourses begin: the high ground, and every lake's outflow.
+    /// Where watercourses begin: the high ground, and each lake's outflow.
     ///
     /// Summits are taken in order of height, each having to stand clear of the
     /// ones already chosen so a single massif does not spend the whole budget,
     /// and each having to be well inland — a source a few cells from the rim is a
     /// trickle over the edge, not a river.
+    ///
+    /// <b>One outflow per lake, not one per shore cell.</b> The routing floods
+    /// inward from the rim, so <i>every</i> cell along a lake's downstream shore
+    /// has dry ground as its downstream neighbour — a dozen or more of them. Each
+    /// became a source, each traced a river's worth of flow to the rim, and what
+    /// came out below the lake was a fan of parallel channels a few cells apart
+    /// that read as a shallow marsh rather than as an outflow. A lake has one
+    /// spill point: the cell whose downstream ground is lowest, which is where the
+    /// water would actually leave.
     /// </summary>
     private static List<Vector2I> Sources(int seed, IslandParams p, int n, bool[,] land,
                                           short[,] surface, short[,] water,
@@ -343,16 +923,41 @@ internal static class Rivers
     {
         var found = new List<Vector2I>();
 
-        // A lake spills wherever the terrain lets it: the cell whose downstream
-        // neighbour is the first dry ground out of the pool. That is what links
-        // one lake to the next, and eventually to the rim.
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
+        // Each body of standing water, 4-connected, and the one cell it spills at.
+        var seen = new bool[n, n];
+        var stack = new Stack<Vector2I>();
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
         {
-            if (water[x, z] == IslandData.NoLand) continue;
-            Vector2I to = down[x, z];
-            if (to.X < 0 || water[to.X, to.Y] != IslandData.NoLand) continue;
-            found.Add(new Vector2I(x, z));
+            if (water[sx, sz] == IslandData.NoLand || seen[sx, sz]) continue;
+
+            var spill = new Vector2I(-1, -1);
+            int lowest = int.MaxValue;
+
+            seen[sx, sz] = true;
+            stack.Push(new Vector2I(sx, sz));
+            while (stack.Count > 0)
+            {
+                Vector2I c = stack.Pop();
+                Vector2I to = down[c.X, c.Y];
+                if (to.X >= 0 && water[to.X, to.Y] == IslandData.NoLand
+                    && surface[to.X, to.Y] < lowest)
+                {
+                    lowest = surface[to.X, to.Y];
+                    spill = c;
+                }
+
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (water[nx, nz] == IslandData.NoLand) continue;
+                    seen[nx, nz] = true;
+                    stack.Push(new Vector2I(nx, nz));
+                }
+            }
+            if (spill.X >= 0) found.Add(spill);
         }
 
         var peaks = new List<Vector2I>();
@@ -421,11 +1026,26 @@ internal static class Rivers
     /// here)</c>. Carrying that maximum forward is what makes a depression fill
     /// and spill at its lowest rim rather than trapping the flood, and it is why
     /// a lake needs no special handling: water enters, crosses, and leaves.
+    ///
+    /// <para><b>Ties are broken by a noise field, not by insertion order.</b> That
+    /// one change is what stops rivers running in straight lines. Terrain built
+    /// under a slope limit is mostly flats, so most of the flood is a tie — and a
+    /// first-in-first-out tie-break makes the flood a plain breadth-first search,
+    /// whose tree is a fan of straight cardinal rays. Every course traced down it
+    /// came out as long straight runs meeting at right angles. Ordering equal
+    /// ground by a smooth field instead makes the front advance along that field's
+    /// low ground, so the tree — and the courses on it — bend at the field's
+    /// wavelength. The jitter is strictly below one slab, so it can only reorder
+    /// cells the terrain itself does not separate.</para>
     /// </summary>
-    private static void Route(int n, bool[,] land, short[,] surface, short[,] water,
+    private static void Route(int seed, int n, bool[,] land, short[,] surface, short[,] water,
                               List<Vector2I> order, Vector2I[,] down)
     {
         var seen = new bool[n, n];
+        var lifted = new int[n, n];
+        // Wavelength of the wander, in cells: about fourteen — a bend a river
+        // takes, rather than a wobble along its length.
+        var meander = new Noise(seed + 5701, frequency: 0.07f, octaves: 3);
         var queue = new PriorityQueue<Vector2I, long>();
         long tick = 0;
 
@@ -445,13 +1065,15 @@ internal static class Rivers
             if (!rim) continue;
 
             seen[x, z] = true;
-            queue.Enqueue(new Vector2I(x, z), Key(Level(surface, water, x, z), tick++));
+            int level = Level(surface, water, x, z);
+            lifted[x, z] = level;
+            queue.Enqueue(new Vector2I(x, z), Key(level, meander, x, z, tick++));
         }
 
-        while (queue.TryDequeue(out Vector2I c, out long key))
+        while (queue.TryDequeue(out Vector2I c, out _))
         {
             order.Add(c);
-            int reached = (int)(key >> 24) - LevelBias;
+            int reached = lifted[c.X, c.Y];
 
             for (int k = 0; k < 4; k++)
             {
@@ -462,7 +1084,8 @@ internal static class Rivers
                 seen[nx, nz] = true;
                 down[nx, nz] = c;
                 int lift = Math.Max(reached, Level(surface, water, nx, nz));
-                queue.Enqueue(new Vector2I(nx, nz), Key(lift, tick++));
+                lifted[nx, nz] = lift;
+                queue.Enqueue(new Vector2I(nx, nz), Key(lift, meander, nx, nz, tick++));
             }
         }
     }
@@ -472,15 +1095,18 @@ internal static class Rivers
         => water[x, z] != IslandData.NoLand ? water[x, z] : surface[x, z];
 
     /// <summary>
-    /// Height in the high bits, insertion order in the low ones, so equal heights
-    /// come out first-in-first-out and a flat drains evenly outward instead of
-    /// picking a corner.
+    /// Height in the high bits, the meander field in the middle, insertion order
+    /// in the low ones: terrain always outranks the wander, the wander outranks
+    /// arrival order, and nothing is left to chance.
     /// </summary>
     /// <summary>Keeps the packed level positive; slab indices run below zero.</summary>
     private const int LevelBias = 4096;
 
-    private static long Key(int level, long tick)
-        => ((long)(level + LevelBias) << 24) | (tick & 0xFFFFFF);
+    private static long Key(int level, Noise meander, int x, int z, long tick)
+    {
+        long wander = (long)(meander.At(x, z) * 0xFFFFFF) & 0xFFFFFF;
+        return ((long)(level + LevelBias) << 40) | (wander << 16) | (tick & 0xFFFF);
+    }
 
     /// <summary>
     /// Puts a second cell alongside a navigable channel. A barge needs two cells;
@@ -564,7 +1190,14 @@ internal static class Rivers
                 if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) rim = k;
             }
 
-            int width = navigable[x, z] ? 2 : 1;
+            // <b>One cell, always.</b> A navigable river is two cells across, and
+            // giving its fall a width of two drew a sheet centred on one cell and
+            // straddling both — so half of it hung over whatever was beside the
+            // channel, which on a bank a slab higher looked like water pouring out
+            // of solid rock. Both cells of the pair are river cells and both reach
+            // this loop, so each emits its own sheet over its own cell and the two
+            // together are the two-cell fall.
+            const int width = 1;
 
             if (rim >= 0)
             {
