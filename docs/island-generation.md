@@ -45,11 +45,12 @@ Alongside the terrain, `IslandData` carries what the later stages worked out:
 ```csharp
 byte[,]  Landform, Material;      // what this patch is, what its surface is made of
 short[,] WaterLevel;              // top slab of standing fluid, or NoLand
+byte[,]  Fluid;                   // what stands there: water unless a pass said otherwise
 bool[,]  River, Navigable, Ford;  // a course; too deep to wade; where you can
 bool[,]  Beach, Ferry, Landings;  // and the built-on / landed-on ground
 int[,]   Region, Walk, Reach, ShelfId, WaterBody, Flow;
 List<...> Areas, Reaches, Shelves, Bridges, Berths, Passages, Gates, Falls,
-          CoastCells, CliffCells, Overhangs, Passes;
+		  Geysers, CoastCells, CliffCells, Overhangs, Passes;
 ```
 
 Generation is a **pure function of `(seed, IslandParams)`**. Same inputs, same
@@ -175,6 +176,17 @@ of a Voronoi polygon. One lake per patch, and a patch beside one that holds wate
 stays dry — a row of pools at slightly different levels reads as flooding.
 `Lakes` scales how many.
 
+**A big pool need not be one big lake.** Where the pool is large enough to have
+an inside, it rolls a **shape**: still a single body more often than not, else a
+*thousand-lakes* scatter of separate pools, a *ring* round a dry island of its
+own floor, a *crescent*, a ragged *cross*, or a *tarn* cropped small. Every
+shape is a subset of the pool the containment already approved, so nothing about
+the rules changes — and small pools keep the old behaviour to the cell, which is
+why fragmented islands are unaffected. Broad country also rolls wetter (a large
+interior lifts the lake chance by up to half) and patches that lose the main
+roll can still take a small tarn, so a big connected flat island comes out with
+more, and more varied, water.
+
 **Rivers are routed by a priority flood inward from the rim.** Terrain under a
 slope limit is mostly flats, so steepest descent stalls; flooding inward gives
 every cell a downstream neighbour by construction and passes straight through a
@@ -192,9 +204,15 @@ channels below every lake that read as a marsh.
   The river cuts its banks to match, so no two-slab step is left behind.
 - **A stream is crossed at a ford** — one every ~11 cells, where both banks are
   dry and within a slab of the water — and is an obstacle everywhere else.
-- **A navigable river** is two cells across, three slabs deep, and not fordable.
-  It occasionally splits round an **eyot**, an island of its own floodplain lying
-  along the course.
+- **A navigable river** is two cells across, three slabs deep, and not fordable —
+  and a course earns it below its first real confluence, which is where a barge
+  would in fact get in. It occasionally splits round an **eyot**, an island of
+  its own floodplain lying along the course. **It is a stair of pools**: the water is walked from the rim
+  upstream and held level until the ground has risen a fall's worth, so a barge
+  river is dead flat between falls instead of wearing thirty one-slab steps —
+  and its two cells always hold **one** water level, whatever the valley pass
+  did to either of them (`Settle` runs the descend and pair-levelling
+  corrections against each other until both hold at once).
 - **Valleys**: the ground either side sinks toward a course, in bands tapered so
   no step exceeds one slab. **The channel sinks with its valley** — the bank
   already stands exactly one slab above the water, so lowering only the ground
@@ -211,13 +229,41 @@ channels below every lake that read as a marsh.
   the rest none, a half gives three quarters of them valleys of differing depth,
   and 1 cuts every course to its full reach. One reach for the whole Domain made
   the knob all-or-nothing, which is not what a country looks like.
+  **The rank is tilted by the course's own descent**: a river that falls a long
+  way came down through uneven country and draws from the low end of the window,
+  a river crossing a plain draws from the high end — so mid-slider, valleys go
+  to the hills and a plain keeps its incisions. 0 still cuts nothing; and the
+  slider's whole range now maps onto what used to be its **lower half**, because
+  everything past the old midpoint was trenches nobody chose — 1 means "the most
+  valley worth having", with steep courses cut in full and plain ones shallow.
 - **Every river reaches the rim and pours off it**, because there is no sea. Rim
   falls are drawn spilling past the keel into the aether.
+- **A lip pours every way it plausibly can.** A cell that is a fall at all — any
+  aether beside it, or a fall's depth of drop along its own course — throws a
+  sheet off *every* aether edge (a corner spills both ways) and toward every
+  neighbouring *water* far enough below it; a lake does the same where its
+  outflow leaves well under its surface. Only toward water and aether, never
+  onto dry ground: a sheet onto dry land would be a course the drainage never
+  routed, and either floods the ground or vanishes into it.
 
-Everything is water. `FluidKind` — a Domain-wide `Water` / `Lava` / `Essence`
-that turned every watercourse into a wall — was removed: it was two lines of
-behaviour and no appearance, so what it actually shipped was a dropdown that did
-nothing you could see.
+**Fluids.** `FluidKind` returned 2026-09-01, upside down: the removed one was a
+Domain-wide dropdown (every watercourse water, or all of it lava) with nothing
+visible behind it; the new one is **per column** (`IslandData.Fluid`), so one
+Domain can hold different fluids at once — which is what the biome layer will
+want. Water is the default and the only fluid that behaves: rivers, ferries and
+fords are water's alone.
+
+- **Goo** is the first other fluid: violet puddles sunk into dry flat patches
+  like small tarns, on ~30% of islands, 1–3 apiece. It makes no rivers — the
+  routing treats goo as not-land, so nothing drains through it, out of it, or
+  into it — and **fluids never mix, even diagonally**: no water may stand within
+  a king's move of goo (placement guarantees it, the rivers' `keep` mask
+  preserves it, and the audit checks it). Nothing sails, fords or walks it. It
+  is deliberately inert until the biome layer says what it is for.
+- **Geysers** are a hook, not yet a feature: `IslandData.Geysers` and the lab's
+  jet rendering exist, and nothing fills them. A terrain-stage placement was
+  tried and binned the same day — where a jet belongs is a fact about the
+  *biome*, so the placement waits for that layer.
 
 ### Stage 5 — Keel
 
@@ -479,6 +525,8 @@ scripts/generation/            namespace ProjectNikitin.Generation
   ReliefStyle.cs               where the high ground sits (internal)
   Rivers.cs                    routing, channels, fords, eyots, valleys, falls
   Fall.cs                      one waterfall
+  FluidKind.cs                 what a body of standing fluid is (water, goo)
+  Geyser.cs                    one jet of a geyser field
   Overhangs.cs                 stage 6
   Traversal.cs                 stage 7: walk, reach, water bodies, berths, shelves
   BridgeEase.cs, Crossing.cs   how far a bridge reaches, and one bridge site

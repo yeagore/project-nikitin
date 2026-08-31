@@ -30,6 +30,7 @@ public partial class IslandLab : Node3D
 
 	private MultiMeshInstance3D _terrain = null!;
 	private MultiMeshInstance3D _water = null!;
+	private MultiMeshInstance3D _goo = null!;
 	private MultiMeshInstance3D _falls = null!;
 	private MultiMeshInstance3D _gates = null!;
 	private MultiMeshInstance3D _marks = null!;
@@ -38,6 +39,7 @@ public partial class IslandLab : Node3D
 	private CameraRig _rig = null!;
 	private BoxMesh _unitBox = null!;
 	private PlaneMesh _waterQuad = null!;
+	private PlaneMesh _gooQuad = null!;
 	private PlaneMesh _fallQuad = null!;
 	private readonly List<Label3D> _compass = new();
 	private int _lastSignature;
@@ -369,6 +371,30 @@ public partial class IslandLab : Node3D
 		};
 		AddChild(_water);
 
+		// Goo: the same flat sheet, its own material. Violet, glossier and more
+		// opaque than water — a thing you notice and do not drink. It cannot ride
+		// the water multimesh because vertex colours multiply into that material's
+		// blue albedo, which crushes any warm channel to nothing.
+		_gooQuad = new PlaneMesh
+		{
+			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
+			Orientation = PlaneMesh.OrientationEnum.Y,
+		};
+		_gooQuad.Material = new StandardMaterial3D
+		{
+			AlbedoColor = new Color(0.52f, 0.14f, 0.72f, 0.9f),
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+			Roughness = 0.05f,
+			Metallic = 0.2f,
+		};
+		_goo = new MultiMeshInstance3D
+		{
+			Name = "Goo",
+			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+		};
+		AddChild(_goo);
+
 		// A fall is the same water stood on end: one quad per fall, as wide as the
 		// channel and as tall as the drop. At the rim it runs on past the keel,
 		// because there is nothing under a Domain to catch it.
@@ -378,6 +404,12 @@ public partial class IslandLab : Node3D
 			Orientation = PlaneMesh.OrientationEnum.Z,
 		};
 		_fallQuad.Material = WaterMaterial(0.75f);
+		// Drawn after the water sheet, always. Two transparent objects are
+		// otherwise ordered by distance from the camera to their origins — and
+		// both multimeshes sit at the world origin, so the tie broke differently
+		// as the camera moved and the falls popped in and out where the two
+		// overlapped.
+		if (_fallQuad.Material is StandardMaterial3D fallLit) fallLit.RenderPriority = 1;
 		_falls = new MultiMeshInstance3D
 		{
 			Name = "Falls",
@@ -764,13 +796,20 @@ public partial class IslandLab : Node3D
 		int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
 		int rim = 0;
 		foreach (Fall f in d.Falls) if (f.OffRim) rim++;
+		int gooCells = 0;
+		for (int x = 0; x < d.Size; x++)
+		for (int z = 0; z < d.Size; z++)
+			if (d.WaterLevel[x, z] != IslandData.NoLand
+				&& d.Fluid[x, z] == (byte)FluidKind.Goo) gooCells++;
 
 		return $"walk {100f * mainland / land:0}% mainland in {districts} districts   "
 			+ $"reach {100f * heart / land:0}%   "
 			+ $"shelves {buildable} buildable of {d.Shelves.Count}   "
 			+ $"passes {d.Passes.Count}   bridges {d.Bridges.Count}   "
 			+ $"ferry berths {d.Berths.Count} on {d.WaterBodies} bodies   "
-			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim)";
+			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim)"
+			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")
+			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");
 	}
 
 	/// <summary>
@@ -829,6 +868,7 @@ public partial class IslandLab : Node3D
 
 		var xf = new List<Transform3D>();
 		var col = new List<Color>();
+		var goo = new List<Transform3D>();
 		var lakes = new HashSet<int>();
 
 		for (int x = 0; x < n; x++)
@@ -842,14 +882,30 @@ public partial class IslandLab : Node3D
 
 			// Slab index L fills world Y from L*sh to (L+1)*sh, so the surface of
 			// the topmost water slab sits at (level + 1) * sh.
-			xf.Add(new Transform3D(
+			var at = new Transform3D(
 				Basis.Identity,
-				new Vector3((x - half) * cs, (level + 1) * sh, (z - half) * cs)));
+				new Vector3((x - half) * cs, (level + 1) * sh, (z - half) * cs));
+
+			// The other fluid has its own sheet and its own material: goo is not
+			// a colour of water, and the water material's blue albedo would eat
+			// any warm tint a vertex colour tried to give it.
+			if (d.Fluid[x, z] == (byte)FluidKind.Goo) { goo.Add(at); continue; }
+
+			xf.Add(at);
 			col.Add(WaterColor(d, x, z));
 			// Rivers share the water plane but are not lakes; counting them would
 			// make the tally meaningless.
 			if (!d.River[x, z]) lakes.Add(d.Region[x, z]);
 		}
+
+		var gm = new MultiMesh
+		{
+			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+			Mesh = _gooQuad,
+			InstanceCount = goo.Count,
+		};
+		for (int i = 0; i < goo.Count; i++) gm.SetInstanceTransform(i, goo[i]);
+		_goo.Multimesh = gm;
 
 		// <b>UseColors, and the colour actually set.</b> The material has asked for
 		// vertex colour as albedo since the four kinds of water were named, but
@@ -889,6 +945,7 @@ public partial class IslandLab : Node3D
 		const float cs = Terrain.CellSize;
 
 		var xf = new List<Transform3D>();
+		float floor = 0f, ceiling = 0f;
 
 		foreach (Fall f in d.Falls)
 		{
@@ -897,18 +954,84 @@ public partial class IslandLab : Node3D
 			float height = Mathf.Max(sh, top - bottom);
 
 			// The sheet stands across the flow: rotate the quad's +Z normal onto
-			// the direction the water is going, and push it half a cell that way
-			// so it hangs at the lip rather than through the column behind it.
+			// the direction the water is going, and push it a whisker past half a
+			// cell that way — half a cell is exactly the plane of the cliff face
+			// under the lip, and a sheet in that plane z-fights the terrain,
+			// which is the shimmer the falls used to have.
 			float angle = Mathf.Atan2(f.Flow.X, f.Flow.Y);
 			var basis = new Basis(Vector3.Up, angle)
 				.Scaled(new Vector3(f.Width * cs, height, 1f));
 
 			var origin = new Vector3(
-				(f.Cell.X - half + f.Flow.X * 0.5f) * cs,
+				(f.Cell.X - half + f.Flow.X * 0.53f) * cs,
 				bottom + height * 0.5f,
-				(f.Cell.Y - half + f.Flow.Y * 0.5f) * cs);
+				(f.Cell.Y - half + f.Flow.Y * 0.53f) * cs);
 
 			xf.Add(new Transform3D(basis, origin));
+			floor = Mathf.Min(floor, bottom);
+			ceiling = Mathf.Max(ceiling, top);
+		}
+
+		// <b>Cataracts.</b> A one- or two-slab step between adjacent flooded
+		// cells is a rapid, not a fall — too small for the generator to name,
+		// still a hole in the picture if nothing is drawn there: two sheets of
+		// surface and a gap. Every such step gets a connecting sheet, purely in
+		// the renderer; the generator's falls list stays the falls.
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+		{
+			short a = d.WaterLevel[x, z];
+			if (a == IslandData.NoLand) continue;
+			if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;   // goo does not pour
+
+			for (int k = 0; k < 2; k++)
+			{
+				int nx = x + (k == 0 ? 1 : 0), nz = z + (k == 0 ? 0 : 1);
+				if (nx >= n || nz >= n) continue;
+				short b = d.WaterLevel[nx, nz];
+				if (b == IslandData.NoLand || a == b) continue;
+				if (d.Fluid[nx, nz] != (byte)FluidKind.Water) continue;
+				if (Math.Abs(a - b) >= Rivers.FallDepth) continue;  // a fall, drawn above
+
+				// The sheet hangs from the higher surface, facing the lower cell,
+				// pushed the same whisker past the face the falls use.
+				bool aHigh = a > b;
+				int hx = aHigh ? x : nx, hz = aHigh ? z : nz;
+				int fx = aHigh ? nx - x : x - nx, fz = aHigh ? nz - z : z - nz;
+				short hi = aHigh ? a : b;
+				short lo = aHigh ? b : a;
+
+				float top = (hi + 1) * sh;
+				float bottom = lo * sh;
+				float height = top - bottom;
+				var basis = new Basis(Vector3.Up, Mathf.Atan2(fx, fz))
+					.Scaled(new Vector3(cs, height, 1f));
+				xf.Add(new Transform3D(basis, new Vector3(
+					(hx - half + fx * 0.53f) * cs,
+					bottom + height * 0.5f,
+					(hz - half + fz * 0.53f) * cs)));
+				floor = Mathf.Min(floor, bottom);
+				ceiling = Mathf.Max(ceiling, top);
+			}
+		}
+
+		// A geyser is the same water stood on end once more, upwards: two narrow
+		// sheets crossed at right angles, so the jet reads from every side.
+		foreach (Geyser g in d.Geysers)
+		{
+			float bottom = (g.Base + 1) * sh;
+			float top = (g.Top + 1) * sh;
+			float height = Mathf.Max(sh, top - bottom);
+			var at = new Vector3((g.Cell.X - half) * cs, bottom + height * 0.5f,
+								 (g.Cell.Y - half) * cs);
+			for (int arm = 0; arm < 2; arm++)
+			{
+				var basis = new Basis(Vector3.Up, arm * Mathf.Pi / 2f)
+					.Scaled(new Vector3(0.34f * cs, height, 1f));
+				xf.Add(new Transform3D(basis, at));
+			}
+			floor = Mathf.Min(floor, bottom);
+			ceiling = Mathf.Max(ceiling, top);
 		}
 
 		var mm = new MultiMesh
@@ -919,6 +1042,12 @@ public partial class IslandLab : Node3D
 		};
 		for (int i = 0; i < xf.Count; i++) mm.SetInstanceTransform(i, xf[i]);
 		_falls.Multimesh = mm;
+		// One box round every sheet, set by hand. The quad is flat, so the
+		// automatic bounds are paper-thin on one axis — and a bound the culler
+		// half-believes is a fall that blinks out whenever the camera swings.
+		_falls.CustomAabb = new Aabb(
+			new Vector3(-half * cs - cs, floor - cs, -half * cs - cs),
+			new Vector3(n * cs + 2 * cs, ceiling - floor + 2 * cs, n * cs + 2 * cs));
 	}
 
 	/// <summary>

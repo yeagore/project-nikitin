@@ -327,6 +327,10 @@ public sealed class IslandGenerator
                 drains[x, z] = pass[x, z] || (canyon != null && canyon[x, z]);
         }
         short[,] water = PlaceLakes(seed, p, land, region, regionCount, plan, surface, drains);
+        // The other fluid, placed with the same containment rules and after the
+        // lakes, so it can see where the water is and keep its distance.
+        var fluid = new byte[n, n];
+        PlaceGoo(seed, p, land, region, regionCount, plan, surface, water, fluid);
         // Lakes cut the surface after the grammar passes, so both run once more
         // over what they left. Levelling a shore leaves the bank behind it
         // standing a few slabs proud, and an islet edge can land on the
@@ -380,8 +384,25 @@ public sealed class IslandGenerator
         foreach (Vector2I c in new[] { ca, cb })
             if (c.X >= 0 && c.Y >= 0 && c.X < n && c.Y < n) keep[c.X, c.Y] = true;
 
+        // <b>Fluids never touch, even diagonally.</b> Goo and its whole
+        // king's-move neighbourhood are off limits to the water, the same way a
+        // bridgehead is: no channel is cut there, and no navigable river widens
+        // or braids into it. The routing itself treats goo as not-land — see
+        // Rivers.Route — so no course ever drains through a puddle either.
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (fluid[x, z] != (byte)FluidKind.Goo) continue;
+            for (int ox = -1; ox <= 1; ox++)
+            for (int oz = -1; oz <= 1; oz++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if (nx >= 0 && nz >= 0 && nx < n && nz < n) keep[nx, nz] = true;
+            }
+        }
+
         Rivers.Carve(seed, p, land, surface, water, data.River, data.Navigable,
-                     data.Flow, data.Falls, span, form, keep);
+                     data.Flow, data.Falls, span, form, keep, fluid);
 
         // The valley and bank passes only ever lower, and a cell lowered beside a
         // channel can end up under the water next to it. The same correction the
@@ -404,9 +425,16 @@ public sealed class IslandGenerator
             data.Material[x, z] = 0;
             data.Landform[x, z] = (byte)plan[region[x, z]].Type;
             data.WaterLevel[x, z] = water[x, z];
+            data.Fluid[x, z] = fluid[x, z];
             data.Canyon[x, z] = canyon != null && canyon[x, z];
             data.Pass[x, z] = pass != null && pass[x, z];
         }
+
+        // Geysers are the biome layer's, not the terrain's. The data
+        // (IslandData.Geysers) and the lab's rendering stay as the hook; the
+        // terrain-stage placement that briefly filled it is binned — it put
+        // jets where the rock was, and where a jet belongs is a fact about the
+        // biome. See the appendix.
 
         // What the crossings finally are, measured off the finished terrain: the
         // deck level each one runs at, and how long it is.
@@ -564,9 +592,33 @@ public sealed class IslandGenerator
             // bed lands near the surrounding plain and the mesa reads as a wall
             // around a pit rather than as a tableland.
             // `Lakes` slides the whole thing: 0 leaves the Domain dry, 1 fills
-            // every flat patch that could hold water. 0.5 is the old fixed rate.
+            // every flat patch that could hold water. 0.5 is the old fixed rate —
+            // for a patch of ordinary size; see the boost below.
             float chance = (t == LandformType.Mesa ? 0.10f : 0.22f) * wet * 2f;
+            // <b>Broad country holds more water.</b> A large interior lifts the
+            // roll by up to half again, so an island of big connected flats comes
+            // out wetter — which is also where the shaped lakes below have room
+            // to be shapes. A fragmented island's small interiors get the old
+            // chance exactly, so it stays as dry as it ever was.
+            chance *= 1f + Math.Min(interior[r], 320) / 320f * 0.5f;
             wants[r] = Hash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
+        }
+
+        // <b>Occasional smaller lakes.</b> A patch that lost the main roll can
+        // still take a tarn — a pool a few cells wide, cropped from its own
+        // interior. It adds variety on country that already qualifies for a lake
+        // and nothing at all on fragmented maps, whose interiors fail the same
+        // size test the main roll uses.
+        var tarn = new bool[count];
+        for (int r = 0; r < count; r++)
+        {
+            if (wants[r] || drained[r]) continue;
+            LandformType t = plan[r].Type;
+            if (t != LandformType.Plain && t != LandformType.Basin) continue;
+            if (interior[r] < minInterior || shore[r] == int.MaxValue) continue;
+            if (Hash01(seed, 0x7AB0u ^ (uint)r * 2654435761u) >= 0.12f * wet * 2f) continue;
+            wants[r] = true;
+            tarn[r] = true;
         }
 
         // <b>No chains of lakes.</b> Each patch fills to its own rim, so a row of
@@ -605,7 +657,12 @@ public sealed class IslandGenerator
         // minimum is still ShoreMargin whatever the setting, so the dry ring that
         // holds the water in is exactly as thick as it ever was.
         var ragged = new Noise(seed + 4242, frequency: 0.13f, octaves: 3);
-        float wander = ShoreWander * Mathf.Lerp(1.35f, 0.45f, wet);
+        // The floor at the wet end used to be 0.45, and at that amplitude the
+        // integer truncation below flattens the wander to nearly nothing — the
+        // margin comes out a constant, and a constant inset from a Voronoi edge
+        // is a straight shoreline. 0.85 keeps two to three cells of swing at
+        // full wet, so a big lake's shore still reads as a shore.
+        float wander = ShoreWander * Mathf.Lerp(1.35f, 0.85f, wet);
         var margin = new int[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -633,13 +690,17 @@ public sealed class IslandGenerator
             }
         }
 
+        // A big pool need not be one big lake — see ShapeLakes.
+        LakeStyle[] style = ShapeLakes(seed, n, region, count, plan, wants, tarn, pool);
+
         // A few lakes get an islet: cells left uncarved, raised if need be so they
         // break the surface. Round, not the square a Chebyshev radius would give.
+        // Only the plain single lakes: the shaped ones carry their own dry ground.
         var islet = new bool[n, n];
         var wobble = new Noise(seed + 1212, frequency: 0.45f, octaves: 2);
         for (int r = 0; r < count; r++)
         {
-            if (!wants[r]) continue;
+            if (!wants[r] || style[r] != LakeStyle.Single) continue;
             if (Hash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
 
             (int cx, int cz) = DeepestCell(region, inset, pool, r, n);
@@ -671,6 +732,331 @@ public sealed class IslandGenerator
         RaiseSunkenShores(land, surface, water);
         LevelShores(land, surface, water);
         return water;
+    }
+
+    /// <summary>How a patch's pool is drawn — see <see cref="ShapeLakes"/>.</summary>
+    private enum LakeStyle : byte { Single, Tarn, Thousand, Ring, Crescent, Cross }
+
+    /// <summary>Cells of annulus a ring or crescent lake keeps at the shore.</summary>
+    private const int RingWidth = 2;
+
+    /// <summary>
+    /// Gives a big pool a shape other than "all of it".
+    ///
+    /// <para>Left alone, every lake is Just One Big Lake: the patch's interior,
+    /// filled. Where the pool is large enough to have an inside, it now rolls a
+    /// style — still one big lake more often than not, else a <b>thousand-lakes</b>
+    /// scatter of separate pools, a <b>ring</b> round a dry island of its own
+    /// floor, a <b>crescent</b> (the same ring with a bite taken out of one
+    /// side), a ragged <b>cross</b>, or a <b>tarn</b> cropped small. Every shape
+    /// is a subset of the pool the containment rules already approved, so the
+    /// dry ring that holds the water in is untouched — and the ground a shape
+    /// leaves dry is the patch's own floor, which
+    /// <see cref="RaiseSunkenShores"/> lifts to a walkable slab above the water
+    /// exactly as it does for a wandering shoreline.</para>
+    ///
+    /// <para><b>Small pools keep the old behaviour to the cell.</b> A shape
+    /// needs room — a ring wants an inside, a scatter wants gaps — so anything
+    /// under the size floor stays a single body, which is why a fragmented
+    /// island's little lakes come out exactly as they always did.</para>
+    /// </summary>
+    private static LakeStyle[] ShapeLakes(int seed, int n, int[,] region, int count,
+                                          RegionPlan[] plan, bool[] wants, bool[] tarn,
+                                          bool[,] pool)
+    {
+        var style = new LakeStyle[count];
+
+        // The pool's own inset: distance to the nearest cell outside it. This is
+        // what a ring is drawn from, and its maximum is how much "inside" the
+        // pool has to spend.
+        var depth = new int[n, n];
+        var q = new Queue<(int X, int Z)>();
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            depth[x, z] = -1;
+            if (!pool[x, z]) continue;
+            bool edge = false;
+            for (int k = 0; k < 4 && !edge; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                edge = nx < 0 || nz < 0 || nx >= n || nz >= n || !pool[nx, nz];
+            }
+            if (!edge) continue;
+            depth[x, z] = 0;
+            q.Enqueue((x, z));
+        }
+        while (q.Count > 0)
+        {
+            var (cx, cz) = q.Dequeue();
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = cx + Dx[k], nz = cz + Dz[k];
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!pool[nx, nz] || depth[nx, nz] >= 0) continue;
+                depth[nx, nz] = depth[cx, cz] + 1;
+                q.Enqueue((nx, nz));
+            }
+        }
+
+        var area = new int[count];
+        var deep = new int[count];
+        Array.Fill(deep, -1);
+        var sumX = new long[count];
+        var sumZ = new long[count];
+        var deepAt = new (int X, int Z)[count];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!pool[x, z]) continue;
+            int r = region[x, z];
+            area[r]++;
+            sumX[r] += x;
+            sumZ[r] += z;
+            if (depth[x, z] > deep[r]) { deep[r] = depth[x, z]; deepAt[r] = (x, z); }
+        }
+
+        for (int r = 0; r < count; r++)
+        {
+            if (!wants[r] || plan[r].Type == LandformType.Mesa) continue;
+            if (tarn[r]) { style[r] = LakeStyle.Tarn; continue; }
+            if (area[r] < 40) continue;                       // too small to shape
+
+            float roll = Hash01(seed, 0x5A9Eu ^ (uint)r * 2654435761u);
+            style[r] = roll switch
+            {
+                < 0.40f => LakeStyle.Single,
+                < 0.56f => LakeStyle.Thousand,
+                < 0.70f => LakeStyle.Ring,
+                < 0.84f => LakeStyle.Crescent,
+                < 0.92f => LakeStyle.Cross,
+                _ => LakeStyle.Tarn,
+            };
+            // A ring or a crescent is drawn from the pool's inset, so the pool
+            // has to be deep enough to have an inside at all.
+            if (style[r] is LakeStyle.Ring or LakeStyle.Crescent && deep[r] < RingWidth + 2)
+                style[r] = LakeStyle.Single;
+        }
+
+        var scatter = new Noise(seed + 9917, frequency: 0.17f, octaves: 2);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!pool[x, z]) continue;
+            int r = region[x, z];
+            bool drain = false;
+            switch (style[r])
+            {
+                case LakeStyle.Thousand:
+                    // The scatter: pools where a chunky noise field runs low,
+                    // dry ground between them. The field's wavelength is what
+                    // keeps the pools pool-sized rather than salt-and-pepper.
+                    drain = scatter.At(x, z) >= 0.52f;
+                    break;
+                case LakeStyle.Ring:
+                    drain = depth[x, z] > RingWidth;
+                    break;
+                case LakeStyle.Crescent:
+                {
+                    // The ring, with its core stamped out again off-centre: the
+                    // overlap of the two discs is the bite, and what survives is
+                    // the moon.
+                    int dir = (int)(Hash01(seed, 0xC3E5u ^ (uint)r * 40503u) * 8f) & 7;
+                    int ox = x - ((RingWidth + 1) * Dx8[dir]);
+                    int oz = z - ((RingWidth + 1) * Dz8[dir]);
+                    drain = ox >= 0 && oz >= 0 && ox < n && oz < n
+                            && region[ox, oz] == r && depth[ox, oz] > RingWidth;
+                    break;
+                }
+                case LakeStyle.Cross:
+                {
+                    long cx = sumX[r] / area[r], cz = sumZ[r] / area[r];
+                    // The bars bend and breathe. Two straight three-cell bars
+                    // through the centroid read as a stamp, not as water: so
+                    // each arm's centreline drifts along its length on the
+                    // scatter field, and its half-width wanders between one
+                    // and two and a half cells. Sampled at offsets so the two
+                    // arms and the width move independently.
+                    float driftX = (scatter.At(z * 1.1f, 900f + r * 13f) - 0.5f) * 6f;
+                    float driftZ = (scatter.At(700f + r * 13f, x * 1.1f) - 0.5f) * 6f;
+                    float width = 1.0f + scatter.At(x * 1.7f + 300f, z * 1.7f) * 1.5f;
+                    drain = Math.Abs(x - cx - driftX) > width
+                            && Math.Abs(z - cz - driftZ) > width;
+                    break;
+                }
+                case LakeStyle.Tarn:
+                {
+                    var (tx, tz) = deepAt[r];
+                    float dx = x - tx, dz = z - tz;
+                    float radius = 2.0f + Hash01(seed, 0x7A2Cu ^ (uint)r * 40503u) * 1.4f;
+                    drain = MathF.Sqrt(dx * dx + dz * dz) > radius;
+                    break;
+                }
+            }
+            if (drain) pool[x, z] = false;
+        }
+
+        // Specks read as noise, not as lakes: any shaped remnant under a few
+        // cells goes dry. The seen-marker doubles as the component id.
+        var seen = new bool[n, n];
+        var members = new List<(int X, int Z)>();
+        var stack = new Stack<(int X, int Z)>();
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!pool[sx, sz] || seen[sx, sz] || style[region[sx, sz]] == LakeStyle.Single)
+                continue;
+
+            members.Clear();
+            seen[sx, sz] = true;
+            stack.Push((sx, sz));
+            while (stack.Count > 0)
+            {
+                var (cx, cz) = stack.Pop();
+                members.Add((cx, cz));
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = cx + Dx[k], nz = cz + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!pool[nx, nz]) continue;
+                    seen[nx, nz] = true;
+                    stack.Push((nx, nz));
+                }
+            }
+            if (members.Count >= 4) continue;
+            foreach (var (mx, mz) in members) pool[mx, mz] = false;
+        }
+        return style;
+    }
+
+    /// <summary>The eight king-move steps, for the crescent's offset stamp.</summary>
+    private static readonly int[] Dx8 = { 1, 1, 0, -1, -1, -1, 0, 1 };
+    private static readonly int[] Dz8 = { 0, 1, 1, 1, 0, -1, -1, -1 };
+
+    // ---- Goo -----------------------------------------------------------------
+
+    /// <summary>Islands that get goo at all. Most get none — it is a find.</summary>
+    private const float GooIslandChance = 0.30f;
+
+    /// <summary>
+    /// Puddles of the other fluid — see <see cref="FluidKind.Goo"/>.
+    ///
+    /// <para>Placed like small tarns: a blob a few cells wide sunk into the
+    /// interior of a dry flat patch, the patch's own ground as containment, the
+    /// blob's ring setting its level. The rules that make it a different fluid
+    /// rather than purple water live elsewhere: the routing treats goo as
+    /// not-land so no river ever drains through it, its king's-move
+    /// neighbourhood is barred to channels, and <c>Traversal.Sailable</c> says
+    /// nothing sails it. Here it only has to be placed where no water stands
+    /// within a king's move — which the patch's own dry interior guarantees, and
+    /// a cell-level guard enforces anyway.</para>
+    /// </summary>
+    private static void PlaceGoo(int seed, IslandParams p, bool[,] land, int[,] region,
+                                 int count, RegionPlan[] plan, short[,] surface,
+                                 short[,] water, byte[,] fluid)
+    {
+        int n = p.Size;
+        if (Hash01(seed, 0x600A11u) >= GooIslandChance) return;
+
+        int[,] inset = PatchInset(land, region);
+
+        var holdsWater = new bool[count];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (land[x, z] && water[x, z] != IslandData.NoLand) holdsWater[region[x, z]] = true;
+
+        // Dry flat patches with enough interior for a puddle and its ring.
+        var interior = new int[count];
+        var deep = new int[count];
+        var deepAt = new (int X, int Z)[count];
+        Array.Fill(deep, -1);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (inset[x, z] < 2) continue;
+            int r = region[x, z];
+            interior[r]++;
+            if (inset[x, z] > deep[r]) { deep[r] = inset[x, z]; deepAt[r] = (x, z); }
+        }
+
+        var takers = new List<int>();
+        for (int r = 0; r < count; r++)
+        {
+            if (holdsWater[r] || interior[r] < 16) continue;
+            LandformType t = plan[r].Type;
+            if (t != LandformType.Plain && t != LandformType.Basin) continue;
+            takers.Add(r);
+        }
+        if (takers.Count == 0) return;
+
+        // One to three puddles, in hash order so the choice is the seed's.
+        takers.Sort((a, b) => Hash01(seed, 0x60011u ^ (uint)a * 40503u)
+            .CompareTo(Hash01(seed, 0x60011u ^ (uint)b * 40503u)));
+        int puddles = 1 + (int)(Hash01(seed, 0x600C7u) * 3f);
+
+        var wobble = new Noise(seed + 3434, frequency: 0.4f, octaves: 2);
+        var cells = new List<(int X, int Z)>();
+
+        foreach (int r in takers)
+        {
+            if (puddles <= 0) break;
+
+            var (cx, cz) = deepAt[r];
+            float radius = 1.4f + Hash01(seed, 0x600D3u ^ (uint)r * 2654435761u) * 1.6f;
+
+            cells.Clear();
+            int reach = (int)radius + 1;
+            for (int x = Math.Max(0, cx - reach); x <= Math.Min(n - 1, cx + reach); x++)
+            for (int z = Math.Max(0, cz - reach); z <= Math.Min(n - 1, cz + reach); z++)
+            {
+                if (region[x, z] != r || inset[x, z] < 2) continue;
+                if (water[x, z] != IslandData.NoLand) continue;
+                float dx = x - cx, dz = z - cz;
+                if (MathF.Sqrt(dx * dx + dz * dz) > radius * (0.75f + 0.5f * wobble.At(x, z)))
+                    continue;
+
+                // The guard that makes "never mixes" a fact rather than a hope.
+                bool nearWater = false;
+                for (int ox = -1; ox <= 1 && !nearWater; ox++)
+                for (int oz = -1; oz <= 1 && !nearWater; oz++)
+                {
+                    int nx = x + ox, nz = z + oz;
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    nearWater = water[nx, nz] != IslandData.NoLand
+                                && fluid[nx, nz] != (byte)FluidKind.Goo;
+                }
+                if (!nearWater) cells.Add((x, z));
+            }
+            if (cells.Count < 3) continue;
+
+            // The ring round the puddle sets its level, exactly as a patch's rim
+            // sets a lake's.
+            int shore = int.MaxValue;
+            foreach (var (x, z) in cells)
+            for (int ox = -1; ox <= 1; ox++)
+            for (int oz = -1; oz <= 1; oz++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (cells.Contains((nx, nz))) continue;
+                if (water[nx, nz] != IslandData.NoLand) continue;
+                shore = Math.Min(shore, surface[nx, nz]);
+            }
+            if (shore == int.MaxValue) continue;
+
+            short level = (short)(shore - 1);
+            foreach (var (x, z) in cells)
+            {
+                surface[x, z] = SlabClamp(level - 2);
+                water[x, z] = level;
+                fluid[x, z] = (byte)FluidKind.Goo;
+            }
+            puddles--;
+        }
+
+        // The same shoreline corrections the lakes end on, over what goo left.
+        RaiseSunkenShores(land, surface, water);
+        LevelShores(land, surface, water);
     }
 
     /// <summary>

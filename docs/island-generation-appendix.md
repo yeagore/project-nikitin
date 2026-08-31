@@ -162,6 +162,190 @@ the things a valley may not cut. Two-slab steps off mountains went *down* with
 this change, 1,069 → 931, because a valley that only some rivers get is a valley
 that meets less of the terrain it is forbidden to touch.
 
+**And then the ranks were tilted by relief** (2026-09-01): a course's descent —
+head water to rim water — now shifts its draw by up to ±0.35 of the window, so a
+river that came down through hills takes a valley early on the slider and a river
+crossing a plain takes one late or never. The clamp keeps the ends of the slider
+exact: 0 still cuts nothing, 1 still cuts every course in full. Swept at 0.25 /
+0.50, courses with a valley went 26 → 21 and 39 → 30 of 71, and the mean rise
+0.52 → 0.29 and 1.15 → 0.80 — the middle of the knob got choosier, and what it
+now chooses is the uneven country.
+
+### The river with one side higher than the other
+
+A navigable river is two cells widened into one surface, and three passes could
+move one cell of the pair without the other. `CutValleys`' caps are per-cell — a
+lake or a pinned landform beside the left cell holds it back while the right cell
+sinks free. `Descend` walks a cell's *chain*, and the partner's chain is not the
+axis's. And on gentle ground the pair straddled the course's one-slab steps, so
+the wide surface broke into shingles. Measured, the audit's uphill check — a
+higher-flow river cell standing two or more above a neighbour — found the
+leftovers: 2 pairs across 60 islands, each a stretch of water with one side
+standing over the other.
+
+Three corrections, together in `Rivers.Settle`:
+
+- **`LevelPairs`**: a pair holds one water level, the higher cell coming down to
+  the lower, bed and all. Run against `Descend` until both hold at once — each
+  only ever lowers, so the loop terminates, in practice inside two passes.
+- **The valley cuts the pair once**: after the taper, both cells take the
+  smaller of their two wants. Reductions only, so nothing the taper settled is
+  disturbed.
+- **`FlattenReaches`**: a barge river is now a *stair of pools* — walked from
+  the rim upstream, each cell held to the pool below it until the ground has
+  risen `FallDepth`, and that step kept, as a fall. Dead level between falls,
+  which is also what a reach *is* to a ferry. Streams keep their one-slab
+  rapids; the flattening is the navigable river's alone, and it costs the bed at
+  most two extra slabs at the held end of a reach, where the banks now read as a
+  low gorge.
+
+`riverUphill` went 2 → 0, and two-slab steps off mountains 948 → 830 — the
+unequal valley sinks were most of both. The cost: mainland share 39.8% → 39.0%
+and two of 121 roads stopped being free walks, which is gorge banks doing what
+gorge banks do. Heartland share, berths, quay heights and every Gate guarantee
+did not move.
+
+### Water pours every way it plausibly can
+
+`FindFalls` used to give each river cell at most one fall, in the first direction
+found — so a river reaching a corner of the island poured off one aether edge and
+ignored the other, and the levelled partner of a navigable pair (whose own chain
+runs flat) drew nothing while its axis fell three slabs beside it. Now every
+river cell throws a sheet off *every* aether edge beside it, and toward every
+neighbouring **water** a `FallDepth` or more below it; a lake does the same where
+its outflow channel leaves well under its surface. Falls went 544 → 584, of which
+363 off the rim (was 282).
+
+The restriction is the point: sheets land only on water or in aether, never on
+dry ground. A sheet onto dry land would be a course the drainage never routed —
+either it floods ground no channel was cut through, or the water visibly
+vanishes into soil. Nothing new gets wet, so the extra falls cannot flood
+anything, and the one audit case of "uphill" water that remained turned out to be
+a drawn waterfall: a mainstem pouring three slabs sideways into the stream beside
+it, which the uphill heuristic now excuses because a fall is proof of which way
+the water goes.
+
+Two rendering faults fixed with this, both in the lab: the sheet used to stand
+*exactly* in the plane of the cliff face under the lip and z-fought it (now
+pushed a whisker past — 0.53 of a cell instead of 0.50), and the falls popped in
+and out as the camera swung — the automatic bounds of a flat quad are paper-thin,
+so the multimesh now sets its own box, and the falls draw at a fixed priority
+after the water sheet instead of tying with it on distance-to-origin.
+
+**And the cataracts** (2026-09-01): a one- or two-slab step along a course is
+a rapid the generator rightly does not call a fall — and the picture had a hole
+there, two sheets of surface and a gap, which read as falls "sometimes just not
+appearing". The lab now draws a small connecting sheet across every sub-fall
+step between adjacent flooded cells, renderer-side only: the falls list stays
+the falls, because `Traversal` cuts ferry bodies at falls and a rapid is not a
+thing a barge cannot pass… downstream, at least; the routing already one-ways
+what matters.
+
+### The wide rivers that were not there
+
+"A surprising lack of wide rivers" turned out to be tuning, not the pair fixes:
+navigable cells were 796 before and after those, to the cell. The culprit was
+`NavigableShare` — tuned in an era of outflow inflation so that it took *three*
+courses meeting to make a reach navigable, which at the preset's `Rivers = 0.5`
+left a median island 17 navigable cells: one short reach, read from the lab as
+none. Now a course turns navigable below its first real confluence
+(`NavigableShare` 0.16 → 0.11, the confluence floor `riverAt × 3` → `× 2`):
+navigable cells 796 → 1,980 over 60 islands, 39.6 per island at the preset in
+the sweep.
+
+A side effect worth naming: the one island in sixty whose water a bridge could
+not span resampled away, so the berth count is 0 across the audit — the domino
+rule still finds 4,600 sites, and the pruning correctly keeps none, because
+every island in this sample can be crossed without a ferry. Ferries earn their
+keep on low-`Crossings` Domains, where a two-cell river is already past the
+span; the machinery is intact and idle.
+
+### The Valleys slider, rescaled
+
+Everything anyone actually chose lived below a half, and the top half cut
+trenches. The whole range now maps onto the old lower half (`strength × 0.5`,
+with 0 still exactly nothing): 1.0 means "the most valley worth having", steep
+courses in full and plain ones shallow, per the relief tilt. The consequence to
+know about: the *bottom* half of the new range is correspondingly subtle —
+swept, the rise over control at the new 0.5 is +0.08 slabs — because the old
+0–0.25 always was.
+
+### Lakes that are not Just One Big Lake
+
+A lake was the patch's interior, filled — every island the same lake at a
+different size. Where the pool is big enough to have an inside (40+ cells), it
+now rolls a shape: single (still the plurality), a **thousand-lakes** scatter on
+a chunky noise field, a **ring** round a dry island of its own floor (the
+pool's inset ≤ 2), a **crescent** (the ring's core stamped out again
+off-centre — the overlap is the bite), a ragged **cross** (two bars through the
+centroid), or a **tarn** cropped small. Every shape is a subset of the pool the
+containment approved, so the dry ring holding the water in is untouched, and
+`RaiseSunkenShores` lifts what a shape leaves dry exactly as it lifts a
+wandering shoreline. Two dials turned with it: a large interior lifts the lake
+chance by up to half (broad country holds more water), and a patch that loses
+the main roll can still take a small tarn. Fragmented islands are unaffected by
+construction — their pools fail the same size floor the shapes need.
+
+Measured: lake regions 93 → 173 over 60 islands, distinct bodies median 24
+cells; at the preset's `Lakes = 0.5` the sweep's lake cells went 124 → 150. At
+the slider's top the total *area* is a fifth lower than it was — the shapes
+spend cells on being shapes — while the body count is up by half, which is the
+trade the feature is.
+
+### The other fluid, and the geysers
+
+`FluidKind` came back upside down — see the spec. What is worth keeping here is
+the shape of the "never mixes" guarantee, because it is belt and braces by
+design: goo is *placed* only where no water stands within a king's move (the
+patch's own dry interior guarantees it; a cell guard enforces it anyway), the
+rivers' `keep` mask covers goo's whole king's-move neighbourhood so no channel,
+widening or braid can approach, and `Rivers.Route` treats goo as not-land so no
+course ever drains through a puddle and a goo body has no spill — goo makes no
+rivers because the drainage has never heard of it. The audit counts water
+within a king's move of goo and wants 0. `Traversal.Sailable` refuses it, so it
+takes no berth and joins no ferry network; `Walkable` refuses it because it is
+standing fluid without a ford. It is an obstacle the colour of a warning.
+
+Geysers were the opposite trade — pure scenery, no rules — and were **binned
+the same day** (Maxim looked; they did not turn out): a field of jets placed
+where the rock was, and where a jet belongs is a fact about the *biome*, which
+does not exist yet. What stays is the hook — `Geyser`, `IslandData.Geysers`,
+and the lab's crossed-sheet rendering, all dormant — so the biome layer fills a
+list rather than re-growing the plumbing. When water gets its content pass they
+are the natural partner of plunge pools (§E.14) and the first candidate for an
+eruption schedule.
+
+### The gorge that cannot be bridged, measured
+
+Maxim's worry, and a fair one: rivers often run between two cliffs — the
+grammar makes gorges on purpose — and if the two rims were misaligned too
+often, a gorge would be a wall you must walk the whole length of. The audit now
+measures this with the exact rule the reach flood builds bridges with
+(`Traversal.Walkable` endpoints, `DeckFits` over the gap, banks within
+`MaxBridgeRise`), so what it reports is what the game would let you build. A
+gorge cell is a river cell with dry ground 3+ slabs over its water on both
+sides of an axis — looked for *through* the channel, since a navigable river's
+rim stands beyond its partner — and a reach is a 4-connected run of them,
+counted from three cells.
+
+The answer is: **it does not happen.** Over 60 preset islands: 796 gorge cells
+in 47 reaches (median 9 cells, longest 51) on 18 islands — **47 of 47
+crossable**, 0 sealed, 0 refused for misalignment alone. The worst walk from
+any gorge cell to its nearest deck site is 9 cells; the median is 0, meaning
+most gorge cells can be bridged where you stand. Swept across `Crossings`
+(12 seeds each): Easy 7 reaches / 0 sealed / worst walk 3, Medium 14 / 0 / 1,
+Hard 13 / 0 / 1 — even on Easy Domains, where the span is one cell and
+misalignment is the *only* thing that could seal a stream gorge, nothing does.
+
+Why it is benign is structural, not luck: every pass that cuts a gorge —
+valleys, banks, the flattened reaches — lowers a slab at a time under the
+taper, so the two rims come off the same ground and rarely part by more than a
+slab or two, which `MaxBridgeRise = 2` absorbs; and `DeckFits` reads a deep
+gorge as a *chasm*, so the deck over it gets the full bridge span rather than
+the three-cell water limit. The check stays in the audit as a tripwire: if a
+future pass starts shearing rims apart, `gorgeSealed` is in the baseline and
+will shout.
+
 ### Three dead branches nobody could see
 
 `Surfaces.Pick` decides what the top of a column is made of. Three of its arms
@@ -379,16 +563,18 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 | | |
 |---|---|
 | step grammar | **94.1% free**, 0.5% two-slab, 5.4% cliff, over 378k adjacent pairs |
-| two-slab steps off mountains | 948 — riverbanks and valley sides the pass is not allowed to cut |
+| two-slab steps off mountains | 692 — riverbanks and valley sides the pass is not allowed to cut |
 | cliffs between patches | plain-plain, plain-mesa, plain-basin, mesa-mesa — the pairs the rules allow |
-| rivers | 4.5k cells on 60 of 60 islands, 796 navigable, ~540 falls |
+| rivers | 5.1k cells on 60 of 60 islands, 1,980 navigable, ~630 falls, **0 running uphill** |
 | how a course runs | 60% straight / 40% turning |
-| lakes | 93 on 45 of 60, **0 leaks, 0 water touching the void** |
-| ferries | 48 berths of 3,362 sites (1% load-bearing), on the 1 island in 60 where water is genuinely in the way |
+| lakes | ~125 on 56 of 60 (~156 distinct bodies, median 21 cells — the shapes), **0 leaks, 0 water touching the void** |
+| goo | ~520 cells on 19 of 60, **0 within a king's move of water** (geysers are an empty hook — see *The other fluid*) |
+| gorges | 47 walled reaches on 18 of 60 — **47 of 47 bridgeable, 0 sealed**, worst walk to a deck 9 cells |
+| ferries | 0 berths of 4,621 sites — no island in this sample has water a bridge cannot span; the machinery is intact and idle (see *The wide rivers that were not there*) |
 | surface | stone 11%, scree 15%, snow 13%, sand 21%, silt 5%, grass 3%, heath 23%, dust 2%, meadow 8% — none NEVER |
-| anchors | 29k coast (81% of it beached), 31k cliff, 250 overhang, 372 ford, 1.8k gate landing |
-| overhangs | ~250 columns with a second span |
-| walk / reach | **40% mainland on foot, 95% heartland with building**, 50 of 60 islands one whole |
+| anchors | 29k coast (81% of it beached), 35k cliff, 270 overhang, 342 ford, 543 gate landing |
+| overhangs | ~270 columns with a second span |
+| walk / reach | **39% mainland on foot, 94% heartland with building**, 51 of 60 islands one whole |
 | what stays out of reach | mountain and karst tower — landforms whose point is the height |
 | Gates | 1 entry and 1-3 exits on every island (median 2 exits); 0 on a shared edge, 0 off the heartland, 0 not outermost on their own axis |
 | Gate landings | every one exactly 3 cells and dead level — **0 short or sloped** |
@@ -420,10 +606,10 @@ built out of a great many overlapping blobs costs.
 
 | | |
 |---|---|
-| two-slab steps at a riverbank or valley side | 948 in 378k pairs, all where the ground the pass would have to cut is a landform, a bridgehead or standing water. It rose from ~730 when valleys started working; the alternative is eating the landform. |
+| two-slab steps at a riverbank or valley side | 830 in 378k pairs, all where the ground the pass would have to cut is a landform, a bridgehead or standing water. It rose from ~730 when valleys started working and fell back from 948 when pairs stopped sinking unevenly; the alternative is eating the landform. |
 | ~~3 crossings with banks more than 2 slabs apart~~ | **closed.** It came in with the sculpted landforms and went out with the crater cull and the beach reordering: 0 of 149. |
 | 3 gates in a corner of their own edge | The relaxed placement rungs firing where a coast will not take four Gates under the full rules. No pair is inside the separation floor any more. The alternative is a Domain with fewer Links, which is worse. |
-| 2 river cells running uphill in 4,578 | Where a channel could not sink as far as the stretch above it — a bridgehead or a mesa rim in the way — and the second `Descend` did not fully flatten it. Was 1 before valleys worked. |
+| ~~2 river cells running uphill in 4,578~~ | **closed** by `Settle` (descend + pair-levelling run to a fixed point) — and the last case was a mainstem pouring a drawn fall into the stream beside it, which is water falling, not climbing. 0 of 4,506. |
 | ~~3 hanging Exits delivered ~2/3 of the time~~ | **closed** by the set-wise placer and the built strip: 100% at every count, and 100% for four hanging Gates. |
 | a landmass adrift on the two most broken layouts | `BrokenFractal` and `ThousandIsles`, per the feasibility table. The Stage 11 guarantees still hold, so it is one islet of fifteen rather than a broken island. |
 | basins on a `Highlands` island | ~80% of islands, not 100% — adjacency cannot always place one beside a massif. *Accepted.* |
@@ -471,6 +657,14 @@ Still open, added since:
     obvious real-world coastline the arrangements do not produce. It is a mask
     operation (radial or parallel cuts inward from the rim) rather than a
     landform, so it belongs with Stage 1.
+14. **Plunge pools.** When the falls learned to pour every plausible way, the
+    sheets were restricted to landing on existing water so nothing floods — but
+    the other road was to *dig* the landing: a small pool under a fall onto dry
+    ground, fed by it, maybe spilling on. Maxim called a lake fed by waterfalls
+    an aesthetically pleasant idea, and it is; what it costs is that a pool is
+    standing water on ground the traversal already counted, so it wants the same
+    guards as a lake (bridgeheads, landing strips, roads) and a re-run of the
+    analysis. Worth doing when water gets its content pass.
 
 ---
 

@@ -168,15 +168,32 @@ which is what the lab's panel now says under the checkbox. (`Spiral` was binned
 
 **Water.** Lakes sink into a flat patch's interior with the patch's own rim as
 containment, and the shore inset wanders so a lake is not a scale copy of a
-Voronoi polygon. Rivers are routed by a priority flood inward from the rim, with
+Voronoi polygon. A big pool rolls a **shape** — single, thousand-lakes scatter,
+ring, crescent, cross, or a small tarn — every shape a subset of the approved
+pool, so fragmented islands are untouched while broad flat country comes out
+wetter and more varied. Rivers are routed by a priority flood inward from the rim, with
 **ties broken on a noise field — which is what makes them bend**. Sources are
 named: every summit, and **one outflow per lake**. A river has a bed; a stream is
 crossed **at a ford** (one every ~11 cells) and is an obstacle everywhere else; a
-navigable river is two cells wide, not fordable, and sometimes splits round an
-**eyot**. The ground sinks toward a course in tapered bands (`Valleys`) — **and
+navigable river is two cells wide, not fordable, earned below a course's first
+confluence, and sometimes splits round an **eyot**.
+
+**Fluids.** `IslandData.Fluid` is per column (the removed Domain-wide `FluidKind`
+dropdown came back upside down, 2026-09-01): water is the default and the only
+fluid that behaves. **Goo** — violet puddles on ~30% of islands — makes no
+rivers (the routing treats it as not-land) and **never mixes with water, even
+diagonally**; the audit checks that at zero. **Geysers** (~35% of islands) are a
+clustered field of water jets on high dry ground: scenery and a feature anchor,
+no terrain moved, in `IslandData.Geysers`. The ground sinks toward a course in tapered bands (`Valleys`) — **and
 the channel sinks with them**, one band deeper than its own bank, because a bank
 already stands one slab above the water and a valley that only lowers the ground
-beside a river comes out as a moat around it. Every river reaches the rim and
+beside a river comes out as a moat around it. Valleys favour the courses that
+descend through uneven country; a river crossing a plain keeps its bare incision.
+A navigable river is a **stair of pools** — dead level between falls, its two
+cells always at one level (`Settle` in `Rivers.cs`) — and water **pours every way
+it plausibly can**: off every aether edge beside a cell and toward any
+neighbouring water a fall's depth below it, never onto dry ground, so nothing new
+gets wet. Every river reaches the rim and
 pours off it, because there is no sea. Everything is water: `FluidKind` (lava,
 essence) was removed 2026-08-31 — it was two `if`s and a dropdown with nothing
 visible behind it, and the whole idea is the look.
@@ -250,7 +267,7 @@ reachable from it.
    sand, silt, grass, meadow, heath, dust) / `anchors` (what the content layer
    attaches to: coast, cliff, overhang, beach, ford, gate landing, ferry quay —
    everything else dimmed). Water is coloured by kind: pale a ford, mid a stream,
-   deep a navigable reach, dark a lake.
+   deep a navigable reach, dark a lake — and goo is violet, in every view.
 5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (its
    1 × 3 landing strip, whichever kind of Gate it is),
    **K** ferry berths (quay and hull), **O** fords, **P** the roads between
@@ -333,6 +350,8 @@ scripts/
     Names.cs                    Names for the Domain, its districts and its water.
     Rivers.cs                   Drainage routing, channels, banks, eyots, waterfalls.
     Fall.cs                     One waterfall; the off-rim ones are the silhouette.
+    FluidKind.cs                What a body of standing fluid is (water, goo).
+    Geyser.cs                   One jet of a geyser field.
     Gate.cs / GatePlacement.cs  Where the Links come out.
     Passage.cs                  The least-works road from the Entry to each Exit, and
                                 the works — stair, bridge, ferry — along it.

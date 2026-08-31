@@ -278,6 +278,9 @@ public static class Traversal
         int n = d.Size;
         if (x < 0 || z < 0 || x >= n || z >= n) return false;
         if (!d.HasLand(x, z) || d.WaterLevel[x, z] == IslandData.NoLand) return false;
+        // Only water: a hull does not go in the goo, so a puddle of it is not a
+        // body of water, takes no berth and joins no ferry network.
+        if (d.Fluid[x, z] != (byte)FluidKind.Water) return false;
         return !d.River[x, z] || d.Navigable[x, z];
     }
 

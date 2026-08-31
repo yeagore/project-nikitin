@@ -161,6 +161,15 @@ public partial class GenerationAudit : Node
 
         int lakes = 0, lakeCells = 0, leaks = 0, waterAtVoid = 0, islandsWithLake = 0;
         var shoreSteps = new List<int>();
+        var lakeBodySizes = new List<int>();
+
+        int gooCells = 0, gooIslands = 0, gooTouchesWater = 0;
+
+        int gorgeCells = 0, gorgeReaches = 0, gorgeCrossable = 0, gorgeSealed = 0;
+        int gorgeMisaligned = 0, gorgeIslands = 0;
+        var gorgeLengths = new List<int>();
+        var gorgeSealedLengths = new List<int>();
+        var gorgeDetours = new List<int>();
 
         int landmasses = 0, diagonalLand = 0, diagonalWater = 0;
         int overhangCells = 0, overhangIslands = 0;
@@ -403,15 +412,22 @@ public partial class GenerationAudit : Node
             }
 
             // ---- lakes ---------------------------------------------------------
+            // Goo is standing fluid and gets the same physics checks — a leak is
+            // a leak whatever stands over it — but it is not a lake, ignores the
+            // Lakes knob, and does not belong in the lake counts.
             var lakeRegions = new HashSet<int>();
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
                 short w = d.WaterLevel[x, z];
                 if (w == IslandData.NoLand || d.River[x, z]) continue;
+                bool watery = d.Fluid[x, z] == (byte)FluidKind.Water;
 
-                lakeCells++;
-                lakeRegions.Add(d.Region[x, z]);
+                if (watery)
+                {
+                    lakeCells++;
+                    lakeRegions.Add(d.Region[x, z]);
+                }
 
                 for (int k = 0; k < 4; k++)
                 {
@@ -419,11 +435,72 @@ public partial class GenerationAudit : Node
                     if (!Land(nx, nz)) { waterAtVoid++; continue; }
                     if (d.WaterLevel[nx, nz] != IslandData.NoLand) continue;
                     if (Top(nx, nz) < w) leaks++;               // dry ground *under* the water
-                    else shoreSteps.Add(Top(nx, nz) - w);
+                    else if (watery) shoreSteps.Add(Top(nx, nz) - w);
                 }
             }
             lakes += lakeRegions.Count;
             if (lakeRegions.Count > 0) islandsWithLake++;
+
+            // Distinct bodies and their sizes — a patch is no longer one lake by
+            // definition, so the region count above and this can disagree, and
+            // the gap between them is the shaped lakes working.
+            var lakeSeen = new bool[n, n];
+            var lakeStack = new Stack<(int X, int Z)>();
+            for (int sx = 0; sx < n; sx++)
+            for (int sz = 0; sz < n; sz++)
+            {
+                if (lakeSeen[sx, sz] || d.WaterLevel[sx, sz] == IslandData.NoLand
+                    || d.River[sx, sz]) continue;
+                if (d.Fluid[sx, sz] != (byte)FluidKind.Water) continue;
+
+                int size = 0;
+                lakeSeen[sx, sz] = true;
+                lakeStack.Push((sx, sz));
+                while (lakeStack.Count > 0)
+                {
+                    var (cx, cz) = lakeStack.Pop();
+                    size++;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int nx = cx + Dx[k], nz = cz + Dz[k];
+                        if (nx < 0 || nz < 0 || nx >= n || nz >= n || lakeSeen[nx, nz]) continue;
+                        if (d.WaterLevel[nx, nz] == IslandData.NoLand || d.River[nx, nz]) continue;
+                        if (d.Fluid[nx, nz] != (byte)FluidKind.Water) continue;
+                        lakeSeen[nx, nz] = true;
+                        lakeStack.Push((nx, nz));
+                    }
+                }
+                lakeBodySizes.Add(size);
+            }
+
+            // ---- goo -----------------------------------------------------------
+            int gooHere = 0;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (d.WaterLevel[x, z] == IslandData.NoLand
+                    || d.Fluid[x, z] != (byte)FluidKind.Goo) continue;
+                gooHere++;
+                // Never mixes, including diagonally: no water within a king's move.
+                for (int ox = -1; ox <= 1; ox++)
+                for (int oz = -1; oz <= 1; oz++)
+                {
+                    int nx = x + ox, nz = z + oz;
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (d.WaterLevel[nx, nz] != IslandData.NoLand
+                        && d.Fluid[nx, nz] == (byte)FluidKind.Water) gooTouchesWater++;
+                }
+            }
+            gooCells += gooHere;
+            if (gooHere > 0) gooIslands++;
+
+            // ---- gorges: can the walled reaches actually be bridged? -----------
+            int reachesHere = AnalyseGorges(d, ref gorgeCells, gorgeLengths,
+                                            gorgeSealedLengths, gorgeDetours,
+                                            ref gorgeCrossable, ref gorgeSealed,
+                                            ref gorgeMisaligned);
+            gorgeReaches += reachesHere;
+            if (reachesHere > 0) gorgeIslands++;
 
             // ---- what the character delivered ----------------------------------
             charIslands.TryGetValue(d.Character, out int seen);
@@ -483,6 +560,8 @@ public partial class GenerationAudit : Node
             // the rim. A river that stops inland is water with nowhere to go.
             int here = 0;
             bool reachedRim = false;
+            var pours = new HashSet<(Vector2I, Vector2I)>();
+            foreach (Fall f in d.Falls) pours.Add((f.Cell, f.Flow));
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -500,8 +579,16 @@ public partial class GenerationAudit : Node
                     if (!Land(nx, nz)) { reachedRim = true; continue; }
                     // Water running uphill: a downstream cell standing above this
                     // one by more than a slab of noise.
+                    // Excused where the higher neighbour pours a drawn fall into
+                    // this cell: that is water falling, which is the opposite of
+                    // climbing. The flow comparison is a heuristic for "more
+                    // downstream", and two chains running side by side at
+                    // different levels can trip it — the fall is the proof of
+                    // which way the water actually goes.
                     if (d.River[nx, nz] && d.WaterLevel[nx, nz] > level + 1
-                        && d.Flow[nx, nz] > d.Flow[x, z]) riverUphill++;
+                        && d.Flow[nx, nz] > d.Flow[x, z]
+                        && !pours.Contains((new Vector2I(nx, nz), new Vector2I(x - nx, z - nz))))
+                        riverUphill++;
                 }
             }
             foreach (Fall f in d.Falls)
@@ -1035,7 +1122,21 @@ public partial class GenerationAudit : Node
         GD.Print($"lakes: {lakes} over {lakeCells} cells, on {islandsWithLake} of {Seeds} islands");
         Report("  shore step above water", shoreSteps, "slabs");
         GD.Print($"  dry land BELOW a water surface (want 0): {leaks}");
-        GD.Print($"  water touching the void (want 0):        {waterAtVoid}\n");
+        GD.Print($"  water touching the void (want 0):        {waterAtVoid}");
+        Report("  lake bodies", lakeBodySizes, "cells");
+
+        GD.Print($"goo: {gooCells} cells of puddle on {gooIslands} of {Seeds} islands");
+        GD.Print($"  goo within a king's move of water (want 0): {gooTouchesWater}\n");
+
+        GD.Print($"gorges (a course walled 3+ slabs on both sides): {gorgeCells} cells, "
+            + $"{gorgeReaches} reaches of 3+ cells, on {gorgeIslands} of {Seeds} islands");
+        Report("  reach length", gorgeLengths, "cells");
+        GD.Print($"  reaches a bridge could cross somewhere along them: "
+            + $"{gorgeCrossable} of {gorgeReaches}");
+        GD.Print($"  sealed reaches — no legal deck anywhere on their length: {gorgeSealed}"
+            + $", of which {gorgeMisaligned} misaligned rims (a deck fits, banks disagree 3+)");
+        Report("  sealed reach length", gorgeSealedLengths, "cells");
+        Report("  walk to the nearest deck, worst cell per reach", gorgeDetours, "cells");
 
         GD.Print("landforms delivered, by character (share of that character's islands)");
         foreach (var (c, islands) in charIslands.OrderBy(k => k.Key.ToString()))
@@ -1169,6 +1270,10 @@ public partial class GenerationAudit : Node
             ["lakes"] = lakes,
             ["waterLeaks"] = leaks,
             ["riverUphill"] = riverUphill,
+            ["gooCells"] = gooCells,
+            ["gooTouchesWater"] = gooTouchesWater,
+            ["gorgeReaches"] = gorgeReaches,
+            ["gorgeSealed"] = gorgeSealed,
             ["berths"] = berths,
             ["overhangColumns"] = overhangCells,
             ["mainland%"] = Math.Round(100.0 * walkMainland / walkLand, 1),
@@ -1820,6 +1925,8 @@ public partial class GenerationAudit : Node
                 for (int z = 0; z < d.Size; z++)
                 {
                     if (d.WaterLevel[x, z] == IslandData.NoLand || d.River[x, z]) continue;
+                    // Not the goo: it ignores this knob, being no kind of lake.
+                    if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;
                     cells++;
                     int r = d.Region[x, z];
                     perRegion[r] = perRegion.GetValueOrDefault(r) + 1;
@@ -1851,6 +1958,32 @@ public partial class GenerationAudit : Node
             }
             GD.Print($"  {v,6:0.00} {cells / (float)SweepSeeds,12:0.0} "
                 + $"{navigable / (float)SweepSeeds,10:0.0} {falls / (float)SweepSeeds,7:0.0}");
+        }
+
+        // The gorge question at every bridge span. The preset's Medium answers
+        // "how often can a walled river not be bridged" with zero — but Easy
+        // Domains only span one cell, so a two-cell channel is a wall there by
+        // rule, and misalignment is the one thing that can seal a stream gorge.
+        // This is where the frustration would live if it lived anywhere.
+        GD.Print($"\n  {"crossings",-10} {"reaches",8} {"sealed",7} {"misaligned",11} "
+            + $"{"worst walk",11}");
+        foreach (BridgeEase ease in new[] { BridgeEase.Easy, BridgeEase.Medium, BridgeEase.Hard })
+        {
+            var p = (IslandParams)Params.Duplicate();
+            p.Crossings = ease;
+            int cells = 0, cross = 0, sealedUp = 0, skew = 0, reaches = 0;
+            var lens = new List<int>();
+            var sealedLens = new List<int>();
+            var walks = new List<int>();
+            for (int i = 0; i < SweepSeeds; i++)
+            {
+                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                reaches += AnalyseGorges(d, ref cells, lens, sealedLens, walks,
+                                         ref cross, ref sealedUp, ref skew);
+            }
+            int worst = 0;
+            foreach (int w in walks) worst = Math.Max(worst, w);
+            GD.Print($"  {ease,-10} {reaches,8} {sealedUp,7} {skew,11} {worst,11}");
         }
 
         // The rise is the valley; the rest is what deepening every channel on the
@@ -1916,6 +2049,158 @@ public partial class GenerationAudit : Node
     /// falling toward its river for a long way before it reaches it — and it is
     /// measurable where "does the valley pass look right" is not.
     /// </summary>
+    /// <summary>
+    /// Whether the island's walled river reaches can actually be bridged.
+    ///
+    /// A river running between two cliffs is fine — the grammar makes gorges on
+    /// purpose, and not every river should be crossable everywhere. But a gorge
+    /// whose two rims never line up within a deck's tolerance <i>anywhere along
+    /// its length</i> is a wall with water at the bottom: the only way across is
+    /// to walk the whole reach round. This measures how often that happens,
+    /// using the exact rule the reach flood builds bridges with —
+    /// <see cref="Traversal.Walkable"/> endpoints, <see cref="Traversal.DeckFits"/>
+    /// over the gap, levels within <see cref="Traversal.MaxBridgeRise"/> — so
+    /// what it reports is what the game would let you build, not a re-derivation.
+    ///
+    /// A <b>gorge cell</b> is a river cell with dry ground three slabs or more
+    /// above its water on both sides of one axis; a <b>reach</b> is a
+    /// 4-connected run of them, counted from three cells long, since a one-cell
+    /// gorge is a doorway rather than a wall. A reach is <b>sealed</b> when no
+    /// legal deck crosses any of its cells on either axis, and <b>misaligned</b>
+    /// when, additionally, a deck's geometry fit somewhere along it and only the
+    /// rims' disagreement refused it — the pure frustration case the analysis
+    /// exists to count.
+    /// </summary>
+    private static int AnalyseGorges(IslandData d, ref int cells, List<int> lengths,
+                                     List<int> sealedLengths, List<int> detours,
+                                     ref int crossable, ref int shut, ref int skew)
+    {
+        int n = d.Size;
+        int span = Math.Max(1, d.BridgeSpan);
+
+        var walled = new bool[n, n];
+        var canCross = new bool[n, n];
+        var riseOnly = new bool[n, n];
+
+        // The first dry ground out from the water on this side, looked for
+        // through the channel itself — a navigable river is two cells across,
+        // and its gorge wall stands beyond its partner, not beside each cell.
+        bool Rim(int x, int z, int dx, int dz, short w)
+        {
+            for (int step = 1; step <= 3; step++)
+            {
+                int nx = x + dx * step, nz = z + dz * step;
+                if (nx < 0 || nz < 0 || nx >= n || nz >= n) return false;
+                if (!d.HasLand(nx, nz)) return false;              // the island's rim
+                if (d.WaterLevel[nx, nz] != IslandData.NoLand) continue;
+                return d.SurfaceLevel(nx, nz) - w >= 3;
+            }
+            return false;
+        }
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!d.River[x, z]) continue;
+            short w = d.WaterLevel[x, z];
+
+            for (int axis = 0; axis < 2; axis++)
+            {
+                int dx = axis == 0 ? 1 : 0, dz = axis == 0 ? 0 : 1;
+                if (Rim(x, z, -dx, -dz, w) && Rim(x, z, dx, dz, w))
+                    walled[x, z] = true;
+
+                // Every deck whose run crosses this cell on this axis: near end
+                // i cells back, far end j cells on, the whole thing inside the
+                // span the reach flood would allow.
+                for (int i = 1; i <= span && !canCross[x, z]; i++)
+                for (int j = 1; i + j <= span + 1; j++)
+                {
+                    int ax = x - dx * i, az = z - dz * i;
+                    int bx = x + dx * j, bz = z + dz * j;
+                    if (ax < 0 || az < 0 || bx >= n || bz >= n) continue;
+                    if (!Traversal.Walkable(d, ax, az)
+                        || !Traversal.Walkable(d, bx, bz)) continue;
+                    if (!Traversal.DeckFits(d, ax, az, dx, dz, i + j, span)) continue;
+                    int rise = Math.Abs(Traversal.CrossLevel(d, ax, az)
+                                        - Traversal.CrossLevel(d, bx, bz));
+                    if (rise > Traversal.MaxBridgeRise) { riseOnly[x, z] = true; continue; }
+                    canCross[x, z] = true;
+                    break;
+                }
+            }
+        }
+
+        var seen = new bool[n, n];
+        var stack = new Stack<(int X, int Z)>();
+        var members = new List<(int X, int Z)>();
+        int reaches = 0;
+
+        for (int sx = 0; sx < n; sx++)
+        for (int sz = 0; sz < n; sz++)
+        {
+            if (!walled[sx, sz] || seen[sx, sz]) continue;
+
+            members.Clear();
+            bool anyCross = false, anySkew = false;
+            seen[sx, sz] = true;
+            stack.Push((sx, sz));
+            while (stack.Count > 0)
+            {
+                var (cx, cz) = stack.Pop();
+                members.Add((cx, cz));
+                anyCross |= canCross[cx, cz];
+                anySkew |= riseOnly[cx, cz];
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = cx + Dx[k], nz = cz + Dz[k];
+                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!walled[nx, nz]) continue;
+                    seen[nx, nz] = true;
+                    stack.Push((nx, nz));
+                }
+            }
+
+            cells += members.Count;
+            if (members.Count < 3) continue;
+            reaches++;
+            lengths.Add(members.Count);
+            if (!anyCross)
+            {
+                shut++;
+                sealedLengths.Add(members.Count);
+                if (anySkew) skew++;
+                continue;
+            }
+            crossable++;
+
+            // How far the walk to the nearest deck is from the worst cell of
+            // the reach — one site on a fifty-cell gorge is still a detour, and
+            // this is the number that says how long a one.
+            var dist = new Dictionary<(int X, int Z), int>();
+            var q = new Queue<(int X, int Z)>();
+            foreach (var m in members)
+                if (canCross[m.X, m.Z]) { dist[m] = 0; q.Enqueue(m); }
+            while (q.Count > 0)
+            {
+                var (cx, cz) = q.Dequeue();
+                for (int k = 0; k < 4; k++)
+                {
+                    var next = (X: cx + Dx[k], Z: cz + Dz[k]);
+                    if (next.X < 0 || next.Z < 0 || next.X >= n || next.Z >= n) continue;
+                    if (!walled[next.X, next.Z] || dist.ContainsKey(next)) continue;
+                    dist[next] = dist[(cx, cz)] + 1;
+                    q.Enqueue(next);
+                }
+            }
+            int worst = 0;
+            foreach (var m in members)
+                if (dist.TryGetValue(m, out int got)) worst = Math.Max(worst, got);
+            detours.Add(worst);
+        }
+        return reaches;
+    }
+
     private static bool ValleyRise(IslandData d, out double rise, List<double>? perRiver = null)
     {
         rise = 0;

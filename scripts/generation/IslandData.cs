@@ -99,6 +99,21 @@ public sealed class IslandData
     public short[,] WaterLevel { get; }
 
     /// <summary>
+    /// What the standing fluid in a column is, as a <see cref="FluidKind"/>.
+    /// Meaningful only where <see cref="WaterLevel"/> is set; everything is
+    /// water unless a pass said otherwise. Fluids never touch, even diagonally.
+    /// </summary>
+    public byte[,] Fluid { get; }
+
+    /// <summary>
+    /// The Domain's geyser fields. <b>Empty today</b>: the terrain-stage
+    /// placement was binned, because where a jet belongs is a fact about the
+    /// biome — this list and the lab's rendering are the hook that layer will
+    /// fill. See <see cref="Geyser"/>.
+    /// </summary>
+    public List<Geyser> Geysers { get; } = new();
+
+    /// <summary>
     /// Columns a canyon was cut through. A canyon is a deliberate exception to
     /// the step grammar — its walls are a cliff on a border the rules would
     /// otherwise forbid one on — so anything auditing or pathing the terrain has
@@ -329,6 +344,7 @@ public sealed class IslandData
         Land = new bool[size, size];
         Region = new int[size, size];
         WaterLevel = new short[size, size];
+        Fluid = new byte[size, size];
         Canyon = new bool[size, size];
         Pass = new bool[size, size];
         River = new bool[size, size];
