@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -112,9 +113,6 @@ public static class Traversal
     /// crossings an arrangement depends on are level by construction.)
     /// </summary>
     public const int MaxBridgeRise = 2;
-
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
 
     /// <summary>
     /// Fills <c>Walk</c> / <c>Areas</c> / <c>Mainland</c> (what you can cross on
@@ -242,7 +240,7 @@ public static class Traversal
         for (int step = 1; step < reach; step++)
         {
             int mx = x + dx * step, mz = z + dz * step;
-            if (mx < 0 || mz < 0 || mx >= n || mz >= n) continue;
+            if (!InBounds(n, mx, mz)) continue;
             if (!d.HasLand(mx, mz)) continue;                       // aether
 
             // What the deck has to clear: a water surface where there is one, the
@@ -276,7 +274,7 @@ public static class Traversal
     public static bool Sailable(IslandData d, int x, int z)
     {
         int n = d.Size;
-        if (x < 0 || z < 0 || x >= n || z >= n) return false;
+        if (!InBounds(n, x, z)) return false;
         if (!d.HasLand(x, z) || d.WaterLevel[x, z] == IslandData.NoLand) return false;
         // Only water: a hull does not go in the goo, so a puddle of it is not a
         // body of water, takes no berth and joins no ferry network.
@@ -424,7 +422,7 @@ public static class Traversal
     public static bool Walkable(IslandData d, int x, int z)
     {
         int n = d.Size;
-        if (x < 0 || z < 0 || x >= n || z >= n) return false;
+        if (!InBounds(n, x, z)) return false;
         if (!d.HasLand(x, z)) return false;
         if (d.WaterLevel[x, z] == IslandData.NoLand) return true;
         // A stream is crossed at a ford and nowhere else: fordable-everywhere made
@@ -697,7 +695,7 @@ public static class Traversal
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!ground[nx, nz] || claimed[nx, nz]) continue;
                     // A shelf may descend, a slab at a time. What it may not do is
                     // step twice at once.
@@ -751,7 +749,7 @@ public static class Traversal
                 {
                     if (dx == 0 && dz == 0) continue;
                     int nx = c.X + dx, nz = c.Y + dz;
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n
+                    if (!InBounds(n, nx, nz)
                         || !alive.Contains(new Vector2I(nx, nz)))
                     {
                         solid = false;

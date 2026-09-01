@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
@@ -222,7 +224,7 @@ internal static class GatePlacement
         }
         if (entry < 0)
         {
-            int first = (int)(Hash01(seed, 0x3D1Fu) * chosen.Length);
+            int first = (int)(FeatureHash01(seed, 0x3D1Fu) * chosen.Length);
             for (int k = 0; k < chosen.Length && entry < 0; k++)
             {
                 int i = (first + k) % chosen.Length;
@@ -234,7 +236,7 @@ internal static class GatePlacement
         // ---- 3. how many Exits are wanted, and which sites keep them -----------
         int exits = p.ExitGates > 0
             ? Math.Clamp(p.ExitGates, 1, 3)
-            : 1 + (int)(Hash01(seed, 0x6A7Eu) * 3f);
+            : 1 + (int)(FeatureHash01(seed, 0x6A7Eu) * 3f);
 
         // Take away, best first: an Exit the Domain does not need is deleted, and
         // the ones deleted are the worst-founded of the four.
@@ -247,14 +249,14 @@ internal static class GatePlacement
         // ---- 4. and what kind each one is --------------------------------------
         GateKind entryKind = p.EntryGate != GateKind.Auto
             ? p.EntryGate
-            : Hash01(seed, 0xE47Eu) < LandGateShare ? GateKind.Land : GateKind.Hanging;
+            : FeatureHash01(seed, 0xE47Eu) < LandGateShare ? GateKind.Land : GateKind.Hanging;
 
         d.Gates.Add(Build(chosen[entry], GateRole.Entry, entryKind));
         foreach (int i in order)
         {
             GateKind kind = p.ExitGate != GateKind.Auto
                 ? p.ExitGate
-                : Hash01(seed, 0x91C0u ^ (uint)chosen[i].Edge * 2654435761u) < LandGateShare
+                : FeatureHash01(seed, 0x91C0u ^ (uint)chosen[i].Edge * 2654435761u) < LandGateShare
                     ? GateKind.Land
                     : GateKind.Hanging;
             d.Gates.Add(Build(chosen[i], GateRole.Exit, kind));
@@ -483,7 +485,7 @@ internal static class GatePlacement
 
         // The head of the strip: land with aether directly outward of it.
         int hx = x + outward.X, hz = z + outward.Y;
-        if (hx >= 0 && hz >= 0 && hx < n && hz < n && d.HasLand(hx, hz)) return false;
+        if (InBounds(n, hx, hz) && d.HasLand(hx, hz)) return false;
 
         short lowest = short.MaxValue, highest = short.MinValue;
         for (int along = 0; along < StripLength; along++)
@@ -539,14 +541,14 @@ internal static class GatePlacement
         // hanging offset of the wall simply offers no site; measured before this
         // rule, one gate in nine hung outside the box.
         int px = x + outward.X * HangingOffset, pz = z + outward.Y * HangingOffset;
-        if (px < 0 || pz < 0 || px >= n || pz >= n) return false;
+        if (!InBounds(n, px, pz)) return false;
 
         for (int step = 1; step <= HangingOffset; step++)
         for (int side = -1; side <= 1; side++)
         {
             int gx = x + outward.X * step + across.X * side;
             int gz = z + outward.Y * step + across.Y * side;
-            if (gx < 0 || gz < 0 || gx >= n || gz >= n || !d.HasLand(gx, gz)) continue;
+            if (!InBounds(n, gx, gz) || !d.HasLand(gx, gz)) continue;
             if (d.SurfaceLevel(gx, gz) >= sill) return false;
         }
 
@@ -554,7 +556,7 @@ internal static class GatePlacement
         for (int step = HangingOffset - HangingClearance + 1; step <= HangingOffset; step++)
         {
             int gx = x + outward.X * step, gz = z + outward.Y * step;
-            if (gx >= 0 && gz >= 0 && gx < n && gz < n && d.HasLand(gx, gz)) return false;
+            if (InBounds(n, gx, gz) && d.HasLand(gx, gz)) return false;
         }
         return true;
     }
@@ -639,7 +641,7 @@ internal static class GatePlacement
             for (int along = 0; along < StripLength; along++)
             {
                 Vector2I cell = head - outward * along;
-                if (cell.X < 0 || cell.Y < 0 || cell.X >= n || cell.Y >= n) continue;
+                if (!InBounds(n, cell.X, cell.Y)) continue;
                 if (!d.HasLand(cell.X, cell.Y)) continue;
                 d.Landings[cell.X, cell.Y] = true;
             }
@@ -716,7 +718,7 @@ internal static class GatePlacement
                - MathF.Abs(side - middle) * 0.35f
                - roughness * 1.5f
                + ApronAt(d, x, z) * 0.01f
-               + Hash01(seed, 0x2200u ^ (uint)(x * 733 + z)) * 0.5f;
+               + FeatureHash01(seed, 0x2200u ^ (uint)(x * 733 + z)) * 0.5f;
     }
 
     /// <summary>
@@ -760,7 +762,7 @@ internal static class GatePlacement
     private static bool Usable(IslandData d, int x, int z)
     {
         int n = d.Size;
-        if (x < 0 || z < 0 || x >= n || z >= n) return false;
+        if (!InBounds(n, x, z)) return false;
         if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) return false;
         return d.Heartland >= 0 && d.Reach[x, z] == d.Heartland;
     }
@@ -797,19 +799,5 @@ internal static class GatePlacement
             flyable++;
         }
         return (usable, fits, strip, flyable);
-    }
-
-    private static float Hash01(int seed, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)seed * 2654435761u ^ salt;
-            h ^= h >> 15;
-            h *= 0x2C1B3C6Du;
-            h ^= h >> 12;
-            h *= 0x297A2D39u;
-            h ^= h >> 15;
-            return (h & 0xFFFFFF) / 16777216f;
-        }
     }
 }

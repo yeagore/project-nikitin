@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -15,20 +16,7 @@ public static class FieldOps
     }
 
     /// <summary>
-    /// The value v such that a fraction <paramref name="q"/> of the field is ≤ v
-    /// (q in [0, 1]). One sort; used to turn a target land fraction into a
-    /// mask threshold without an iterative search.
-    /// </summary>
-    public static float Quantile(float[,] field, float q)
-    {
-        var flat = new float[field.Length];
-        int k = 0;
-        foreach (float v in field) flat[k++] = v;
-        return Quantile(flat, q);
-    }
-
-    /// <summary>
-    /// As <see cref="Quantile(float[,], float)"/>, over an explicit sample set —
+    /// The value v such that a fraction q of the samples is ≤ v: one sort, over an explicit sample set —
     /// used to measure coverage against the candidate area rather than the whole
     /// grid, most of which is empty aether.
     /// </summary>
@@ -94,9 +82,9 @@ public static class FieldOps
                 int cap = int.MaxValue;
                 for (int k = 0; k < 4; k++)
                 {
-                    int nx = x + (k == 0 ? 1 : k == 1 ? -1 : 0);
-                    int nz = k == 2 ? z + 1 : k == 3 ? z - 1 : z;
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    int nx = x + Dx[k];
+                    int nz = z + Dz[k];
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!land[nx, nz]) continue;                 // the rim is not a neighbour
                     cap = Math.Min(cap, drop[nx, nz] + 1);
                 }
@@ -131,7 +119,7 @@ public static class FieldOps
                 for (int dz = -1; dz <= 1; dz++)
                 {
                     int nx = x + dx, nz = z + dz;
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     sum += field[nx, nz];
                     taken++;
                 }

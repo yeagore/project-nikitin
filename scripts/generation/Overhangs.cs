@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 
 using Godot;
+using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
@@ -39,9 +41,6 @@ internal static class Overhangs
 
     /// <summary>Slabs of rock in a lip. Thin enough to read as an overhang.</summary>
     private const int LipThickness = 2;
-
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
 
     /// <summary>
     /// Whether a cliff top is solid enough behind it to hang a lip off.
@@ -133,16 +132,16 @@ internal static class Overhangs
 
                 // How far the lip reaches out, and how thick it is. Both wander,
                 // so a face carries a ragged eave rather than a fitted shelf.
-                int depth = 1 + (int)(Hash01(seed, 0x0EA5u ^ (uint)(x * 73856093 ^ z * 19349663))
+                int depth = 1 + (int)(FeatureHash01(seed, 0x0EA5u ^ (uint)(x * 73856093 ^ z * 19349663))
                                       * reach);
                 int thick = LipThickness
-                            + (int)(Hash01(seed, 0x11Fu ^ (uint)(x * 31 + z)) * 2f);
+                            + (int)(FeatureHash01(seed, 0x11Fu ^ (uint)(x * 31 + z)) * 2f);
                 short bottom = (short)(high - thick + 1);
 
                 for (int step = 0; step < depth; step++)
                 {
                     int cx = lx + Dx[k] * step, cz = lz + Dz[k] * step;
-                    if (cx < 0 || cz < 0 || cx >= n || cz >= n) break;
+                    if (!InBounds(n, cx, cz)) break;
                     if (!d.HasLand(cx, cz) || d.Spans[cx, cz].Length > 1) break;
                     // Real air under the lip, and a gap the span list can hold:
                     // two spans in a column must not touch.
@@ -190,7 +189,7 @@ internal static class Overhangs
                 for (int gap = 2; gap <= span; gap++)
                 {
                     int fx = x + dx * (gap + 1), fz = z + dz * (gap + 1);
-                    if (fx < 0 || fz < 0 || fx >= n || fz >= n) break;
+                    if (!InBounds(n, fx, fz)) break;
                     if (!d.HasLand(fx, fz)) break;
 
                     short here = d.SurfaceLevel(x, z), far = d.SurfaceLevel(fx, fz);
@@ -229,20 +228,6 @@ internal static class Overhangs
                     break;
                 }
             }
-        }
-    }
-
-    private static float Hash01(int seed, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)seed * 2654435761u ^ salt;
-            h ^= h >> 15;
-            h *= 0x2C1B3C6Du;
-            h ^= h >> 12;
-            h *= 0x297A2D39u;
-            h ^= h >> 15;
-            return (h & 0xFFFFFF) / 16777216f;
         }
     }
 }

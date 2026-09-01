@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
@@ -35,31 +37,6 @@ public sealed class IslandGenerator
     /// </summary>
     private const float StraitNarrowest = 1.05f;
 
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
-
-    /// <summary>A region's assignment: what it is, and the level it is built from.</summary>
-    private readonly struct RegionPlan
-    {
-        public readonly LandformType Type;
-        public readonly int Plateau;        // slabs
-
-        /// <summary>
-        /// The rung group this region was unioned into. Neighbours in one group
-        /// share a rung, which is exactly the statement "no cliff belongs here" —
-        /// so the slope limiter can enforce it <i>across</i> the border instead of
-        /// hoping a blurred amplitude field closes the gap on its own.
-        /// </summary>
-        public readonly int RungGroup;
-
-        public RegionPlan(LandformType type, int plateau, int rungGroup)
-        {
-            Type = type;
-            Plateau = plateau;
-            RungGroup = rungGroup;
-        }
-    }
-
     /// <summary>
     /// How many islands may be built for one seed before the best of them is
     /// taken as it stands. Four: a re-roll is for the rare island that comes out
@@ -86,7 +63,7 @@ public sealed class IslandGenerator
 
         for (int attempt = 0; attempt < Attempts; attempt++)
         {
-            int use = attempt == 0 ? seed : unchecked((int)Hash(seed, 0x5E1Fu + (uint)attempt));
+            int use = attempt == 0 ? seed : unchecked((int)TerrainHash(seed, 0x5E1Fu + (uint)attempt));
             IslandData d = Build(use, p);
             d.Attempts = attempt + 1;
             d.Unmet = Unmet(d, p);
@@ -96,7 +73,6 @@ public sealed class IslandGenerator
             // guarantee still beats one short of three.
             if (best == null || d.Unmet.Length < best.Unmet.Length)
             {
-                d.Attempts = attempt + 1;
                 best = d;
             }
         }
@@ -404,7 +380,7 @@ public sealed class IslandGenerator
         var keep = new bool[n, n];
         foreach (var (ca, cb) in bridges)
         foreach (Vector2I c in new[] { ca, cb })
-            if (c.X >= 0 && c.Y >= 0 && c.X < n && c.Y < n) keep[c.X, c.Y] = true;
+            if (InBounds(n, c.X, c.Y)) keep[c.X, c.Y] = true;
 
         // <b>Fluids never touch, even diagonally.</b> Goo and its whole
         // king's-move neighbourhood are off limits to the water, the same way a
@@ -419,7 +395,7 @@ public sealed class IslandGenerator
             for (int oz = -1; oz <= 1; oz++)
             {
                 int nx = x + ox, nz = z + oz;
-                if (nx >= 0 && nz >= 0 && nx < n && nz < n) keep[nx, nz] = true;
+                if (InBounds(n, nx, nz)) keep[nx, nz] = true;
             }
         }
 
@@ -625,7 +601,7 @@ public sealed class IslandGenerator
             // to be shapes. A fragmented island's small interiors get the old
             // chance exactly, so it stays as dry as it ever was.
             chance *= 1f + Math.Min(interior[r], 320) / 320f * 0.5f;
-            wants[r] = Hash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
+            wants[r] = TerrainHash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
         }
 
         // <b>Occasional smaller lakes.</b> A patch that lost the main roll can
@@ -640,7 +616,7 @@ public sealed class IslandGenerator
             LandformType t = plan[r].Type;
             if (t != LandformType.Plain && t != LandformType.Basin) continue;
             if (interior[r] < minInterior || shore[r] == int.MaxValue) continue;
-            if (Hash01(seed, 0x7AB0u ^ (uint)r * 2654435761u) >= 0.12f * wet * 2f) continue;
+            if (TerrainHash01(seed, 0x7AB0u ^ (uint)r * 2654435761u) >= 0.12f * wet * 2f) continue;
             wants[r] = true;
             tarn[r] = true;
         }
@@ -665,7 +641,7 @@ public sealed class IslandGenerator
             level[r] = shore[r] - 1;
             // Two or three slabs of water; the bed therefore sits three or four
             // below the ring, never the ambiguous two.
-            bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
+            bed[r] = level[r] - (2 + (int)(TerrainHash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
         }
 
         // <b>How far in the water starts, per cell, not per island.</b> A lake
@@ -704,7 +680,7 @@ public sealed class IslandGenerator
             if (!wants[r] || plan[r].Type != LandformType.Mesa) continue;
             (int cx, int cz) = DeepestCell(region, inset, pool, r, n);
             if (cx < 0) continue;
-            float capped = 1.6f + Hash01(seed, 0x7A2Bu ^ (uint)r * 40503u) * 1.2f;
+            float capped = 1.6f + TerrainHash01(seed, 0x7A2Bu ^ (uint)r * 40503u) * 1.2f;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -725,12 +701,12 @@ public sealed class IslandGenerator
         for (int r = 0; r < count; r++)
         {
             if (!wants[r] || style[r] != LakeStyle.Single) continue;
-            if (Hash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
+            if (TerrainHash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
 
             (int cx, int cz) = DeepestCell(region, inset, pool, r, n);
             if (cx < 0) continue;
 
-            float rad = 0.9f + Hash01(seed, 0x0DDu ^ (uint)r * 40503u) * 0.9f;
+            float rad = 0.9f + TerrainHash01(seed, 0x0DDu ^ (uint)r * 40503u) * 0.9f;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -747,8 +723,8 @@ public sealed class IslandGenerator
             if (!pool[x, z]) continue;
             int r = region[x, z];
 
-            if (islet[x, z]) { surface[x, z] = SlabClamp(level[r] + 1); continue; }
-            surface[x, z] = SlabClamp(bed[r]);
+            if (islet[x, z]) { surface[x, z] = Terrain.SlabClamp(level[r] + 1); continue; }
+            surface[x, z] = Terrain.SlabClamp(bed[r]);
             water[x, z] = (short)level[r];
         }
 
@@ -804,7 +780,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4 && !edge; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                edge = nx < 0 || nz < 0 || nx >= n || nz >= n || !pool[nx, nz];
+                edge = !InBounds(n, nx, nz) || !pool[nx, nz];
             }
             if (!edge) continue;
             depth[x, z] = 0;
@@ -816,7 +792,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = cx + Dx[k], nz = cz + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!pool[nx, nz] || depth[nx, nz] >= 0) continue;
                 depth[nx, nz] = depth[cx, cz] + 1;
                 q.Enqueue((nx, nz));
@@ -846,7 +822,7 @@ public sealed class IslandGenerator
             if (tarn[r]) { style[r] = LakeStyle.Tarn; continue; }
             if (area[r] < 40) continue;                       // too small to shape
 
-            float roll = Hash01(seed, 0x5A9Eu ^ (uint)r * 2654435761u);
+            float roll = TerrainHash01(seed, 0x5A9Eu ^ (uint)r * 2654435761u);
             style[r] = roll switch
             {
                 < 0.40f => LakeStyle.Single,
@@ -885,10 +861,10 @@ public sealed class IslandGenerator
                     // The ring, with its core stamped out again off-centre: the
                     // overlap of the two discs is the bite, and what survives is
                     // the moon.
-                    int dir = (int)(Hash01(seed, 0xC3E5u ^ (uint)r * 40503u) * 8f) & 7;
+                    int dir = (int)(TerrainHash01(seed, 0xC3E5u ^ (uint)r * 40503u) * 8f) & 7;
                     int ox = x - ((RingWidth + 1) * Dx8[dir]);
                     int oz = z - ((RingWidth + 1) * Dz8[dir]);
-                    drain = ox >= 0 && oz >= 0 && ox < n && oz < n
+                    drain = InBounds(n, ox, oz)
                             && region[ox, oz] == r && depth[ox, oz] > RingWidth;
                     break;
                 }
@@ -912,7 +888,7 @@ public sealed class IslandGenerator
                 {
                     var (tx, tz) = deepAt[r];
                     float dx = x - tx, dz = z - tz;
-                    float radius = 2.0f + Hash01(seed, 0x7A2Cu ^ (uint)r * 40503u) * 1.4f;
+                    float radius = 2.0f + TerrainHash01(seed, 0x7A2Cu ^ (uint)r * 40503u) * 1.4f;
                     drain = MathF.Sqrt(dx * dx + dz * dz) > radius;
                     break;
                 }
@@ -941,7 +917,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || seen[nx, nz]) continue;
                     if (!pool[nx, nz]) continue;
                     seen[nx, nz] = true;
                     stack.Push((nx, nz));
@@ -952,10 +928,6 @@ public sealed class IslandGenerator
         }
         return style;
     }
-
-    /// <summary>The eight king-move steps, for the crescent's offset stamp.</summary>
-    private static readonly int[] Dx8 = { 1, 1, 0, -1, -1, -1, 0, 1 };
-    private static readonly int[] Dz8 = { 0, 1, 1, 1, 0, -1, -1, -1 };
 
     // ---- Goo -----------------------------------------------------------------
 
@@ -980,7 +952,7 @@ public sealed class IslandGenerator
                                  short[,] water, byte[,] fluid)
     {
         int n = p.Size;
-        if (Hash01(seed, 0x600A11u) >= GooIslandChance) return;
+        if (TerrainHash01(seed, 0x600A11u) >= GooIslandChance) return;
 
         int[,] inset = PatchInset(land, region);
 
@@ -1014,9 +986,9 @@ public sealed class IslandGenerator
         if (takers.Count == 0) return;
 
         // One to three puddles, in hash order so the choice is the seed's.
-        takers.Sort((a, b) => Hash01(seed, 0x60011u ^ (uint)a * 40503u)
-            .CompareTo(Hash01(seed, 0x60011u ^ (uint)b * 40503u)));
-        int puddles = 1 + (int)(Hash01(seed, 0x600C7u) * 3f);
+        takers.Sort((a, b) => TerrainHash01(seed, 0x60011u ^ (uint)a * 40503u)
+            .CompareTo(TerrainHash01(seed, 0x60011u ^ (uint)b * 40503u)));
+        int puddles = 1 + (int)(TerrainHash01(seed, 0x600C7u) * 3f);
 
         var wobble = new Noise(seed + 3434, frequency: 0.4f, octaves: 2);
         var cells = new List<(int X, int Z)>();
@@ -1026,7 +998,7 @@ public sealed class IslandGenerator
             if (puddles <= 0) break;
 
             var (cx, cz) = deepAt[r];
-            float radius = 1.4f + Hash01(seed, 0x600D3u ^ (uint)r * 2654435761u) * 1.6f;
+            float radius = 1.4f + TerrainHash01(seed, 0x600D3u ^ (uint)r * 2654435761u) * 1.6f;
 
             cells.Clear();
             int reach = (int)radius + 1;
@@ -1045,7 +1017,7 @@ public sealed class IslandGenerator
                 for (int oz = -1; oz <= 1 && !nearWater; oz++)
                 {
                     int nx = x + ox, nz = z + oz;
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     nearWater = water[nx, nz] != IslandData.NoLand
                                 && fluid[nx, nz] != (byte)FluidKind.Goo;
                 }
@@ -1061,7 +1033,7 @@ public sealed class IslandGenerator
             for (int oz = -1; oz <= 1; oz++)
             {
                 int nx = x + ox, nz = z + oz;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (cells.Contains((nx, nz))) continue;
                 if (water[nx, nz] != IslandData.NoLand) continue;
                 shore = Math.Min(shore, surface[nx, nz]);
@@ -1071,7 +1043,7 @@ public sealed class IslandGenerator
             short level = (short)(shore - 1);
             foreach (var (x, z) in cells)
             {
-                surface[x, z] = SlabClamp(level - 2);
+                surface[x, z] = Terrain.SlabClamp(level - 2);
                 water[x, z] = level;
                 fluid[x, z] = (byte)FluidKind.Goo;
             }
@@ -1108,12 +1080,12 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (water[nx, nz] != IslandData.NoLand)
                         floor = Math.Max(floor, water[nx, nz] + 1);
                 }
                 if (floor == int.MinValue || surface[x, z] >= floor) continue;
-                surface[x, z] = SlabClamp(floor);
+                surface[x, z] = Terrain.SlabClamp(floor);
                 changed = true;
             }
             if (!changed) break;
@@ -1139,7 +1111,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 int o = region[nx, nz];
                 if (o != r) neighbours[r].Add(o);
             }
@@ -1180,10 +1152,10 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (water[nx, nz] != IslandData.NoLand) cap = Math.Min(cap, water[nx, nz] + 1);
             }
-            if (cap != int.MaxValue && surface[x, z] > cap) surface[x, z] = SlabClamp(cap);
+            if (cap != int.MaxValue && surface[x, z] > cap) surface[x, z] = Terrain.SlabClamp(cap);
         }
     }
 
@@ -1215,7 +1187,7 @@ public sealed class IslandGenerator
                 if (dx < 0) continue;
 
                 water[dx, dz] = IslandData.NoLand;
-                surface[dx, dz] = SlabClamp(level[region[dx, dz]] + 1);
+                surface[dx, dz] = Terrain.SlabClamp(level[region[dx, dz]] + 1);
                 changed = true;
             }
             if (!changed) break;
@@ -1234,7 +1206,6 @@ public sealed class IslandGenerator
         var body = new bool[n, n];
         var seen = new bool[n, n];
         var stack = new Stack<(int X, int Z)>();
-        var best = new List<(int X, int Z)>();
         var current = new List<(int X, int Z)>();
         var bestOf = new List<(int X, int Z)>[count];
 
@@ -1255,7 +1226,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || seen[nx, nz]) continue;
                     if (inset[nx, nz] < margin[nx, nz] || region[nx, nz] != r) continue;
                     seen[nx, nz] = true;
                     stack.Push((nx, nz));
@@ -1270,7 +1241,6 @@ public sealed class IslandGenerator
             if (bestOf[r] == null || bestOf[r].Count < 12) continue;
             foreach (var (x, z) in bestOf[r]) body[x, z] = true;
         }
-        _ = best;
         return body;
     }
 
@@ -1303,7 +1273,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                bool outside = nx < 0 || nz < 0 || nx >= n || nz >= n
+                bool outside = !InBounds(n, nx, nz)
                                || !land[nx, nz] || region[nx, nz] != region[x, z];
                 if (!outside) continue;
                 inset[x, z] = 0;
@@ -1317,7 +1287,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (region[nx, nz] != region[x, z] || inset[nx, nz] >= 0) continue;
                 inset[nx, nz] = inset[x, z] + 1;
                 q.Enqueue((nx, nz));
@@ -1325,7 +1295,6 @@ public sealed class IslandGenerator
         }
         return inset;
     }
-
 
     // ---- Stage 1: footprint mask ----------------------------------------------
 
@@ -1381,10 +1350,6 @@ public sealed class IslandGenerator
             Wander = from.Wander;
             Group = from.Group;
         }
-
-        /// <summary>Normalised distance from this lobe's own wandering edge; &lt; 1 is inside.</summary>
-        public float Distance(float x, float z, Noise lobes, float irr)
-            => Distance(x, z, lobes, irr, out _);
 
         /// <summary>
         /// As above, and reports the wandering radius it measured against, in
@@ -1489,8 +1454,8 @@ public sealed class IslandGenerator
         const float stretch = 1.8f;
         float wander = alone ? 0.55f : 0.5f;
 
-        float Aspect(uint salt) => Mathf.Lerp(1f, stretch, irr * Hash01(seed, salt));
-        float Angle(uint salt) => Hash01(seed, salt) * Mathf.Tau;
+        float Aspect(uint salt) => Mathf.Lerp(1f, stretch, irr * TerrainHash01(seed, salt));
+        float Angle(uint salt) => TerrainHash01(seed, salt) * Mathf.Tau;
 
         var made = new List<Lobe>();
 
@@ -1514,7 +1479,7 @@ public sealed class IslandGenerator
             made.Add(new Lobe(x, z, r,
                               aspect > 0f ? aspect : Aspect(salt),
                               float.IsNaN(rot) ? Angle(salt ^ 0x77u) : rot,
-                              LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander,
+                              LobeRings * (0.8f + 0.5f * TerrainHash01(seed, salt ^ 0xB3u)), wander,
                               group));
         }
 
@@ -1532,19 +1497,19 @@ public sealed class IslandGenerator
         void Sweep(int count, float ringRadius, float blobRadius, float spread, uint salt,
                    float tangential, float arc)
         {
-            float phase = Hash01(seed, salt) * Mathf.Tau;
+            float phase = TerrainHash01(seed, salt) * Mathf.Tau;
             float step = arc >= Mathf.Tau - 0.001f ? arc / count : arc / Math.Max(1, count - 1);
             for (int i = 0; i < count; i++)
             {
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
-                float a = phase + step * i + (Hash01(seed, s) - 0.5f) * step * 0.7f;
-                float rr = ringRadius * (1f - spread * 0.5f + spread * Hash01(seed, s ^ 0x5u));
-                float br = blobRadius * (0.75f + 0.5f * Hash01(seed, s ^ 0x9u));
+                float a = phase + step * i + (TerrainHash01(seed, s) - 0.5f) * step * 0.7f;
+                float rr = ringRadius * (1f - spread * 0.5f + spread * TerrainHash01(seed, s ^ 0x5u));
+                float br = blobRadius * (0.75f + 0.5f * TerrainHash01(seed, s ^ 0x9u));
                 // An ellipse is squashed along its rotation and stretched across
                 // it, so rotating to the radial direction elongates the blob along
                 // the tangent — around the lagoon rather than into it.
                 float aspect = tangential > 0f
-                    ? tangential * (0.85f + 0.4f * Hash01(seed, s ^ 0x11u))
+                    ? tangential * (0.85f + 0.4f * TerrainHash01(seed, s ^ 0x11u))
                     : 0f;
                 Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s,
                     aspect, tangential > 0f ? a : float.NaN);
@@ -1578,7 +1543,7 @@ public sealed class IslandGenerator
             {
                 float a = spokes[i] * Mathf.Tau;
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
-                float arm = reach * (0.82f + 0.30f * Hash01(seed, s));
+                float arm = reach * (0.82f + 0.30f * TerrainHash01(seed, s));
                 Add(cx + MathF.Cos(a) * arm, cz + MathF.Sin(a) * arm,
                     radius * 0.37f, s, 1.7f, a + Mathf.Pi * 0.5f);
             }
@@ -1596,7 +1561,7 @@ public sealed class IslandGenerator
         void Coil(uint salt, float sweep, float thick, int links)
         {
             const float inner = 0.08f;
-            float phase = Hash01(seed, salt ^ 0x11u) * Mathf.Tau;
+            float phase = TerrainHash01(seed, salt ^ 0x11u) * Mathf.Tau;
             float outer = radius * 0.86f * spread;
 
             // For the turns to stay apart, the radius has to fall faster per turn
@@ -1610,7 +1575,7 @@ public sealed class IslandGenerator
                 float rr = Mathf.Lerp(outer, radius * inner, t);
                 uint s = salt ^ (uint)(i + 3) * 2654435761u;
                 Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr,
-                    radius * thick * (0.85f + 0.3f * Hash01(seed, s)), s, 1.8f,
+                    radius * thick * (0.85f + 0.3f * TerrainHash01(seed, s)), s, 1.8f,
                     a + Mathf.Pi * 0.5f);
             }
         }
@@ -1622,7 +1587,7 @@ public sealed class IslandGenerator
             // strait carving parts them along the seam.
             case IslandArrangement.Satellites:
                 Add(cx, cz, radius * 0.61f, 0x1000u);
-                Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
+                Ring(2 + (int)(TerrainHash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
                      radius * 0.23f, 0.26f, 0x1002u);
                 break;
 
@@ -1652,9 +1617,9 @@ public sealed class IslandGenerator
             // arrangement of the twenty-two at 10% land, every islet a skipping
             // stone. Scatter is the identity; starvation is not.
             case IslandArrangement.Archipelago:
-                Ring(2 + (int)(Hash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
+                Ring(2 + (int)(TerrainHash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
                      radius * 0.24f, 0.55f, 0x4001u);
-                Ring(3 + (int)(Hash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
+                Ring(3 + (int)(TerrainHash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
                      radius * 0.23f, 0.55f, 0x4003u);
                 break;
 
@@ -1668,7 +1633,7 @@ public sealed class IslandGenerator
             {
                 float ring = radius * 0.76f * spread;
                 float blob = radius * 0.33f;
-                Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
+                Ring(6 + (int)(TerrainHash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
                 lagoon = MathF.Max(4f, ring - blob * 0.55f);
                 break;
             }
@@ -1681,7 +1646,7 @@ public sealed class IslandGenerator
             {
                 float ring = radius * 0.74f * spread;
                 float blob = radius * 0.34f;
-                Ring(9 + (int)(Hash01(seed, 0x5100u) * 4f), ring, blob, 0.07f, 0x5101u, 2.2f);
+                Ring(9 + (int)(TerrainHash01(seed, 0x5100u) * 4f), ring, blob, 0.07f, 0x5101u, 2.2f);
                 lagoon = MathF.Max(4f, ring - blob * 0.75f);
                 break;
             }
@@ -1695,8 +1660,8 @@ public sealed class IslandGenerator
                 bool whole = how == IslandArrangement.Arc;
                 float ring = radius * 0.74f * spread;
                 float blob = radius * (whole ? 0.34f : 0.33f);
-                float arc = Mathf.Tau * (0.52f + 0.18f * Hash01(seed, 0x5200u));
-                int count = (whole ? 7 : 5) + (int)(Hash01(seed, 0x5201u) * 3f);
+                float arc = Mathf.Tau * (0.52f + 0.18f * TerrainHash01(seed, 0x5200u));
+                int count = (whole ? 7 : 5) + (int)(TerrainHash01(seed, 0x5201u) * 3f);
                 Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 2.1f, arc);
                 lagoon = MathF.Max(4f, ring - blob * (whole ? 0.75f : 0.55f));
                 break;
@@ -1711,7 +1676,7 @@ public sealed class IslandGenerator
             {
                 float ring = radius * 0.74f * spread;
                 float blob = radius * 0.29f;
-                Ring(7 + (int)(Hash01(seed, 0x5300u) * 3f), ring, blob, 0.05f, 0x5301u, 1.15f);
+                Ring(7 + (int)(TerrainHash01(seed, 0x5300u) * 3f), ring, blob, 0.05f, 0x5301u, 1.15f);
                 lagoon = MathF.Max(4f, ring - blob * 0.62f);
                 break;
             }
@@ -1745,10 +1710,10 @@ public sealed class IslandGenerator
                 for (int gz = 0; gz < grid; gz++)
                 {
                     uint s = 0x6001u ^ (uint)(++i * 2654435761u);
-                    if (Hash01(seed, s ^ 0xEu) < 0.12f) continue;    // a hole in the quilt
-                    float px = pad + (gx + 0.30f + 0.40f * Hash01(seed, s)) * cell;
-                    float pz = pad + (gz + 0.30f + 0.40f * Hash01(seed, s ^ 0x9u)) * cell;
-                    Add(px, pz, cell * 0.55f * (0.8f + 0.4f * Hash01(seed, s ^ 0x5u)), s);
+                    if (TerrainHash01(seed, s ^ 0xEu) < 0.12f) continue;    // a hole in the quilt
+                    float px = pad + (gx + 0.30f + 0.40f * TerrainHash01(seed, s)) * cell;
+                    float pz = pad + (gz + 0.30f + 0.40f * TerrainHash01(seed, s ^ 0x9u)) * cell;
+                    Add(px, pz, cell * 0.55f * (0.8f + 0.4f * TerrainHash01(seed, s ^ 0x5u)), s);
                 }
                 break;
             }
@@ -1778,7 +1743,7 @@ public sealed class IslandGenerator
             // Five or six, so no two face each other and every bay is a wedge.
             case IslandArrangement.Star:
             {
-                int points = 5 + (int)(Hash01(seed, 0x7300u) * 2f);
+                int points = 5 + (int)(TerrainHash01(seed, 0x7300u) * 2f);
                 var spokes = new float[points];
                 for (int i = 0; i < points; i++) spokes[i] = (float)i / points;
                 Arms(spokes, 0x7301u);
@@ -1797,17 +1762,17 @@ public sealed class IslandGenerator
                 float heading = Angle(0x8000u);
                 float wx = cx + MathF.Cos(heading + Mathf.Pi) * radius * 0.45f;
                 float wz = cz + MathF.Sin(heading + Mathf.Pi) * radius * 0.45f;
-                int links = 6 + (int)(Hash01(seed, 0x8001u) * 3f);
+                int links = 6 + (int)(TerrainHash01(seed, 0x8001u) * 3f);
 
                 for (int i = 0; i < links; i++)
                 {
                     uint s = 0x8002u ^ (uint)(i + 1) * 2654435761u;
-                    float br = blob * (0.78f + 0.44f * Hash01(seed, s));
+                    float br = blob * (0.78f + 0.44f * TerrainHash01(seed, s));
                     Add(wx, wz, br, s, 1.5f, heading + Mathf.Pi * 0.5f);
 
                     // Turn, then step. Turning first is what makes the chain wind
                     // rather than fan out from its first blob.
-                    heading += (Hash01(seed, s ^ 0x3Bu) - 0.5f) * Mathf.Pi * 0.62f;
+                    heading += (TerrainHash01(seed, s ^ 0x3Bu) - 0.5f) * Mathf.Pi * 0.62f;
                     float stride = br * 1.35f;
                     float nx = wx + MathF.Cos(heading) * stride;
                     float nz = wz + MathF.Sin(heading) * stride;
@@ -1834,7 +1799,7 @@ public sealed class IslandGenerator
 
             case IslandArrangement.Rosette:
                 Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
-                     links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
+                     links: 9 + (int)(TerrainHash01(seed, 0xA000u) * 4f));
                 break;
 
             // One island cracked. The blobs are laid over each other in a tight
@@ -1842,7 +1807,7 @@ public sealed class IslandGenerator
             // as a fracture rather than as a channel.
             case IslandArrangement.Shards:
                 Add(cx, cz, radius * 0.44f, 0x9000u);
-                Ring(3 + (int)(Hash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
+                Ring(3 + (int)(TerrainHash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
                      radius * 0.42f, 0.18f, 0x9002u);
                 break;
 
@@ -1932,8 +1897,8 @@ public sealed class IslandGenerator
                 {
                     uint s = 0xB300u ^ (uint)(++i * 2654435761u);
                     Add(cx + sx * d, cz + sz * d,
-                        radius * 0.40f * (0.92f + 0.16f * Hash01(seed, s)), s,
-                        1f + 0.25f * Hash01(seed, s ^ 0x7u), 0f);
+                        radius * 0.40f * (0.92f + 0.16f * TerrainHash01(seed, s)), s,
+                        1f + 0.25f * TerrainHash01(seed, s ^ 0x7u), 0f);
                 }
                 break;
             }
@@ -1943,7 +1908,7 @@ public sealed class IslandGenerator
             // the four Gates.
             case IslandArrangement.Halves:
             {
-                bool tall = Hash01(seed, 0xB400u) < 0.5f;
+                bool tall = TerrainHash01(seed, 0xB400u) < 0.5f;
                 float d = radius * 0.31f * spread;
                 float dx = tall ? d : 0f, dz = tall ? 0f : d;
                 Add(cx + dx, cz + dz, radius * 0.56f, 0xB401u, 1.25f,
@@ -1965,7 +1930,7 @@ public sealed class IslandGenerator
                 // at the rim, which produced a hollow broken ring: a yin-yang is
                 // a full disc with an S through it, not an O with a gap.
                 float disc = radius * 0.74f;
-                float phase = (int)(Hash01(seed, 0xB500u) * 4f) * Mathf.Tau / 4f;
+                float phase = (int)(TerrainHash01(seed, 0xB500u) * 4f) * Mathf.Tau / 4f;
                 for (int half = 0; half < 2; half++)
                 {
                     float flip = half == 0 ? 0f : Mathf.Pi;
@@ -1987,8 +1952,8 @@ public sealed class IslandGenerator
             // which is a chokepoint the settlement layer will thank us for.
             case IslandArrangement.Isthmus:
             {
-                float a = (int)(Hash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
-                          + (Hash01(seed, 0xB601u) - 0.5f) * 0.5f;
+                float a = (int)(TerrainHash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
+                          + (TerrainHash01(seed, 0xB601u) - 0.5f) * 0.5f;
                 float apart = radius * 0.58f * spread;
                 float hx = MathF.Cos(a) * apart, hz = MathF.Sin(a) * apart;
                 Add(cx + hx, cz + hz, radius * 0.42f, 0xB602u);
@@ -2007,7 +1972,7 @@ public sealed class IslandGenerator
             // shore. The cut is what makes the barrier beads rather than a wall.
             case IslandArrangement.Reef:
             {
-                float a = (int)(Hash01(seed, 0xB700u) * 4f) * Mathf.Tau / 4f;
+                float a = (int)(TerrainHash01(seed, 0xB700u) * 4f) * Mathf.Tau / 4f;
                 float back = radius * 0.30f;
                 Add(cx - MathF.Cos(a) * back, cz - MathF.Sin(a) * back,
                     radius * 0.52f, 0xB701u);
@@ -2372,20 +2337,20 @@ public sealed class IslandGenerator
         for (int z = 0; z < n; z++)
             if (land[x, z] && massOf[x, z] != largest) offMain[region[x, z]] = true;
 
-        int bites = 1 + (int)(Hash01(seed, 0x77A3) * (0.5f + 2.7f * irr));
+        int bites = 1 + (int)(TerrainHash01(seed, 0x77A3) * (0.5f + 2.7f * irr));
         for (int i = 0; i < bites; i++)
         {
             uint salt = 0x9100u + (uint)i * 977u;
-            float ang = Hash01(seed, salt) * Mathf.Tau;
+            float ang = TerrainHash01(seed, salt) * Mathf.Tau;
 
             // Some bites are placed well inside and kept small, which takes out
             // interior patches and leaves a hole through the island rather than a
             // notch in its coast.
-            bool interior = i == 0 && Hash01(seed, salt ^ 0xA5u) < 0.35f;
-            float from = radius * (interior ? 0.10f + 0.35f * Hash01(seed, salt ^ 0x31u)
-                                            : 0.25f + 0.85f * Hash01(seed, salt ^ 0x31u));
-            float reach = radius * (interior ? 0.20f + 0.25f * Hash01(seed, salt ^ 0x57u)
-                                             : 0.30f + 0.75f * Hash01(seed, salt ^ 0x57u));
+            bool interior = i == 0 && TerrainHash01(seed, salt ^ 0xA5u) < 0.35f;
+            float from = radius * (interior ? 0.10f + 0.35f * TerrainHash01(seed, salt ^ 0x31u)
+                                            : 0.25f + 0.85f * TerrainHash01(seed, salt ^ 0x31u));
+            float reach = radius * (interior ? 0.20f + 0.25f * TerrainHash01(seed, salt ^ 0x57u)
+                                             : 0.30f + 0.75f * TerrainHash01(seed, salt ^ 0x57u));
             var at = new Vector2(cx + MathF.Cos(ang) * from, cz + MathF.Sin(ang) * from);
 
             // The bite's own outline is lobed too, so which patches fall inside is
@@ -2483,7 +2448,7 @@ public sealed class IslandGenerator
             for (int dz = -1; dz <= 1; dz++)
             {
                 int nx = x + dx, nz = z + dz;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || (dx == 0 && dz == 0)) continue;
+                if (!InBounds(n, nx, nz) || (dx == 0 && dz == 0)) continue;
                 if (mask[nx, nz]) found++;
             }
             return found;
@@ -2539,7 +2504,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!mask[nx, nz] || into[nx, nz] >= 0) continue;
                     into[nx, nz] = id;
                     stack.Push(new Vector2I(nx, nz));
@@ -2625,7 +2590,7 @@ public sealed class IslandGenerator
     /// Which landmasses are already joined into one linkable whole, growing out
     /// from the largest.
     /// </summary>
-    private static HashSet<int> LinkedSet(int count, Dictionary<long, (Vector2I A, Vector2I B, int Gap)> facing,
+    private static HashSet<int> LinkedSet(Dictionary<long, (Vector2I A, Vector2I B, int Gap)> facing,
                                           int seedPart, int span)
     {
         var linked = new HashSet<int> { seedPart };
@@ -2680,7 +2645,7 @@ public sealed class IslandGenerator
                 if (parts[i].Count > parts[biggest].Count) biggest = i;
 
             var near = FacingPairs(mask, comp, span);
-            HashSet<int> linked = LinkedSet(parts.Count, near, biggest, span);
+            HashSet<int> linked = LinkedSet(near, biggest, span);
             if (linked.Count == parts.Count) return;
 
             // The closest stray, over a long sightline this time, and how far it
@@ -2782,7 +2747,7 @@ public sealed class IslandGenerator
         int keep = 0;
         for (int i = 1; i < last.Count; i++) if (last[i].Count > last[keep].Count) keep = i;
 
-        HashSet<int> survivors = LinkedSet(last.Count, FacingPairs(mask, comp, span), keep, span);
+        HashSet<int> survivors = LinkedSet(FacingPairs(mask, comp, span), keep, span);
         for (int i = 0; i < last.Count; i++)
             if (!survivors.Contains(i))
                 foreach (Vector2I c in last[i]) mask[c.X, c.Y] = false;
@@ -2864,7 +2829,7 @@ public sealed class IslandGenerator
             int la = surface[a.X, a.Y], lb = surface[b.X, b.Y];
             if (Math.Abs(la - lb) > MaxBridgeheadDrop) continue;
 
-            short target = SlabClamp(Math.Min(la, lb));
+            short target = Terrain.SlabClamp(Math.Min(la, lb));
             moved |= FlattenPad(land, surface, water, region, plan, a, target, n);
             moved |= FlattenPad(land, surface, water, region, plan, b, target, n);
         }
@@ -2880,7 +2845,7 @@ public sealed class IslandGenerator
         for (int dz = -BridgeheadPad; dz <= BridgeheadPad; dz++)
         {
             int x = c.X + dx, z = c.Y + dz;
-            if (x < 0 || z < 0 || x >= n || z >= n) continue;
+            if (!InBounds(n, x, z)) continue;
             if (!land[x, z] || surface[x, z] <= target) continue;
             if (NearWater(water, n, x, z)) continue;
             // A landing is plains ground. Cutting a pad into a mesa's rim or a
@@ -2909,7 +2874,7 @@ public sealed class IslandGenerator
         for (int dz = -1; dz <= 1; dz++)
         {
             int nx = x + dx, nz = z + dz;
-            if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+            if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
             if (plan[region[nx, nz]].Type != LandformType.Basin) continue;
             floor = Math.Max(floor, surface[nx, nz] + 3);
         }
@@ -2923,7 +2888,7 @@ public sealed class IslandGenerator
         for (int dz = -1; dz <= 1; dz++)
         {
             int nx = x + dx, nz = z + dz;
-            if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+            if (!InBounds(n, nx, nz)) continue;
             if (water[nx, nz] != IslandData.NoLand) return true;
         }
         return false;
@@ -2942,7 +2907,7 @@ public sealed class IslandGenerator
 
             int la = Traversal.CrossLevel(d, a.X, a.Y);
             int lb = Traversal.CrossLevel(d, b.X, b.Y);
-            short deck = SlabClamp(Mathf.RoundToInt((la + lb) * 0.5f));
+            short deck = Terrain.SlabClamp(Mathf.RoundToInt((la + lb) * 0.5f));
             int span = Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y)) - 1;
             d.Bridges.Add(new Crossing(a, b, deck, span));
         }
@@ -2992,7 +2957,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!mask[nx, nz] || comp[nx, nz] >= 0) continue;
                     comp[nx, nz] = id;
                     stack.Push((nx, nz));
@@ -3029,12 +2994,12 @@ public sealed class IslandGenerator
         var centre = new Vector2((n - 1) * 0.5f, (n - 1) * 0.5f);
         ReliefStyle style = ResolveStyle(seed, p);
 
-        float a1 = Hash01(seed, 0x7A11) * Mathf.Tau;
-        float a2 = Hash01(seed, 0x1B93) * Mathf.Tau;
+        float a1 = TerrainHash01(seed, 0x7A11) * Mathf.Tau;
+        float a2 = TerrainHash01(seed, 0x1B93) * Mathf.Tau;
         var axis = new Vector2(MathF.Cos(a1), MathF.Sin(a1));
-        var p1 = centre + axis * radius * (0.30f + 0.20f * Hash01(seed, 0x44D2));
+        var p1 = centre + axis * radius * (0.30f + 0.20f * TerrainHash01(seed, 0x44D2));
         var p2 = centre + new Vector2(MathF.Cos(a2), MathF.Sin(a2))
-                          * radius * (0.30f + 0.25f * Hash01(seed, 0x6E05));
+                          * radius * (0.30f + 0.25f * TerrainHash01(seed, 0x6E05));
 
         var drift = new Noise(seed + 606, frequency: 0.02f, octaves: 3);
 
@@ -3124,7 +3089,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!land[nx, nz] || comp[nx, nz] >= 0 || raw[nx, nz] != key) continue;
                     comp[nx, nz] = id;
                     stack.Push((nx, nz));
@@ -3150,7 +3115,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz]) continue;
                 int other = comp[nx, nz];
                 if (other == worst) continue;
@@ -3199,8 +3164,8 @@ public sealed class IslandGenerator
         for (int j = 0; j < cols; j++)
         {
             uint key = (uint)i * 73856093u ^ (uint)j * 19349663u;
-            sx[i, j] = (i - 0.5f + 0.2f + 0.6f * Hash01(seed, key)) * step;
-            sz[i, j] = (j - 0.5f + 0.2f + 0.6f * Hash01(seed, key ^ 0x9E3779B9u)) * step;
+            sx[i, j] = (i - 0.5f + 0.2f + 0.6f * TerrainHash01(seed, key)) * step;
+            sz[i, j] = (j - 0.5f + 0.2f + 0.6f * TerrainHash01(seed, key ^ 0x9E3779B9u)) * step;
         }
 
         var warpX = new Noise(seed + 707, frequency: 0.035f, octaves: 2);
@@ -3253,7 +3218,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz]) continue;
                 int b = region[nx, nz];
                 if (b == a) continue;
@@ -3288,19 +3253,6 @@ public sealed class IslandGenerator
         var env = new float[count];
         for (int r = 0; r < count; r++) env[r] = cells[r] > 0 ? sum[r] / cells[r] : 0f;
         return env;
-    }
-
-    /// <summary>The smallest value the field takes anywhere in each region.</summary>
-    private static float[] RegionMin(bool[,] land, int[,] region, int count, float[,] field)
-    {
-        int n = land.GetLength(0);
-        var min = new float[count];
-        Array.Fill(min, float.MaxValue);
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-            if (land[x, z]) min[region[x, z]] = MathF.Min(min[region[x, z]], field[x, z]);
-        for (int r = 0; r < count; r++) if (min[r] == float.MaxValue) min[r] = 0f;
-        return min;
     }
 
     /// <summary>Mean of a field over each region's cells.</summary>
@@ -3368,10 +3320,10 @@ public sealed class IslandGenerator
         // massif merge then welds them into one. Under a Ridge envelope that band
         // is a spine, so the chain crosses the isle.
         bool cordillera = quota[(int)LandformType.Mountain] > 1
-                          && Hash01(seed, 0x2B7F) < (ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f);
+                          && TerrainHash01(seed, 0x2B7F) < (ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f);
 
         float Jitter(int r, uint salt, float amount)
-            => (Hash01(seed, salt ^ (uint)r * 2654435761u) - 0.5f) * amount;
+            => (TerrainHash01(seed, salt ^ (uint)r * 2654435761u) - 0.5f) * amount;
 
         void Take(LandformType t, Func<int, float> score)
         {
@@ -3681,7 +3633,7 @@ public sealed class IslandGenerator
             // A small nudge only: a large one makes groups disagree constantly,
             // and every disagreement is a cliff.
             float rung = e * levels
-                         + (Hash01(seed, 0xC3D4u ^ (uint)g * 2654435761u) - 0.5f) * 0.5f;
+                         + (TerrainHash01(seed, 0xC3D4u ^ (uint)g * 2654435761u) - 0.5f) * 0.5f;
             plateau[r] = Math.Clamp((int)MathF.Round(rung), 0, levels) * p.CliffHeight;
         }
 
@@ -3797,7 +3749,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4 && !edge; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                edge = nx < 0 || nz < 0 || nx >= n || nz >= n
+                edge = !InBounds(n, nx, nz)
                        || !land[nx, nz] || region[nx, nz] != region[x, z];
             }
             if (edge) { dist[x, z] = 0; q.Enqueue((x, z)); }
@@ -3809,7 +3761,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz] || region[nx, nz] != region[x, z]) continue;
                 if (dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[x, z] + 1;
@@ -3900,21 +3852,6 @@ public sealed class IslandGenerator
         => t is LandformType.Badlands or LandformType.Karst or LandformType.Massif
              or LandformType.Sinkholes;
 
-    private static LandformType PickWeighted(float[] w, float u)
-    {
-        float total = 0f;
-        foreach (float v in w) total += v;
-        if (total <= 0f) return LandformType.Plain;
-
-        float pick = u * total;
-        for (int i = 0; i < w.Length; i++)
-        {
-            pick -= w[i];
-            if (pick <= 0f) return (LandformType)i;
-        }
-        return LandformType.Plain;
-    }
-
     // ---- Stage 3: surface within regions --------------------------------------
 
     private static short[,] BuildSurface(int seed, IslandParams p, bool[,] land, int[,] region,
@@ -3956,7 +3893,7 @@ public sealed class IslandGenerator
         // bias. On one of the eight compass points it is a fact about the Domain —
         // "the wind is from the north-east" — that the readout can say, the
         // compass overlay can draw, and the content layer can use.
-        int point = (int)(Hash01(seed, 0xD0E5u) * 8f) & 7;
+        int point = (int)(TerrainHash01(seed, 0xD0E5u) * 8f) & 7;
         float grain = point * (Mathf.Tau / 8f);
         float gcos = MathF.Cos(grain), gsin = MathF.Sin(grain);
         duneGrain = point;
@@ -3987,7 +3924,7 @@ public sealed class IslandGenerator
                 float dw = 0.5f + 0.3f * hilly;
                 t = dw * detail.At(x, z) + (1f - dw) * coarse.At(x, z);
             }
-            h[x, z] = SlabClamp(rp.Plateau + t * amp[x, z]);
+            h[x, z] = Terrain.SlabClamp(rp.Plateau + t * amp[x, z]);
         }
 
         // Pass 2 — mountains hang off the ground actually present at their border,
@@ -4009,7 +3946,7 @@ public sealed class IslandGenerator
             float s = u * u * (3f - 2f * u);
             float rugged = (summit.At(x, z) - 0.5f) * 2f * 5f
                            * FieldOps.SmoothStep(0.45f, 1f, u);
-            h[x, z] = SlabClamp(foot[x, z] + p.MountainHeight * s + rugged);
+            h[x, z] = Terrain.SlabClamp(foot[x, z] + p.MountainHeight * s + rugged);
         }
         return h;
     }
@@ -4056,7 +3993,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx >= 0 && nz >= 0 && nx < n && nz < n && land[nx, nz]) continue;
+                if (InBounds(n, nx, nz) && land[nx, nz]) continue;
                 toRim[x, z] = 0;
                 q.Enqueue((x, z));
                 break;
@@ -4069,7 +4006,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz] || toRim[nx, nz] >= 0) continue;
                 toRim[nx, nz] = toRim[x, z] + 1;
                 q.Enqueue((nx, nz));
@@ -4093,7 +4030,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4 && even; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 even = Math.Abs(surface[nx, nz] - surface[x, z]) <= 1
                        && water[nx, nz] == IslandData.NoLand;
             }
@@ -4118,7 +4055,7 @@ public sealed class IslandGenerator
         for (int z = 0; z < n; z++)
         {
             if (drop[x, z] <= 0) continue;
-            surface[x, z] = SlabClamp(surface[x, z] - drop[x, z]);
+            surface[x, z] = Terrain.SlabClamp(surface[x, z] - drop[x, z]);
             beach[x, z] = true;
         }
     }
@@ -4197,7 +4134,7 @@ public sealed class IslandGenerator
                 // two slabs is the one height the grammar forbids.
                 case LandformType.Badlands:
                     if (gully.At(x, z) > 0.62f) continue;
-                    h[x, z] = SlabClamp(h[x, z] - (int)MathF.Round(GullyDepth * (0.7f + 0.5f * scale)));
+                    h[x, z] = Terrain.SlabClamp(h[x, z] - (int)MathF.Round(GullyDepth * (0.7f + 0.5f * scale)));
                     carved[x, z] = true;
                     break;
 
@@ -4212,7 +4149,7 @@ public sealed class IslandGenerator
                     // height throughout: the sides are meant to be sheer.
                     int rise = (int)MathF.Round(TowerRise * (0.6f + 0.9f * scale)
                                                 * (0.75f + 0.5f * towers.At(x * 0.13f, z * 0.13f)));
-                    h[x, z] = SlabClamp(h[x, z] + Math.Max(4, rise));
+                    h[x, z] = Terrain.SlabClamp(h[x, z] + Math.Max(4, rise));
                     carved[x, z] = true;
                     break;
                 }
@@ -4226,7 +4163,7 @@ public sealed class IslandGenerator
                     int rings = 3 + (int)(scale * 2.5f);
                     int ring = (int)(warped * rings);
                     if (ring <= 0) continue;
-                    h[x, z] = SlabClamp(h[x, z] + ring * TerraceRiser);
+                    h[x, z] = Terrain.SlabClamp(h[x, z] + ring * TerraceRiser);
                     carved[x, z] = true;
                     break;
                 }
@@ -4238,7 +4175,7 @@ public sealed class IslandGenerator
                 case LandformType.Sinkholes:
                 {
                     if (towers.At(x + 512f, z - 512f) > 0.30f) continue;
-                    h[x, z] = SlabClamp(h[x, z] - (int)MathF.Round(
+                    h[x, z] = Terrain.SlabClamp(h[x, z] - (int)MathF.Round(
                         SinkDepth * (0.7f + 0.6f * scale)));
                     carved[x, z] = true;
                     break;
@@ -4273,7 +4210,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (carved[nx, nz] && h[nx, nz] == h[x, z]) kin++;
                 else if (!carved[nx, nz]) floor = Math.Max(floor, (int)h[nx, nz]);
             }
@@ -4282,7 +4219,7 @@ public sealed class IslandGenerator
 
         foreach (var (x, z, to) in lone)
         {
-            h[x, z] = SlabClamp(to);
+            h[x, z] = Terrain.SlabClamp(to);
             carved[x, z] = false;
         }
     }
@@ -4317,7 +4254,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) { atCoast = true; continue; }
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) { atCoast = true; continue; }
                 if (!isMountain[nx, nz]) best = MathF.Max(best, h[nx, nz]);
             }
             // A massif meeting only the coastline has no landward ground to start
@@ -4340,7 +4277,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!isMountain[nx, nz] || known[nx, nz]) continue;
                 foot[nx, nz] = foot[x, z];
                 known[nx, nz] = true;
@@ -4431,7 +4368,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!land[nx, nz]) continue;
                     if (exempt != null && exempt[nx, nz]) continue;
 
@@ -4487,7 +4424,7 @@ public sealed class IslandGenerator
                     for (int k = 0; k < 4; k++)
                     {
                         int wx = x + Dx[k], wz = z + Dz[k];
-                        if (wx < 0 || wz < 0 || wx >= n || wz >= n) continue;
+                        if (!InBounds(n, wx, wz)) continue;
                         if (water[wx, wz] != IslandData.NoLand)
                             keepAbove = Math.Max(keepAbove, water[wx, wz] + 1);
                     }
@@ -4496,7 +4433,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!land[nx, nz] || plan[region[nx, nz]].Type == LandformType.Mountain) continue;
                     if (exempt != null && exempt[nx, nz]) continue;
 
@@ -4513,7 +4450,7 @@ public sealed class IslandGenerator
         return any;
     }
 
-    private static bool WantsCanyon(int seed, IslandParams p) => Hash01(seed, 0x4C17) < 0.20f;
+    private static bool WantsCanyon(int seed, IslandParams p) => TerrainHash01(seed, 0x4C17) < 0.20f;
 
     /// <summary>
     /// Cuts a <b>pass</b>: a saddle where one plateau sags down to meet the next,
@@ -4548,7 +4485,7 @@ public sealed class IslandGenerator
                                       Dictionary<long, List<(int X, int Z)>> borders,
                                       List<Vector2I> sites)
     {
-        float roll = Hash01(seed, 0x9E15);
+        float roll = TerrainHash01(seed, 0x9E15);
         int want = roll < 0.35f ? 0 : roll < 0.80f ? 1 : 2;
         if (want == 0) return null;
 
@@ -4574,7 +4511,7 @@ public sealed class IslandGenerator
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                     if (region[nx, nz] == region[x, z]) continue;
 
                     // Three, not two: a two-slab step is not a cliff — the grammar
@@ -4589,7 +4526,7 @@ public sealed class IslandGenerator
             }
             if (bx < 0) continue;
 
-            float jitter = 0.6f + 0.8f * Hash01(seed, 0x5A11u ^ (uint)key * 2654435761u);
+            float jitter = 0.6f + 0.8f * TerrainHash01(seed, 0x5A11u ^ (uint)key * 2654435761u);
             options.Add((cells.Count * jitter / bestDrop, bx, bz, bestDrop));
         }
         if (options.Count == 0) return null;
@@ -4617,7 +4554,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = px + Dx[k], nz = pz + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (region[nx, nz] != region[px, pz]) floor = Math.Min(floor, h[nx, nz]);
             }
             if (floor == int.MaxValue) continue;
@@ -4653,7 +4590,7 @@ public sealed class IslandGenerator
                 // to have. The col stops at a cliff's height above the floor.
                 if (plan[region[x, z]].Type != LandformType.Basin)
                     target = Math.Max(target, BasinFloorNear(land, h, region, plan, n, x, z));
-                if (target < h[x, z]) h[x, z] = SlabClamp(target);
+                if (target < h[x, z]) h[x, z] = Terrain.SlabClamp(target);
                 mask[x, z] = true;
             }
 
@@ -4711,7 +4648,7 @@ public sealed class IslandGenerator
         int n = p.Size;
         // The seed set already covers both sides of the border, so it is two cells
         // wide before the BFS grows it at all. A canyon is a crack, not a valley.
-        int halfWidth = Hash01(seed, 0x3B71) < 0.7f ? 0 : 1;        // 2 or 4 cells across
+        int halfWidth = TerrainHash01(seed, 0x3B71) < 0.7f ? 0 : 1;        // 2 or 4 cells across
         int depth = Math.Max(4, (int)MathF.Round(p.CliffHeight * 1.8f));
 
         var dist = new int[n, n];
@@ -4728,7 +4665,7 @@ public sealed class IslandGenerator
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz] || dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[x, z] + 1;
                 q.Enqueue((nx, nz));
@@ -4745,7 +4682,7 @@ public sealed class IslandGenerator
             // hollow sunk into the ground around it — inverts. A canyon that ends
             // where it meets a cliff is what a canyon does anyway.
             if (TouchesTable(region, plan, land, x, z, n)) continue;
-            h[x, z] = SlabClamp(h[x, z] - depth);
+            h[x, z] = Terrain.SlabClamp(h[x, z] - depth);
             cut[x, z] = true;
         }
         return cut;
@@ -4759,7 +4696,7 @@ public sealed class IslandGenerator
         for (int k = 0; k < 4; k++)
         {
             int nx = x + Dx[k], nz = z + Dz[k];
-            if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+            if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
             if (IsTable(plan[region[nx, nz]].Type)) return true;
         }
         return false;
@@ -4822,7 +4759,7 @@ public sealed class IslandGenerator
 
             int floorY = -Mathf.RoundToInt(MathF.Max(1f, depth));
             int k = Math.Min(floorY, surface[x, z] - (int)edge);          // keep columns solid
-            keel[x, z] = SlabClamp(Math.Min(k, surface[x, z] - 1));
+            keel[x, z] = Terrain.SlabClamp(Math.Min(k, surface[x, z] - 1));
         }
         return keel;
     }
@@ -4875,7 +4812,7 @@ public sealed class IslandGenerator
 
     private static int Probe(int[,] d, int n, int x, int z, int cost)
     {
-        if (x < 0 || z < 0 || x >= n || z >= n) return int.MaxValue;
+        if (!InBounds(n, x, z)) return int.MaxValue;
         int v = d[x, z];
         return v >= int.MaxValue - cost ? int.MaxValue : v + cost;
     }
@@ -4929,7 +4866,7 @@ public sealed class IslandGenerator
                 { ReliefStyle.Plateau, ReliefStyle.Tilted, ReliefStyle.OffsetPeak },
             _ => new[] { ReliefStyle.Ridge, ReliefStyle.TwinPeaks, ReliefStyle.OffsetPeak },
         };
-        return pool[(int)(Hash(seed, 0x5EED) % (uint)pool.Length)];
+        return pool[(int)(TerrainHash(seed, 0x5EED) % (uint)pool.Length)];
     }
 
     private static ReliefStyle ResolveStyle(int seed, IslandParams p)
@@ -5019,7 +4956,7 @@ public sealed class IslandGenerator
         float total = 0f;
         for (int i = 0; i < upto; i++) total += ArrangementPool[i].Weight;
 
-        float pick = Hash01(seed, 0x7A1Du) * total;
+        float pick = TerrainHash01(seed, 0x7A1Du) * total;
         for (int i = 0; i < upto; i++)
         {
             pick -= ArrangementPool[i].Weight;
@@ -5043,27 +4980,7 @@ public sealed class IslandGenerator
         int upto = p.NewLandforms
             ? Enum.GetValues<TerrainCharacter>().Length - 1      // minus Auto
             : ClassicCharacters;
-        return (TerrainCharacter)(1 + (int)(Hash(seed, 0xC7A2) % (uint)upto));
+        return (TerrainCharacter)(1 + (int)(TerrainHash(seed, 0xC7A2) % (uint)upto));
     }
 
-    /// <summary>Deterministic per-island scalar in <c>[0, 1)</c> for a given salt.</summary>
-    private static float Hash01(int seed, uint salt) => (Hash(seed, salt) & 0xFFFFFF) / 16777216f;
-
-    private static uint Hash(int seed, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)seed * 2654435761u ^ salt * 2246822519u;
-            h ^= h >> 15; h *= 2246822519u;
-            h ^= h >> 13; h *= 3266489917u;
-            h ^= h >> 16;
-            return h;
-        }
-    }
-
-    private static short SlabClamp(float level)
-        => (short)Math.Clamp((int)MathF.Round(level), short.MinValue + 1, short.MaxValue);
-
-    private static short SlabClamp(int level)
-        => (short)Math.Clamp(level, short.MinValue + 1, short.MaxValue);
 }

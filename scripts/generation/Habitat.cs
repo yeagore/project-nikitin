@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Godot;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -28,19 +29,6 @@ namespace ProjectNikitin.Generation;
 /// </summary>
 internal static class Habitat
 {
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
-
-    /// <summary>
-    /// Grid offsets for the eight compass points, in <see cref="IslandData.DuneGrain"/>'s
-    /// convention (0 = east, anticlockwise): the same angles
-    /// <see cref="IslandData.DuneVector"/> reports, snapped to cells.
-    /// </summary>
-    private static readonly Vector2I[] Compass =
-    {
-        new(1, 0), new(1, 1), new(0, 1), new(-1, 1),
-        new(-1, 0), new(-1, -1), new(0, -1), new(1, -1),
-    };
 
     /// <summary>Cells of distance over which moisture decays to 1/e of itself.</summary>
     private const float MoistureFalloff = 6.5f;
@@ -100,7 +88,7 @@ internal static class Habitat
             for (int k = 0; k < 4; k++)
             {
                 int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!d.HasLand(nx, nz) || dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[c.X, c.Y] + 1;
                 q.Enqueue(new Vector2I(nx, nz));
@@ -166,7 +154,7 @@ internal static class Habitat
             for (int oz = -2; oz <= 2; oz++)
             {
                 int nx = x + ox, nz = z + oz;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 short eff = d.EffectiveLevel(nx, nz);
                 if (eff == IslandData.NoLand) continue;
                 if (eff < lo) lo = eff;
@@ -189,7 +177,8 @@ internal static class Habitat
     private static void MeasureExposure(IslandData d)
     {
         int n = d.Size;
-        Vector2I up = Compass[(d.DuneGrain + 4) & 7];
+        int wind = (d.DuneGrain + 4) & 7;
+        Vector2I up = new(Dx8[wind], Dz8[wind]);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -201,7 +190,7 @@ internal static class Habitat
             for (int step = 1; step <= WindScan; step++)
             {
                 int nx = x + up.X * step, nz = z + up.Y * step;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !d.HasLand(nx, nz)) break;
+                if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) break;
                 float rise = d.EffectiveLevel(nx, nz) - here;
                 if (rise > cover) cover = rise;
             }
@@ -226,7 +215,7 @@ internal static class Habitat
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx >= 0 && nz >= 0 && nx < n && nz < n && d.HasLand(nx, nz)) continue;
+                if (InBounds(n, nx, nz) && d.HasLand(nx, nz)) continue;
                 dist[x, z] = 0;
                 q.Enqueue(new Vector2I(x, z));
                 break;
@@ -238,7 +227,7 @@ internal static class Habitat
             for (int k = 0; k < 4; k++)
             {
                 int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!d.HasLand(nx, nz) || dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[c.X, c.Y] + 1;
                 q.Enqueue(new Vector2I(nx, nz));

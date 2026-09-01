@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using ProjectNikitin.Generation;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
@@ -151,8 +152,6 @@ public partial class GenerationAudit : Node
     /// </summary>
     [Export] public bool AcceptBaseline { get; set; } = false;
 
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
     private static readonly string[] TypeName =
     {
         "plain", "hills", "mountain", "mesa", "basin", "badlands", "karst",
@@ -286,7 +285,7 @@ public partial class GenerationAudit : Node
             int n = d.Size;
 
             short Top(int x, int z) => d.SurfaceLevel(x, z);
-            bool Land(int x, int z) => x >= 0 && z >= 0 && x < n && z < n && d.HasLand(x, z);
+            bool Land(int x, int z) => InBounds(n, x, z) && d.HasLand(x, z);
 
             // The height you actually cross a column at. A stream's channel is cut
             // one slab below its banks and filled to the old level, so you ford it
@@ -525,7 +524,7 @@ public partial class GenerationAudit : Node
                     for (int k = 0; k < 4; k++)
                     {
                         int nx = cx + Dx[k], nz = cz + Dz[k];
-                        if (nx < 0 || nz < 0 || nx >= n || nz >= n || lakeSeen[nx, nz]) continue;
+                        if (!InBounds(n, nx, nz) || lakeSeen[nx, nz]) continue;
                         if (d.WaterLevel[nx, nz] == IslandData.NoLand || d.River[nx, nz]) continue;
                         if (d.Fluid[nx, nz] != (byte)FluidKind.Water) continue;
                         lakeSeen[nx, nz] = true;
@@ -548,7 +547,7 @@ public partial class GenerationAudit : Node
                 for (int oz = -1; oz <= 1; oz++)
                 {
                     int nx = x + ox, nz = z + oz;
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (d.WaterLevel[nx, nz] != IslandData.NoLand
                         && d.Fluid[nx, nz] == (byte)FluidKind.Water) gooTouchesWater++;
                 }
@@ -773,7 +772,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     int bx = c.X + Dx[k], bz = c.Y + Dz[k];
-                    if (bx < 0 || bz < 0 || bx >= n || bz >= n) continue;
+                    if (!InBounds(n, bx, bz)) continue;
                     if (d.WaterLevel[bx, bz] == IslandData.NoLand) continue;
                     brinksBesideWater++;
                     break;
@@ -1116,9 +1115,9 @@ public partial class GenerationAudit : Node
             // a broken join, they are two islands — and every arrangement but
             // Single has them by design.
             diagonalLand += DiagonalOnly(n, (x, z) =>
-                x >= 0 && z >= 0 && x < n && z < n && massOf[x, z] >= 0, massOf);
+                InBounds(n, x, z) && massOf[x, z] >= 0, massOf);
             diagonalWater += DiagonalOnly(n, (x, z) =>
-                x >= 0 && z >= 0 && x < n && z < n && d.WaterLevel[x, z] != IslandData.NoLand);
+                InBounds(n, x, z) && d.WaterLevel[x, z] != IslandData.NoLand);
         }
 
         ulong ms = Time.GetTicksMsec() - t0;
@@ -1525,7 +1524,7 @@ public partial class GenerationAudit : Node
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                bool outside = nx < 0 || nz < 0 || nx >= n || nz >= n
+                bool outside = !InBounds(n, nx, nz)
                                || !d.HasLand(nx, nz) || d.Region[nx, nz] != d.Region[x, z];
                 if (!outside) continue;
                 dist[x, z] = 0;
@@ -1539,7 +1538,7 @@ public partial class GenerationAudit : Node
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !d.HasLand(nx, nz)) continue;
+                if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
                 if (d.Region[nx, nz] != d.Region[x, z] || dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[x, z] + 1;
                 q.Enqueue((nx, nz));
@@ -1584,7 +1583,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!d.HasLand(nx, nz) || into[nx, nz] >= 0) continue;
                     into[nx, nz] = id;
                     stack.Push((nx, nz));
@@ -1613,7 +1612,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!d.HasLand(nx, nz) || seen[nx, nz]) continue;
                     seen[nx, nz] = true;
                     stack.Push((nx, nz));
@@ -2179,7 +2178,7 @@ public partial class GenerationAudit : Node
                         for (int k = 0; k < 4; k++)
                         {
                             int nx = x + Dx[k], nz = z + Dz[k];
-                            if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                            if (!InBounds(n, nx, nz)) continue;
                             if (!d.HasLand(nx, nz) || w == IslandData.NoLand) continue;
                             if (d.WaterLevel[nx, nz] == IslandData.NoLand
                                 && d.SurfaceLevel(nx, nz) < w) waterFault++;
@@ -2566,7 +2565,7 @@ public partial class GenerationAudit : Node
                     for (int k = 0; k < 4; k++)
                     {
                         int nx = x + Dx[k], nz = z + Dz[k];
-                        bool off = nx < 0 || nz < 0 || nx >= n || nz >= n
+                        bool off = !InBounds(n, nx, nz)
                                    || !d.HasLand(nx, nz);
                         if (d.River[x, z] && off) reachedRim = true;
                         if (w == IslandData.NoLand || off) continue;
@@ -2810,7 +2809,7 @@ public partial class GenerationAudit : Node
             for (int step = 1; step <= 3; step++)
             {
                 int nx = x + dx * step, nz = z + dz * step;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) return false;
+                if (!InBounds(n, nx, nz)) return false;
                 if (!d.HasLand(nx, nz)) return false;              // the island's rim
                 if (d.WaterLevel[nx, nz] != IslandData.NoLand) continue;
                 return d.SurfaceLevel(nx, nz) - w >= 3;
@@ -2874,7 +2873,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || seen[nx, nz]) continue;
                     if (!walled[nx, nz]) continue;
                     seen[nx, nz] = true;
                     stack.Push((nx, nz));
@@ -2907,7 +2906,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     var next = (X: cx + Dx[k], Z: cz + Dz[k]);
-                    if (next.X < 0 || next.Z < 0 || next.X >= n || next.Z >= n) continue;
+                    if (!InBounds(n, next.X, next.Z)) continue;
                     if (!walled[next.X, next.Z] || dist.ContainsKey(next)) continue;
                     dist[next] = dist[(cx, cz)] + 1;
                     q.Enqueue(next);
@@ -2953,7 +2952,7 @@ public partial class GenerationAudit : Node
             for (int k = 0; k < 4; k++)
             {
                 int nx = cx + Dx[k], nz = cz + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (dist[nx, nz] >= 0 || !d.HasLand(nx, nz)) continue;
                 dist[nx, nz] = dist[cx, cz] + 1;
                 basin[nx, nz] = basin[cx, cz];
@@ -3014,7 +3013,7 @@ public partial class GenerationAudit : Node
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!d.River[nx, nz] || basin[nx, nz] >= 0) continue;
                     basin[nx, nz] = id;
                     stack.Push((nx, nz));

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
 using Godot;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -77,8 +78,6 @@ public sealed record Passage(int Exit, Vector2I From, Vector2I To, int Cost,
 /// </summary>
 internal static class Passages
 {
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
 
     /// <summary>
     /// What one work is worth against one cell of walking, in the packed cost.
@@ -130,7 +129,7 @@ internal static class Passages
             reserved[x, z] = d.Ferry[x, z] || d.Landings[x, z];
         foreach (Crossing bank in d.Bridges)
         foreach (Vector2I cell in new[] { bank.A, bank.B })
-            if (cell.X >= 0 && cell.Y >= 0 && cell.X < n && cell.Y < n)
+            if (InBounds(n, cell.X, cell.Y))
                 reserved[cell.X, cell.Y] = true;
         // The cells under the portal itself. A Gate is one cell wide now, so this
         // is one cell — and for a hanging Gate it is out in the aether anyway,
@@ -139,7 +138,7 @@ internal static class Passages
         foreach (Gate g in d.Gates)
         {
             var cell = new Vector2I(g.Center.X, g.Center.Z);
-            if (cell.X >= 0 && cell.Y >= 0 && cell.X < n && cell.Y < n)
+            if (InBounds(n, cell.X, cell.Y))
                 reserved[cell.X, cell.Y] = true;
         }
 
@@ -235,7 +234,7 @@ internal static class Passages
         {
             if (d.Gates[i].Role != GateRole.Exit) continue;
             Vector2I goal = d.Gates[i].Apron;
-            if (goal.X < 0 || goal.Y < 0 || goal.X >= n || goal.Y >= n) continue;
+            if (!InBounds(n, goal.X, goal.Y)) continue;
             if (cost[goal.X, goal.Y] == long.MaxValue) continue;
 
             var path = new List<Vector2I>();

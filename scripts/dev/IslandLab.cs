@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Godot;
 using ProjectNikitin;
 using ProjectNikitin.Generation;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
@@ -1268,7 +1269,7 @@ public partial class IslandLab : Node3D
 				{
 					int cx = g.Center.X + inward.X * step;
 					int cz = g.Center.Z + inward.Y * step;
-					if (cx < 0 || cz < 0 || cx >= n || cz >= n) continue;
+					if (!InBounds(n, cx, cz)) continue;
 
 					short ground = d.SurfaceLevel(cx, cz);
 					float y = ground == IslandData.NoLand
@@ -1415,7 +1416,7 @@ public partial class IslandLab : Node3D
 				float px = cx + dir.X * step;
 				float pz = cz + dir.Y * step;
 				int ix = Mathf.RoundToInt(px), iz = Mathf.RoundToInt(pz);
-				if (ix < 0 || iz < 0 || ix >= n || iz >= n || !d.HasLand(ix, iz)) continue;
+				if (!InBounds(n, ix, iz) || !d.HasLand(ix, iz)) continue;
 
 				short ground = d.SurfaceLevel(ix, iz);
 				if (ground == IslandData.NoLand) continue;

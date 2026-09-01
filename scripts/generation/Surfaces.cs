@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Godot;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -72,8 +73,6 @@ public enum SurfaceMaterial : byte
 /// </summary>
 internal static class Surfaces
 {
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
 
     /// <summary>Slabs of visible face that make a cliff — the traversal's own "needs a hoist".</summary>
     private const int CliffFace = 3;
@@ -124,7 +123,7 @@ internal static class Surfaces
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !d.HasLand(nx, nz))
+                if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz))
                 {
                     coast = true;
                     continue;

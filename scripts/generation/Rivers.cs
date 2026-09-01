@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
@@ -81,9 +83,6 @@ internal static class Rivers
     /// it is left to the aether. There is nothing below to catch it.
     /// </summary>
     public const int RimFallTail = 16;
-
-    private static readonly int[] Dx = { 1, -1, 0, 0 };
-    private static readonly int[] Dz = { 0, 0, 1, -1 };
 
     /// <summary>
     /// Routes drainage and carves what qualifies: a bed two slabs into
@@ -278,7 +277,7 @@ internal static class Rivers
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!river[nx, nz] || basin[nx, nz] >= 0) continue;
                     basin[nx, nz] = id;
                     stack.Push(new Vector2I(nx, nz));
@@ -387,7 +386,7 @@ internal static class Rivers
         var carve = new float[basins];
         for (int b = 0; b < basins; b++)
         {
-            float rank = Hash01(seed, 0x7A11Eu ^ (uint)b * 2654435761u);
+            float rank = FeatureHash01(seed, 0x7A11Eu ^ (uint)b * 2654435761u);
             // <b>Valleys go where the country is uneven.</b> A valley is what a
             // river cuts working down through relief, and a plain gains nothing
             // from one but a trench — so a course's descent tilts its rank: a
@@ -437,7 +436,7 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz] || dist[nx, nz] >= 0) continue;
                 dist[nx, nz] = dist[c.X, c.Y] + 1;
                 wide[nx, nz] = wide[c.X, c.Y];
@@ -483,7 +482,7 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (water[nx, nz] != IslandData.NoLand && !river[nx, nz])
                     floor = Math.Max(floor, water[nx, nz] + 1);
 
@@ -514,7 +513,7 @@ internal static class Rivers
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (dist[nx, nz] == band - 1) inner = Math.Max(inner, want[nx, nz]);
                 }
                 want[x, z] = Math.Min(want[x, z], inner);
@@ -575,7 +574,7 @@ internal static class Rivers
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                     if (water[nx, nz] != IslandData.NoLand)
                         floor = Math.Max(floor, water[nx, nz] + 1);
                     if (surface[x, z] - surface[nx, nz] == 2) ambiguous = true;
@@ -615,7 +614,7 @@ internal static class Rivers
         var order = new List<Vector2I>();
 
         bool Stream(int x, int z)
-            => x >= 0 && z >= 0 && x < n && z < n && d.River[x, z] && !d.Navigable[x, z];
+            => InBounds(n, x, z) && d.River[x, z] && !d.Navigable[x, z];
 
         // Whether you could actually get across here: dry, walkable ground within
         // a slab of the water on both sides of the channel.
@@ -634,7 +633,7 @@ internal static class Rivers
 
         bool Bank(int x, int z, short level)
         {
-            if (x < 0 || z < 0 || x >= n || z >= n) return false;
+            if (!InBounds(n, x, z)) return false;
             if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) return false;
             return Math.Abs(d.SurfaceLevel(x, z) - level) <= 1;
         }
@@ -732,25 +731,25 @@ internal static class Rivers
         {
             if (!channel[sx, sz] || !navigable[sx, sz]) continue;
             if (mate[sx, sz].X < 0) continue;                    // not an axis cell
-            if (Hash01(seed, 0xE70Au ^ (uint)(sx * 73856093 ^ sz * 19349663)) > EyotChance)
+            if (FeatureHash01(seed, 0xE70Au ^ (uint)(sx * 73856093 ^ sz * 19349663)) > EyotChance)
                 continue;
 
             axis.Clear();
             isle.Clear();
             far.Clear();
             var c = new Vector2I(sx, sz);
-            int want = 4 + (int)(Hash01(seed, 0xE70Bu ^ (uint)(sx * 31 + sz)) * 4f);
+            int want = 4 + (int)(FeatureHash01(seed, 0xE70Bu ^ (uint)(sx * 31 + sz)) * 4f);
 
             for (int step = 0; step < want; step++)
             {
-                if (c.X < 0 || c.Y < 0 || c.X >= n || c.Y >= n) break;
+                if (!InBounds(n, c.X, c.Y)) break;
                 if (!channel[c.X, c.Y] || !navigable[c.X, c.Y] || spent[c.X, c.Y]) break;
 
                 Vector2I t = mate[c.X, c.Y];
                 if (t.X < 0 || spent[t.X, t.Y]) break;
                 // The far bank, directly opposite the partner across the axis.
                 var f = new Vector2I(2 * c.X - t.X, 2 * c.Y - t.Y);
-                if (f.X < 0 || f.Y < 0 || f.X >= n || f.Y >= n) break;
+                if (!InBounds(n, f.X, f.Y)) break;
                 if (!land[f.X, f.Y] || channel[f.X, f.Y] || keep[f.X, f.Y]) break;
                 if (water[f.X, f.Y] != IslandData.NoLand) break;
                 // Never widen into a bank standing over the river: that leaves a
@@ -813,26 +812,12 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (river[nx, nz] && water[nx, nz] != IslandData.NoLand)
                     around = Math.Max(around, water[nx, nz]);
             }
             if (around == int.MinValue) continue;
             surface[x, z] = (short)(around + 1);
-        }
-    }
-
-    private static float Hash01(int seed, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)seed * 2654435761u ^ salt;
-            h ^= h >> 15;
-            h *= 0x2C1B3C6Du;
-            h ^= h >> 12;
-            h *= 0x297A2D39u;
-            h ^= h >> 15;
-            return (h & 0xFFFFFF) / 16777216f;
         }
     }
 
@@ -865,7 +850,7 @@ internal static class Rivers
         // over one leaves a cliff, which is a waterfall and not an ambiguity.
         bool Dry(int x, int z)
         {
-            if (x < 0 || z < 0 || x >= n || z >= n) return false;
+            if (!InBounds(n, x, z)) return false;
             if (!land[x, z] || water[x, z] != IslandData.NoLand) return false;
             if (keep[x, z]) return false;                        // a bridgehead is level already
             var type = (LandformType)form[x, z];
@@ -882,7 +867,7 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (water[nx, nz] != IslandData.NoLand)
                     floor = Math.Max(floor, water[nx, nz] + 1);
                 if ((LandformType)form[nx, nz] == LandformType.Basin)
@@ -1115,7 +1100,7 @@ internal static class Rivers
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n || seen[nx, nz]) continue;
+                    if (!InBounds(n, nx, nz) || seen[nx, nz]) continue;
                     if (water[nx, nz] == IslandData.NoLand) continue;
                     seen[nx, nz] = true;
                     stack.Push(new Vector2I(nx, nz));
@@ -1137,14 +1122,11 @@ internal static class Rivers
         foreach (Vector2I c in peaks)
         {
             if (found.Count >= want + 8) break;
-            int taken = 0;
             bool crowded = false;
             foreach (Vector2I had in found)
             {
                 if (Math.Abs(had.X - c.X) + Math.Abs(had.Y - c.Y) < spacing) { crowded = true; break; }
-                taken++;
             }
-            _ = taken;
             if (crowded) continue;
             found.Add(c);
             if (found.Count >= want) break;
@@ -1159,7 +1141,7 @@ internal static class Rivers
         for (int step = 1; step <= reach; step++)
         {
             int nx = x + Dx[k] * step, nz = z + Dz[k] * step;
-            if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) return false;
+            if (!InBounds(n, nx, nz) || !land[nx, nz]) return false;
         }
         return true;
     }
@@ -1229,7 +1211,7 @@ internal static class Rivers
             for (int k = 0; k < 4 && !rim; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                rim = nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz];
+                rim = !InBounds(n, nx, nz) || !land[nx, nz];
             }
             if (!rim) continue;
 
@@ -1247,7 +1229,7 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!Ground(nx, nz) || seen[nx, nz]) continue;
 
                 seen[nx, nz] = true;
@@ -1305,7 +1287,7 @@ internal static class Rivers
             for (int side = -1; side <= 1; side += 2)
             {
                 int nx = x + px * side, nz = z + pz * side;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                if (!InBounds(n, nx, nz)) continue;
                 if (!land[nx, nz] || channel[nx, nz]) continue;
                 if (water[nx, nz] != IslandData.NoLand) continue;
                 // A bridgehead, or the ground round a goo puddle: the channel
@@ -1383,7 +1365,7 @@ internal static class Rivers
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
-                    if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                    if (!InBounds(n, nx, nz)) continue;
                     if (!river[nx, nz] || water[nx, nz] == IslandData.NoLand) continue;
                     if (water[x, z] - water[nx, nz] < FallDepth) continue;
                     falls.Add(new Fall(new Vector2I(x, z), water[x, z], water[nx, nz],
@@ -1403,7 +1385,7 @@ internal static class Rivers
             for (int k = 0; k < 4; k++)
             {
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx >= 0 && nz >= 0 && nx < n && nz < n && land[nx, nz]) continue;
+                if (InBounds(n, nx, nz) && land[nx, nz]) continue;
                 falls.Add(new Fall(new Vector2I(x, z), water[x, z],
                                    (short)(water[x, z] - RimFallTail),
                                    new Vector2I(Dx[k], Dz[k]), true, width));
@@ -1436,7 +1418,7 @@ internal static class Rivers
             {
                 if (spilt[k]) continue;
                 int nx = x + Dx[k], nz = z + Dz[k];
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n || !land[nx, nz]) continue;
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
                 if (water[nx, nz] == IslandData.NoLand) continue;
                 if (water[x, z] - water[nx, nz] < FallDepth) continue;
                 falls.Add(new Fall(new Vector2I(x, z), water[x, z], water[nx, nz],

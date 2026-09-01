@@ -35,7 +35,4 @@ public sealed class Noise
 
     /// <summary>2D sample in <c>[0, 1]</c>.</summary>
     public float At(float x, float z) => _n.GetNoise2D(x, z) * 0.5f + 0.5f;
-
-    /// <summary>3D sample in <c>[0, 1]</c>.</summary>
-    public float At(float x, float y, float z) => _n.GetNoise3D(x, y, z) * 0.5f + 0.5f;
 }

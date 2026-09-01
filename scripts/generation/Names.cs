@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
@@ -54,27 +55,13 @@ internal static class Names
         d.WaterNames.Clear();
         for (int i = 0; i < d.WaterBodies; i++)
             d.WaterNames.Add($"{Compose(seed, 0x77Eu + (uint)i * 40503u, tail: false)} "
-                             + Waters[(int)(Hash(seed, 0x77Fu + (uint)i) % (uint)Waters.Length)]);
+                             + Waters[(int)(FeatureHash(seed, 0x77Fu + (uint)i) % (uint)Waters.Length)]);
     }
 
     private static string Compose(int seed, uint salt, bool tail = true)
     {
-        string head = Heads[(int)(Hash(seed, salt) % (uint)Heads.Length)];
+        string head = Heads[(int)(FeatureHash(seed, salt) % (uint)Heads.Length)];
         if (!tail) return head;
-        return head + Tails[(int)(Hash(seed, salt ^ 0x5Bu) % (uint)Tails.Length)];
-    }
-
-    private static uint Hash(int seed, uint salt)
-    {
-        unchecked
-        {
-            uint h = (uint)seed * 2654435761u ^ salt;
-            h ^= h >> 15;
-            h *= 0x2C1B3C6Du;
-            h ^= h >> 12;
-            h *= 0x297A2D39u;
-            h ^= h >> 15;
-            return h;
-        }
+        return head + Tails[(int)(FeatureHash(seed, salt ^ 0x5Bu) % (uint)Tails.Length)];
     }
 }
