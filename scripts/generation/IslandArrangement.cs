@@ -114,4 +114,34 @@ public enum IslandArrangement
     // over; on the island it needed a coil so thick and so tightly linked to stay
     // one landmass that what came out was Rosette with more steps. Removed rather
     // than tuned: two names for one shape is worse than one shape.
+
+    // --- the geometric set, 2026-09-01 -------------------------------------
+
+    /// <summary>One blocky landmass filling a square, axis-aligned.</summary>
+    Square = 24,
+
+    /// <summary>The square stood on a corner: a diamond with its points on the axes.</summary>
+    Rhomb = 25,
+
+    /// <summary>The letter itself: two uprights and the diagonal joining them.</summary>
+    NShape = 26,
+
+    /// <summary>Four roughly symmetric parts, one per quadrant, parted by a cross of straits.</summary>
+    Quarters = 27,
+
+    /// <summary>Two roughly symmetric halves parted by one axis-aligned strait.</summary>
+    Halves = 28,
+
+    /// <summary>
+    /// Two interlocked commas chasing each other round one disc — the yin-yang.
+    /// The first arrangement built from <b>grouped</b> lobes: each comma is a
+    /// chain that fuses, and only the S between the two is carved.
+    /// </summary>
+    Harmony = 29,
+
+    /// <summary>Two broad heads joined by a narrow walkable neck of land.</summary>
+    Isthmus = 30,
+
+    /// <summary>A main island sheltered behind a long thin barrier chain of islets.</summary>
+    Reef = 31,
 }

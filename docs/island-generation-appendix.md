@@ -315,6 +315,191 @@ list rather than re-growing the plumbing. When water gets its content pass they
 are the natural partner of plunge pools (§E.14) and the first candidate for an
 eruption schedule.
 
+### Three footprints, one bounding box
+
+Two facts landed together (2026-09-01). First, the `Sizes` sweep — the
+guarantee set at 64², 96² and 128² — found the pipeline already mostly
+size-clean: 64² runs at 1.17 attempts with 0 unmet guarantees, 96² and 128² at
+1.00, water physics and gorges clean throughout, which is what share-based
+tuning (edge bands, separation floors, source spacing) buys. Second, the one
+thing that did **not** hold was the bounding box: with hanging Gates ten cells
+off the rim, **21 portals in 60 islands hung outside the grid** — worse at the
+small sizes, where ten cells is a sixth of the Domain.
+
+Two changes close it. The hanging offset came down from ten to five (Maxim
+asked for 4–6; five keeps the flight readable — at four the portal reads as a
+doorway just off the step), and `Flyable` now refuses any site whose portal
+would stand outside the grid, which makes the box a law of placement rather
+than a hope: a coast hugging the wall simply offers no site, and the set-wise
+search shops elsewhere on the edge. The audit checks every Gate against the box
+(`gateOutOfBox`, want 0) and the lab's compass overlay draws the box itself, so
+a violation would be visible before it was countable.
+
+After both: `gateOutOfBox` 21 → 0 at every footprint, four hanging Gates still
+on 100% of 528 GateMatrix runs, every edge/kind/count request still met at
+100%, and the `Sizes` table dead clean — 64² at 1.17 attempts and 97.9%
+heartland, 96² and 128² at 1.00. The three sizes are now a supported fact
+(the lab grew a Size spinner), not an untested parameter.
+
+The lab's overlay then split into **two boxes** (Maxim's read, and the right
+one): the faint one is the Domain's cube — the maximal possible extent, the
+grid, the law — and the gold one is the tight box round the landmass itself,
+keel to peak, waterfalls and Gates left out. The gap between them is the room
+an arrangement is not using, which is how the ThousandIsles huddle became
+visible in 3D as well as in the portraits.
+
+### Meat, measured per arrangement
+
+"The rings are too thin" is a claim about area, and the audit could not test it:
+`Auto`'s rolls give some arrangements one island in sixty. The `Bulk` sweep
+forces each arrangement in turn and prints land share, thinnest first — and the
+table read differently than the eye did. `Ring` itself was the second-fattest
+shape of the twenty-two (28.8% land against `Single`'s 34%), because its dozen
+tangential lobes overlap into a thick annulus. What was actually thin was the
+scatter and the arms: `Archipelago` at 10.2%, `ThousandIsles` at 10.7%, and the
+whole L/T/cross family in the bottom half — an `LShape` at 12.6% is not a corner
+of country, it is a pair of causeways.
+
+So the thin half was fattened, roughly in proportion to how thin it measured:
+the arms family's hub and arm radii 0.40/0.34 → 0.45/0.37 of the island radius,
+`Archipelago`'s islets 0.20/0.19 → 0.24/0.23, `ThousandIsles`' 0.13 → 0.145ish
+(scatter is the identity; starvation is not), the fractal chain 0.24 → 0.27,
+`BrokenRing` and `BrokenArc` arcs 0.30 → 0.33, `Rosette`'s coil 0.23 → 0.26,
+`Satellites` 0.58/0.21 → 0.61/0.23. `Single`, `Twins`, `Triplets`, `Ring`,
+`Arc`, `Atoll` and `Shards` were left exactly alone — the aim is meat, not
+equality, and a ring will never out-eat a singleton.
+
+Re-measured: the floor of the table rose from 10.2% to 13.5%, every boosted
+shape gained two to four points of land share (`Archipelago` 10.2 → 14.7,
+`ThousandIsles` 10.7 → 13.5, `LShape` 12.6 → 14.6, `Rosette` 17.6 → 20.8), the
+untouched shapes came out byte-identical, and the ordering survived.
+(`ThousandIsles` has since been rebuilt outright — see *The audit grew eyes*.) One
+accidental repair: `Star` — which shares the arms — now fuses into one landmass
+(1.7 → 1.1 masses), which is what its no-straits entry always claimed it was.
+Four hanging Gates still arrive on 100% of 528 runs across all 176
+arrangement × character combinations.
+
+### The audit grew eyes, and what they saw
+
+`Portraits` writes a top-view PNG per arrangement — land as an elevation ramp,
+water its four blues, goo its violet, portals red — because headless `Image`
+drawing needs no rendering device, and whether a spiral is a spiral or a rosette
+with more steps is not a thing a summary number can say. It paid for itself the
+same hour, three times:
+
+- **ThousandIsles' huddle was the linker, not the layout.** The isles always
+  crowded the middle, and moving from rings to a stratified scatter did not fix
+  it — both seeds leaned the same way, which is the signature of a system, not a
+  die. The system is `LinkLandmasses`: every piece of a layout must be
+  bridgeable, and the linker enforces it by translating strays bodily toward
+  the rest — so isles thrown wide are isles huddled by the time the mask is
+  legal. The only spread that survives the law is one that is already legal:
+  ThousandIsles is now a **quilt** — a jittered grid of lobes over the whole
+  footprint, corner to corner, every seam carved to a strait — and the portrait
+  shows ~30 isles filling the box with wandering channels between them.
+- **Square drew a quatrefoil** (corners without edges) until the edge-midpoint
+  lobes went in; **Rhomb drew a caltrop** (elongated points) until its points
+  went round; **Harmony drew a hollow ring** until the comma heads moved into
+  the disc's middle — a yin-yang is a full disc with an S through it, not an O
+  with a gap. Each was one look and one edit. `NShape`, `Quarters`, `Halves`,
+  `Isthmus` and `Reef` read right on the first portrait.
+
+### Eight debutants, all passed
+
+The geometric set — `Square`, `Rhomb`, `NShape`, `Quarters`, `Halves`,
+`Harmony`, `Isthmus`, `Reef` — went through the `Debut` workup: every shape at
+64², 96² and 128² over 12 seeds, and against all eight characters. Verdict:
+**nothing binned.** Attempts 1.00 nearly everywhere (worst: Isthmus 1.58 at
+64², where the neck is tight; NShape × Karst 1.3), 0 unmet guarantees, 0 water
+faults, 0 Gates out of the box, heartland 96.8–99.8% throughout. Land shares
+run 15–25% — mid-table against the old roster.
+
+`Harmony` forced one real mechanism: **grouped lobes** (`Lobe.Group`). A comma
+is a chain of five lobes that must fuse while the S between the two commas is
+carved, and the old rule — a cutting layout carves every seam — would have
+shredded it into beads. A lobe's group of −1 (the default) is a piece of its
+own, so every arrangement that existed before groups behaves to the cell as it
+did; two lobes sharing a named group keep their seam. `Quarters` and `Halves`
+are the symmetric, axis-aligned siblings Twins never was; `Isthmus` is two
+countries and a chokepoint; `Reef` is the one shape with a sheltered sound.
+
+The pool weights put the debutants behind `NewArrangements` with the rest of
+the newer shapes. The old `Spiral` stays dead: nothing in the set retries it,
+and the chrysanthemum it actually drew is still called `Rosette`.
+
+### The cube got a lid, and the layouts grew into their box
+
+Three constraints landed together (2026-09-01, the second arrangements pass).
+
+**Altitude answers to the cube.** A Size-cell Domain is now at most Size slabs
+keel to peak: `BoundAltitude` caps the two big vertical spenders — mountain
+rise and keel depth — at the share of the cube they take on a 128 Domain (40
+and 34 slabs), so 128 is untouched to the slab and smaller Domains come out
+proportionally lower rather than as a scale model of a mountain in a shoebox.
+Measured: spans of 37 / 41 / 46 / 63 / 77 slabs at the five sizes against lids
+of 48 / 64 / 72 / 96 / 128 — everything under, nothing clipped, and the audit
+counts overflows (`altOverCap`, want 0).
+
+**The footprint band.** Maxim's observation, generalised: half the layouts
+crouched in the middle of their own Domain — Twins took 38% of its box, Reef
+39%, and the first fix (measuring the raw mask) missed them, because the
+<i>linker</i> drags every unbridgeable stray inward and shrinks a scattered
+layout after the mask is drawn. The fit pass therefore wraps the whole mask
+stage — bites, islet filter, linker — and rebuilds scaled up about the centre
+until the landmass's bounding rectangle covers 55–85% of the grid, erring big
+per the brief. All thirty arrangements now sit in 55.5–81%.
+
+**The five-size roster.** `IslandParams.SupportedSizes` = 48/64/72/96/128 —
+the 64/96/128 ladder and Maxim's 48/72/96 alternative overlaid until he picks.
+The `Sizes` sweep runs the guarantee set at all five: 72 and 96 are as clean as
+128 (1.00 attempts), 64 re-rolls mildly (1.17), and **48 is the strained one**
+— 1.4–1.5 attempts and the occasional unmet seed, which is a 48-cell footprint
+carrying constants (region scale, shelf minima) tuned for more room. Worth
+knowing before the ladder is chosen.
+
+Two portrait-driven fixes rode along: `Square` went from nine conjoined blobs
+to a solid block (deep overlap plus a `Solid` floor of 0.85 — a few crevasse
+slits remain and read as character), and `Harmony` earned its own extra-wide
+strait (4.6 cells at the widest) because its commas overlap so deeply that the
+default S healed shut on half the seeds — and a Harmony with one landmass is a
+blob. The arrangement dropdown also learned to scroll; thirty entries had put
+the newest shapes below the bottom of the window.
+
+### Where the small footprints pinch, by name
+
+Maxim's read — some arrangements come out deformed at 64 and especially 48 —
+measured by the `Strain` sweep: every arrangement at 48², 64² and 128² (the
+control), 12 seeds each, sorted by 48² attempts. The re-rolls do cluster, and
+the cluster has a shape: it is the **multi-piece ring and split family**, the
+layouts that must deliver several pieces, each at least `MinIsletCells`, parted
+by straits and still linkable — three demands that a 48-cell box cannot host at
+once.
+
+The shortlist for the future size gate (48² numbers, 12 seeds):
+
+| arrangement | attempts | unmet | short of its masses | clean from |
+|---|---|---|---|---|
+| `Halves` | 2.25 | **6** | 3 | 64² |
+| `BrokenArc` | 2.25 | **7** | 3 | 96² (1.42 att at 64²) |
+| `BrokenRing` | 1.67 | 3 | 1 | 64² |
+| `Archipelago` | 1.67 | 0 | 0 | re-rolls its way out; 64² clean |
+| `Atoll` | 1.58 | 1 | 0 | 96² (1 unmet at 64²) |
+| `BrokenFractal` | 1.25 | 0 | **5** | 64² — at 48² it ships with fewer stepping stones than it names |
+| `Reef` | 1.00 | 0 | 3 | 64² — the barrier chain collapses into fewer beads |
+
+Everything else runs 1.0–1.5 attempts at 48² with no unmet seeds, and the
+whole roster is clean at 96² and 128². One oddity worth its own note:
+`Harmony` is clean at the small sizes but **fuses on a quarter of 128² seeds**
+(3 of 12 short of its two commas) — the fit pass grows the disc, the commas'
+overlap deepens absolutely, and the S heals in the middle; widening the strait
+past its current 5.4 cells starts reading as a gulf, so this wants a smarter
+cut, not a wider one. `Satellites` chronically drops one islet at every size.
+
+Nothing is gated yet — the intended mechanism is `ArrangementPool` filtered by
+`Size` when Maxim picks the ladder, which is one switch on data that already
+exists. The sweep stays in the audit so the list re-derives itself when the
+constants move.
+
 ### The gorge that cannot be bridged, measured
 
 Maxim's worry, and a fair one: rivers often run between two cliffs — the
@@ -563,18 +748,19 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 | | |
 |---|---|
 | step grammar | **94.1% free**, 0.5% two-slab, 5.4% cliff, over 378k adjacent pairs |
-| two-slab steps off mountains | 692 — riverbanks and valley sides the pass is not allowed to cut |
+| two-slab steps off mountains | 643 — riverbanks and valley sides the pass is not allowed to cut |
 | cliffs between patches | plain-plain, plain-mesa, plain-basin, mesa-mesa — the pairs the rules allow |
-| rivers | 5.1k cells on 60 of 60 islands, 1,980 navigable, ~630 falls, **0 running uphill** |
+| rivers | 5.1k cells on 60 of 60 islands, ~1,850 navigable, ~700 falls, **0 running uphill** |
 | how a course runs | 60% straight / 40% turning |
-| lakes | ~125 on 56 of 60 (~156 distinct bodies, median 21 cells — the shapes), **0 leaks, 0 water touching the void** |
-| goo | ~520 cells on 19 of 60, **0 within a king's move of water** (geysers are an empty hook — see *The other fluid*) |
-| gorges | 47 walled reaches on 18 of 60 — **47 of 47 bridgeable, 0 sealed**, worst walk to a deck 9 cells |
+| lakes | ~132 on 51 of 60 (~156 distinct bodies, median 23 cells — the shapes), **0 leaks, 0 water touching the void** |
+| goo | ~530 cells on 20 of 60, **0 within a king's move of water** (geysers are an empty hook — see *The other fluid*) |
+| gorges | 55 walled reaches on 21 of 60 — 54 of 55 bridgeable, worst walk to a deck 9 cells; the 1 sealed reach is **3 cells long**, crossable two cells past its own end — the tripwire caught it, which is the tripwire working |
+| bounding box | **0 Gates outside it**, at 64², 96² and 128² alike |
 | ferries | 0 berths of 4,621 sites — no island in this sample has water a bridge cannot span; the machinery is intact and idle (see *The wide rivers that were not there*) |
 | surface | stone 11%, scree 15%, snow 13%, sand 21%, silt 5%, grass 3%, heath 23%, dust 2%, meadow 8% — none NEVER |
 | anchors | 29k coast (81% of it beached), 35k cliff, 270 overhang, 342 ford, 543 gate landing |
 | overhangs | ~270 columns with a second span |
-| walk / reach | **39% mainland on foot, 94% heartland with building**, 51 of 60 islands one whole |
+| walk / reach | **37% mainland on foot, 95% heartland with building**, 52 of 60 islands one whole |
 | what stays out of reach | mountain and karst tower — landforms whose point is the height |
 | Gates | 1 entry and 1-3 exits on every island (median 2 exits); 0 on a shared edge, 0 off the heartland, 0 not outermost on their own axis |
 | Gate landings | every one exactly 3 cells and dead level — **0 short or sloped** |
@@ -657,7 +843,12 @@ Still open, added since:
     obvious real-world coastline the arrangements do not produce. It is a mask
     operation (radial or parallel cuts inward from the rim) rather than a
     landform, so it belongs with Stage 1.
-14. **Plunge pools.** When the falls learned to pour every plausible way, the
+14. **Size-gating the arrangement pool.** The `Strain` sweep names the layouts
+    that fight a 48² box — `Halves`, `BrokenArc`, `BrokenRing`, `Atoll`,
+    `Archipelago`, `BrokenFractal`, `Reef` — and the fix is one filter on
+    `ArrangementPool` by `Size`, to be wired when Maxim picks the ladder. See
+    *Where the small footprints pinch*.
+15. **Plunge pools.** When the falls learned to pour every plausible way, the
     sheets were restricted to landing on existing water so nothing floods — but
     the other road was to *dig* the landing: a small pool under a fall onto dry
     ground, fed by it, maybe spilling on. Maxim called a lake fed by waterfalls

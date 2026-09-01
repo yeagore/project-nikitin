@@ -19,6 +19,15 @@ public partial class IslandParams : Resource
 {
     // ---- footprint ----------------------------------------------------------
 
+    /// <summary>
+    /// The footprints a Domain may have — the roster the lab picks from and the
+    /// audit's <c>Sizes</c> sweep verifies. Two ladders under consideration
+    /// (64 / 96 / 128 and 48 / 72 / 96), overlaid until Maxim picks one; a
+    /// Domain's <b>altitude</b> is bounded by the same number in slabs, so the
+    /// bounding cube is a real shape and not a metaphor.
+    /// </summary>
+    public static readonly int[] SupportedSizes = { 48, 64, 72, 96, 128 };
+
     /// <summary>Footprint edge length in cells.</summary>
     [Export(PropertyHint.Range, "16,128,1")] public int Size { get; set; } = 96;
 

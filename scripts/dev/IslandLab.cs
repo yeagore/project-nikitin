@@ -1251,6 +1251,65 @@ public partial class IslandLab : Node3D
 			// the whole island, snapped to a compass point — and until now it was
 			// a local variable inside the surface pass that nothing could see.
 			DrawDuneGrain(d, Mark);
+
+			// <b>Two bounding boxes.</b> The faint one is the Domain's cube —
+			// the maximal possible extent, whose walls are the grid and whose
+			// law the audit holds the Gates to: nothing built may poke through.
+			// The gold one is what the landmass actually takes: the tight box
+			// round the land itself, keel to peak, waterfalls and Gates left
+			// out — so the gap between the two is the room an arrangement is
+			// not using.
+			float yLo = 0f, yHi = 0f;
+			float xLo = n, xHi = -1f, zLo = n, zHi = -1f;
+			bool anyCol = false;
+			for (int x = 0; x < n; x++)
+			for (int z = 0; z < n; z++)
+			{
+				if (!d.HasLand(x, z)) continue;
+				float keel = d.KeelLevel(x, z) * sh;
+				float top = d.Spans[x, z][^1].Top * sh;
+				yLo = anyCol ? Mathf.Min(yLo, keel) : keel;
+				yHi = anyCol ? Mathf.Max(yHi, top) : top;
+				anyCol = true;
+				xLo = Mathf.Min(xLo, x);
+				xHi = Mathf.Max(xHi, x);
+				zLo = Mathf.Min(zLo, z);
+				zHi = Mathf.Max(zHi, z);
+			}
+
+			void Box(float ax, float bx, float ay, float by, float az, float bz,
+					 float girth, Color tint)
+			{
+				float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
+				float my = (ay + by) * 0.5f;
+				float lx = (bx - ax) * cs + girth, lz = (bz - az) * cs + girth;
+				foreach (float y in new[] { ay, by })
+				{
+					Mark(mx, y, az, new Vector3(lx, girth, girth), tint);
+					Mark(mx, y, bz, new Vector3(lx, girth, girth), tint);
+					Mark(ax, y, mz, new Vector3(girth, girth, lz), tint);
+					Mark(bx, y, mz, new Vector3(girth, girth, lz), tint);
+				}
+				foreach (float px in new[] { ax, bx })
+				foreach (float pz in new[] { az, bz })
+					Mark(px, my, pz, new Vector3(girth, by - ay, girth), tint);
+			}
+
+			if (anyCol)
+			{
+				// The land's own box, snug: half a cell past the outermost
+				// columns, a slab past keel and peak.
+				Box(xLo - 0.5f, xHi + 0.5f, yLo - sh, yHi + sh, zLo - 0.5f,
+					zHi + 0.5f, cs * 0.14f, new Color(1f, 0.78f, 0.25f, 0.6f));
+
+				// And the Domain's cube, faint, fitted vertically round
+				// everything the island has — portals counted among the peaks.
+				float cubeHi = yHi;
+				foreach (Gate g in d.Gates)
+					cubeHi = Mathf.Max(cubeHi, (g.Center.Y + Gate.Height) * sh);
+				Box(-0.5f, n - 0.5f, yLo - 2f * cs, cubeHi + 2f * cs, -0.5f,
+					n - 0.5f, cs * 0.1f, new Color(0.92f, 0.96f, 1f, 0.3f));
+			}
 		}
 
 		var mm = new MultiMesh
@@ -1613,6 +1672,16 @@ public partial class IslandLab : Node3D
 		Heading(rows, "what the island is");
 		_viewPick = Choice<View>(rows, "View  (C)", () => _view,
 			v => { _view = v; Rebuild(); });
+		// The supported footprints and nothing between: every constant in the
+		// pipeline is audited at exactly these sizes (the audit's Sizes sweep).
+		// A dropdown, because the roster is picked from, not typed.
+		rows.AddChild(Caption("Size, cells"));
+		_size = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		foreach (int s in IslandParams.SupportedSizes)
+			_size.AddItem($"{s} × {s}  ({s} slabs tall)", s);
+		_size.Selected = _size.GetItemIndex(Params.Size);
+		_size.ItemSelected += _ => { if (!_syncing) Params.Size = _size.GetSelectedId(); };
+		rows.AddChild(_size);
 		_arrangePick = Choice<IslandArrangement>(rows, "Arrangement  (G)",
 			() => Params.Arrangement, v => Params.Arrangement = v);
 		_characterPick = Choice<TerrainCharacter>(rows, "Character  (V)",
@@ -1731,6 +1800,7 @@ public partial class IslandLab : Node3D
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
+	private OptionButton _size = null!;
 	private Label _poolNote = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
 
@@ -1791,6 +1861,7 @@ public partial class IslandLab : Node3D
 		_wet.Value = Params.Rivers;
 		_lakes.Value = Params.Lakes;
 		_valleys.Value = Params.Valleys;
+		_size.Selected = _size.GetItemIndex(Params.Size);
 		_rungs.Value = Params.PlateauLevels;
 		_cliff.Value = Params.CliffHeight;
 		_patch.Value = Params.RegionScale;
@@ -1838,6 +1909,10 @@ public partial class IslandLab : Node3D
 			if (_syncing) return;
 			write((T)Enum.ToObject(typeof(T), pick.GetSelectedId()));
 		};
+		// Capped, so a long list scrolls instead of running off the window —
+		// thirty arrangements put the bottom of the popup past the bottom of
+		// the screen and the newest shapes out of reach.
+		pick.GetPopup().MaxSize = new Vector2I(480, 440);
 		into.AddChild(pick);
 		return pick;
 	}

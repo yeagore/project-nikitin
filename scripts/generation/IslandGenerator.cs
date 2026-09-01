@@ -81,6 +81,7 @@ public sealed class IslandGenerator
     /// </summary>
     public IslandData Generate(int seed, IslandParams p)
     {
+        p = BoundAltitude(p);
         IslandData? best = null;
 
         for (int attempt = 0; attempt < Attempts; attempt++)
@@ -198,44 +199,65 @@ public sealed class IslandGenerator
 
         IslandArrangement how = ResolveArrangement(seed, p);
         data.Arrangement = how;
-        // Specks are not islets: BuildMask already drops anything under
-        // MinIsletCells, so what comes back is landmasses only.
-        bool[,] land = BuildMask(seed, p, how);
 
-        // Bites are taken patch by patch, so the coast they leave runs along
-        // region borders. Regions are rebuilt afterwards rather than re-indexed:
-        // the partition is deterministic, so this simply re-derives it over the
-        // land that remains.
-        // Bites are for a single landmass. A bite takes a third of what is left,
-        // measured over the whole footprint, and on a Twins or Triplets layout
-        // that is most of one island — which is exactly how a third of Twins came
-        // out with one twin. A layout with several pieces already has all the
-        // silhouette interest a bite was there to provide.
-        if (how == IslandArrangement.Single || how == IslandArrangement.Satellites)
-        {
-            int[,] draft = BuildRegions(seed, p, land, out int draftCount);
-            BiteRegions(seed, p, land, draft, draftCount);
-        }
-        // Bites and the mask itself can leave two lobes meeting at a corner, which
-        // is not a join you can walk. Filling the corner is done before the
-        // component filter, so what it measures is what you can actually reach.
-        CloseDiagonalJoins(land);
-
-        // A Single Domain is one landmass by definition. Every other arrangement
-        // keeps its pieces — and then has to earn them: LinkLandmasses nudges the
-        // pieces together until each can be reached from the next by a bridge.
-        // How far one bridge reaches decides how far apart the pieces may sit, so
-        // the linker and the reach analysis have to be told the same number.
         int span = Math.Max(1, (int)p.Crossings);
         data.BridgeSpan = span;
 
-        if (how == IslandArrangement.Single) KeepLargestComponent(land);
-        else
+        // <b>The fit pass measures what ships.</b> The landmass's bounding
+        // rectangle should cover 55–85% of the grid (Maxim's band, erring big) —
+        // and the number that matters is the one after the bites, the islet
+        // filter and above all the <i>linker</i>, which drags any stray it must
+        // toward the rest and thereby shrinks every scattered layout. So the
+        // whole mask stage runs inside the loop: build at a scale, finish, and
+        // measure; grow the scale and rebuild while it lands short.
+        bool[,] land = null!;
+        float scale = 1f;
+        for (int fit = 0; fit < 3; fit++)
         {
-            DropComponentsUnder(land, MinIsletCells);
-            LinkLandmasses(land, span);
+            // Specks are not islets: BuildMask already drops anything under
+            // MinIsletCells, so what comes back is landmasses only.
+            land = BuildMask(seed, p, how, scale);
+
+            // Bites are taken patch by patch, so the coast they leave runs along
+            // region borders. Regions are rebuilt afterwards rather than
+            // re-indexed: the partition is deterministic, so this simply
+            // re-derives it over the land that remains.
+            // Bites are for a single landmass. A bite takes a third of what is
+            // left, measured over the whole footprint, and on a Twins or Triplets
+            // layout that is most of one island — which is exactly how a third of
+            // Twins came out with one twin. A layout with several pieces already
+            // has all the silhouette interest a bite was there to provide.
+            if (how == IslandArrangement.Single || how == IslandArrangement.Satellites)
+            {
+                int[,] draft = BuildRegions(seed, p, land, out int draftCount);
+                BiteRegions(seed, p, land, draft, draftCount);
+            }
+            // Bites and the mask itself can leave two lobes meeting at a corner,
+            // which is not a join you can walk. Filling the corner is done before
+            // the component filter, so what it measures is what you can reach.
+            CloseDiagonalJoins(land);
+
+            // A Single Domain is one landmass by definition. Every other
+            // arrangement keeps its pieces — and then has to earn them:
+            // LinkLandmasses nudges the pieces together until each can be reached
+            // from the next by a bridge. How far one bridge reaches decides how
+            // far apart the pieces may sit, so the linker and the reach analysis
+            // have to be told the same number.
+            if (how == IslandArrangement.Single) KeepLargestComponent(land);
+            else
+            {
+                DropComponentsUnder(land, MinIsletCells);
+                LinkLandmasses(land, span);
+            }
+            CloseDiagonalJoins(land);
+
+            float share = ExtentShare(land);
+            if (share <= 0f || (share >= ExtentFloor && share <= ExtentCeiling)) break;
+            float target = share < ExtentFloor ? 0.68f : 0.78f;
+            float factor = Math.Clamp(MathF.Sqrt(target / share), 0.8f, 1.35f);
+            if (MathF.Abs(factor - 1f) < 0.03f) break;
+            scale *= factor;
         }
-        CloseDiagonalJoins(land);
         // The crossings themselves are recorded once the terrain has a height:
         // a bridge is a level deck, so it is not a crossing until both banks
         // agree on one — see LevelBridgeheads.
@@ -1319,8 +1341,19 @@ public sealed class IslandGenerator
         /// </summary>
         public readonly float Wander;
 
+        /// <summary>
+        /// Which piece of the arrangement this lobe belongs to. <b>−1 — the
+        /// default — is a piece of its own</b>: under a cutting layout, every
+        /// seam it shares is carved, which is how every arrangement behaved
+        /// before groups existed. Two lobes sharing a non-negative group are one
+        /// piece, and the seam between them is left alone whatever the layout —
+        /// which is what lets a yin-yang comma be a <i>chain</i> of lobes and
+        /// still one island, with only the S between the two commas cut.
+        /// </summary>
+        public readonly int Group;
+
         public Lobe(float cx, float cz, float radius, float aspect, float rot, float rings,
-                    float wander)
+                    float wander, int group = -1)
         {
             Cx = cx;
             Cz = cz;
@@ -1330,6 +1363,21 @@ public sealed class IslandGenerator
             Sin = MathF.Sin(rot);
             Rings = rings;
             Wander = wander;
+            Group = group;
+        }
+
+        /// <summary>The same lobe somewhere else at another size — the fit pass's move.</summary>
+        public Lobe(Lobe from, float cx, float cz, float radius)
+        {
+            Cx = cx;
+            Cz = cz;
+            Radius = radius;
+            Aspect = from.Aspect;
+            Cos = from.Cos;
+            Sin = from.Sin;
+            Rings = from.Rings;
+            Wander = from.Wander;
+            Group = from.Group;
         }
 
         /// <summary>Normalised distance from this lobe's own wandering edge; &lt; 1 is inside.</summary>
@@ -1444,7 +1492,8 @@ public sealed class IslandGenerator
 
         var made = new List<Lobe>();
 
-        void Add(float x, float z, float r, uint salt, float aspect = 0f, float rot = float.NaN)
+        void Add(float x, float z, float r, uint salt, float aspect = 0f, float rot = float.NaN,
+                 int group = -1)
         {
             // Keep every blob inside the footprint with a margin, or a nudge later
             // will push it into the wall.
@@ -1463,7 +1512,8 @@ public sealed class IslandGenerator
             made.Add(new Lobe(x, z, r,
                               aspect > 0f ? aspect : Aspect(salt),
                               float.IsNaN(rot) ? Angle(salt ^ 0x77u) : rot,
-                              LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander));
+                              LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander,
+                              group));
         }
 
         /// A ring of blobs at a given radius, evenly spaced then jittered.
@@ -1514,7 +1564,12 @@ public sealed class IslandGenerator
             // stopped meaning "four arms, one per compass point" and started
             // meaning "some arms" — and since the Gates are on the four edges, an
             // arm pointing at an edge is the whole use of the shape.
-            Add(cx, cz, radius * 0.40f, salt, 1f, 0f);
+            //
+            // Hub and arms fattened 0.40/0.34 → 0.45/0.37 (2026-09-01): measured,
+            // an L was 12% land against a Single's 34%, and what read as "a
+            // corner of country" was a pair of causeways. See the audit's Bulk
+            // table — the arms family sat in the thin half of it entire.
+            Add(cx, cz, radius * 0.45f, salt, 1f, 0f);
             float reach = radius * 0.58f * spread;
 
             for (int i = 0; i < spokes.Length; i++)
@@ -1523,7 +1578,7 @@ public sealed class IslandGenerator
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
                 float arm = reach * (0.82f + 0.30f * Hash01(seed, s));
                 Add(cx + MathF.Cos(a) * arm, cz + MathF.Sin(a) * arm,
-                    radius * 0.34f, s, 1.7f, a + Mathf.Pi * 0.5f);
+                    radius * 0.37f, s, 1.7f, a + Mathf.Pi * 0.5f);
             }
         }
 
@@ -1564,9 +1619,9 @@ public sealed class IslandGenerator
             // clear of the main blob; where one lands close enough to touch, the
             // strait carving parts them along the seam.
             case IslandArrangement.Satellites:
-                Add(cx, cz, radius * 0.58f, 0x1000u);
+                Add(cx, cz, radius * 0.61f, 0x1000u);
                 Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
-                     radius * 0.21f, 0.26f, 0x1002u);
+                     radius * 0.23f, 0.26f, 0x1002u);
                 break;
 
             // Two halves of one irregular mass, split by the strait that runs
@@ -1591,11 +1646,14 @@ public sealed class IslandGenerator
             // Scattered and unequal: two or three near the middle, four or five
             // further out, radii varying by half. An archipelago is defined by
             // having no order to it, which is what separates it from an atoll.
+            // Blobs fattened 0.20/0.19 → 0.24/0.23 (2026-09-01): the thinnest
+            // arrangement of the twenty-two at 10% land, every islet a skipping
+            // stone. Scatter is the identity; starvation is not.
             case IslandArrangement.Archipelago:
                 Ring(2 + (int)(Hash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
-                     radius * 0.20f, 0.55f, 0x4001u);
+                     radius * 0.24f, 0.55f, 0x4001u);
                 Ring(3 + (int)(Hash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
-                     radius * 0.19f, 0.55f, 0x4003u);
+                     radius * 0.23f, 0.55f, 0x4003u);
                 break;
 
             // A ring, and the lagoon is what is *not* placed. Two things separate
@@ -1607,7 +1665,7 @@ public sealed class IslandGenerator
             case IslandArrangement.BrokenRing:
             {
                 float ring = radius * 0.76f * spread;
-                float blob = radius * 0.30f;
+                float blob = radius * 0.33f;
                 Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
                 lagoon = MathF.Max(4f, ring - blob * 0.55f);
                 break;
@@ -1634,7 +1692,7 @@ public sealed class IslandGenerator
             {
                 bool whole = how == IslandArrangement.Arc;
                 float ring = radius * 0.74f * spread;
-                float blob = radius * (whole ? 0.34f : 0.30f);
+                float blob = radius * (whole ? 0.34f : 0.33f);
                 float arc = Mathf.Tau * (0.52f + 0.18f * Hash01(seed, 0x5200u));
                 int count = (whole ? 7 : 5) + (int)(Hash01(seed, 0x5201u) * 3f);
                 Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 2.1f, arc);
@@ -1659,14 +1717,39 @@ public sealed class IslandGenerator
             // Too many islands to name, in three loose rings so the middle is as
             // busy as the rim. Each is small enough to be one place and large
             // enough to survive the islet filter.
+            // Scattered over the <b>whole</b> footprint, corners included. Three
+            // rings round the middle left a third of the bounding box dark —
+            // rings never reach a corner — so the isles are thrown like darts:
+            // uniform over the square, each keeping a minimum distance from the
+            // ones already down. The spacing widens with the separation retries,
+            // which is what `spread` means here.
             case IslandArrangement.ThousandIsles:
-                Ring(3 + (int)(Hash01(seed, 0x6000u) * 2f), radius * 0.26f * spread,
-                     radius * 0.13f, 0.5f, 0x6001u);
-                Ring(5 + (int)(Hash01(seed, 0x6002u) * 3f), radius * 0.58f * spread,
-                     radius * 0.13f, 0.45f, 0x6003u);
-                Ring(6 + (int)(Hash01(seed, 0x6004u) * 4f), radius * 0.88f * spread,
-                     radius * 0.12f, 0.40f, 0x6005u);
+            {
+                // <b>A quilt, not a scatter.</b> Every piece of a layout must be
+                // bridgeable, and the linker enforces it by dragging strays
+                // bodily toward the rest — so isles thrown wide are isles
+                // huddled in the middle by the time the mask is legal, which is
+                // exactly what both the old rings and a stratified scatter came
+                // out as. The only spread that survives the law is one that is
+                // already legal: a jittered grid of lobes big enough to nearly
+                // touch, quilted over the whole footprint corner to corner, with
+                // every seam carved to a strait. What parts the isles is then
+                // exactly the water a bridge can cross.
+                int grid = p.Size >= 112 ? 6 : p.Size >= 80 ? 5 : 4;
+                const float pad = 4f;
+                float cell = (p.Size - 1 - 2f * pad) / grid;
+                int i = 0;
+                for (int gx = 0; gx < grid; gx++)
+                for (int gz = 0; gz < grid; gz++)
+                {
+                    uint s = 0x6001u ^ (uint)(++i * 2654435761u);
+                    if (Hash01(seed, s ^ 0xEu) < 0.12f) continue;    // a hole in the quilt
+                    float px = pad + (gx + 0.30f + 0.40f * Hash01(seed, s)) * cell;
+                    float pz = pad + (gz + 0.30f + 0.40f * Hash01(seed, s ^ 0x9u)) * cell;
+                    Add(px, pz, cell * 0.55f * (0.8f + 0.4f * Hash01(seed, s ^ 0x5u)), s);
+                }
                 break;
+            }
 
             // One mass with four arms on the cardinal axes. The arms are elongated
             // *radially* — an ellipse is squashed along its own rotation, so the
@@ -1708,7 +1791,7 @@ public sealed class IslandGenerator
             case IslandArrangement.Fractal:
             case IslandArrangement.BrokenFractal:
             {
-                float blob = radius * 0.24f;
+                float blob = radius * 0.27f;
                 float heading = Angle(0x8000u);
                 float wx = cx + MathF.Cos(heading + Mathf.Pi) * radius * 0.45f;
                 float wz = cz + MathF.Sin(heading + Mathf.Pi) * radius * 0.45f;
@@ -1748,7 +1831,7 @@ public sealed class IslandGenerator
             }
 
             case IslandArrangement.Rosette:
-                Coil(0xA000u, sweep: 1.35f, thick: 0.23f,
+                Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
                      links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
                 break;
 
@@ -1760,6 +1843,184 @@ public sealed class IslandGenerator
                 Ring(3 + (int)(Hash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
                      radius * 0.42f, 0.18f, 0x9002u);
                 break;
+
+            // A blocky mass filling a square: a round hub and four round corner
+            // lobes fused, so the silhouette squares off where the corners are
+            // and the shape noise keeps the sides from being ruled lines.
+            case IslandArrangement.Square:
+            {
+                // A 3 × 3 grid of fused lobes: hub, corners, and the edge
+                // midpoints — without the edge four, the corners read as a
+                // quatrefoil with bays where the sides should be. Deeply
+                // overlapped and floored solid, or what reads is nine conjoined
+                // blobs with holes in the middle rather than a block.
+                float d = radius * 0.35f;
+                Add(cx, cz, radius * 0.52f, 0xB000u, 1f, 0f);
+                int i = 0;
+                foreach (float sx in new[] { -1f, 1f })
+                foreach (float sz in new[] { -1f, 1f })
+                    Add(cx + sx * d, cz + sz * d, radius * 0.33f,
+                        0xB001u ^ (uint)(++i * 2654435761u), 1f, 0f);
+                for (int k = 0; k < 4; k++)
+                    Add(cx + Dx[k] * d, cz + Dz[k] * d, radius * 0.33f,
+                        0xB002u ^ (uint)((k + 1) * 2654435761u), 1f, 0f);
+                break;
+            }
+
+            // The square stood on its corner: four points on the axes, elongated
+            // outward the way an arm is, so the diamond tapers where it points.
+            case IslandArrangement.Rhomb:
+            {
+                // The square's own grid stood on a corner: hub, four round
+                // points on the axes, and a lobe at each edge midpoint so the
+                // diagonals fill in. All round — elongating the points was
+                // tried first and drew a caltrop of spikes, not a diamond —
+                // and floored solid like the square, for the same reason.
+                Add(cx, cz, radius * 0.50f, 0xB100u, 1f, 0f);
+                for (int i = 0; i < 4; i++)
+                {
+                    float a = i * Mathf.Tau / 4f;
+                    Add(cx + MathF.Cos(a) * radius * 0.44f,
+                        cz + MathF.Sin(a) * radius * 0.44f, radius * 0.30f,
+                        0xB101u ^ (uint)((i + 1) * 2654435761u), 1f, 0f);
+                    float e = a + Mathf.Tau / 8f;
+                    Add(cx + MathF.Cos(e) * radius * 0.31f,
+                        cz + MathF.Sin(e) * radius * 0.31f, radius * 0.32f,
+                        0xB102u ^ (uint)((i + 1) * 2654435761u), 1f, 0f);
+                }
+                break;
+            }
+
+            // The letter: two uprights and the diagonal that joins the top of
+            // the left to the bottom of the right. Three strokes of elongated
+            // lobes, fused into one winding mass — Fractal's cousin that knows
+            // where it is going.
+            case IslandArrangement.NShape:
+            {
+                float w = radius * 0.52f, h = radius * 0.60f;
+                var strokes = new (float Ax, float Az, float Bx, float Bz)[]
+                {
+                    (-w, h, -w, -h),      // left upright (north is -z: top is -h)
+                    (-w, -h, w, h),       // the diagonal, top-left to bottom-right
+                    (w, h, w, -h),        // right upright
+                };
+                int i = 0;
+                foreach (var (ax, az, bx, bz) in strokes)
+                {
+                    float ang = MathF.Atan2(bz - az, bx - ax);
+                    for (int t = 0; t < 4; t++)
+                    {
+                        float f = t / 3f;
+                        Add(cx + Mathf.Lerp(ax, bx, f), cz + Mathf.Lerp(az, bz, f),
+                            radius * 0.185f, 0xB200u ^ (uint)(++i * 2654435761u),
+                            1.8f, ang + Mathf.Pi * 0.5f);
+                    }
+                }
+                break;
+            }
+
+            // Four roughly symmetric parts, one per quadrant, the same size give
+            // or take a wobble — parted by the cross of straits their seams make.
+            case IslandArrangement.Quarters:
+            {
+                float d = radius * 0.42f * spread;
+                int i = 0;
+                foreach (float sx in new[] { -1f, 1f })
+                foreach (float sz in new[] { -1f, 1f })
+                {
+                    uint s = 0xB300u ^ (uint)(++i * 2654435761u);
+                    Add(cx + sx * d, cz + sz * d,
+                        radius * 0.40f * (0.92f + 0.16f * Hash01(seed, s)), s,
+                        1f + 0.25f * Hash01(seed, s ^ 0x7u), 0f);
+                }
+                break;
+            }
+
+            // Two roughly symmetric halves, split along an axis — Twins' formal
+            // sibling: same size, straight seam, the strait pointing at two of
+            // the four Gates.
+            case IslandArrangement.Halves:
+            {
+                bool tall = Hash01(seed, 0xB400u) < 0.5f;
+                float d = radius * 0.31f * spread;
+                float dx = tall ? d : 0f, dz = tall ? 0f : d;
+                Add(cx + dx, cz + dz, radius * 0.56f, 0xB401u, 1.25f,
+                    tall ? 0f : Mathf.Pi * 0.5f);
+                Add(cx - dx, cz - dz, radius * 0.56f, 0xB402u, 1.25f,
+                    tall ? 0f : Mathf.Pi * 0.5f);
+                break;
+            }
+
+            // The yin-yang: two commas chasing each other round one disc. Each
+            // comma is a <b>grouped</b> chain — a fat head and a tail that thins
+            // as it sweeps half the rim — so its own seams fuse and the only cut
+            // is the S between the two.
+            case IslandArrangement.Harmony:
+            {
+                // Each comma: a fat head well inside the disc — the heads are
+                // what fill the middle — and a tail that migrates out to the rim
+                // as it sweeps its half-turn. First drawn with the whole chain
+                // at the rim, which produced a hollow broken ring: a yin-yang is
+                // a full disc with an S through it, not an O with a gap.
+                float disc = radius * 0.74f;
+                float phase = (int)(Hash01(seed, 0xB500u) * 4f) * Mathf.Tau / 4f;
+                for (int half = 0; half < 2; half++)
+                {
+                    float flip = half == 0 ? 0f : Mathf.Pi;
+                    for (int t = 0; t < 5; t++)
+                    {
+                        float f = t / 4f;
+                        float a = phase + flip - Mathf.Pi * 0.5f + f * Mathf.Pi * 0.98f;
+                        float ring = disc * Mathf.Lerp(0.34f, 0.70f, f * f * 0.6f + f * 0.4f);
+                        float size = radius * Mathf.Lerp(0.37f, 0.15f, f);
+                        Add(cx + MathF.Cos(a) * ring, cz + MathF.Sin(a) * ring, size,
+                            0xB501u ^ (uint)((half * 8 + t + 1) * 2654435761u),
+                            1.4f, a, group: half + 1);
+                    }
+                }
+                break;
+            }
+
+            // Two broad heads and the neck between them: one mass with a waist,
+            // which is a chokepoint the settlement layer will thank us for.
+            case IslandArrangement.Isthmus:
+            {
+                float a = (int)(Hash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
+                          + (Hash01(seed, 0xB601u) - 0.5f) * 0.5f;
+                float apart = radius * 0.58f * spread;
+                float hx = MathF.Cos(a) * apart, hz = MathF.Sin(a) * apart;
+                Add(cx + hx, cz + hz, radius * 0.42f, 0xB602u);
+                Add(cx - hx, cz - hz, radius * 0.40f, 0xB603u);
+                for (int t = 1; t <= 2; t++)
+                {
+                    float f = t / 3f - 0.5f;
+                    Add(cx + hx * f * 2f, cz + hz * f * 2f, radius * 0.16f,
+                        0xB604u ^ (uint)(t * 2654435761u), 1.7f, a + Mathf.Pi * 0.5f);
+                }
+                break;
+            }
+
+            // A main island sheltering behind a barrier: a long thin chain of
+            // tangential islets off one side, with a sound between chain and
+            // shore. The cut is what makes the barrier beads rather than a wall.
+            case IslandArrangement.Reef:
+            {
+                float a = (int)(Hash01(seed, 0xB700u) * 4f) * Mathf.Tau / 4f;
+                float back = radius * 0.30f;
+                Add(cx - MathF.Cos(a) * back, cz - MathF.Sin(a) * back,
+                    radius * 0.52f, 0xB701u);
+                float arc = Mathf.Tau * 0.30f;
+                for (int t = 0; t < 5; t++)
+                {
+                    float f = t / 4f - 0.5f;
+                    float ba = a + f * arc;
+                    float ring = radius * 0.80f * spread;
+                    Add(cx + MathF.Cos(ba) * ring, cz + MathF.Sin(ba) * ring,
+                        radius * 0.16f, 0xB702u ^ (uint)((t + 1) * 2654435761u),
+                        2.2f, ba);
+                }
+                break;
+            }
 
             default:
                 Add(cx, cz, radius, 0x0001u);
@@ -1779,13 +2040,23 @@ public sealed class IslandGenerator
             IslandArrangement.LShape => false,
             IslandArrangement.Rosette => false,
             IslandArrangement.Star => false,
+            IslandArrangement.Square => false,
+            IslandArrangement.Rhomb => false,
+            IslandArrangement.NShape => false,
+            IslandArrangement.Isthmus => false,
             _ => true,
         };
-        // An atoll's islets all but touch, and a shard's crack is a crack.
+        // An atoll's islets all but touch, and a shard's crack is a crack. The
+        // yin-yang's S goes the other way: its commas overlap so deeply that a
+        // strait at the default width heals shut on half the seeds, and a
+        // Harmony with one landmass is a blob — the S is the whole shape. It is
+        // still crossable, because the strait noise pinches it to a step across
+        // in places whatever its widest reach is.
         float narrow = how switch
         {
             IslandArrangement.Atoll => 1.7f,
             IslandArrangement.Shards => 1.9f,
+            IslandArrangement.Harmony => 5.4f,
             _ => 0f,
         };
         // The layouts that are a shape rather than a scatter: a thin arm perforated
@@ -1794,6 +2065,16 @@ public sealed class IslandGenerator
         {
             IslandArrangement.Fractal => 0.86f,
             IslandArrangement.BrokenFractal => 0.86f,
+            // Thin strokes and thin necks perforate the same way a thin arm does.
+            IslandArrangement.NShape => 0.86f,
+            IslandArrangement.Isthmus => 0.8f,
+            IslandArrangement.Harmony => 0.82f,
+            IslandArrangement.Reef => 0.8f,
+            // Blocks read as blocks only while they are solid: the coverage
+            // threshold pocking holes through a square turns it into nine
+            // conjoined blobs, which is what Maxim saw.
+            IslandArrangement.Square => 0.85f,
+            IslandArrangement.Rhomb => 0.85f,
             _ => 0f,
         };
         return new Layout(made.ToArray(), lagoon, cut, narrow, solid);
@@ -1820,6 +2101,10 @@ public sealed class IslandGenerator
         IslandArrangement.BrokenT => 3,
         IslandArrangement.BrokenL => 2,
         IslandArrangement.BrokenFractal => 4,
+        IslandArrangement.Quarters => 4,
+        IslandArrangement.Halves => 2,
+        IslandArrangement.Harmony => 2,
+        IslandArrangement.Reef => 3,
         // Ring, Arc, Cross and Fractal are one landmass with a shape: their blobs
         // are meant to fuse, so counting pieces would push them apart until they
         // stopped being the shape they name.
@@ -1836,9 +2121,28 @@ public sealed class IslandGenerator
     /// a large empty field. Measuring the result and widening only when it
     /// actually fused keeps the common case tight.
     /// </summary>
-    private static bool[,] BuildMask(int seed, IslandParams p, IslandArrangement how)
+    /// <summary>
+    /// The footprint band: the landmass's bounding rectangle should cover more
+    /// than this share of the grid. Maxim's number — an arrangement crouched in
+    /// the middle of its own Domain is room nobody is using.
+    /// </summary>
+    private const float ExtentFloor = 0.55f;
+
+    /// <summary>
+    /// And past this it is gently pulled back toward four fifths. Soft on
+    /// purpose, and well above the stated 0.80: the brief says err on the big
+    /// side, never on the small.
+    /// </summary>
+    private const float ExtentCeiling = 0.85f;
+
+    private static bool[,] BuildMask(int seed, IslandParams p, IslandArrangement how,
+                                     float scale = 1f)
     {
-        bool[,] mask = BuildMaskOnce(seed, p, how, 1f);
+        // `scale` is the fit pass's lever — see Build. The layouts were
+        // authored against a 128 grid by eye, and by eye half of them crouched:
+        // measured, Twins took 38% of the box it was given.
+        bool[,] mask = BuildMaskOnce(seed, p, how, 1f, scale);
+
         int wanted = MassesWanted(how);
         if (wanted <= 1) return mask;
 
@@ -1846,10 +2150,28 @@ public sealed class IslandGenerator
         {
             DropComponentsUnder(mask, MinIsletCells);
             if (CountMasses(mask) >= wanted) return mask;
-            mask = BuildMaskOnce(seed, p, how, 1f + 0.16f * attempt);
+            mask = BuildMaskOnce(seed, p, how, 1f + 0.16f * attempt, scale);
         }
         DropComponentsUnder(mask, MinIsletCells);
         return mask;
+    }
+
+    /// <summary>Share of the grid the mask's bounding rectangle covers, 0 for no land.</summary>
+    private static float ExtentShare(bool[,] mask)
+    {
+        int n = mask.GetLength(0);
+        int xLo = n, xHi = -1, zLo = n, zHi = -1;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!mask[x, z]) continue;
+            if (x < xLo) xLo = x;
+            if (x > xHi) xHi = x;
+            if (z < zLo) zLo = z;
+            if (z > zHi) zHi = z;
+        }
+        if (xHi < 0) return 0f;
+        return (xHi - xLo + 1) * (float)(zHi - zLo + 1) / (n * (float)n);
     }
 
     private static int CountMasses(bool[,] mask)
@@ -1859,7 +2181,7 @@ public sealed class IslandGenerator
     }
 
     private static bool[,] BuildMaskOnce(int seed, IslandParams p, IslandArrangement how,
-                                         float spread)
+                                         float spread, float scale = 1f)
     {
         int n = p.Size;
         float radius = AutoRadius(p);
@@ -1869,6 +2191,23 @@ public sealed class IslandGenerator
         Layout layout = PlaceLobes(seed, p, how, radius, cx, cz, spread);
         Lobe[] lobes = layout.Lobes;
         float lagoon = layout.Lagoon;
+
+        // The fit pass — see BuildMask. Everything grows or shrinks about the
+        // centre, radii included, so the shape keeps its proportions; the same
+        // clamp Add uses keeps a grown lobe off the walls.
+        if (MathF.Abs(scale - 1f) > 0.001f)
+        {
+            for (int i = 0; i < lobes.Length; i++)
+            {
+                Lobe l = lobes[i];
+                float r = l.Radius * scale;
+                float pad = Math.Min(r + 3f, (n - 1) * 0.5f);
+                lobes[i] = new Lobe(l,
+                    Math.Clamp(cx + (l.Cx - cx) * scale, pad, n - 1 - pad),
+                    Math.Clamp(cz + (l.Cz - cz) * scale, pad, n - 1 - pad), r);
+            }
+            lagoon *= scale;
+        }
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
         var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
@@ -1904,16 +2243,16 @@ public sealed class IslandGenerator
             // is the seam between them, and the seam is where the strait goes.
             float d = float.MaxValue, second = float.MaxValue;
             float rd = 1f, rSecond = 1f;
-            int mine = 0;
+            int mine = 0, runner = -1;
             for (int i = 0; i < lobes.Length; i++)
             {
                 float di = lobes[i].Distance(x, z, wobble, irr, out float ri);
                 if (di < d)
                 {
-                    second = d; rSecond = rd;
+                    second = d; rSecond = rd; runner = mine;
                     d = di; rd = ri; mine = i;
                 }
-                else if (di < second) { second = di; rSecond = ri; }
+                else if (di < second) { second = di; rSecond = ri; runner = i; }
             }
             norm[x, z] = d;
             owner[x, z] = mine;
@@ -1924,7 +2263,14 @@ public sealed class IslandGenerator
             // strait that heals is an arrangement that quietly delivered fewer
             // landmasses than it promised, which is exactly what used to happen to
             // Twins.
-            if (layout.Straits && lobes.Length > 1 && second < float.MaxValue)
+            //
+            // <b>Unless the two lobes are one piece.</b> A lobe's Group of −1 —
+            // the default — is a piece of its own and every seam it shares is
+            // carved; two lobes sharing a named group are one island built from
+            // several blobs, and their seam is left to fuse. See Lobe.Group.
+            if (layout.Straits && lobes.Length > 1 && second < float.MaxValue
+                && (lobes[mine].Group < 0 || runner < 0
+                    || lobes[mine].Group != lobes[runner].Group))
             {
                 float seam = (second - d) * 0.5f * (rd + rSecond);
                 float width = StraitNarrowest
@@ -4491,6 +4837,28 @@ public sealed class IslandGenerator
         => p.Radius > 0f ? p.Radius : p.Size * 0.45f;
 
     /// <summary>
+    /// The bounding cube is <c>Size</c> cells across and <b><c>Size</c> slabs
+    /// tall</b>, and altitude has to answer to it the way the Gates answer to
+    /// the walls. The two big vertical spenders — the mountain's rise and the
+    /// keel's depth — are capped at the share of the cube they take on a 128
+    /// Domain (40 and 34 slabs), so a 128 island is untouched to the slab and a
+    /// smaller one is proportionally lower and shallower rather than a scale
+    /// model of a mountain in a shoebox. The audit measures the resulting span
+    /// per size; these ratios are what keep it under the lid.
+    /// </summary>
+    private static IslandParams BoundAltitude(IslandParams p)
+    {
+        int mountainCap = Mathf.RoundToInt(p.Size * (40f / 128f));
+        int keelCap = Mathf.RoundToInt(p.Size * (34f / 128f));
+        if (p.MountainHeight <= mountainCap && p.KeelDepth <= keelCap) return p;
+
+        var bounded = (IslandParams)p.Duplicate();
+        bounded.MountainHeight = Math.Min(p.MountainHeight, mountainCap);
+        bounded.KeelDepth = Math.Min(p.KeelDepth, keelCap);
+        return bounded;
+    }
+
+    /// <summary>
     /// The high-ground shape that suits a character. Plains want a gentle tilt or
     /// a broad flat; a Highland wants a spine or a pair of masses to hang its
     /// mountains on.
@@ -4553,6 +4921,14 @@ public sealed class IslandGenerator
         (IslandArrangement.BrokenFractal, 3f),
         (IslandArrangement.Rosette, 3f),
         (IslandArrangement.Star, 3f),
+        (IslandArrangement.Square, 3f),
+        (IslandArrangement.Rhomb, 3f),
+        (IslandArrangement.NShape, 2f),
+        (IslandArrangement.Quarters, 3f),
+        (IslandArrangement.Halves, 3f),
+        (IslandArrangement.Harmony, 2f),
+        (IslandArrangement.Isthmus, 3f),
+        (IslandArrangement.Reef, 3f),
     };
 
     /// <summary>How many of <see cref="ArrangementPool"/> are the audited originals.</summary>

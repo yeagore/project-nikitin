@@ -71,21 +71,25 @@ internal static class GatePlacement
     private const int StripTolerance = 3;
 
     /// <summary>
-    /// How far off the rim a hanging Gate floats, in cells. <b>Ten.</b> Four put
-    /// the portal close enough to the coast to read as a doorway standing just
-    /// off the step; at ten it hangs in the aether, which is the whole point of
-    /// it — you fly to a hanging Gate, and the flight is meant to be visible.
+    /// How far off the rim a hanging Gate floats, in cells. <b>Five.</b> It was
+    /// ten — the flight was meant to be visible — but ten cells of overhang eats
+    /// a tenth of a 128 Domain's bounding box and a sixth of a 64 one's, and a
+    /// Gate is the one thing that must never hang outside the box. Five still
+    /// reads as "you fly to it" (four put the portal close enough to the coast
+    /// to read as a doorway standing just off the step) and keeps the portal
+    /// well inside the grid on every size.
     /// </summary>
-    public const int HangingOffset = 10;
+    public const int HangingOffset = 5;
 
     /// <summary>
     /// How much of that offset has to be clear air under the flight path. The
     /// whole run out to the portal is checked against the sill, but only the last
-    /// few cells have to be over nothing: a spit of low ground two cells off the
+    /// few cells have to be over nothing: a spit of low ground a cell off the
     /// coast is scenery a vessel flies over, and refusing it would put the Gate
-    /// rules back to where a ragged coastline could veto a Link.
+    /// rules back to where a ragged coastline could veto a Link. Three of the
+    /// five, scaled down with the offset.
     /// </summary>
-    public const int HangingClearance = 4;
+    public const int HangingClearance = 3;
 
     /// <summary>
     /// How far back from the outermost usable ground on its own side a Gate may
@@ -528,6 +532,14 @@ internal static class GatePlacement
         int n = d.Size;
         int sill = level + 2;
         var across = new Vector2I(-outward.Y, outward.X);
+
+        // <b>The portal must stand inside the bounding box.</b> The box's walls
+        // are the grid, and a hanging Gate — jutting off the rim toward a wall —
+        // is the one built thing that could poke through one. A coast within the
+        // hanging offset of the wall simply offers no site; measured before this
+        // rule, one gate in nine hung outside the box.
+        int px = x + outward.X * HangingOffset, pz = z + outward.Y * HangingOffset;
+        if (px < 0 || pz < 0 || px >= n || pz >= n) return false;
 
         for (int step = 1; step <= HangingOffset; step++)
         for (int side = -1; side <= 1; side++)

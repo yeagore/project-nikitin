@@ -87,9 +87,15 @@ This is the part that governs terrain, generation, and rendering code.
 - **Biome features** (forests, herds, coral/essencercoral growths, vines, fungal
   mats) are structures that sit *on top of, on the sides of, or underneath* slab
   stacks. They are a separate layer from the slabs themselves.
-- Domain size: working target **128×128** cells footprint (position: vasin; the
-  Notion "Ecumene" page still says 16³–64³, and Maxim favours smaller — decision
-  not yet logged). 30–40 Domains per game, laid out on a plane by their position
+- Domain size: **five supported footprints — 48², 64², 72², 96², 128²** — two
+  candidate ladders (64/96/128 and 48/72/96) overlaid until Maxim picks one
+  (2026-09-01; the Notion "Ecumene" page still says 16³–64³ — decision not yet
+  logged). The roster lives in `IslandParams.SupportedSizes`; the lab picks
+  from a dropdown, and the audit's `Sizes` sweep runs the guarantee set at all
+  five; 128² stays the stress target. **Altitude is bounded by the same number
+  in slabs** (`BoundAltitude`), so the bounding cube is a real shape, and the
+  landmass must take **55–85% of the grid's extent** (the fit pass). 30–40
+  Domains per game, laid out on a plane by their position
   in the world-tree (a Domain linked "north" is found by scrolling north). Up to
   4 side Links per Domain now (maybe 6 — incl. top/bottom — later).
 - **Terrain is stored per column, not as a 3D voxel array.** Each `(x,z)` holds a
@@ -152,14 +158,22 @@ island is built from, **by quota**: every landform a character names is
 guaranteed to appear. A character is a *recipe*, not a list of what came out — the
 lab names the landforms an island actually got.
 
-**Twenty-two arrangements**, one shape per `IslandArrangement`: `Single`,
+**Thirty arrangements**, one shape per `IslandArrangement`: `Single`,
 `Satellites`, `Twins`, `Triplets`, `Archipelago`, `Ring`, `BrokenRing`, `Arc`,
 `BrokenArc`, `Atoll`, `ThousandIsles`, `Cross`, `TShape`, `LShape`,
 `BrokenCross`, `BrokenT`, `BrokenL`, `Fractal`, `BrokenFractal`,
-`Rosette`, `Star`, `Shards`. Blobs are placed deliberately and the seam where two
+`Rosette`, `Star`, `Shards` — and the geometric set of 2026-09-01: `Square`,
+`Rhomb`, `NShape` (the letter itself), `Quarters`, `Halves`, `Harmony` (the
+yin-yang, built from **grouped** lobes whose own seams fuse while the S between
+the commas is carved), `Isthmus`, `Reef`. Blobs are placed deliberately and the
+seam where two
 meet is either left alone (they fuse) or **carved into a strait** — that one flag
 is the whole difference between `Ring` and `BrokenRing`. Crosses, Ts, Ls and
 stars are axis-aligned, so an arm points at an edge and therefore at a Gate.
+`ThousandIsles` is a **quilt** over the whole footprint — any scatter wider than
+the bridge span gets huddled back together by the linker, which is why its isles
+used to crowd the middle. The audit writes top-view **portraits** (PNGs) so a
+shape can be looked at headlessly.
 `NewArrangements` / `NewLandforms` keep the newer shapes out of **`Auto`'s pool**
 without taking them out of the code — they gate the dice and nothing else, so
 with an arrangement and a character both named by hand they do nothing at all,
@@ -251,8 +265,10 @@ reachable from it.
    ("Run Current Scene"). It is not the project's main scene, so F5 won't run it.
 3. **The control panel down the left is the interface** — dropdowns for the view,
    arrangement, character, entry kind and edge, exit kind and crossing
-   ease; sliders for hilliness, mix, relief, rivers, lakes and valleys; spin
-   boxes for the plateau rungs, cliff height, region scale and exit count; a
+   ease; a dropdown for the size (48/64/72/96/128); sliders for hilliness, mix,
+   relief, rivers, lakes and valleys; spin
+   boxes for the plateau rungs, cliff height, region scale
+   and exit count; a
    checkbox each for the newer shapes and every overlay. **Tab** hides it. Every
    control is also a key, and both write the same `Params`: **N** new seed, **R**
    rebuild, **F** frame, **C** view, **V** character, **G** arrangement, **H**
@@ -272,8 +288,12 @@ reachable from it.
    1 × 3 landing strip, whichever kind of Gate it is),
    **K** ferry berths (quay and hull), **O** fords, **P** the roads between
    the Gates (pale yellow walk; red stair, gold bridge, cyan ferry), **X** the
-   compass, each Gate's landward vector, and the **prevailing wind** drawn along
-   each dune field (the ridges lie across it).
+   compass, each Gate's landward vector, the **prevailing wind** drawn along
+   each dune field (the ridges lie across it), and **two bounding boxes** — the
+   faint cube of the Domain (the grid, the maximal extent; nothing the
+   generator builds, Gates above all, may hang outside it, and the audit
+   checks it) and a gold box tight round the landmass itself, keel to peak,
+   waterfalls and Gates left out.
 6. The readout is at the **top right**: what the view means, then what this island
    turned out to be — its name, arrangement, the landforms it actually got, the
    ladder, walk and reach shares, shelves, berths, rivers, Gates, and what each
@@ -297,17 +317,27 @@ CLI: `godot --path . scenes/dev/island_lab.tscn`
 and prints the measured guarantees. Run it after any change to the generator. It
 also prints **what moved since the last accepted run** against
 `docs/audit-baseline.json` — a diff, not a test; set `AcceptBaseline` to accept
-the current numbers. Seven opt-in flags print what a summary cannot show:
+the current numbers. Twelve opt-in flags print what a summary cannot show:
 `Silhouettes` (one island per arrangement), `Waterways` (one island's water, full
 resolution), `Sculpts` (a close-up of each sculpted landform), `Feasibility`
 (every arrangement × every character, flagging the combinations the pipeline
 finds hard), `GateRequests` (ask for each Entry edge and kind and each Exit count
 and kind, and report what came out), `GateMatrix` (ask every arrangement ×
 character for **four hanging Gates** — the maximum request — and then check the
-reductions; it also prints the funnel saying *why* a coast refuses one) and
+reductions; it also prints the funnel saying *why* a coast refuses one),
 `Knobs` (sweep `Lakes` / `Rivers` / `Valleys` from 0 to 1 and print what each one
 moves — **this is how you check a slider does anything**, and it is how the
-inverted valley pass was found).
+inverted valley pass was found), `Bulk` (land share per arrangement, thinnest
+first — how the thin half of the layouts was found and fattened), `Sizes`
+(the guarantee set at 64² / 96² / 128², which is what makes the three footprints
+supported rather than untested), `Debut` (the workup for arrangements on
+probation: the newest shapes at every footprint and against every character),
+`Strain` (every arrangement at 48²/64²/128², hardest-pressed first — where the
+re-rolls cluster, a shape is fighting its room; the shortlist for the future
+size gate) and
+`Portraits` (a directory path rather than a bool: writes top-view PNGs, two
+islands per arrangement plus the probationers at 64² — how a shape gets *looked
+at* headlessly, and how the quilt was told from the huddle).
 Appearance still needs a human at the editor — or **F2** in the lab.
 See `docs/island-generation-appendix.md` §D for what the audit currently says and
 which gaps are open.
@@ -405,7 +435,7 @@ addons/           third-party plugins
 - **Slab** — the atomic terrain unit: a cell 1×1 in footprint, 0.25 tall (1:4).
   Terrain Y is measured in slab indices. **Biome** — a Domain's flora / fauna /
   climate.
-- **Gate kinds** — a **hanging Gate** floats ten cells off the rim and is flown
+- **Gate kinds** — a **hanging Gate** floats five cells off the rim and is flown
   through, so the Domain owes it a landing strip (1 × 3 cells, running inland from
   the coast under it); this is the **normal** case. A **land Gate** is the same
   site with the portal moved down onto that strip, and is walked through. A Link
@@ -471,8 +501,9 @@ and to answer/close the matching **Open Question**.
 All eleven stages are done: footprint, regions and landforms, surface, water,
 keel, overhangs, traversal, Gates, the roads between them, surfaces and names,
 and the re-roll guarantees. So are beaches, valleys, fords, ferries, the feature
-anchors, the audit baseline and lab screenshots. The working footprint is
-**128²**.
+anchors, the audit baseline and lab screenshots. Five footprints are supported
+and audited — **48², 64², 72², 96², 128²** — with 128² the stress target, and
+altitude bounded by the size in slabs.
 
 Next, in rough order: the **chunked span-aware mesher + colliders** — the biggest
 piece left, and the only thing that will answer the performance question for
@@ -507,7 +538,9 @@ Flagged so they aren't silently hard-coded:
 6. **Terrain representation.** Per-column list of `Span(bottom, top)` runs
    (slab-indexed), not a 3D lattice — see `docs/island-generation.md`. Supports
    overhangs/arches (gap between spans); rules out branching caves/tunnels.
-7. **Domain size.** 128² footprint working target vs 16³–64³ in Notion (Maxim
-   favours smaller). Unlogged.
+7. **Domain size.** Five supported footprints — 48², 64², 72², 96², 128² — two
+   candidate ladders overlaid, audited by the `Sizes` sweep (2026-09-01), with
+   altitude bounded by the size in slabs; Maxim picks the final ladder later.
+   16³–64³ in Notion is stale. Still unlogged in the Decision Log.
 8. **`grass_block.tscn`** is still a 1×1×1 cube from the block detour — reshape
    to a 1×0.25×1 slab when convenient.

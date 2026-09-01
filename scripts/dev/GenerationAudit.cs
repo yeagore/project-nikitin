@@ -42,6 +42,48 @@ public partial class GenerationAudit : Node
     [Export] public bool Waterways { get; set; } = false;
 
     /// <summary>
+    /// Print how much land each arrangement actually delivers — mean land cells,
+    /// share of the footprint, and landmasses — over <see cref="SweepSeeds"/>
+    /// seeds per arrangement. "The rings are too thin" is a claim about area,
+    /// and area per arrangement is a thing the ordinary summary cannot show:
+    /// <c>Auto</c> rolls give some arrangements one island in sixty.
+    /// </summary>
+    [Export] public bool Bulk { get; set; } = false;
+
+    /// <summary>
+    /// Run the guarantee set at every supported footprint — 64, 96, 128 — over
+    /// <see cref="SweepSeeds"/> seeds each, and print what holds and what
+    /// degrades. Every constant tuned at 128 is a suspect at 64, and this is the
+    /// table that convicts them.
+    /// </summary>
+    [Export] public bool Sizes { get; set; } = false;
+
+    /// <summary>
+    /// Directory to write a top-view PNG of two islands per arrangement into,
+    /// or empty for none. Headless Image drawing needs no rendering device, so
+    /// this is how a shape gets <i>looked at</i> without a human at the editor —
+    /// whether a spiral is a spiral or a rosette with more steps is not a thing
+    /// a summary number can say.
+    /// </summary>
+    [Export] public string Portraits { get; set; } = "";
+
+    /// <summary>
+    /// The workup for arrangements on probation: each of the newest shapes at
+    /// every footprint, and against every character — attempts, unmet
+    /// guarantees, land, connectivity, the water and box laws. An arrangement
+    /// that cannot pass this is binned, not tuned in the dark.
+    /// </summary>
+    [Export] public bool Debut { get; set; } = false;
+
+    /// <summary>
+    /// Every arrangement at the small footprints, hardest-pressed first: where
+    /// the re-rolls cluster, a shape is fighting the room it was given — the
+    /// candidates for restricting to larger sizes. 128² rides along as the
+    /// control column.
+    /// </summary>
+    [Export] public bool Strain { get; set; } = false;
+
+    /// <summary>
     /// Print a close-up height map of one patch of each sculpted landform —
     /// badlands, karst, ziggurat, dunes. Their shape is the point of them, and a
     /// median step height cannot tell a maze of gullies from one trench.
@@ -165,6 +207,9 @@ public partial class GenerationAudit : Node
 
         int gooCells = 0, gooIslands = 0, gooTouchesWater = 0;
 
+        var altSpans = new List<int>();
+        int altOverCap = 0;
+
         int gorgeCells = 0, gorgeReaches = 0, gorgeCrossable = 0, gorgeSealed = 0;
         int gorgeMisaligned = 0, gorgeIslands = 0;
         var gorgeLengths = new List<int>();
@@ -176,7 +221,7 @@ public partial class GenerationAudit : Node
         var lipAir = new List<int>();
 
         int noEntry = 0, badExitCount = 0, sharedEdge = 0, wrongEntryKind = 0;
-        int gateOffHeartland = 0, gateApronShort = 0, gateInWater = 0;
+        int gateOffHeartland = 0, gateApronShort = 0, gateInWater = 0, gateOutOfBox = 0;
         int landGates = 0, hangingGates = 0, stripMissing = 0, hangingOnLand = 0;
         int gateInCorner = 0, gateNotOutermost = 0, gatesCrowded = 0;
         var gateBehind = new List<int>();
@@ -493,6 +538,25 @@ public partial class GenerationAudit : Node
             }
             gooCells += gooHere;
             if (gooHere > 0) gooIslands++;
+
+            // ---- the cube's lid ------------------------------------------------
+            // A Domain is Size cells across and Size *slabs* tall, and the whole
+            // island — keel to peak, overhang roofs included — has to fit.
+            short crest = short.MinValue, bilge = short.MaxValue;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.HasLand(x, z)) continue;
+                Span top = d.Spans[x, z][^1];
+                if (top.Top > crest) crest = top.Top;
+                short keel = d.KeelLevel(x, z);
+                if (keel < bilge) bilge = keel;
+            }
+            if (crest > short.MinValue)
+            {
+                altSpans.Add(crest - bilge);
+                if (crest - bilge > n) altOverCap++;
+            }
 
             // ---- gorges: can the walled reaches actually be bridged? -----------
             int reachesHere = AnalyseGorges(d, ref gorgeCells, gorgeLengths,
@@ -835,6 +899,12 @@ public partial class GenerationAudit : Node
                 if (g.Role == GateRole.Entry) entries++; else exits++;
                 if (!edges.Add(g.Facing)) sharedEdge++;
 
+                // The bounding box is the grid. A Domain sits inside an invisible
+                // bounding cube, and a Gate — hung off the rim toward an edge —
+                // is the one built thing that could poke through its wall.
+                if (g.Center.X < 0 || g.Center.Z < 0
+                    || g.Center.X >= n || g.Center.Z >= n) gateOutOfBox++;
+
                 apronSizes.Add(g.ApronArea);
                 if (g.ApronArea < GatePlacement.ApronArea) gateApronShort++;
 
@@ -1128,6 +1198,9 @@ public partial class GenerationAudit : Node
         GD.Print($"goo: {gooCells} cells of puddle on {gooIslands} of {Seeds} islands");
         GD.Print($"  goo within a king's move of water (want 0): {gooTouchesWater}\n");
 
+        Report("altitude, keel to peak", altSpans, "slabs");
+        GD.Print($"  islands taller than their own size in slabs (want 0): {altOverCap}\n");
+
         GD.Print($"gorges (a course walled 3+ slabs on both sides): {gorgeCells} cells, "
             + $"{gorgeReaches} reaches of 3+ cells, on {gorgeIslands} of {Seeds} islands");
         Report("  reach length", gorgeLengths, "cells");
@@ -1207,6 +1280,7 @@ public partial class GenerationAudit : Node
         Report("  buildable ground within 4 cells of the landing", apronSizes, "cells");
         GD.Print($"  gate off the heartland or in water (want 0): "
             + $"{gateOffHeartland + gateInWater}");
+        GD.Print($"  gate outside the bounding box (want 0):     {gateOutOfBox}");
         GD.Print($"  hanging gate standing on land (want 0):     {hangingOnLand}");
         Report("  landing strip", stripLengths, "cells");
         GD.Print($"  gate with a short or sloped landing (want 0):  {stripMissing}");
@@ -1251,6 +1325,11 @@ public partial class GenerationAudit : Node
         if (GateRequests) PrintGateRequests();
         if (GateMatrix) PrintGateMatrix();
         if (Knobs) PrintKnobs();
+        if (Bulk) PrintBulk();
+        if (Sizes) PrintSizes();
+        if (Debut) PrintDebut();
+        if (Strain) PrintStrain();
+        if (Portraits.Length > 0) WritePortraits();
 
         GD.Print($"continuity: {landmasses} landmasses over {Seeds} islands "
             + $"(more than one is the arrangement's doing, not a fault); "
@@ -1274,6 +1353,8 @@ public partial class GenerationAudit : Node
             ["gooTouchesWater"] = gooTouchesWater,
             ["gorgeReaches"] = gorgeReaches,
             ["gorgeSealed"] = gorgeSealed,
+            ["gateOutOfBox"] = gateOutOfBox,
+            ["altOverCap"] = altOverCap,
             ["berths"] = berths,
             ["overhangColumns"] = overhangCells,
             ["mainland%"] = Math.Round(100.0 * walkMainland / walkLand, 1),
@@ -1903,6 +1984,431 @@ public partial class GenerationAudit : Node
     /// held at the preset. A slider whose column does not climb is a slider that
     /// does nothing, and that is a thing a summary at one setting cannot say.
     /// </summary>
+    /// <summary>
+    /// Where the small footprints hurt, per arrangement. Attempts are the
+    /// generator fighting its own guarantees; a masses shortfall is a layout
+    /// that could not stay the shape it names; unmet is a seed that shipped
+    /// broken anyway. Any of the three clustering on one arrangement at one
+    /// size marks it for the future size gate.
+    /// </summary>
+    private void PrintStrain()
+    {
+        GD.Print($"\n=== strain at the small footprints ({SweepSeeds} seeds each; "
+            + "att = attempts, short = islands under the masses the shape names) ===");
+        GD.Print($"  {"arrangement",-14} {"48:att",7} {"unmet",6} {"short",6} "
+            + $"{"64:att",7} {"unmet",6} {"short",6} {"128:att",8} {"unmet",6} {"short",6}");
+
+        var rows = new List<(string Name, float Att48, string Cells)>();
+        foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
+        {
+            if (how == IslandArrangement.Auto) continue;
+            int wanted = 1;
+            var bits = new List<string>();
+            float att48 = 0;
+
+            foreach (int size in new[] { 48, 64, 128 })
+            {
+                var p = (IslandParams)Params.Duplicate();
+                p.Arrangement = how;
+                p.Size = size;
+
+                float attempts = 0;
+                int unmet = 0, shortfall = 0;
+                for (int i = 0; i < SweepSeeds; i++)
+                {
+                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    attempts += d.Attempts;
+                    if (d.Unmet.Length > 0) unmet++;
+                    int masses = LabelLandmasses(d, d.Size, new int[d.Size, d.Size]);
+                    wanted = MassesTheShapeNames(how);
+                    if (masses < wanted) shortfall++;
+                }
+                float att = attempts / SweepSeeds;
+                if (size == 48) att48 = att;
+                bits.Add($"{att,7:0.00} {unmet,6} {shortfall,6}");
+            }
+            rows.Add((how.ToString(), att48, string.Join(" ", bits)));
+        }
+
+        rows.Sort((a, b) => b.Att48.CompareTo(a.Att48));
+        foreach (var r in rows) GD.Print($"  {r.Name,-14} {r.Cells}");
+    }
+
+    /// <summary>
+    /// The landmass count an arrangement's name promises — the audit's copy of
+    /// the generator's own bar, for measuring shortfall from outside.
+    /// </summary>
+    private static int MassesTheShapeNames(IslandArrangement how) => how switch
+    {
+        IslandArrangement.Twins => 2,
+        IslandArrangement.Triplets => 3,
+        IslandArrangement.Satellites => 3,
+        IslandArrangement.Archipelago => 4,
+        IslandArrangement.BrokenRing => 4,
+        IslandArrangement.BrokenArc => 3,
+        IslandArrangement.Atoll => 5,
+        IslandArrangement.ThousandIsles => 8,
+        IslandArrangement.Shards => 4,
+        IslandArrangement.BrokenCross => 4,
+        IslandArrangement.BrokenT => 3,
+        IslandArrangement.BrokenL => 2,
+        IslandArrangement.BrokenFractal => 4,
+        IslandArrangement.Quarters => 4,
+        IslandArrangement.Halves => 2,
+        IslandArrangement.Harmony => 2,
+        IslandArrangement.Reef => 3,
+        _ => 1,
+    };
+
+    /// <summary>The arrangements still on probation — see <see cref="Debut"/>.</summary>
+    private static readonly IslandArrangement[] Debutants =
+    {
+        IslandArrangement.Square, IslandArrangement.Rhomb, IslandArrangement.NShape,
+        IslandArrangement.Quarters, IslandArrangement.Halves, IslandArrangement.Harmony,
+        IslandArrangement.Isthmus, IslandArrangement.Reef,
+    };
+
+    private void PrintDebut()
+    {
+        GD.Print($"\n=== the debutants at every footprint ({SweepSeeds} seeds each) ===");
+        GD.Print($"  {"arrangement",-10} {"size",4} {"attempts",8} {"unmet",6} {"land%",6} "
+            + $"{"masses",7} {"heart%",7} {"waterFault",11} {"outBox",7} {"ms",5}");
+
+        foreach (IslandArrangement how in Debutants)
+        {
+            foreach (int size in IslandParams.SupportedSizes)
+            {
+                var p = (IslandParams)Params.Duplicate();
+                p.Arrangement = how;
+                p.Size = size;
+
+                float attempts = 0, masses = 0;
+                int unmet = 0, waterFault = 0, outBox = 0;
+                long landCells = 0;
+                double heartShare = 0;
+                ulong t0 = Time.GetTicksMsec();
+
+                for (int i = 0; i < SweepSeeds; i++)
+                {
+                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    int n = d.Size;
+                    attempts += d.Attempts;
+                    if (d.Unmet.Length > 0) unmet++;
+                    masses += LabelLandmasses(d, n, new int[n, n]);
+
+                    long land = 0, heart = 0;
+                    for (int x = 0; x < n; x++)
+                    for (int z = 0; z < n; z++)
+                    {
+                        if (!d.HasLand(x, z)) continue;
+                        landCells++;
+                        short w = d.WaterLevel[x, z];
+                        if (w == IslandData.NoLand)
+                        {
+                            land++;
+                            if (d.Heartland >= 0 && d.Reach[x, z] == d.Heartland) heart++;
+                        }
+                        for (int k = 0; k < 4; k++)
+                        {
+                            int nx = x + Dx[k], nz = z + Dz[k];
+                            if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
+                            if (!d.HasLand(nx, nz) || w == IslandData.NoLand) continue;
+                            if (d.WaterLevel[nx, nz] == IslandData.NoLand
+                                && d.SurfaceLevel(nx, nz) < w) waterFault++;
+                            if (d.WaterLevel[nx, nz] != IslandData.NoLand
+                                && d.Fluid[nx, nz] != d.Fluid[x, z]) waterFault++;
+                        }
+                    }
+                    if (land > 0) heartShare += 100.0 * heart / land;
+
+                    foreach (Gate g in d.Gates)
+                        if (g.Center.X < 0 || g.Center.Z < 0
+                            || g.Center.X >= n || g.Center.Z >= n) outBox++;
+                }
+
+                float ms = (Time.GetTicksMsec() - t0) / (float)SweepSeeds;
+                GD.Print($"  {how,-10} {size,4} {attempts / SweepSeeds,8:0.00} {unmet,6} "
+                    + $"{100.0 * landCells / SweepSeeds / (size * (double)size),6:0.0} "
+                    + $"{masses / SweepSeeds,7:0.0} {heartShare / SweepSeeds,7:0.0} "
+                    + $"{waterFault,11} {outBox,7} {ms,5:0}");
+            }
+        }
+
+        // And against every character, since a shape that only works on plains
+        // is a shape that fails the moment the world-tree names a biome.
+        GD.Print("\n  against every character, 128², 3 seeds each: attempts, ! = unmet");
+        foreach (IslandArrangement how in Debutants)
+        {
+            var bits = new List<string>();
+            foreach (TerrainCharacter c in Enum.GetValues<TerrainCharacter>())
+            {
+                if (c == TerrainCharacter.Auto) continue;
+                var p = (IslandParams)Params.Duplicate();
+                p.Arrangement = how;
+                p.Character = c;
+
+                float att = 0;
+                bool bad = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    att += d.Attempts;
+                    bad |= d.Unmet.Length > 0;
+                }
+                bits.Add($"{c.ToString()[..2]} {att / 3f:0.0}{(bad ? "!" : " ")}");
+            }
+            GD.Print($"  {how,-10} {string.Join("  ", bits)}");
+        }
+    }
+
+    /// <summary>
+    /// One top-view PNG per arrangement per seed — the audit's eyes. Land is an
+    /// elevation ramp, water its four kinds of blue, goo its violet, landings
+    /// gold, portals red; aether is near-black, and the image edge is the
+    /// bounding box. Scaled 3× nearest so a cell stays a readable square.
+    /// </summary>
+    private void WritePortraits()
+    {
+        DirAccess.MakeDirRecursiveAbsolute(Portraits);
+        int wrote = 0;
+        foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
+        {
+            if (how == IslandArrangement.Auto) continue;
+            var p = (IslandParams)Params.Duplicate();
+            p.Arrangement = how;
+            for (int i = 0; i < 2; i++)
+            {
+                int seed = FirstSeed + i * 6151;
+                IslandData d = new IslandGenerator().Generate(seed, p);
+                SavePortrait(d, $"{Portraits}/{how}_{p.Size}_{seed}.png");
+                wrote++;
+            }
+        }
+
+        // The probationers and the rebuilt quilt again at the smallest
+        // footprint: a shape that only reads at 128 is a shape that lies.
+        foreach (IslandArrangement how in Debutants.Append(IslandArrangement.ThousandIsles))
+        {
+            var p = (IslandParams)Params.Duplicate();
+            p.Arrangement = how;
+            p.Size = 64;
+            IslandData d = new IslandGenerator().Generate(FirstSeed, p);
+            SavePortrait(d, $"{Portraits}/{how}_64_{FirstSeed}.png");
+            wrote++;
+        }
+        GD.Print($"portraits: {wrote} written to {Portraits}");
+    }
+
+    private static void SavePortrait(IslandData d, string path)
+    {
+        int n = d.Size;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+
+        short lo = short.MaxValue, hi = short.MinValue;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!d.HasLand(x, z)) continue;
+            short top = d.SurfaceLevel(x, z);
+            lo = Math.Min(lo, top);
+            hi = Math.Max(hi, top);
+        }
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            Color c;
+            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
+            else if (d.WaterLevel[x, z] != IslandData.NoLand)
+            {
+                if (d.Fluid[x, z] == (byte)FluidKind.Goo) c = new Color(0.58f, 0.16f, 0.74f);
+                else if (d.Ford[x, z]) c = new Color(0.55f, 0.82f, 0.78f);
+                else if (d.Navigable[x, z]) c = new Color(0.12f, 0.42f, 0.68f);
+                else if (d.River[x, z]) c = new Color(0.3f, 0.58f, 0.8f);
+                else c = new Color(0.1f, 0.28f, 0.55f);
+            }
+            else
+            {
+                float t = hi > lo ? (d.SurfaceLevel(x, z) - lo) / (float)(hi - lo) : 0.5f;
+                c = new Color(0.2f, 0.32f, 0.16f).Lerp(new Color(0.85f, 0.8f, 0.66f), t);
+                if (d.Beach[x, z]) c = c.Lerp(new Color(0.9f, 0.85f, 0.55f), 0.5f);
+                if (d.Landings[x, z]) c = new Color(0.95f, 0.82f, 0.25f);
+            }
+            img.SetPixel(x, z, c);
+        }
+
+        foreach (Gate g in d.Gates)
+        {
+            var tint = g.Kind == GateKind.Hanging
+                ? new Color(1f, 0.2f, 0.2f)
+                : new Color(1f, 0.5f, 0.15f);
+            int gx = Math.Clamp(g.Center.X, 0, n - 1);
+            int gz = Math.Clamp(g.Center.Z, 0, n - 1);
+            img.SetPixel(gx, gz, tint);
+        }
+
+        img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
+        img.SavePng(path);
+    }
+
+    /// <summary>
+    /// Land per arrangement, thinnest first. "The rings are too thin" is a claim
+    /// about area, and the ordinary summary cannot test it: Auto's rolls give
+    /// some arrangements one island in sixty. This forces each one in turn.
+    /// </summary>
+    private void PrintBulk()
+    {
+        GD.Print($"\n=== land per arrangement ({SweepSeeds} seeds each, "
+            + $"footprint {Params.Size}²) ===");
+
+        var rows = new List<(string Name, float Share, float Cells, float Masses,
+                             float Extent)>();
+        foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
+        {
+            if (how == IslandArrangement.Auto) continue;
+            var p = (IslandParams)Params.Duplicate();
+            p.Arrangement = how;
+
+            long cells = 0;
+            float masses = 0, extent = 0;
+            for (int i = 0; i < SweepSeeds; i++)
+            {
+                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                int n = d.Size;
+                int xLo = n, xHi = -1, zLo = n, zHi = -1;
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    cells++;
+                    if (x < xLo) xLo = x;
+                    if (x > xHi) xHi = x;
+                    if (z < zLo) zLo = z;
+                    if (z > zHi) zHi = z;
+                }
+                if (xHi >= 0)
+                    extent += 100f * (xHi - xLo + 1) * (zHi - zLo + 1) / (n * (float)n);
+                masses += LabelLandmasses(d, n, new int[n, n]);
+            }
+            float mean = cells / (float)SweepSeeds;
+            rows.Add((how.ToString(), 100f * mean / (Params.Size * Params.Size), mean,
+                      masses / SweepSeeds, extent / SweepSeeds));
+        }
+
+        rows.Sort((a, b) => a.Share.CompareTo(b.Share));
+        GD.Print($"  {"arrangement",-14} {"land%",6} {"cells",9} {"masses",7} {"extent%",8}"
+            + "   (thinnest first; extent wants 55-85)");
+        foreach (var r in rows)
+            GD.Print($"  {r.Name,-14} {r.Share,6:0.0} {r.Cells,9:0} {r.Masses,7:0.0}"
+                + $" {r.Extent,8:0.0}");
+    }
+
+    /// <summary>
+    /// The guarantee set at every supported footprint. Every constant tuned at
+    /// 128 is a suspect at 64, and this is the table that convicts them: the
+    /// re-roll verdicts (attempts, unmet), the connectivity shares, the Gate
+    /// deliverables, the water physics and the gorge tripwire, per size.
+    /// </summary>
+    private void PrintSizes()
+    {
+        GD.Print($"\n=== the guarantee set at every footprint ({SweepSeeds} seeds each) ===");
+        GD.Print($"  {"size",4} {"attempts",8} {"unmet",6} {"main%",6} {"heart%",7} "
+            + $"{"gateFault",10} {"outBox",7} {"rimMiss",8} {"waterFault",11} "
+            + $"{"sealed",7} {"altMax",7} {"altOver",8} {"ms",6}");
+
+        foreach (int size in IslandParams.SupportedSizes)
+        {
+            var p = (IslandParams)Params.Duplicate();
+            p.Size = size;
+
+            float attempts = 0;
+            int unmet = 0, gateFault = 0, outBox = 0, rimMiss = 0, waterFault = 0;
+            int sealedGorges = 0, altMax = 0, altOver = 0;
+            double mainShare = 0, heartShare = 0;
+            ulong t0 = Time.GetTicksMsec();
+
+            for (int i = 0; i < SweepSeeds; i++)
+            {
+                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                int n = d.Size;
+                attempts += d.Attempts;
+                if (d.Unmet.Length > 0) unmet++;
+
+                long land = 0, main = 0, heart = 0;
+                bool hasRiver = false, reachedRim = false;
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    short w = d.WaterLevel[x, z];
+                    if (w == IslandData.NoLand)
+                    {
+                        land++;
+                        if (d.Mainland >= 0 && d.Walk[x, z] == d.Mainland) main++;
+                        if (d.Heartland >= 0 && d.Reach[x, z] == d.Heartland) heart++;
+                    }
+
+                    if (d.River[x, z]) hasRiver = true;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int nx = x + Dx[k], nz = z + Dz[k];
+                        bool off = nx < 0 || nz < 0 || nx >= n || nz >= n
+                                   || !d.HasLand(nx, nz);
+                        if (d.River[x, z] && off) reachedRim = true;
+                        if (w == IslandData.NoLand || off) continue;
+                        // A dry neighbour under this water is a leak; a
+                        // neighbouring fluid of another kind is a mix. Both 0.
+                        if (d.WaterLevel[nx, nz] == IslandData.NoLand
+                            && d.SurfaceLevel(nx, nz) < w) waterFault++;
+                        if (d.WaterLevel[nx, nz] != IslandData.NoLand
+                            && d.Fluid[nx, nz] != d.Fluid[x, z]) waterFault++;
+                    }
+                }
+                if (hasRiver && !reachedRim) rimMiss++;
+                if (land > 0)
+                {
+                    mainShare += 100.0 * main / land;
+                    heartShare += 100.0 * heart / land;
+                }
+
+                int entries = 0, exits = 0;
+                foreach (Gate g in d.Gates)
+                {
+                    if (g.Role == GateRole.Entry) entries++; else exits++;
+                    if (g.Center.X < 0 || g.Center.Z < 0
+                        || g.Center.X >= n || g.Center.Z >= n) outBox++;
+                }
+                if (entries != 1 || exits < 1 || exits > 3) gateFault++;
+
+                int gc = 0, cross = 0, sealedUp = 0, skew = 0;
+                var scratch = new List<int>();
+                AnalyseGorges(d, ref gc, scratch, scratch, scratch,
+                              ref cross, ref sealedUp, ref skew);
+                sealedGorges += sealedUp;
+
+                short peak = short.MinValue, bilge = short.MaxValue;
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    if (d.Spans[x, z][^1].Top > peak) peak = d.Spans[x, z][^1].Top;
+                    if (d.KeelLevel(x, z) < bilge) bilge = d.KeelLevel(x, z);
+                }
+                if (peak > short.MinValue)
+                {
+                    altMax = Math.Max(altMax, peak - bilge);
+                    if (peak - bilge > n) altOver++;
+                }
+            }
+
+            float ms = (Time.GetTicksMsec() - t0) / (float)SweepSeeds;
+            GD.Print($"  {size,4} {attempts / SweepSeeds,8:0.00} {unmet,6} "
+                + $"{mainShare / SweepSeeds,6:0.0} {heartShare / SweepSeeds,7:0.0} "
+                + $"{gateFault,10} {outBox,7} {rimMiss,8} {waterFault,11} "
+                + $"{sealedGorges,7} {altMax,7} {altOver,8} {ms,6:0}");
+        }
+    }
+
     private void PrintKnobs()
     {
         GD.Print($"\n=== water knobs, swept 0 to 1 ({SweepSeeds} seeds each, "

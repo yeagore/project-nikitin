@@ -5,9 +5,13 @@ that were tried and removed, the audit numbers and the ideas not yet taken are i
 [island-generation-appendix.md](island-generation-appendix.md)** — this file is
 meant to stay readable.
 
-Status: 2026-08-31. Every stage below is implemented in `scripts/generation/`,
-and `scenes/dev/island_lab.tscn` draws the result. The working footprint is
-**128 × 128** cells. What is left is the chunked mesher.
+Status: 2026-09-01. Every stage below is implemented in `scripts/generation/`,
+and `scenes/dev/island_lab.tscn` draws the result. Five footprints are supported
+and audited — **48², 64², 72², 96², 128²**, two ladders overlaid until Maxim
+picks one — with 128² the stress target, and a Domain's **altitude bounded by
+the same number in slabs** (`IslandParams.SupportedSizes`,
+`IslandGenerator.BoundAltitude`), so the bounding cube is a real shape. What is
+left is the chunked mesher.
 
 ---
 
@@ -70,8 +74,20 @@ That one flag is the whole difference between `Ring` and `BrokenRing`.
 
 | | layouts |
 |---|---|
-| one landmass | `Single` `Ring` `Arc` `Cross` `TShape` `LShape` `Fractal` `Rosette` `Star` |
-| several | `Satellites` `Twins` `Triplets` `Archipelago` `BrokenRing` `BrokenArc` `Atoll` `ThousandIsles` `Shards` `BrokenCross` `BrokenT` `BrokenL` `BrokenFractal` |
+| one landmass | `Single` `Ring` `Arc` `Cross` `TShape` `LShape` `Fractal` `Rosette` `Star` `Square` `Rhomb` `NShape` `Isthmus` |
+| several | `Satellites` `Twins` `Triplets` `Archipelago` `BrokenRing` `BrokenArc` `Atoll` `ThousandIsles` `Shards` `BrokenCross` `BrokenT` `BrokenL` `BrokenFractal` `Quarters` `Halves` `Harmony` `Reef` |
+
+The **geometric set** (2026-09-01): `Square` and `Rhomb` are blocky fused grids of
+lobes, axis-aligned and corner-stood; `NShape` is the letter itself, three
+strokes of elongated lobes; `Quarters` and `Halves` are four and two roughly
+symmetric parts split by straight straits; `Harmony` is the yin-yang — the first
+layout built from **grouped** lobes, each comma a chain whose own seams fuse
+while the S between the two is carved (`Lobe.Group`); `Isthmus` is two heads and
+a walkable neck; `Reef` is a main island sheltered behind a barrier chain.
+`ThousandIsles` was rebuilt as a **quilt** — a jittered grid of lobes over the
+whole footprint, every seam a strait — because any scatter wider than the bridge
+span is huddled back together by the linker, which is why its isles always
+crowded the middle.
 
 `Cross`, `TShape`, `LShape` and `Star` are one shape with a different set of
 spokes — a wide hub with thick arms, **axis-aligned**, so an arm points at an
@@ -88,6 +104,14 @@ Then: bites are taken out of a lone island by deleting whole regions, diagonal
 joins are filled, components under 30 cells are dropped, and **`LinkLandmasses`
 nudges the pieces together** until every one is within a bridge span of the rest.
 Whatever the arrangement, the pieces are linkable.
+
+**The fit pass** wraps that whole stage: the landmass's bounding rectangle must
+cover **55–85% of the grid** (Maxim's band, erring big), measured on what
+actually ships — after the bites, the islet filter and above all the linker,
+whose stray-dragging shrinks every scattered layout. A layout that lands short
+is rebuilt scaled up about the centre, radii and all. Measured across all
+thirty arrangements, every one now sits in the band; before the pass, Twins
+took 38% of its box and Reef 39%.
 
 *New layouts are gated by `IslandParams.NewArrangements`, which keeps them out of
 `Auto`'s pool without taking them out of the code.*
@@ -342,8 +366,24 @@ arrangement × character combinations, with no seed needing a re-roll.
 
 | kind | |
 |---|---|
-| `Hanging` | Floats ten cells off the rim; you fly through it. Needs clear air for the last four cells of the approach and a **1 × 3 landing strip** running inland from the coast under it |
+| `Hanging` | Floats five cells off the rim (was ten — see the bounding box below); you fly through it. Needs clear air for the last three cells of the approach and a **1 × 3 landing strip** running inland from the coast under it |
 | `Land` | the same site with the portal moved down onto that strip. You walk through it, and the ground you walk out onto is the ground a vessel would have landed on |
+
+**Nothing hangs outside the bounding box.** A Domain sits inside an invisible
+bounding cube (see the Ecumene page): its walls are the grid, and its **lid is
+the same number in slabs** — a Size-cell Domain is at most Size slabs from keel
+to peak, which `BoundAltitude` enforces by capping the two big vertical
+spenders (mountain rise and keel depth) at the share of the cube they take on a
+128 Domain, so 128 is untouched and smaller Domains are proportionally lower.
+Everything the
+generator builds — the Gates above all, since a hanging portal juts off the rim
+toward a wall — must stay inside it. That is why the hanging offset came down
+from ten to five: ten cells of overhang eats a tenth of a 128 Domain's box and a
+sixth of a 64 one's. The audit checks every Gate against the box (want 0
+outside), and the lab's compass overlay (**X**) draws **two boxes**: the faint
+cube of the Domain — the grid, the maximal possible extent, the law — and a
+gold box tight round the landmass itself, keel to peak, waterfalls and Gates
+left out. The gap between the two is the room an arrangement is not using.
 
 **The strip is built, not found.** Three cells of usable ground running inland,
 and once the site is chosen those three cells are **levelled** to the height of
