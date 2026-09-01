@@ -142,7 +142,7 @@ public partial class GenerationChecksum : Node
 
     private void Case(string label, int seed, IslandParams p)
     {
-        IslandData d = new IslandGenerator().Generate(seed, p);
+        IslandData d = IslandGenerator.Generate(seed, p);
         ulong h = Hash(d);
         string line = $"{label}\t{seed}\t{h:x16}";
         GD.Print(line);

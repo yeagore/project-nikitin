@@ -281,7 +281,7 @@ public partial class GenerationAudit : Node
         for (int i = 0; i < Seeds; i++)
         {
             int seed = FirstSeed + i * 6151;
-            IslandData d = new IslandGenerator().Generate(seed, Params);
+            IslandData d = IslandGenerator.Generate(seed, Params);
             int n = d.Size;
 
             short Top(int x, int z) => d.SurfaceLevel(x, z);
@@ -1639,7 +1639,7 @@ public partial class GenerationAudit : Node
 
             var p = (IslandParams)Params.Duplicate();
             p.Arrangement = how;
-            IslandData d = new IslandGenerator().Generate(FirstSeed, p);
+            IslandData d = IslandGenerator.Generate(FirstSeed, p);
             int n = d.Size, step = Math.Max(1, n / 64);
 
             GD.Print($"--- {how} (seed {FirstSeed}) ---");
@@ -1681,7 +1681,7 @@ public partial class GenerationAudit : Node
         for (int i = 0; i < Math.Min(3, Seeds); i++)
         {
             int seed = FirstSeed + i * 6151;
-            IslandData d = new IslandGenerator().Generate(seed, Params);
+            IslandData d = IslandGenerator.Generate(seed, Params);
             int n = d.Size;
 
             var falls = new HashSet<Vector2I>();
@@ -1749,7 +1749,7 @@ public partial class GenerationAudit : Node
 
                 for (int i = 0; i < FeasibilitySeeds; i++)
                 {
-                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
 
@@ -1820,7 +1820,7 @@ public partial class GenerationAudit : Node
             int rightEdge = 0, rightKind = 0, both = 0, attempts = 0;
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 attempts += d.Attempts;
                 foreach (Gate g in d.Gates)
                 {
@@ -1851,7 +1851,7 @@ public partial class GenerationAudit : Node
             var got = new List<int>();
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int exits = 0, wrong = 0;
                 foreach (Gate g in d.Gates)
                 {
@@ -1917,7 +1917,7 @@ public partial class GenerationAudit : Node
                 int four = 0, gates = 0, hanging = 0;
                 for (int i = 0; i < FeasibilitySeeds; i++)
                 {
-                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     int here = d.Gates.Count, air = 0;
                     foreach (Gate g in d.Gates) if (g.Kind == GateKind.Hanging) air++;
                     gates += here;
@@ -1980,7 +1980,7 @@ public partial class GenerationAudit : Node
 
             var data = new List<IslandData>();
             for (int i = 0; i < FeasibilitySeeds; i++)
-                data.Add(new IslandGenerator().Generate(FirstSeed + i * 6151, p));
+                data.Add(IslandGenerator.Generate(FirstSeed + i * 6151, p));
 
             (string Label, bool Loose)[] rungs = { ("strict", false), ("loose", true) };
             foreach (var (label, loose) in rungs)
@@ -2027,7 +2027,7 @@ public partial class GenerationAudit : Node
             var got = new List<int>();
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int exits = 0, wrong = 0;
                 foreach (Gate g in d.Gates)
                 {
@@ -2083,7 +2083,7 @@ public partial class GenerationAudit : Node
                 int unmet = 0, shortfall = 0;
                 for (int i = 0; i < SweepSeeds; i++)
                 {
-                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
                     int masses = LabelLandmasses(d, d.Size, new int[d.Size, d.Size]);
@@ -2157,7 +2157,7 @@ public partial class GenerationAudit : Node
 
                 for (int i = 0; i < SweepSeeds; i++)
                 {
-                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     int n = d.Size;
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
@@ -2218,7 +2218,7 @@ public partial class GenerationAudit : Node
                 bool bad = false;
                 for (int i = 0; i < 3; i++)
                 {
-                    IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     att += d.Attempts;
                     bad |= d.Unmet.Length > 0;
                 }
@@ -2246,7 +2246,7 @@ public partial class GenerationAudit : Node
             for (int i = 0; i < 2; i++)
             {
                 int seed = FirstSeed + i * 6151;
-                IslandData d = new IslandGenerator().Generate(seed, p);
+                IslandData d = IslandGenerator.Generate(seed, p);
                 SavePortrait(d, $"{Portraits}/{how}_{p.Size}_{seed}.png");
                 wrote++;
             }
@@ -2259,7 +2259,7 @@ public partial class GenerationAudit : Node
             var p = (IslandParams)Params.Duplicate();
             p.Arrangement = how;
             p.Size = 64;
-            IslandData d = new IslandGenerator().Generate(FirstSeed, p);
+            IslandData d = IslandGenerator.Generate(FirstSeed, p);
             SavePortrait(d, $"{Portraits}/{how}_64_{FirstSeed}.png");
             wrote++;
         }
@@ -2332,7 +2332,7 @@ public partial class GenerationAudit : Node
         for (int i = 0; i < 6; i++)
         {
             int seed = FirstSeed + i;
-            IslandData d = new IslandGenerator().Generate(seed, Params);
+            IslandData d = IslandGenerator.Generate(seed, Params);
             SaveHabitat(d, $"{FieldMaps}/habitat_{seed}.png");
             SaveAnchors(d, $"{FieldMaps}/anchors_{seed}.png");
             SaveSurface(d, $"{FieldMaps}/surface_{seed}.png");
@@ -2486,7 +2486,7 @@ public partial class GenerationAudit : Node
             float masses = 0, extent = 0;
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int n = d.Size;
                 int xLo = n, xHi = -1, zLo = n, zHi = -1;
                 for (int x = 0; x < n; x++)
@@ -2542,7 +2542,7 @@ public partial class GenerationAudit : Node
 
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int n = d.Size;
                 attempts += d.Attempts;
                 if (d.Unmet.Length > 0) unmet++;
@@ -2638,7 +2638,7 @@ public partial class GenerationAudit : Node
             long cells = 0, bodies = 0, biggest = 0;
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 var perRegion = new Dictionary<int, int>();
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
@@ -2665,7 +2665,7 @@ public partial class GenerationAudit : Node
             long cells = 0, navigable = 0, falls = 0;
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
                 {
@@ -2696,7 +2696,7 @@ public partial class GenerationAudit : Node
             var walks = new List<int>();
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 reaches += AnalyseGorges(d, ref cells, lens, sealedLens, walks,
                                          ref cross, ref sealedUp, ref skew);
             }
@@ -2724,7 +2724,7 @@ public partial class GenerationAudit : Node
             var each = new List<double>();
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = new IslandGenerator().Generate(FirstSeed + i * 6151, p);
+                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 if (ValleyRise(d, out double rise, each)) { total += rise; counted++; }
                 berths += d.Berths.Count;
 
@@ -3052,7 +3052,7 @@ public partial class GenerationAudit : Node
             var p = (IslandParams)Params.Duplicate();
             p.Character = character;
             p.Arrangement = IslandArrangement.Single;
-            IslandData d = new IslandGenerator().Generate(FirstSeed, p);
+            IslandData d = IslandGenerator.Generate(FirstSeed, p);
             int n = d.Size;
 
             // The biggest patch of the landform in question, and its middle.

@@ -714,7 +714,7 @@ public partial class IslandLab : Node3D
 		_lastSignature = Signature();
 
 		ulong t0 = Time.GetTicksUsec();
-		_data = new IslandGenerator().Generate(Seed, Params);
+		_data = IslandGenerator.Generate(Seed, Params);
 		int spans = RenderSpans(_data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		int lakes = Redraw();
@@ -750,8 +750,8 @@ public partial class IslandLab : Node3D
 
 		// A shape only Auto-with-the-flag-on could have rolled is marked, so the
 		// checkbox has a visible consequence on the island as well as on the pool.
-		string newer = IslandGenerator.IsNewerShape(d.Arrangement)
-					|| IslandGenerator.IsNewerShape(d.Character) ? " (newer shape)" : "";
+		string newer = Roster.IsNewerShape(d.Arrangement)
+					|| Roster.IsNewerShape(d.Character) ? " (newer shape)" : "";
 
 		_status.Text =
 			$"{d.Name}   seed {Seed}   {d.Arrangement}   {d.Character}{newer}: {Made(d)}"
@@ -1879,11 +1879,11 @@ public partial class IslandLab : Node3D
 
 		var bits = new List<string>();
 		if (rollsShape)
-			bits.Add($"{IslandGenerator.AutoArrangements(newer)} of "
-				+ $"{IslandGenerator.AutoArrangements(true)} arrangements");
+			bits.Add($"{Roster.AutoArrangements(newer)} of "
+				+ $"{Roster.AutoArrangements(true)} arrangements");
 		if (rollsMade)
-			bits.Add($"{IslandGenerator.AutoCharacters(newer)} of "
-				+ $"{IslandGenerator.AutoCharacters(true)} characters");
+			bits.Add($"{Roster.AutoCharacters(newer)} of "
+				+ $"{Roster.AutoCharacters(true)} characters");
 		return "Auto draws from " + string.Join(" and ", bits) + ".";
 	}
 	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
