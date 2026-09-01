@@ -6,7 +6,11 @@ using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
-/// <summary>Stage 2a/b: the relief envelope and the patchwork of regions.</summary>
+/// <summary>
+/// The relief envelope and the patchwork of regions: where the high ground lies,
+/// which cells form one patch, which patches touch, and how far inside its patch
+/// a cell sits.
+/// </summary>
 internal static class Regions
 {
     /// <summary>Relief left at the shoreline, as a fraction of the cell's inland relief.</summary>
@@ -16,10 +20,9 @@ internal static class Regions
     private const float CoastTaperCells = 3.5f;
 
     /// <summary>
-    /// Per-cell envelope in <c>[0, 1]</c> saying where this island's high ground
-    /// lies. It does not shape elevation directly — doing that is what made the
-    /// terrain radial. It only biases which rung each region lands on, and where
-    /// mountains cluster.
+    /// Per-cell envelope in <c>[0, 1]</c> saying where this island's high ground lies.
+    /// It never shapes elevation directly: it only biases which rung a region lands
+    /// on and where mountains cluster.
     /// </summary>
     internal static float[,] ReliefEnvelope(int seed, IslandParams p, bool[,] land, float[,] toCoast)
     {
@@ -70,9 +73,8 @@ internal static class Regions
     }
 
     /// <summary>
-    /// A narrow spine running the length of the island. Narrow and long on
-    /// purpose: with landform choice now keyed to the envelope, this is what
-    /// turns into a mountain chain crossing the isle.
+    /// A narrow ridge along an axis; under a Ridge envelope it becomes a mountain
+    /// chain crossing the isle.
     /// </summary>
     private static float Spine(Vector2 cell, Vector2 c, Vector2 axis, float radius)
     {
@@ -85,10 +87,10 @@ internal static class Regions
     }
 
     /// <summary>
-    /// Jittered-grid Voronoi with a domain-warped lookup, split into connected
-    /// components, then every component under <see cref="IslandParams.MinRegionArea"/>
-    /// merged into the neighbour it shares the most border with. Without the
-    /// merge, the coastline slices regions into slivers too small to read.
+    /// Jittered-grid Voronoi with a domain-warped lookup, split into connected components,
+    /// then every component under <see cref="IslandParams.MinRegionArea"/> folded into the
+    /// neighbour it shares the most border with — the coastline slices regions into
+    /// slivers too small to read.
     /// </summary>
     internal static int[,] BuildRegions(int seed, IslandParams p, bool[,] land, out int count)
     {
@@ -96,10 +98,21 @@ internal static class Regions
         int[,] raw = Partition(seed, p, land);
 
         var comp = new int[n, n];
+        var members = LabelComponents(n, land, raw, comp);
+        MergeSlivers(n, land, Math.Max(4, p.MinRegionArea), comp, members);
+        return Reindex(n, land, comp, members, out count);
+    }
+
+    /// <summary>
+    /// Labels the connected components of equal Voronoi id by depth-first search, ids in
+    /// scan order into <paramref name="comp"/>. Each member list is in pop order, which is
+    /// the insertion order of <see cref="MergeSlivers"/>'s shared-border dictionary.
+    /// </summary>
+    private static List<List<(int X, int Z)>> LabelComponents(int n, bool[,] land, int[,] raw, int[,] comp)
+    {
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++) comp[x, z] = -1;
 
-        // Connected components of equal Voronoi id: one region must be one patch.
         var members = new List<List<(int X, int Z)>>();
         var stack = new Stack<(int X, int Z)>();
         for (int x = 0; x < n; x++)
@@ -128,9 +141,18 @@ internal static class Regions
                 }
             }
         }
+        return members;
+    }
 
-        int minArea = Math.Max(4, p.MinRegionArea);
-        var locked = new bool[members.Count];       // isolated islets: nothing to merge into
+    /// <summary>
+    /// Repeatedly folds the smallest component under <paramref name="minArea"/> into the
+    /// neighbour with the longest shared border (ties: the larger neighbour, then the first
+    /// met). An islet with no neighbour is locked and left as it is.
+    /// </summary>
+    private static void MergeSlivers(int n, bool[,] land, int minArea, int[,] comp,
+                                     List<List<(int X, int Z)>> members)
+    {
+        var locked = new bool[members.Count];
 
         for (int guard = 0; guard < 4096; guard++)
         {
@@ -169,8 +191,12 @@ internal static class Regions
             members[target].AddRange(members[worst]);
             members[worst].Clear();
         }
+    }
 
-        // Re-index to a dense range.
+    /// <summary>Renumbers the surviving components densely; −1 on aether.</summary>
+    private static int[,] Reindex(int n, bool[,] land, int[,] comp,
+                                  List<List<(int X, int Z)>> members, out int count)
+    {
         var remap = new int[members.Count];
         Array.Fill(remap, -1);
         count = 0;
@@ -184,6 +210,10 @@ internal static class Regions
         return region;
     }
 
+    /// <summary>
+    /// Raw Voronoi id per land cell: jittered sites on a step-sized grid, looked up at a
+    /// domain-warped position; the nearest of the 3×3 surrounding sites wins, the first on a tie.
+    /// </summary>
     private static int[,] Partition(int seed, IslandParams p, bool[,] land)
     {
         int n = p.Size;
@@ -233,7 +263,10 @@ internal static class Regions
         return raw;
     }
 
-    /// <summary>Border cells per unordered region pair, plus each region's neighbour set.</summary>
+    /// <summary>
+    /// Border cells per unordered region pair, plus each region's neighbour set. Both are
+    /// read downstream in insertion order, so the scan order here is part of the result.
+    /// </summary>
     internal static Dictionary<long, List<(int X, int Z)>> BuildBorders(
         bool[,] land, int[,] region, int count, out HashSet<int>[] neighbours)
     {
@@ -265,7 +298,7 @@ internal static class Regions
         return borders;
     }
 
-    /// <summary>Mean of a field over each region's cells.</summary>
+    /// <summary>Mean of a field over each region's cells, summed in scan order.</summary>
     internal static float[] RegionMean(bool[,] land, int[,] region, int count, float[,] field)
     {
         var sum = new float[count];
@@ -284,6 +317,7 @@ internal static class Regions
         return sum;
     }
 
+    /// <summary>Cell count per region.</summary>
     internal static int[] RegionCells(bool[,] land, int[,] region, int count)
     {
         int n = land.GetLength(0);
@@ -294,42 +328,16 @@ internal static class Regions
         return cells;
     }
 
-    /// <summary>Normalised distance from each cell to its own region's border, in [0,1].</summary>
+    /// <summary>
+    /// Distance from each cell to its own region's border, normalised by the region's
+    /// deepest cell to <c>[0, 1]</c>.
+    /// </summary>
     internal static float[,] InwardDistance(bool[,] land, int[,] region, int count)
     {
         int n = land.GetLength(0);
-        var dist = new int[n, n];
-        var q = new Queue<(int X, int Z)>();
-
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            dist[x, z] = -1;
-            if (!land[x, z]) continue;
-
-            bool edge = false;
-            for (int k = 0; k < 4 && !edge; k++)
-            {
-                int nx = x + Dx[k], nz = z + Dz[k];
-                edge = !InBounds(n, nx, nz)
-                       || !land[nx, nz] || region[nx, nz] != region[x, z];
-            }
-            if (edge) { dist[x, z] = 0; q.Enqueue((x, z)); }
-        }
-
-        while (q.Count > 0)
-        {
-            var (x, z) = q.Dequeue();
-            for (int k = 0; k < 4; k++)
-            {
-                int nx = x + Dx[k], nz = z + Dz[k];
-                if (!InBounds(n, nx, nz)) continue;
-                if (!land[nx, nz] || region[nx, nz] != region[x, z]) continue;
-                if (dist[nx, nz] >= 0) continue;
-                dist[nx, nz] = dist[x, z] + 1;
-                q.Enqueue((nx, nz));
-            }
-        }
+        int[,] dist = Flood.Distance(n,
+            (x, z) => land[x, z] && OnRegionEdge(n, land, region, x, z),
+            (x, z, nx, nz) => land[nx, nz] && region[nx, nz] == region[x, z]);
 
         var peak = new int[count];
         for (int x = 0; x < n; x++)
@@ -341,5 +349,17 @@ internal static class Regions
         for (int z = 0; z < n; z++)
             if (land[x, z]) u[x, z] = dist[x, z] / (float)Math.Max(1, peak[region[x, z]]);
         return u;
+    }
+
+    /// <summary>A land cell with the grid edge, aether or another region beside it.</summary>
+    private static bool OnRegionEdge(int n, bool[,] land, int[,] region, int x, int z)
+    {
+        for (int k = 0; k < 4; k++)
+        {
+            int nx = x + Dx[k], nz = z + Dz[k];
+            if (!InBounds(n, nx, nz) || !land[nx, nz] || region[nx, nz] != region[x, z])
+                return true;
+        }
+        return false;
     }
 }
