@@ -32,16 +32,92 @@ public sealed class IslandData
     public byte[,] Material { get; }
 
     /// <summary>
-    /// Land cells with aether beside them, and cells with a face of three slabs or
-    /// more. The <b>feature anchors</b>: a forest goes "on flat well-watered ground
-    /// away from the coast", not at a coordinate, so generation answers the
-    /// geometric questions once and the content layer reads the lists instead of
-    /// each system carrying its own copy of the terrain rules.
+    /// Land cells with aether beside them — the rim. The first of the <b>feature
+    /// anchors</b>: a forest goes "on flat well-watered ground away from the
+    /// coast", not at a coordinate, so generation answers the geometric questions
+    /// once and the content layer reads the lists instead of each system carrying
+    /// its own copy of the terrain rules. See <c>Surfaces</c> for the whole set.
     /// </summary>
     public List<Vector2I> CoastCells { get; } = new();
 
-    /// <summary>Cells standing three slabs or more above a neighbour.</summary>
+    /// <summary>
+    /// Cliff <b>brinks</b>: dry cells whose visible surface stands three slabs or
+    /// more above a neighbour's. Measured against the <i>effective</i> surface —
+    /// the water where a neighbour is flooded — because a bank one slab above a
+    /// navigable river used to register here on the strength of the bed being
+    /// three slabs down, which made half the anchors river margins. The rim of a
+    /// real gorge still qualifies: it stands three slabs over the water itself.
+    /// </summary>
     public List<Vector2I> CliffCells { get; } = new();
+
+    /// <summary>
+    /// The ground <b>under</b> those faces: dry cells with a neighbour's effective
+    /// surface three slabs or more above them. Where talus, cave mouths and
+    /// shade-growth belong — the content layer should not have to re-derive "at
+    /// the foot of a wall" from the brink list.
+    /// </summary>
+    public List<Vector2I> CliffFootCells { get; } = new();
+
+    /// <summary>
+    /// The walkable wet margin: dry cells beside water (never goo) standing at
+    /// most one slab above its surface — the free-step shore. Reeds, willows,
+    /// mills and moorings belong here; a gorge rim does not, because it fails the
+    /// one-slab test and lands in <see cref="CliffCells"/> instead.
+    /// </summary>
+    public List<Vector2I> BankCells { get; } = new();
+
+    /// <summary>
+    /// The high points that read as summits: the highest dry cells of the high
+    /// country, spaced out so one massif does not claim a ridge of them. Eyries,
+    /// shrines, beacons — and the natural home for a geyser field, when the biome
+    /// layer fills that hook.
+    /// </summary>
+    public List<Vector2I> Summits { get; } = new();
+
+    // ---- The habitat vector -------------------------------------------------
+    //
+    // Five bytes per column measuring the growing conditions, filled by
+    // Habitat.Measure. Not a biome: a biome is what LIVES somewhere, and choosing
+    // it is the next branch's work. These are the measurable facts that choice
+    // will be a function of, kept as separate axes on purpose — so the biome
+    // layer can combine them (rain shadow = moisture x exposure, treeline =
+    // warmth, essencecoral = rim distance) instead of unpicking one score.
+
+    /// <summary>
+    /// 0 parched … 255 waterside: nearness to fresh water (goo waters nothing),
+    /// decayed over ~15 cells and wobbled by noise so the bands are not contour
+    /// lines of the water network.
+    /// </summary>
+    public byte[,] Moisture { get; }
+
+    /// <summary>
+    /// 255 warm lowland … 0 frozen: a fixed lapse per slab climbed above the
+    /// island's lowest ground, anchored to the tallest a mountain can stand at
+    /// this footprint. Absolute, not normalised per island — a flat island's
+    /// highest hill is NOT its own private mountaintop, which is what used to put
+    /// snow on 13% of everything.
+    /// </summary>
+    public byte[,] Warmth { get; }
+
+    /// <summary>
+    /// 0 dead flat … 255 broken: the local relief of the effective surface within
+    /// two cells. What forests avoid and goats do not.
+    /// </summary>
+    public byte[,] Ruggedness { get; }
+
+    /// <summary>
+    /// 0 sheltered … 255 windswept: how open the cell is to the Domain's one wind
+    /// (<see cref="WindFrom"/>) — no higher ground upwind means the wind arrives
+    /// unbroken. The lee-versus-windward axis the dunes already lie along.
+    /// </summary>
+    public byte[,] Exposure { get; }
+
+    /// <summary>
+    /// Cells of land between this column and the aether, capped at 255. The
+    /// setting's own axis: the rim is scoured, essencecoral grows on edges, and
+    /// the deep interior is where the sheltered country is.
+    /// </summary>
+    public byte[,] RimDistance { get; }
 
     /// <summary>What this Domain is called.</summary>
     public string Name { get; internal set; } = "";
@@ -340,6 +416,11 @@ public sealed class IslandData
         Size = size;
         Spans = new Span[size, size][];
         Material = new byte[size, size];
+        Moisture = new byte[size, size];
+        Warmth = new byte[size, size];
+        Ruggedness = new byte[size, size];
+        Exposure = new byte[size, size];
+        RimDistance = new byte[size, size];
         Landform = new byte[size, size];
         Land = new bool[size, size];
         Region = new int[size, size];
@@ -386,4 +467,19 @@ public sealed class IslandData
     /// <summary>Bottom slab of the lowest span, or <see cref="NoLand"/>.</summary>
     public short KeelLevel(int x, int z)
         => HasLand(x, z) ? Spans[x, z][0].Bottom : NoLand;
+
+    /// <summary>
+    /// The level you would <i>see</i> — the water surface where the column is
+    /// flooded, the ground everywhere else. Any rule about what a cell looks
+    /// like from beside it (a cliff, a bank, local relief) wants this rather
+    /// than <see cref="SurfaceLevel"/>: measured against the bare surface, the
+    /// bank of a navigable river reads as a three-slab cliff because the bed is
+    /// three slabs down, and that is a fact about the fish, not the view.
+    /// </summary>
+    public short EffectiveLevel(int x, int z)
+    {
+        if (!HasLand(x, z)) return NoLand;
+        short water = WaterLevel[x, z];
+        return water != NoLand ? water : Spans[x, z][0].Top;
+    }
 }

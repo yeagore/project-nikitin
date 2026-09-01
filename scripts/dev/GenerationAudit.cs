@@ -68,6 +68,16 @@ public partial class GenerationAudit : Node
     [Export] public string Portraits { get; set; } = "";
 
     /// <summary>
+    /// Directory to write habitat, anchor and surface maps into, or empty for
+    /// none — one triple of PNGs for each of the first few seeds. The habitat
+    /// vector and the anchor lists are exactly the kind of output a summary
+    /// number cannot vouch for: "31k banks" says nothing about whether the
+    /// banks lie along the rivers, and a moisture field wrong by a transpose
+    /// still has a plausible mean.
+    /// </summary>
+    [Export] public string FieldMaps { get; set; } = "";
+
+    /// <summary>
     /// The workup for arrangements on probation: each of the newest shapes at
     /// every footprint, and against every character — attempts, unmet
     /// guarantees, land, connectivity, the water and box laws. An arrangement
@@ -187,8 +197,15 @@ public partial class GenerationAudit : Node
         int berthSites = 0, islandsNeedingFerry = 0;
         var materialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
         long coastAnchors = 0, cliffAnchors = 0, beachCells = 0, fordCells = 0, landingCells = 0;
+        long cliffFootAnchors = 0, bankAnchors = 0, summitAnchors = 0;
+        long brinksBesideWater = 0;
         long beachedCoast = 0;
         int islandsWithoutBeach = 0;
+        var moistureMeans = new List<int>();
+        var warmthMeans = new List<int>();
+        var ruggedMeans = new List<int>();
+        var exposureMeans = new List<int>();
+        var rimMeans = new List<int>();
         var quayRise = new List<int>();
 
         int exitsWithoutRoad = 0, roadsFree = 0, roadJumps = 0, roughIslands = 0, flights = 0;
@@ -743,8 +760,29 @@ public partial class GenerationAudit : Node
             // ---- surface and anchors ------------------------------------------
             coastAnchors += d.CoastCells.Count;
             cliffAnchors += d.CliffCells.Count;
+            cliffFootAnchors += d.CliffFootCells.Count;
+            bankAnchors += d.BankCells.Count;
+            summitAnchors += d.Summits.Count;
             foreach (Vector2I c in d.CoastCells) if (d.Beach[c.X, c.Y]) beachedCoast++;
+
+            // How many brinks are gorge rims — dry ground three slabs over the
+            // water itself. Before the effective-surface fix this was most of
+            // the list, because every bank measured three slabs over its own bed.
+            foreach (Vector2I c in d.CliffCells)
+            {
+                for (int k = 0; k < 4; k++)
+                {
+                    int bx = c.X + Dx[k], bz = c.Y + Dz[k];
+                    if (bx < 0 || bz < 0 || bx >= n || bz >= n) continue;
+                    if (d.WaterLevel[bx, bz] == IslandData.NoLand) continue;
+                    brinksBesideWater++;
+                    break;
+                }
+            }
+
             int beachHere = 0;
+            long moistSum = 0, warmSum = 0, rugSum = 0, expSum = 0, rimSum = 0;
+            int landHere = 0;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -753,9 +791,23 @@ public partial class GenerationAudit : Node
                 if (d.Beach[x, z]) beachHere++;
                 if (d.Ford[x, z]) fordCells++;
                 if (d.Landings[x, z]) landingCells++;
+                landHere++;
+                moistSum += d.Moisture[x, z];
+                warmSum += d.Warmth[x, z];
+                rugSum += d.Ruggedness[x, z];
+                expSum += d.Exposure[x, z];
+                rimSum += d.RimDistance[x, z];
             }
             beachCells += beachHere;
             if (beachHere == 0) islandsWithoutBeach++;
+            if (landHere > 0)
+            {
+                moistureMeans.Add((int)(moistSum / landHere));
+                warmthMeans.Add((int)(warmSum / landHere));
+                ruggedMeans.Add((int)(rugSum / landHere));
+                exposureMeans.Add((int)(expSum / landHere));
+                rimMeans.Add((int)(rimSum / landHere));
+            }
             waterBodies += d.WaterBodies;
             if (d.Berths.Count > 0) { islandsWithBerth++; islandsNeedingFerry++; }
             foreach (FerryBerth berth in d.Berths)
@@ -1178,8 +1230,11 @@ public partial class GenerationAudit : Node
             }
             GD.Print("  " + string.Join(", ", parts));
         }
-        GD.Print($"anchors: {coastAnchors} coast, {cliffAnchors} cliff, {overhangCells} overhang, "
-            + $"{beachCells} beach, {fordCells} ford, {landingCells} gate landing, {berths} quay");
+        GD.Print($"anchors: {coastAnchors} coast, {cliffAnchors} cliff brink, "
+            + $"{cliffFootAnchors} cliff foot, {bankAnchors} bank, {summitAnchors} summit, "
+            + $"{overhangCells} overhang, {beachCells} beach, {fordCells} ford, "
+            + $"{landingCells} gate landing, {berths} quay");
+        GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {brinksBesideWater}");
         GD.Print($"  islands with no beach at all: {islandsWithoutBeach} of {Seeds}");
         // Against the coast *ring*, not against the beach's own cell count: a
         // beach is two cells deep, so beach-cells-over-coast-cells reads 151% and
@@ -1188,6 +1243,18 @@ public partial class GenerationAudit : Node
         GD.Print($"  coast that steps down onto a beach: "
             + (coastAnchors > 0 ? $"{100.0 * beachedCoast / coastAnchors:0}%" : "-")
             + "   (the rest breaks off to the keel)\n");
+
+        // The habitat vector, as per-island means. A mean cannot vouch for the
+        // shape of a field — that is what FieldMaps is for — but a mean that
+        // jumps is a field that changed, and a mean pinned at 0 or 255 is an
+        // axis that stopped measuring anything.
+        GD.Print("habitat: per-island mean of each axis, 0-255");
+        Report("  moisture (0 parched - 255 waterside)", moistureMeans, "");
+        Report("  warmth   (0 frozen - 255 warm)", warmthMeans, "");
+        Report("  rugged   (0 flat - 255 broken)", ruggedMeans, "");
+        Report("  exposure (0 lee - 255 windswept)", exposureMeans, "");
+        Report("  rim distance", rimMeans, "cells");
+        GD.Print("");
 
         GD.Print($"lakes: {lakes} over {lakeCells} cells, on {islandsWithLake} of {Seeds} islands");
         Report("  shore step above water", shoreSteps, "slabs");
@@ -1330,6 +1397,7 @@ public partial class GenerationAudit : Node
         if (Debut) PrintDebut();
         if (Strain) PrintStrain();
         if (Portraits.Length > 0) WritePortraits();
+        if (FieldMaps.Length > 0) WriteFieldMaps();
 
         GD.Print($"continuity: {landmasses} landmasses over {Seeds} islands "
             + $"(more than one is the arrangement's doing, not a fault); "
@@ -2245,6 +2313,152 @@ public partial class GenerationAudit : Node
             int gx = Math.Clamp(g.Center.X, 0, n - 1);
             int gz = Math.Clamp(g.Center.Z, 0, n - 1);
             img.SetPixel(gx, gz, tint);
+        }
+
+        img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
+        img.SavePng(path);
+    }
+
+    /// <summary>
+    /// The habitat vector, the anchors and the surface mapping as pictures, for
+    /// the first few seeds at the preset. This is the common-sense test for
+    /// Stage 5b: whether the moisture follows the rivers, whether the cliffs
+    /// are cliffs and not banks, whether the snow sits on summits — none of
+    /// which a count can say.
+    /// </summary>
+    private void WriteFieldMaps()
+    {
+        DirAccess.MakeDirRecursiveAbsolute(FieldMaps);
+        int wrote = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            int seed = FirstSeed + i;
+            IslandData d = new IslandGenerator().Generate(seed, Params);
+            SaveHabitat(d, $"{FieldMaps}/habitat_{seed}.png");
+            SaveAnchors(d, $"{FieldMaps}/anchors_{seed}.png");
+            SaveSurface(d, $"{FieldMaps}/surface_{seed}.png");
+            wrote += 3;
+        }
+        GD.Print($"field maps: {wrote} written to {FieldMaps}");
+    }
+
+    /// <summary>
+    /// The five habitat axes side by side: moisture, warmth, ruggedness,
+    /// exposure, rim distance. Aether is near-black in every panel.
+    /// </summary>
+    private static void SaveHabitat(IslandData d, string path)
+    {
+        int n = d.Size;
+        const int gap = 2;
+        var img = Image.CreateEmpty(5 * n + 4 * gap, n, false, Image.Format.Rgb8);
+        img.Fill(new Color(0.05f, 0.05f, 0.07f));
+
+        var aether = new Color(0.07f, 0.08f, 0.11f);
+        void Panel(int index, Func<int, int, float> value, Color lo, Color hi)
+        {
+            int left = index * (n + gap);
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                img.SetPixel(left + x, z,
+                    d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : aether);
+        }
+
+        Panel(0, (x, z) => d.Moisture[x, z] / 255f,
+              new Color(0.55f, 0.45f, 0.30f), new Color(0.10f, 0.52f, 0.62f));
+        Panel(1, (x, z) => d.Warmth[x, z] / 255f,
+              new Color(0.88f, 0.92f, 1.00f), new Color(0.85f, 0.48f, 0.18f));
+        Panel(2, (x, z) => d.Ruggedness[x, z] / 255f,
+              new Color(0.10f, 0.11f, 0.13f), new Color(0.95f, 0.88f, 0.70f));
+        Panel(3, (x, z) => d.Exposure[x, z] / 255f,
+              new Color(0.14f, 0.30f, 0.20f), new Color(0.92f, 0.93f, 0.85f));
+        Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f),
+              new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f));
+
+        img.Resize((5 * n + 4 * gap) * 3, n * 3, Image.Interpolation.Nearest);
+        img.SavePng(path);
+    }
+
+    /// <summary>
+    /// The anchors over a dimmed height base: cyan coast, red brink, orange
+    /// foot, teal bank, sand beach, green ford, gold landing, blue quay,
+    /// magenta overhang, white summit. Rarer and more built kinds drawn last.
+    /// </summary>
+    private static void SaveAnchors(IslandData d, string path)
+    {
+        int n = d.Size;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            Color c;
+            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
+            else if (d.WaterLevel[x, z] != IslandData.NoLand)
+                c = d.Fluid[x, z] == (byte)FluidKind.Goo
+                    ? new Color(0.35f, 0.10f, 0.45f)
+                    : new Color(0.10f, 0.20f, 0.34f);
+            else c = new Color(0.20f, 0.20f, 0.21f);
+            img.SetPixel(x, z, c);
+        }
+
+        void Mark(IEnumerable<Vector2I> cells, Color c)
+        {
+            foreach (Vector2I p in cells) img.SetPixel(p.X, p.Y, c);
+        }
+        void MarkMask(bool[,] mask, Color c)
+        {
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (mask[x, z]) img.SetPixel(x, z, c);
+        }
+
+        Mark(d.CoastCells, new Color(0.30f, 0.82f, 0.88f));
+        Mark(d.CliffFootCells, new Color(0.90f, 0.55f, 0.20f));
+        Mark(d.CliffCells, new Color(0.88f, 0.28f, 0.24f));
+        Mark(d.BankCells, new Color(0.30f, 0.75f, 0.55f));
+        MarkMask(d.Beach, new Color(0.90f, 0.82f, 0.55f));
+        MarkMask(d.Ford, new Color(0.55f, 0.92f, 0.45f));
+        MarkMask(d.Landings, new Color(0.98f, 0.86f, 0.25f));
+        MarkMask(d.Ferry, new Color(0.35f, 0.55f, 0.95f));
+        Mark(d.Overhangs, new Color(0.88f, 0.35f, 0.85f));
+        Mark(d.Summits, new Color(1f, 1f, 1f));
+
+        img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
+        img.SavePng(path);
+    }
+
+    /// <summary>The surface mapping, in the lab's own palette; water its blues.</summary>
+    private static void SaveSurface(IslandData d, string path)
+    {
+        int n = d.Size;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            Color c;
+            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
+            else if (d.WaterLevel[x, z] != IslandData.NoLand)
+            {
+                if (d.Fluid[x, z] == (byte)FluidKind.Goo) c = new Color(0.58f, 0.16f, 0.74f);
+                else if (d.Ford[x, z]) c = new Color(0.55f, 0.82f, 0.78f);
+                else if (d.Navigable[x, z]) c = new Color(0.12f, 0.42f, 0.68f);
+                else if (d.River[x, z]) c = new Color(0.3f, 0.58f, 0.8f);
+                else c = new Color(0.1f, 0.28f, 0.55f);
+            }
+            else c = (SurfaceMaterial)d.Material[x, z] switch
+            {
+                SurfaceMaterial.Stone => new Color(0.46f, 0.46f, 0.48f),
+                SurfaceMaterial.Scree => new Color(0.62f, 0.60f, 0.55f),
+                SurfaceMaterial.Snow => new Color(0.92f, 0.94f, 0.96f),
+                SurfaceMaterial.Sand => new Color(0.85f, 0.78f, 0.55f),
+                SurfaceMaterial.Silt => new Color(0.52f, 0.44f, 0.32f),
+                SurfaceMaterial.Grass => new Color(0.36f, 0.56f, 0.26f),
+                SurfaceMaterial.Meadow => new Color(0.50f, 0.64f, 0.30f),
+                SurfaceMaterial.Heath => new Color(0.52f, 0.52f, 0.32f),
+                _ => new Color(0.68f, 0.58f, 0.42f),
+            };
+            img.SetPixel(x, z, c);
         }
 
         img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);

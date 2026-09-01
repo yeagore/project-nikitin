@@ -48,13 +48,17 @@ Alongside the terrain, `IslandData` carries what the later stages worked out:
 
 ```csharp
 byte[,]  Landform, Material;      // what this patch is, what its surface is made of
+byte[,]  Moisture, Warmth,        // the habitat vector: the growing conditions
+         Ruggedness, Exposure,    //   per column, for the biome layer to read
+         RimDistance;             //   (see Stage 10)
 short[,] WaterLevel;              // top slab of standing fluid, or NoLand
 byte[,]  Fluid;                   // what stands there: water unless a pass said otherwise
 bool[,]  River, Navigable, Ford;  // a course; too deep to wade; where you can
 bool[,]  Beach, Ferry, Landings;  // and the built-on / landed-on ground
 int[,]   Region, Walk, Reach, ShelfId, WaterBody, Flow;
 List<...> Areas, Reaches, Shelves, Bridges, Berths, Passages, Gates, Falls,
-		  Geysers, CoastCells, CliffCells, Overhangs, Passes;
+		  Geysers, CoastCells, CliffCells, CliffFootCells, BankCells, Summits,
+		  Overhangs, Passes;
 ```
 
 Generation is a **pure function of `(seed, IslandParams)`**. Same inputs, same
@@ -438,29 +442,54 @@ length, so a road crosses a stream rather than walking down it.
 telling you it is going the wrong way. `IslandData.Rough` says whether the Domain
 has any. Not a fault: a Domain is allowed to be hard country.
 
-### Stage 10 — Surfaces, anchors and names
+### Stage 10 — Habitat, surfaces, anchors and names
 
-`Surfaces.Classify` fills `Material` from height, slope, distance to water and
-landform — stone, scree, snow, sand, silt, **grass** (within 3 cells of water),
-**meadow** (within 9), **heath** (beyond), dust. It also collects the **feature
-anchors**: `CoastCells`, `CliffCells`, `Overhangs`, alongside `Beach`, `Ford`,
-`Landings` and `Ferry`. A forest goes "on flat well-watered ground away from the
-coast", not at a coordinate, so generation answers the geometric questions once
-and content reads the lists rather than each system carrying its own copy of the
-terrain rules.
+**The habitat vector** (`Habitat.Measure`) is the load-bearing half: five bytes
+per column measuring the growing conditions, kept as separate axes so the biome
+layer (the next branch) can compose them instead of unpicking one score.
 
-> Three of these were broken until they were measured, and all three failed
-> silently. `slope >= 3` returned `Stone` from **both** arms of a ternary;
-> `damp <= Damp` and `damp <= Dry` **both** returned `Grass`, so the middle band
-> did not exist; and a cell the wetness flood never reached was given exactly
-> `Dry`, which reads as still-green — so `Heath`, the driest ground on a Domain,
-> was **0.0% of every island ever generated**. The lab's `surface` view and the
-> audit's material histogram exist so that the next one of these is caught by
-> looking rather than by reading the code.
+| axis | 0 … 255 | how it is measured |
+|---|---|---|
+| `Moisture` | parched … waterside | breadth-first distance from fresh water (goo waters nothing), wobbled by noise so the bands are not contour lines of the water network, decayed over ~15 cells |
+| `Warmth` | frozen … warm lowland | a **fixed lapse per slab** above the island's lowest ground, anchored to the tallest a mountain can stand at this footprint (`Size × 40/128` — the `BoundAltitude` cap). Absolute on purpose: normalised per island, every island's top fifth went white, and snow was 13% of everything |
+| `Ruggedness` | flat … broken | local relief of the *effective* surface within two cells |
+| `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (the wind is `WindFrom`, the one the dunes lie along); eight slabs of upwind rise is full shelter |
+| `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |
 
-Both are viewable: `surface` paints the material, `anchors` paints what the
-content layer can attach to. The audit prints a share per material, with `NEVER`
-beside any that no island produced.
+**Every geometric question is asked of the effective surface** —
+`IslandData.EffectiveLevel`, the water surface where a column is flooded —
+because habitat and anchors describe what a place *looks like*. Measured
+against the bare ground, the bank of a navigable river was a "cliff" on the
+strength of its bed being three slabs down, and half the cliff list was river
+margin.
+
+`Surfaces.Classify` then collects the **feature anchors** — `CoastCells`,
+`CliffCells` (**brinks**: dry cells three or more slabs over a neighbour's
+effective surface; a gorge rim qualifies, a bank does not), `CliffFootCells`
+(the ground under those faces), `BankCells` (the walkable wet margin, at most
+one slab over the water), `Summits` (the highest dry cells of genuinely high
+country — at least half the mountain cap — spaced apart), and `Overhangs`,
+alongside `Beach`, `Ford`, `Landings` and `Ferry`. A forest goes "on flat
+well-watered ground away from the coast", not at a coordinate, so generation
+answers the geometric questions once and content reads the lists rather than
+each system carrying its own copy of the terrain rules.
+
+`Material` is a **provisional** mapping of the habitat vector — stone, scree,
+snow (a warmth floor only real peaks reach), sand, silt, grass, meadow, heath,
+dust — kept so the island reads as a place in the lab before the biome layer
+exists. The biome branch is expected to replace the mapping; the vector is the
+part meant to last.
+
+> Three arms of the old classifier were broken until they were measured, and
+> all three failed silently — `Heath` was **0.0% of every island ever
+> generated** (see the appendix). The lab's `surface` view, the audit's
+> material histogram with `NEVER` beside empty bins, and now the audit's
+> `FieldMaps` PNGs exist so the next one of these is caught by looking rather
+> than by reading the code.
+
+All of it is viewable: `surface` paints the material, `anchors` paints what the
+content layer can attach to, and the five habitat views (`moisture`, `warmth`,
+`rugged`, `exposure`, `rim`) paint each axis as a ramp.
 
 `Names.Give` names the Domain, its districts and its bodies of water. Integers
 are right for the generator and wrong for everyone who has to talk about the
@@ -573,7 +602,8 @@ scripts/generation/            namespace ProjectNikitin.Generation
   Ferry.cs                     a berth: a quay, its water, the body it reaches
   Gate.cs, GatePlacement.cs    stage 8
   Passage.cs                   stage 9: the least-works road, and the works on it
-  Surfaces.cs, Names.cs        stage 10
+  Habitat.cs                   stage 10: the habitat vector — the growing conditions
+  Surfaces.cs, Names.cs        stage 10: anchors, the provisional materials, names
 scripts/terrain/               (later) the chunked span-aware mesher + colliders
 scripts/dev/IslandLab.cs       the lab
 scripts/dev/GenerationAudit.cs the headless audit — see the appendix
@@ -589,8 +619,10 @@ docs/audit-baseline.json       the last accepted audit numbers
    the only thing that will answer the performance question for real.
 2. **Settlement placement.** Everything it needs exists: shelves, berths, roads,
    Gate aprons.
-3. **The biome layer** above `Material` — the living things, as opposed to the
-   ground.
+3. **The biome layer** above the habitat vector — the living things, as opposed
+   to the ground. The vector (moisture, warmth, ruggedness, exposure, rim
+   distance) and the anchor lists are its inputs; the provisional `Material`
+   mapping is its to replace.
 4. Span-aware pathing, which is what would make an overhang walkable.
 
 The appendix lists the ideas that have been logged and not taken, and the gaps

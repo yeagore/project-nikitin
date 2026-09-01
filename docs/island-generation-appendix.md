@@ -500,6 +500,31 @@ Nothing is gated yet — the intended mechanism is `ArrangementPool` filtered by
 exists. The sweep stays in the audit so the list re-derives itself when the
 constants move.
 
+### The satellite the bite ate, and the seam between pieces
+
+The two chronic shortfalls in that table were both structural, and neither was
+a tuning problem (2026-09-01).
+
+**Satellites dropped one islet at every size** because of the bites. Only
+`Single` and `Satellites` take bites, and a bite deletes whole regions under
+guards that protect the *total* — no bite takes a third of what is left, the
+island keeps 60% of what it started with. An islet is a tenth of the land,
+well inside both caps, so a bite landing on it deleted it whole and the layout
+shipped short. A bite now eats coastline, never a satellite: any region with a
+cell off the largest landmass is exempt. Measured over the `Strain` sweep,
+Satellites' shortfall went 1/1/1 (48/64/128) → 0/0/0.
+
+**Harmony fused on a quarter of 128² seeds**, and the appendix's guess —
+"wants a smarter cut, not a wider one" — turned out to be exactly right. The
+strait was carved where the two nearest *lobes* disagreed; deep in the commas'
+overlap, both nearest lobes belong to **one** comma chain, so no seam was seen
+there at all, and no width could fix a cut drawn in the wrong place. The seam
+is now measured between **pieces** — the nearest distance per `Lobe.Group`,
+with an ungrouped lobe a piece of its own, so every pre-group arrangement
+computes cell-for-cell what it did before. Harmony's shortfall at 128² went
+3 of 12 → 0, and the strait width stays at 5.4 cells rather than growing into
+a gulf.
+
 ### The gorge that cannot be bridged, measured
 
 Maxim's worry, and a fair one: rivers often run between two cliffs — the
@@ -557,6 +582,49 @@ found it was printing a share per material with `NEVER` beside the empty ones �
 which the audit now does, and the lab's `surface` view now paints honestly.
 Distribution after the fix: stone 11%, scree 15%, snow 13%, sand 21%, silt 5%,
 grass 3%, heath 23%, dust 2%, meadow 8%.
+
+**That classifier has since been replaced** (2026-09-01) by the habitat vector —
+see *The anchors that were banks*, below — but the lesson stands, and the
+tooling it bought (the `NEVER` histogram, the `surface` view) is what the
+replacement was verified with.
+
+### The anchors that were banks, and the habitat vector
+
+Two of Maxim's reads landed together (2026-09-01). **The cliff anchors were
+nonsense**: `CliffCells` marked any cell whose *ground* stood three slabs from a
+neighbour's — and for a river column the ground is the bed, so every bank of a
+navigable river was a "cliff" on the strength of the water being deep, and both
+sides of every real face registered, brink and foot indistinguishable. **The
+surface mapping was nonsense in a subtler way**: height was normalised per
+island, so the top fifth of *any* island wore snow (13% of all land — a flat
+island's highest hill was its own private mountaintop), and an altitude band
+unconditionally returned scree, which is where the stone-deserts came from.
+
+The fix for the first is one idea: every geometric question is asked of the
+**effective surface** (`IslandData.EffectiveLevel` — the water surface where a
+column is flooded), because anchors describe what a place looks like.
+`CliffCells` became brinks only; `CliffFootCells` (the ground under a face),
+`BankCells` (the walkable wet margin, ≤ 1 slab over the water) and `Summits`
+(highest dry cells of genuinely high country, spaced) joined the set. Banks
+came out at ~150 per island tracing the water network, brinks fell to what is
+actually a wall, and the gorge rims that remain (~2.3k of 20k) are honestly
+three slabs over the water itself.
+
+The fix for the second is the **habitat vector** (`Habitat.cs`): moisture,
+warmth, ruggedness, exposure, rim distance — one byte each per column, five
+separate axes on purpose, so the biome layer can compose them rather than
+unpick a score. Warmth uses a fixed lapse anchored to the mountain cap for the
+footprint (`Size × 40/128`), which is what "snow is for mountaintops" means in
+numbers: snow fell from 13% of land to 1%, and only where the country genuinely
+climbs. `Material` is now a provisional reading of the vector, kept for the
+lab; the vector is the part the next branch builds on.
+
+Verified by looking: the audit's `FieldMaps` flag writes the five axes, the
+anchors and the surface as PNGs per seed — moisture visibly follows the rivers,
+banks trace the courses, the brink/foot pair lines the gorges, and the S of a
+sculpted canyon reads in the ruggedness panel. The lab grew five habitat views
+(`moisture` / `warmth` / `rugged` / `exposure` / `rim`) for the same review by
+hand.
 
 ### Beaches, measured
 
@@ -726,6 +794,7 @@ Flags on the scene:
 | `GateRequests` | ask for each Entry edge and kind, and each Exit count and kind, and report what came out — the only parameters set from outside the Domain |
 | `GateMatrix` | ask every arrangement × character for four hanging Gates — the maximum request — then check that asking for less works too. See above |
 | `Knobs` | sweep `Lakes`, `Rivers` and `Valleys` from 0 to 1 and print what each one moves. A slider that does not change the island is worse than one that is not there, and a summary at one setting cannot tell you which it is |
+| `FieldMaps` | a directory path: write the habitat vector (five panels), the anchors and the surface mapping as PNGs for the first few seeds. "31k banks" says nothing about whether the banks lie along the rivers, and a moisture field wrong by a transpose still has a plausible mean — this is how Stage 10 gets looked at headless |
 | `AcceptBaseline` | write this run's headline numbers as the new accepted answer |
 
 `GateRequests` and `Knobs` share `SweepSeeds` (12 by default). Both hold
@@ -754,11 +823,12 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 | how a course runs | 60% straight / 40% turning |
 | lakes | ~132 on 51 of 60 (~156 distinct bodies, median 23 cells — the shapes), **0 leaks, 0 water touching the void** |
 | goo | ~530 cells on 20 of 60, **0 within a king's move of water** (geysers are an empty hook — see *The other fluid*) |
-| gorges | 55 walled reaches on 21 of 60 — 54 of 55 bridgeable, worst walk to a deck 9 cells; the 1 sealed reach is **3 cells long**, crossable two cells past its own end — the tripwire caught it, which is the tripwire working |
+| gorges | 70 walled reaches on 22 of 60 — 65 of 70 bridgeable; **5 sealed**, all misaligned rims, lengths 4–19 cells. This crept up from 1 while the flattened reaches and valley tilts landed (the baseline held 7 before the 2026-09-01 session ended on 5) — the tripwire is doing its job, and the number wants an owner: see the open list |
 | bounding box | **0 Gates outside it**, at 64², 96² and 128² alike |
 | ferries | 0 berths of 4,621 sites — no island in this sample has water a bridge cannot span; the machinery is intact and idle (see *The wide rivers that were not there*) |
-| surface | stone 11%, scree 15%, snow 13%, sand 21%, silt 5%, grass 3%, heath 23%, dust 2%, meadow 8% — none NEVER |
-| anchors | 29k coast (81% of it beached), 35k cliff, 270 overhang, 342 ford, 543 gate landing |
+| surface | stone 10.5%, scree 8%, **snow 1%** (was 13% — now only where the country genuinely climbs), sand 21%, silt 7%, grass 5%, heath 17%, dust 18%, meadow 12% — none NEVER |
+| habitat | per-island means: moisture 19–125, warmth 177–241, rugged 42–161, exposure 170–243, rim distance 1–13 cells |
+| anchors | 34.5k coast (84% of it beached), 20.6k cliff brink (2.2k of them honest gorge rims), 20k cliff foot, 8.6k bank, 127 summits, 351 overhang, 363 ford, 546 gate landing |
 | overhangs | ~270 columns with a second span |
 | walk / reach | **37% mainland on foot, 95% heartland with building**, 52 of 60 islands one whole |
 | what stays out of reach | mountain and karst tower — landforms whose point is the height |
@@ -770,7 +840,7 @@ river cells fell from 1,642 to 146 and it was very nearly read past.
 
 ### Feasibility: every arrangement against every character
 
-`Feasibility` runs all 22 arrangements × 8 characters. The ordinary audit rolls
+`Feasibility` runs every arrangement × all 8 characters. The ordinary audit rolls
 from `Auto`, so it measures the combinations the weights happen to produce — but
 a Domain's biome and world-tree position will name both, and a combination that
 takes four attempts is a bug nobody would ever see from the summary.
@@ -801,7 +871,9 @@ built out of a great many overlapping blobs costs.
 | basins on a `Highlands` island | ~80% of islands, not 100% — adjacency cannot always place one beside a massif. *Accepted.* |
 | undersized patches on `ThousandIsles` / `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. *Accepted.* |
 | overhangs are not walkable | Stage 6 runs after the analysis by design. Span-as-node traversal is its own problem. |
-| feature anchors | `CoastCells`, `CliffCells` and `Overhangs` exist. What is missing is the layer that uses them. |
+| feature anchors | Rethought 2026-09-01 — brinks, feet, banks, summits, all against the effective surface (see *The anchors that were banks*). What is still missing is the layer that uses them. |
+| `Halves` and `Triplets` fuse on one 128² seed in twelve | Ungrouped layouts, so not the Harmony seam bug; not chronic, and the re-roll absorbs it. Logged by the `Strain` sweep. |
+| 5 sealed gorge reaches, up from 1 | All misaligned rims (a deck fits, the banks disagree by 3+), lengths 4–19 cells. Crept up as the flattened reaches and valley tilts landed. The Stage 11 reach guarantees still hold on every island, so nothing is cut off — but a 19-cell reach with no deck is a real detour, and a pass that re-levels the two rims at the least-misaligned cell of a sealed reach would close it properly. Not attempted this session: it is the same class of surgery as `LevelBridgeheads`, and worth doing deliberately. |
 
 ---
 
@@ -810,13 +882,17 @@ built out of a great many overlapping blobs costs.
 Logged rather than done, so the reasoning survives the conversation it came out
 of. The numbered ones that have since been **done** are marked.
 
-1. ~~A biome / material layer~~ — **done** as `Surfaces.Classify`, at the ground
-   level (stone / grass / sand / …). The *living* layer above it — what grows
-   where — is still open, and is a Domain-level concern.
+1. ~~A biome / material layer~~ — **done twice**: first as `Surfaces.Classify`
+   at the ground level, then rebuilt (2026-09-01) as the **habitat vector**
+   (`Habitat.cs` — moisture, warmth, ruggedness, exposure, rim distance) with
+   `Material` a provisional reading of it. The *living* layer above — what
+   grows where — is the next branch, and the vector is its input.
 2. **Settlement placement.** Everything it needs now exists. It is the first
    thing that would expose whether the terrain rules produce good *play* rather
    than good pictures.
-3. ~~Feature anchors~~ — **done**: `CoastCells`, `CliffCells`, `Overhangs`.
+3. ~~Feature anchors~~ — **done**, and **rethought** 2026-09-01: `CoastCells`,
+   `CliffCells` (brinks), `CliffFootCells`, `BankCells`, `Summits`,
+   `Overhangs`, all measured against the effective surface.
 4. ~~Beaches~~ — **done**.
 5. **A real cost model for works.** Every work costs 1 point today, which makes
    `Passage.Cost` mean "how many projects" — right as a first answer, but a

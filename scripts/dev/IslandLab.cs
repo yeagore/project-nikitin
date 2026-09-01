@@ -66,6 +66,16 @@ public partial class IslandLab : Node3D
 		Surface,
 		/// <summary>The feature anchors the content layer attaches things to.</summary>
 		Anchors,
+		/// <summary>Habitat: nearness to fresh water, decayed and wobbled.</summary>
+		Moisture,
+		/// <summary>Habitat: the altitude lapse — where the cold country is.</summary>
+		Warmth,
+		/// <summary>Habitat: local relief of the visible surface.</summary>
+		Rugged,
+		/// <summary>Habitat: openness to the Domain's one wind.</summary>
+		Exposure,
+		/// <summary>Habitat: cells of land between here and the aether.</summary>
+		Rim,
 	}
 
 	private static readonly int ViewCount = Enum.GetValues<View>().Length;
@@ -87,9 +97,21 @@ public partial class IslandLab : Node3D
 		View.Surface => "surface   what the ground is made of: grey stone / pale scree / "
 					  + "white snow / sand / brown silt / dark green grass (by water) / "
 					  + "light green meadow / olive heath / tan dust",
-		_ => "anchors   what the content layer attaches to: cyan coast / red cliff / "
-		   + "magenta overhang / sand beach / yellow gate landing / green ford / "
-		   + "blue ferry quay. Unmarked ground is dimmed",
+		View.Anchors => "anchors   what the content layer attaches to: cyan coast / "
+		   + "red cliff brink / orange cliff foot / teal bank / magenta overhang / "
+		   + "sand beach / green ford / yellow gate landing / blue ferry quay / "
+		   + "white summit. Unmarked ground is dimmed",
+		View.Moisture => "moisture  nearness to fresh water (goo waters nothing): "
+		   + "blue waterside, tan parched. What the biome layer will grow things by",
+		View.Warmth => "warmth    the altitude lapse, absolute: orange warm lowland, "
+		   + "pale frozen. Anchored to the tallest a mountain can be at this size — "
+		   + "a flat island is warm all over",
+		View.Rugged => "rugged    local relief within two cells: dark flat, pale broken. "
+		   + "Measured on the visible surface, so a river is its water, not its bed",
+		View.Exposure => "exposure  openness to the wind (from "
+		   + "the dune-field direction): pale windswept, dark green lee",
+		_ => "rim       cells of land between here and the aether: violet rim, "
+		   + "dark interior. Essencecoral country is the violet end",
 	};
 
 	private View _view = View.Height;
@@ -199,8 +221,10 @@ public partial class IslandLab : Node3D
 
 		string wind = dunes > 0 ? $"   wind from {d.WindFrom}, dunes run {d.DuneRun}" : "";
 		return $"ground: {string.Join(", ", parts)}{wind}"
-			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} cliff, "
-			+ $"{d.Overhangs.Count} overhang, {Count(d.Beach)} beach, {Count(d.Ford)} ford, "
+			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} brink, "
+			+ $"{d.CliffFootCells.Count} foot, {d.BankCells.Count} bank, "
+			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "
+			+ $"{Count(d.Beach)} beach, {Count(d.Ford)} ford, "
 			+ $"{Count(d.Landings)} gate landing, {d.Berths.Count} quay";
 	}
 
@@ -233,7 +257,9 @@ public partial class IslandLab : Node3D
 		var grid = new byte[n, n];
 
 		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = 1;
+		foreach (Vector2I c in d.CliffFootCells) grid[c.X, c.Y] = 8;
 		foreach (Vector2I c in d.CliffCells) grid[c.X, c.Y] = 2;
+		foreach (Vector2I c in d.BankCells) grid[c.X, c.Y] = 9;
 		foreach (Vector2I c in d.Overhangs) grid[c.X, c.Y] = 3;
 
 		for (int x = 0; x < n; x++)
@@ -244,6 +270,9 @@ public partial class IslandLab : Node3D
 			if (d.Landings[x, z]) grid[x, z] = 6;
 			if (d.Ferry[x, z]) grid[x, z] = 7;
 		}
+
+		// Summits last: one cell each, and the rarest fact on the map.
+		foreach (Vector2I c in d.Summits) grid[c.X, c.Y] = 10;
 		return grid;
 	}
 
@@ -256,15 +285,21 @@ public partial class IslandLab : Node3D
 		return grid[x, z] switch
 		{
 			1 => new Color(0.30f, 0.82f, 0.88f),      // coast
-			2 => new Color(0.88f, 0.28f, 0.24f),      // cliff
+			2 => new Color(0.88f, 0.28f, 0.24f),      // cliff brink
 			3 => new Color(0.88f, 0.35f, 0.85f),      // overhang / arch
 			4 => new Color(0.90f, 0.82f, 0.55f),      // beach
 			5 => new Color(0.55f, 0.92f, 0.45f),      // ford
 			6 => new Color(0.98f, 0.86f, 0.25f),      // gate landing
 			7 => new Color(0.35f, 0.55f, 0.95f),      // ferry quay
+			8 => new Color(0.90f, 0.55f, 0.20f),      // cliff foot
+			9 => new Color(0.30f, 0.75f, 0.55f),      // bank
+			10 => new Color(1f, 1f, 1f),              // summit
 			_ => new Color(0.26f, 0.26f, 0.27f),      // unremarkable ground
 		};
 	}
+
+	/// <summary>A habitat axis as a two-colour ramp, for the five field views.</summary>
+	private static Color FieldColor(byte v, Color lo, Color hi) => lo.Lerp(hi, v / 255f);
 
 	/// <summary>What the ground is made of, for the surface view.</summary>
 	private static Color MaterialColor(SurfaceMaterial m) => m switch
@@ -1566,6 +1601,26 @@ public partial class IslandLab : Node3D
 						break;
 					case View.Anchors:
 						col.Add(AnchorColor(d, x, z, anchor));
+						break;
+					case View.Moisture:
+						col.Add(FieldColor(d.Moisture[x, z],
+							new Color(0.55f, 0.45f, 0.30f), new Color(0.10f, 0.52f, 0.62f)));
+						break;
+					case View.Warmth:
+						col.Add(FieldColor(d.Warmth[x, z],
+							new Color(0.88f, 0.92f, 1.00f), new Color(0.85f, 0.48f, 0.18f)));
+						break;
+					case View.Rugged:
+						col.Add(FieldColor(d.Ruggedness[x, z],
+							new Color(0.10f, 0.11f, 0.13f), new Color(0.95f, 0.88f, 0.70f)));
+						break;
+					case View.Exposure:
+						col.Add(FieldColor(d.Exposure[x, z],
+							new Color(0.14f, 0.30f, 0.20f), new Color(0.92f, 0.93f, 0.85f)));
+						break;
+					case View.Rim:
+						col.Add(FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6),
+							new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f)));
 						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);

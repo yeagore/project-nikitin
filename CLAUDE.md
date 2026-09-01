@@ -196,9 +196,10 @@ confluence, and sometimes splits round an **eyot**.
 dropdown came back upside down, 2026-09-01): water is the default and the only
 fluid that behaves. **Goo** — violet puddles on ~30% of islands — makes no
 rivers (the routing treats it as not-land) and **never mixes with water, even
-diagonally**; the audit checks that at zero. **Geysers** (~35% of islands) are a
-clustered field of water jets on high dry ground: scenery and a feature anchor,
-no terrain moved, in `IslandData.Geysers`. The ground sinks toward a course in tapered bands (`Valleys`) — **and
+diagonally**; the audit checks that at zero. **Geysers were binned the same day
+they landed** (Maxim looked; they did not turn out): where a jet belongs is a
+fact about the biome, which does not exist yet. `Geyser`, `IslandData.Geysers`
+and the lab's rendering stay as the dormant hook that layer will fill. The ground sinks toward a course in tapered bands (`Valleys`) — **and
 the channel sinks with them**, one band deeper than its own bank, because a bank
 already stands one slab above the water and a valley that only lowers the ground
 beside a river comes out as a moat around it. Valleys favour the courses that
@@ -244,9 +245,16 @@ the one pass that both reads the traversal analysis and changes the terrain, so
 
 `Passages` is the payoff: the **least-infrastructure road from the Entry to each
 Exit**, walking free and every work one point. Five elevators inside fifteen
-cells is a *flight*, which marks the Domain `Rough`. `Surfaces` then classifies
-what the ground is made of and collects the feature anchors (`CoastCells`,
-`CliffCells`, `Overhangs`); `Names` names the Domain and its parts. Stage 6
+cells is a *flight*, which marks the Domain `Rough`. `Habitat` then measures the
+**habitat vector** — five bytes per column the biome layer will read: moisture,
+warmth (a fixed lapse, so snow is for mountaintops, not for every island's top
+fifth), ruggedness, exposure to the Domain's wind, and rim distance — and
+`Surfaces` collects the feature anchors (`CoastCells`, `CliffCells` — brinks
+only, `CliffFootCells`, `BankCells`, `Summits`, `Overhangs`), everything
+measured against the **effective surface** (the water, where a column is
+flooded — measured against the bed, every river bank was a "cliff"), and maps
+the vector to a provisional `Material`; `Names` names the Domain and its parts.
+Stage 6
 overhangs and arches give some columns a second span — rendered and collidable,
 **not yet walkable**, because pathing over a two-level column wants spans as
 nodes and that is its own problem.
@@ -281,8 +289,10 @@ reachable from it.
    `reach` (what connects once you build — red is out of reach whatever you
    build) / `shelves` / `surface` (what the ground is made of: stone, scree, snow,
    sand, silt, grass, meadow, heath, dust) / `anchors` (what the content layer
-   attaches to: coast, cliff, overhang, beach, ford, gate landing, ferry quay —
-   everything else dimmed). Water is coloured by kind: pale a ford, mid a stream,
+   attaches to: coast, cliff brink, cliff foot, bank, overhang, beach, ford,
+   gate landing, ferry quay, summit — everything else dimmed) / and the five
+   habitat axes as ramps: `moisture`, `warmth`, `rugged`, `exposure`, `rim`.
+   Water is coloured by kind: pale a ford, mid a stream,
    deep a navigable reach, dark a lake — and goo is violet, in every view.
 5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (its
    1 × 3 landing strip, whichever kind of Gate it is),
@@ -317,7 +327,7 @@ CLI: `godot --path . scenes/dev/island_lab.tscn`
 and prints the measured guarantees. Run it after any change to the generator. It
 also prints **what moved since the last accepted run** against
 `docs/audit-baseline.json` — a diff, not a test; set `AcceptBaseline` to accept
-the current numbers. Twelve opt-in flags print what a summary cannot show:
+the current numbers. Thirteen opt-in flags print what a summary cannot show:
 `Silhouettes` (one island per arrangement), `Waterways` (one island's water, full
 resolution), `Sculpts` (a close-up of each sculpted landform), `Feasibility`
 (every arrangement × every character, flagging the combinations the pipeline
@@ -337,15 +347,18 @@ re-rolls cluster, a shape is fighting its room; the shortlist for the future
 size gate) and
 `Portraits` (a directory path rather than a bool: writes top-view PNGs, two
 islands per arrangement plus the probationers at 64² — how a shape gets *looked
-at* headlessly, and how the quilt was told from the huddle).
+at* headlessly, and how the quilt was told from the huddle) and
+`FieldMaps` (also a directory path: the habitat vector, the anchors and the
+surface mapping as PNGs for the first few seeds — how Stage 10 gets looked at,
+and how the bank-cliffs and the everywhere-snow were confirmed fixed).
 Appearance still needs a human at the editor — or **F2** in the lab.
 See `docs/island-generation-appendix.md` §D for what the audit currently says and
 which gaps are open.
 
 
-`scenes/terrain/grass_block.tscn` predates the slab decision — it is still a
-1×1×1 cube and should be reshaped to a 1×0.25×1 slab (and `main.tscn`'s camera
-pivot adjusted from 0.5 to 0.125). Low priority; not part of the generation work.
+`scenes/terrain/grass_block.tscn` was reshaped to the 1×0.25×1 slab (and
+`main.tscn`'s camera pivot dropped to 0.125) on 2026-09-01 — the block detour is
+closed.
 
 ---
 
@@ -370,13 +383,15 @@ scripts/
     ReliefStyle.cs              Where the high ground sits (internal, per character).
     Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
     IslandGenerator.cs          Generate(seed, params) — mask, patches, relief, lakes, keel, re-roll.
-    IslandArrangement.cs        The twenty-two named layouts.
+    IslandArrangement.cs        The thirty named layouts.
     Traversal.cs                Stage 5: walk areas, reach areas, water bodies, ferry
                                 berths, buildable shelves.
     BridgeEase.cs               Easy / Medium / Hard — cells one bridge spans.
     Crossing.cs                 A bridge site: two banks, a deck level, a span.
     Ferry.cs                    A ferry berth: a quay, its water, the body it reaches.
-    Surfaces.cs                 What the ground is made of, and the feature anchors.
+    Habitat.cs                  The habitat vector: moisture, warmth, ruggedness,
+                                exposure, rim distance — what the biome layer reads.
+    Surfaces.cs                 The feature anchors, and the provisional materials.
     Names.cs                    Names for the Domain, its districts and its water.
     Rivers.cs                   Drainage routing, channels, banks, eyots, waterfalls.
     Fall.cs                     One waterfall; the off-rim ones are the silhouette.
@@ -392,8 +407,8 @@ scripts/
 resources/
   island_default.tres          The IslandParams preset both dev scenes load.
 scenes/
-  main/main.tscn               Single-slab viewer (grass_block.tscn — still a cube).
-  terrain/grass_block.tscn     Prototype terrain block (pre-slab-decision).
+  main/main.tscn               Single-slab viewer.
+  terrain/grass_block.tscn     Prototype terrain slab (1 × 0.25 × 1).
   dev/island_lab.tscn          Island generation harness.
   dev/generation_audit.tscn    Headless guarantee audit (see docs §4d).
 docs/
@@ -542,5 +557,5 @@ Flagged so they aren't silently hard-coded:
    candidate ladders overlaid, audited by the `Sizes` sweep (2026-09-01), with
    altitude bounded by the size in slabs; Maxim picks the final ladder later.
    16³–64³ in Notion is stale. Still unlogged in the Decision Log.
-8. **`grass_block.tscn`** is still a 1×1×1 cube from the block detour — reshape
-   to a 1×0.25×1 slab when convenient.
+8. *(resolved 2026-09-01)* **`grass_block.tscn`** reshaped to a 1×0.25×1 slab;
+   `main.tscn`'s camera pivot adjusted to 0.125.

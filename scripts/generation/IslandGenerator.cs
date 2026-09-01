@@ -499,8 +499,10 @@ public sealed class IslandGenerator
         // to cross the ground between them are known.
         Passages.Find(data);
 
-        // What the ground is made of, and the anchors the content layer attaches
-        // to. Reads the finished terrain and changes nothing.
+        // The habitat vector — the growing conditions per column — then what the
+        // ground is made of and the anchors the content layer attaches to. Both
+        // read the finished terrain and change nothing.
+        Habitat.Measure(seed, data);
         Surfaces.Classify(data);
         Names.Give(seed, data);
 
@@ -2239,40 +2241,51 @@ public sealed class IslandGenerator
         {
             // The nearest blob wins, and owns the cell. Taking the minimum rather
             // than summing keeps two islets from fusing into a peanut just because
-            // they are close. The runner-up is kept as well: where the two agree
-            // is the seam between them, and the seam is where the strait goes.
-            float d = float.MaxValue, second = float.MaxValue;
-            float rd = 1f, rSecond = 1f;
-            int mine = 0, runner = -1;
+            // they are close.
+            //
+            // The runner-up is tracked <b>per piece</b>, not per lobe: a lobe's
+            // Group of −1 — the default — is a piece of its own, so on every
+            // arrangement that existed before groups the two are the same thing
+            // to the cell. On a grouped layout they are not. Measured lobe
+            // against lobe, a cell deep in the overlap of the yin-yang's two
+            // commas had both of its nearest lobes from ONE comma — no seam was
+            // seen there at all — and the S healed shut on a quarter of 128²
+            // seeds, which no width could fix because the cut was being drawn
+            // in the wrong place. The seam that matters is where two PIECES'
+            // fields agree, and that is where the strait goes.
+            float d = float.MaxValue, rd = 1f;
+            int mine = 0, bestPiece = int.MinValue;
+            float dBest = float.MaxValue, rBest = 1f;
+            float dOther = float.MaxValue, rOther = 1f;
             for (int i = 0; i < lobes.Length; i++)
             {
                 float di = lobes[i].Distance(x, z, wobble, irr, out float ri);
-                if (di < d)
+                if (di < d) { d = di; rd = ri; mine = i; }
+
+                int piece = lobes[i].Group >= 0 ? lobes[i].Group : -(i + 1);
+                if (piece == bestPiece)
                 {
-                    second = d; rSecond = rd; runner = mine;
-                    d = di; rd = ri; mine = i;
+                    if (di < dBest) { dBest = di; rBest = ri; }
                 }
-                else if (di < second) { second = di; rSecond = ri; runner = i; }
+                else if (di < dBest)
+                {
+                    if (dBest < dOther) { dOther = dBest; rOther = rBest; }
+                    dBest = di; rBest = ri; bestPiece = piece;
+                }
+                else if (di < dOther) { dOther = di; rOther = ri; }
             }
             norm[x, z] = d;
             owner[x, z] = mine;
 
-            // Turn the difference between the two normalised distances back into
-            // cells — a normalised unit is one lobe radius — and clear a band of
-            // them either side of the seam. The band never closes completely: a
-            // strait that heals is an arrangement that quietly delivered fewer
-            // landmasses than it promised, which is exactly what used to happen to
-            // Twins.
-            //
-            // <b>Unless the two lobes are one piece.</b> A lobe's Group of −1 —
-            // the default — is a piece of its own and every seam it shares is
-            // carved; two lobes sharing a named group are one island built from
-            // several blobs, and their seam is left to fuse. See Lobe.Group.
-            if (layout.Straits && lobes.Length > 1 && second < float.MaxValue
-                && (lobes[mine].Group < 0 || runner < 0
-                    || lobes[mine].Group != lobes[runner].Group))
+            // Turn the difference between the two pieces' normalised distances
+            // back into cells — a normalised unit is one lobe radius — and clear
+            // a band of them either side of the seam. The band never closes
+            // completely: a strait that heals is an arrangement that quietly
+            // delivered fewer landmasses than it promised, which is exactly what
+            // used to happen to Twins.
+            if (layout.Straits && lobes.Length > 1 && dOther < float.MaxValue)
             {
-                float seam = (second - d) * 0.5f * (rd + rSecond);
+                float seam = (dOther - dBest) * 0.5f * (rBest + rOther);
                 float width = StraitNarrowest
                               + (straitCells - StraitNarrowest) * strait.At(x, z);
                 cut[x, z] = seam < width;
@@ -2346,6 +2359,19 @@ public sealed class IslandGenerator
             if (land[x, z]) { cells[region[x, z]]++; remaining++; }
         int original = remaining;
 
+        // A bite eats coastline, never a satellite. Only Single and Satellites
+        // take bites at all, and on Satellites the total-land guards below are
+        // no protection for an islet: it is a tenth of the land, well inside
+        // the per-bite cap, and one bite landing on it deleted it whole — which
+        // is how the layout came out an islet short at every footprint. A
+        // region with any cell off the largest landmass is therefore exempt.
+        var massOf = new int[n, n];
+        int largest = LargestComponent(land, massOf);
+        var offMain = new bool[count];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (land[x, z] && massOf[x, z] != largest) offMain[region[x, z]] = true;
+
         int bites = 1 + (int)(Hash01(seed, 0x77A3) * (0.5f + 2.7f * irr));
         for (int i = 0; i < bites; i++)
         {
@@ -2380,7 +2406,11 @@ public sealed class IslandGenerator
             var doomed = new bool[count];
             int loss = 0;
             for (int r = 0; r < count; r++)
-                if (cells[r] > 0 && inside[r] >= cells[r] * 0.5f) { doomed[r] = true; loss += cells[r]; }
+                if (cells[r] > 0 && !offMain[r] && inside[r] >= cells[r] * 0.5f)
+                {
+                    doomed[r] = true;
+                    loss += cells[r];
+                }
 
             // Never eat the island. Two guards: no single bite may take a third of
             // what is left, and the bites together may not drop the island below
@@ -2461,6 +2491,23 @@ public sealed class IslandGenerator
     }
 
     private static void KeepLargestComponent(bool[,] mask) => DropSmallComponents(mask, 1f);
+
+    /// <summary>
+    /// Labels 4-connected land into <paramref name="into"/> and returns the label
+    /// of the largest piece, or -1 for an empty mask.
+    /// </summary>
+    private static int LargestComponent(bool[,] mask, int[,] into)
+    {
+        List<List<Vector2I>> comps = Components(mask, into);
+        int best = -1, bestSize = -1;
+        for (int i = 0; i < comps.Count; i++)
+            if (comps[i].Count > bestSize)
+            {
+                bestSize = comps[i].Count;
+                best = i;
+            }
+        return best;
+    }
 
     /// <summary>Smallest thing that counts as an islet. Below it, it is coastline noise.</summary>
     private const int MinIsletCells = 30;
@@ -3978,8 +4025,10 @@ public sealed class IslandGenerator
     /// plain, hills or dunes, level with its neighbours — the outermost cells step
     /// down a slab instead, and that one slab is the difference between land that
     /// stops and land that *meets* the aether. It is free-step ground, so nothing
-    /// about walking changes; it gives a quay somewhere natural to sit and the
-    /// silhouette a softer edge where the terrain earns one.
+    /// about walking changes; it gives the silhouette a softer edge where the
+    /// terrain earns one, and the content layer a shoreline anchor
+    /// (<see cref="IslandData.Beach"/>). Berth placement does <b>not</b> read it
+    /// — a quay goes where the water divides the island, beach or no beach.
     /// </summary>
     private const int BeachWidth = 2;
 
