@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/GenerationChecksum.cs" id="1_checksum"]
+[ext_resource type="Resource" path="res://resources/island_default.tres" id="2_params"]
+
+[node name="GenerationChecksum" type="Node"]
+script = ExtResource("1_checksum")
+Seeds = 60
+FirstSeed = 5000
+Params = ExtResource("2_params")
