@@ -1,25 +1,21 @@
 # Island Generation — appendix
 
-The long form behind [island-generation.md](island-generation.md): why it is
-built this way, what was tried and removed, what the audit measures and what it
-currently says, and the ideas that are logged rather than done.
+The reasoning behind [island-generation.md](island-generation.md): why each
+mechanism is the way it is, what was tried and removed, how the audit and the
+checksum are used, the open gaps, and the ideas not yet taken. The spec says
+what the rules are; this says why. The history of how they got there is in git.
 
 ---
 
 ## A. Requirements
 
-The original checklist, from Notion → *Generation → Island Generation*:
-
-1. A Domain is a landmass or archipelago floating in aether, seen from a
-   strategy camera. Working footprint **128 × 128** cells.
-2. Terrain is **mostly flat with an occasional single-slab step** — ground you
-   can lay a settlement out on — punctuated by cliffs that mean something.
-3. Cliffs are **costs, not walls**: a player who builds should be able to reach
-   almost all of the island.
-4. There must be somewhere to arrive (a Gate and its apron) and somewhere to
-   build (a shelf) on every Domain.
-5. Water: lakes, rivers, and — because there is no sea — **every watercourse
-   ends by pouring off the rim**.
+From Notion → *Generation → Island Generation*: a Domain is a landmass or
+archipelago floating in aether, seen from a strategy camera; terrain is mostly
+flat with the occasional single-slab step, punctuated by cliffs that mean
+something; cliffs are costs, not walls, so a player who builds reaches almost
+all of the island; every Domain has somewhere to arrive (a Gate and its apron)
+and somewhere to build (a shelf); and water means lakes, rivers, and, because
+there is no sea, every watercourse pouring off the rim.
 
 ---
 
@@ -27,725 +23,224 @@ The original checklist, from Notion → *Generation → Island Generation*:
 
 ### Elevation is not a smooth field that gets quantised
 
-The obvious approach is fBm → round to slabs. It was tried and it fails in two
-specific ways, both observed:
-
-- **Step sizes become an accident of the gradient.** Terrain comes out uniformly
-  two-to-three slabs rugged, which is the worst case: a one-slab step is free and
-  anything more needs infrastructure, so *nothing* is freely walkable and nothing
-  reads as a deliberate cliff.
-- **Under a radial envelope the contours are rings**, so snapping them to levels
-  produces visible concentric banding with flat nothing between.
-
-So the island is a blanket of **regions**, each with a landform and a rung, each
-generated under its own slope limit; the envelope only says where the high ground
-tends to be. That is what turns "where are the cliffs?" into a decision.
+fBm rounded to slabs fails two ways: step sizes become an accident of the
+gradient, so the ground is uniformly two-to-three slabs rugged (nothing freely
+walkable, nothing a deliberate cliff), and under a radial envelope the contours
+are rings, so snapping them makes concentric bands. So the island is a blanket
+of regions, each with a landform and a rung, each generated under its own slope
+limit, and the envelope only says where the high ground tends to be. That turns
+"where are the cliffs?" into a decision.
 
 ### The plateau ladder is what makes a cliff mean something
 
-A rung difference *is* a cliff. `AssignPlateaus` therefore enforces the cliff
-rule by construction: any pair of neighbours a cliff is **not** allowed between
-is unioned into one rung group, and the slope limiter then reaches across that
-border. Everything else — two rung groups, a mesa border, a mountain flank — is a
-cliff somebody asked for.
-
-The alternative, blurring the amplitude field until neighbouring patches happened
-to meet, narrows the gap without closing it, and that is where the last handful
-of forbidden cliffs were coming from.
+A rung difference is a cliff. `Landforms.AssignPlateaus` therefore unions every
+pair of neighbours a cliff is not allowed between into one rung group, and the
+slope limiter reaches across that border. Blurring the amplitude field until
+neighbours happened to meet narrows the gap without closing it; that is where
+the last forbidden cliffs came from.
 
 ### Ties in the river flood break on noise
 
-The routing is a priority flood inward from the rim. Terrain under a slope limit
-is mostly flats, so **most of the flood is a tie** — and a first-in-first-out
-tie-break makes the flood a plain breadth-first search, whose tree is a fan of
-straight cardinal rays. Every course traced down it came out as long straight runs
-meeting at right angles: a ruler, not a river.
+Terrain under a slope limit is mostly flats, so most of the priority flood is a
+tie, and a first-in-first-out tie-break is a breadth-first search whose tree is
+a fan of straight cardinal rays: a ruler, not a river. Ordering equal ground by
+a smooth noise field bends the tree at the field's wavelength. The jitter is
+strictly below one slab, so it can only reorder cells the terrain itself does
+not separate. `riverStraight%` in the baseline is the measure.
 
-Ordering equal ground by a smooth noise field instead makes the front advance
-along that field's low ground, so the tree bends at the field's wavelength (about
-fourteen cells). The jitter is strictly below one slab, so it can only reorder
-cells the terrain itself does not separate.
+### Sculpted landforms are a separate pass
 
-Measured: **60% of a course runs straight and 40% turns**; longest straight run,
-median 4 cells, max 18. (A perfectly meandering river would not be 50% — a river
-does hold a line for a while; what it does not do is hold one for twenty cells.)
-
-### Sculpted landforms, and why they are a separate pass
-
-Relief under a slope limit can only put a cliff at a patch *border*. A gully
-wall, a tower side, a terrace riser and a sinkhole are cliffs **inside** a patch,
-so they cannot come from relief at all. They are cut into a surface the limiter
-has already settled and then exempted from it — which is exactly the mechanism
-canyons already used for "a cliff somebody asked for".
-
-Two rules keep them honest, and both are load-bearing:
-
-- **Nothing is sculpted on the outermost ring of its own patch.** That ring is
-  the patch's word to its neighbours, so every border stays bound by the limiter
-  and the cliff rule holds at every edge a sculpted patch has.
-- **Every cut is a fixed depth, never a taper.** A tapering gully has a two-slab
-  step somewhere along its length by construction, and two slabs is the one
-  height the grammar forbids everywhere.
+Relief under a slope limit can only put a cliff at a patch border; a gully
+wall, a tower, a terrace riser and a sinkhole are cliffs inside a patch. They
+are cut into a surface the limiter has already settled and then exempted from
+it, the mechanism a canyon uses. Two rules keep them honest: nothing is sculpted
+on the outermost ring of its own patch, so every border stays bound; and every
+cut is a fixed depth, because a tapering cut has a two-slab step somewhere along
+it by construction.
 
 ### Lowering finished terrain: the taper rule
 
-Two passes lower ground after the grammar has settled — beaches and river
-valleys — and both hit the same trap. Lowering some cells and not others puts a
-step at the edge of the set you lowered, and that step is the depth of the drop.
-Lowering in bands does not help: a cell excluded for its own reasons (a mesa rim,
-a bridgehead, a channel) sits at drop 0 beside a neighbour at drop 3.
+Beaches and valleys lower ground after the grammar has settled, and lowering
+some cells and not others puts a step the size of the drop at the edge of the
+set. `FieldOps.Taper` clamps each cell to one more than its lowest neighbour,
+making the drop field 1-Lipschitz. That is necessary and not sufficient: it
+bounds the change between neighbours, not the result, and two one-slab steps
+add. So beaches run before the settle loop and let the limiter clean up, and the
+valley pass runs its own ambiguous-step correction afterwards.
 
-`FieldOps.Taper` clamps each cell to one more than its lowest neighbour, making
-the drop field 1-Lipschitz. That is necessary and **not sufficient** — it bounds
-the *change* between neighbours, not the *result*, and two one-slab steps add. So
-beaches run *before* the settle loop and let the limiter clean up behind them,
-and the valley pass runs its own ambiguous-step correction afterwards.
+### The channel sinks with its valley
 
-Measured when this was got wrong: two-slab steps went from 0.5% of adjacent pairs
-to **6.2%**, and the fix took it back to 0.5%.
+A bank already stands exactly one slab above the water. Lowering only the ground
+beside a river therefore has nowhere to go, and the taper turns the profile
+inside out into a moat two cells out. So the channel sinks one band deeper than
+its own bank, and the caps then mean what they say: a cell may not sink past a
+lake, nor more than the free step past ground that cannot come with it (a mesa
+rim, a tower, a levelled bridgehead). `Descend` runs again afterwards, since a
+channel that sank unevenly might climb. The `Valleys` knob acts per watercourse
+(each drainage draws a rank; the knob slides a window across the ranks, tilted
+by the course's own descent) because one reach for the whole Domain made every
+river identically incised, which looks generated. The slider's range maps onto
+what anyone actually chose: 1 is the most valley worth having, not a trench.
+The `Knobs` sweep is how this was found, and how it is checked.
 
-### The valley that was a moat
+### A navigable river holds one level
 
-The same trap, caught much later and from the other side. `CutValleys` lowered
-the ground beside a watercourse and **held the channel where it was** — and that
-cannot make a valley, because the bank already stands exactly one slab above the
-water and so has nowhere to go. The "never sink into standing water" guard
-therefore pinned the innermost band at drop 0; `Taper` read that zero as a
-constraint and clamped each band to one more than the band inside it; and the
-profile came out **inverted** — a ditch two or three cells out from the river,
-with the ground rising back toward the water on both sides.
-
-It is a good example of a bug a summary cannot show. Every guarantee held, every
-step was legal, nothing was unreachable, and the number the audit prints for
-rivers looked fine. Swept, it was unmistakable: *slabs the ground gains walking
-from one cell off a river to five*, against `Valleys`, was 0.12 / 0.12 / 0.14 /
-0.10 / **−0.06** — the whole range of the slider worth nothing, and its top worth
-less than nothing.
-
-The fix is one sentence: **the channel sinks with its valley**, one band deeper
-than the bank beside it. Then the caps mean what they say — a cell may not sink
-past a *lake*, and may not sink more than the free step past ground that cannot
-come with it (a mesa rim, a karst tower, a levelled bridgehead), which is what
-stops the pass opening cliffs it did not intend. Because the taper only ever
-reduces a cell, and reduces it to one more than its smallest neighbour, the
-outward profile survives it. `Descend` runs a second time afterwards, since a
-channel that sank unevenly is a channel that might climb.
-
-Same sweep after: 0.10 / 1.30 / 1.33 / 2.27 / **2.45**. The cost is real and
-worth stating — a valley you must cross is an obstacle, so the share of land on
-one walkable piece falls from 36% to 31%, while the share reachable *once you
-build* is unchanged at 95%. That is a valley doing its job.
-
-**Then it was all-or-nothing, which is its own fault.** One reach for the whole
-Domain meant every river on an island had the same valley or none did — and a
-country where every watercourse is identically incised looks as generated as one
-where none is. `Valleys` now acts **per watercourse**: each 4-connected component
-of the channel network draws a rank and keeps it, and the knob slides a window
-across those ranks (`3 × strength − 2 × rank`, clamped). Courses whose window
-lands at zero keep their bare incision.
-
-Swept, counting per river rather than per island — how many courses gain a slab
-or more walking five cells out from the water, and how deep the deepest gets:
-
-| `Valleys` | mean rise | courses with a valley | deepest |
-|---|---|---|---|
-| 0.00 | 0.17 | 17 / 71 | 4.3 |
-| 0.25 | 0.52 | 26 / 71 | 4.3 |
-| 0.50 | 1.15 | 39 / 71 | 5.9 |
-| 0.75 | 1.72 | 48 / 71 | 5.9 |
-| 1.00 | 1.85 | 48 / 71 | 5.9 |
-
-The row at 0.00 is the control and not a zero: a river runs in low ground anyway,
-so some courses clear the bar on natural relief alone. The 23 courses that never
-gain one are where the ground beside them is a landform, a bridgehead or a lake —
-the things a valley may not cut. Two-slab steps off mountains went *down* with
-this change, 1,069 → 931, because a valley that only some rivers get is a valley
-that meets less of the terrain it is forbidden to touch.
-
-**And then the ranks were tilted by relief** (2026-09-01): a course's descent —
-head water to rim water — now shifts its draw by up to ±0.35 of the window, so a
-river that came down through hills takes a valley early on the slider and a river
-crossing a plain takes one late or never. The clamp keeps the ends of the slider
-exact: 0 still cuts nothing, 1 still cuts every course in full. Swept at 0.25 /
-0.50, courses with a valley went 26 → 21 and 39 → 30 of 71, and the mean rise
-0.52 → 0.29 and 1.15 → 0.80 — the middle of the knob got choosier, and what it
-now chooses is the uneven country.
-
-### The river with one side higher than the other
-
-A navigable river is two cells widened into one surface, and three passes could
-move one cell of the pair without the other. `CutValleys`' caps are per-cell — a
-lake or a pinned landform beside the left cell holds it back while the right cell
-sinks free. `Descend` walks a cell's *chain*, and the partner's chain is not the
-axis's. And on gentle ground the pair straddled the course's one-slab steps, so
-the wide surface broke into shingles. Measured, the audit's uphill check — a
-higher-flow river cell standing two or more above a neighbour — found the
-leftovers: 2 pairs across 60 islands, each a stretch of water with one side
-standing over the other.
-
-Three corrections, together in `Rivers.Settle`:
-
-- **`LevelPairs`**: a pair holds one water level, the higher cell coming down to
-  the lower, bed and all. Run against `Descend` until both hold at once — each
-  only ever lowers, so the loop terminates, in practice inside two passes.
-- **The valley cuts the pair once**: after the taper, both cells take the
-  smaller of their two wants. Reductions only, so nothing the taper settled is
-  disturbed.
-- **`FlattenReaches`**: a barge river is now a *stair of pools* — walked from
-  the rim upstream, each cell held to the pool below it until the ground has
-  risen `FallDepth`, and that step kept, as a fall. Dead level between falls,
-  which is also what a reach *is* to a ferry. Streams keep their one-slab
-  rapids; the flattening is the navigable river's alone, and it costs the bed at
-  most two extra slabs at the held end of a reach, where the banks now read as a
-  low gorge.
-
-`riverUphill` went 2 → 0, and two-slab steps off mountains 948 → 830 — the
-unequal valley sinks were most of both. The cost: mainland share 39.8% → 39.0%
-and two of 121 roads stopped being free walks, which is gorge banks doing what
-gorge banks do. Heartland share, berths, quay heights and every Gate guarantee
-did not move.
+Its two cells are one surface, and three passes could move one without the
+other. `LevelPairs` brings the higher cell down to the lower; the valley cuts
+the pair once, both cells taking the smaller want; and `FlattenReaches` makes a
+barge river a stair of pools, dead level between falls, which is also what a
+reach is to a ferry. `Settle` cycles these against `Descend` until all hold;
+each only lowers, so it terminates.
 
 ### Water pours every way it plausibly can
 
-`FindFalls` used to give each river cell at most one fall, in the first direction
-found — so a river reaching a corner of the island poured off one aether edge and
-ignored the other, and the levelled partner of a navigable pair (whose own chain
-runs flat) drew nothing while its axis fell three slabs beside it. Now every
-river cell throws a sheet off *every* aether edge beside it, and toward every
-neighbouring **water** a `FallDepth` or more below it; a lake does the same where
-its outflow channel leaves well under its surface. Falls went 544 → 584, of which
-363 off the rim (was 282).
-
-The restriction is the point: sheets land only on water or in aether, never on
-dry ground. A sheet onto dry land would be a course the drainage never routed —
-either it floods ground no channel was cut through, or the water visibly
-vanishes into soil. Nothing new gets wet, so the extra falls cannot flood
-anything, and the one audit case of "uphill" water that remained turned out to be
-a drawn waterfall: a mainstem pouring three slabs sideways into the stream beside
-it, which the uphill heuristic now excuses because a fall is proof of which way
-the water goes.
-
-Two rendering faults fixed with this, both in the lab: the sheet used to stand
-*exactly* in the plane of the cliff face under the lip and z-fought it (now
-pushed a whisker past — 0.53 of a cell instead of 0.50), and the falls popped in
-and out as the camera swung — the automatic bounds of a flat quad are paper-thin,
-so the multimesh now sets its own box, and the falls draw at a fixed priority
-after the water sheet instead of tying with it on distance-to-origin.
-
-**And the cataracts** (2026-09-01): a one- or two-slab step along a course is
-a rapid the generator rightly does not call a fall — and the picture had a hole
-there, two sheets of surface and a gap, which read as falls "sometimes just not
-appearing". The lab now draws a small connecting sheet across every sub-fall
-step between adjacent flooded cells, renderer-side only: the falls list stays
-the falls, because `Traversal` cuts ferry bodies at falls and a rapid is not a
-thing a barge cannot pass… downstream, at least; the routing already one-ways
-what matters.
-
-### The wide rivers that were not there
-
-"A surprising lack of wide rivers" turned out to be tuning, not the pair fixes:
-navigable cells were 796 before and after those, to the cell. The culprit was
-`NavigableShare` — tuned in an era of outflow inflation so that it took *three*
-courses meeting to make a reach navigable, which at the preset's `Rivers = 0.5`
-left a median island 17 navigable cells: one short reach, read from the lab as
-none. Now a course turns navigable below its first real confluence
-(`NavigableShare` 0.16 → 0.11, the confluence floor `riverAt × 3` → `× 2`):
-navigable cells 796 → 1,980 over 60 islands, 39.6 per island at the preset in
-the sweep.
-
-A side effect worth naming: the one island in sixty whose water a bridge could
-not span resampled away, so the berth count is 0 across the audit — the domino
-rule still finds 4,600 sites, and the pruning correctly keeps none, because
-every island in this sample can be crossed without a ferry. Ferries earn their
-keep on low-`Crossings` Domains, where a two-cell river is already past the
-span; the machinery is intact and idle.
-
-### The Valleys slider, rescaled
-
-Everything anyone actually chose lived below a half, and the top half cut
-trenches. The whole range now maps onto the old lower half (`strength × 0.5`,
-with 0 still exactly nothing): 1.0 means "the most valley worth having", steep
-courses in full and plain ones shallow, per the relief tilt. The consequence to
-know about: the *bottom* half of the new range is correspondingly subtle —
-swept, the rise over control at the new 0.5 is +0.08 slabs — because the old
-0–0.25 always was.
-
-### Lakes that are not Just One Big Lake
-
-A lake was the patch's interior, filled — every island the same lake at a
-different size. Where the pool is big enough to have an inside (40+ cells), it
-now rolls a shape: single (still the plurality), a **thousand-lakes** scatter on
-a chunky noise field, a **ring** round a dry island of its own floor (the
-pool's inset ≤ 2), a **crescent** (the ring's core stamped out again
-off-centre — the overlap is the bite), a ragged **cross** (two bars through the
-centroid), or a **tarn** cropped small. Every shape is a subset of the pool the
-containment approved, so the dry ring holding the water in is untouched, and
-`RaiseSunkenShores` lifts what a shape leaves dry exactly as it lifts a
-wandering shoreline. Two dials turned with it: a large interior lifts the lake
-chance by up to half (broad country holds more water), and a patch that loses
-the main roll can still take a small tarn. Fragmented islands are unaffected by
-construction — their pools fail the same size floor the shapes need.
-
-Measured: lake regions 93 → 173 over 60 islands, distinct bodies median 24
-cells; at the preset's `Lakes = 0.5` the sweep's lake cells went 124 → 150. At
-the slider's top the total *area* is a fifth lower than it was — the shapes
-spend cells on being shapes — while the body count is up by half, which is the
-trade the feature is.
-
-### The other fluid, and the geysers
-
-`FluidKind` came back upside down — see the spec. What is worth keeping here is
-the shape of the "never mixes" guarantee, because it is belt and braces by
-design: goo is *placed* only where no water stands within a king's move (the
-patch's own dry interior guarantees it; a cell guard enforces it anyway), the
-rivers' `keep` mask covers goo's whole king's-move neighbourhood so no channel,
-widening or braid can approach, and `Rivers.Route` treats goo as not-land so no
-course ever drains through a puddle and a goo body has no spill — goo makes no
-rivers because the drainage has never heard of it. The audit counts water
-within a king's move of goo and wants 0. `Traversal.Sailable` refuses it, so it
-takes no berth and joins no ferry network; `Walkable` refuses it because it is
-standing fluid without a ford. It is an obstacle the colour of a warning.
-
-Geysers were the opposite trade — pure scenery, no rules — and were **binned
-the same day** (Maxim looked; they did not turn out): a field of jets placed
-where the rock was, and where a jet belongs is a fact about the *biome*, which
-does not exist yet. What stays is the hook — `Geyser`, `IslandData.Geysers`,
-and the lab's crossed-sheet rendering, all dormant — so the biome layer fills a
-list rather than re-growing the plumbing. When water gets its content pass they
-are the natural partner of plunge pools (§E.14) and the first candidate for an
-eruption schedule.
-
-### Three footprints, one bounding box
-
-Two facts landed together (2026-09-01). First, the `Sizes` sweep — the
-guarantee set at 64², 96² and 128² — found the pipeline already mostly
-size-clean: 64² runs at 1.17 attempts with 0 unmet guarantees, 96² and 128² at
-1.00, water physics and gorges clean throughout, which is what share-based
-tuning (edge bands, separation floors, source spacing) buys. Second, the one
-thing that did **not** hold was the bounding box: with hanging Gates ten cells
-off the rim, **21 portals in 60 islands hung outside the grid** — worse at the
-small sizes, where ten cells is a sixth of the Domain.
-
-Two changes close it. The hanging offset came down from ten to five (Maxim
-asked for 4–6; five keeps the flight readable — at four the portal reads as a
-doorway just off the step), and `Flyable` now refuses any site whose portal
-would stand outside the grid, which makes the box a law of placement rather
-than a hope: a coast hugging the wall simply offers no site, and the set-wise
-search shops elsewhere on the edge. The audit checks every Gate against the box
-(`gateOutOfBox`, want 0) and the lab's compass overlay draws the box itself, so
-a violation would be visible before it was countable.
-
-After both: `gateOutOfBox` 21 → 0 at every footprint, four hanging Gates still
-on 100% of 528 GateMatrix runs, every edge/kind/count request still met at
-100%, and the `Sizes` table dead clean — 64² at 1.17 attempts and 97.9%
-heartland, 96² and 128² at 1.00. The three sizes are now a supported fact
-(the lab grew a Size spinner), not an untested parameter.
-
-The lab's overlay then split into **two boxes** (Maxim's read, and the right
-one): the faint one is the Domain's cube — the maximal possible extent, the
-grid, the law — and the gold one is the tight box round the landmass itself,
-keel to peak, waterfalls and Gates left out. The gap between them is the room
-an arrangement is not using, which is how the ThousandIsles huddle became
-visible in 3D as well as in the portraits.
-
-### Meat, measured per arrangement
-
-"The rings are too thin" is a claim about area, and the audit could not test it:
-`Auto`'s rolls give some arrangements one island in sixty. The `Bulk` sweep
-forces each arrangement in turn and prints land share, thinnest first — and the
-table read differently than the eye did. `Ring` itself was the second-fattest
-shape of the twenty-two (28.8% land against `Single`'s 34%), because its dozen
-tangential lobes overlap into a thick annulus. What was actually thin was the
-scatter and the arms: `Archipelago` at 10.2%, `ThousandIsles` at 10.7%, and the
-whole L/T/cross family in the bottom half — an `LShape` at 12.6% is not a corner
-of country, it is a pair of causeways.
-
-So the thin half was fattened, roughly in proportion to how thin it measured:
-the arms family's hub and arm radii 0.40/0.34 → 0.45/0.37 of the island radius,
-`Archipelago`'s islets 0.20/0.19 → 0.24/0.23, `ThousandIsles`' 0.13 → 0.145ish
-(scatter is the identity; starvation is not), the fractal chain 0.24 → 0.27,
-`BrokenRing` and `BrokenArc` arcs 0.30 → 0.33, `Rosette`'s coil 0.23 → 0.26,
-`Satellites` 0.58/0.21 → 0.61/0.23. `Single`, `Twins`, `Triplets`, `Ring`,
-`Arc`, `Atoll` and `Shards` were left exactly alone — the aim is meat, not
-equality, and a ring will never out-eat a singleton.
-
-Re-measured: the floor of the table rose from 10.2% to 13.5%, every boosted
-shape gained two to four points of land share (`Archipelago` 10.2 → 14.7,
-`ThousandIsles` 10.7 → 13.5, `LShape` 12.6 → 14.6, `Rosette` 17.6 → 20.8), the
-untouched shapes came out byte-identical, and the ordering survived.
-(`ThousandIsles` has since been rebuilt outright — see *The audit grew eyes*.) One
-accidental repair: `Star` — which shares the arms — now fuses into one landmass
-(1.7 → 1.1 masses), which is what its no-straits entry always claimed it was.
-Four hanging Gates still arrive on 100% of 528 runs across all 176
-arrangement × character combinations.
-
-### The audit grew eyes, and what they saw
-
-`Portraits` writes a top-view PNG per arrangement — land as an elevation ramp,
-water its four blues, goo its violet, portals red — because headless `Image`
-drawing needs no rendering device, and whether a spiral is a spiral or a rosette
-with more steps is not a thing a summary number can say. It paid for itself the
-same hour, three times:
-
-- **ThousandIsles' huddle was the linker, not the layout.** The isles always
-  crowded the middle, and moving from rings to a stratified scatter did not fix
-  it — both seeds leaned the same way, which is the signature of a system, not a
-  die. The system is `LinkLandmasses`: every piece of a layout must be
-  bridgeable, and the linker enforces it by translating strays bodily toward
-  the rest — so isles thrown wide are isles huddled by the time the mask is
-  legal. The only spread that survives the law is one that is already legal:
-  ThousandIsles is now a **quilt** — a jittered grid of lobes over the whole
-  footprint, corner to corner, every seam carved to a strait — and the portrait
-  shows ~30 isles filling the box with wandering channels between them.
-- **Square drew a quatrefoil** (corners without edges) until the edge-midpoint
-  lobes went in; **Rhomb drew a caltrop** (elongated points) until its points
-  went round; **Harmony drew a hollow ring** until the comma heads moved into
-  the disc's middle — a yin-yang is a full disc with an S through it, not an O
-  with a gap. Each was one look and one edit. `NShape`, `Quarters`, `Halves`,
-  `Isthmus` and `Reef` read right on the first portrait.
-
-### Eight debutants, all passed
-
-The geometric set — `Square`, `Rhomb`, `NShape`, `Quarters`, `Halves`,
-`Harmony`, `Isthmus`, `Reef` — went through the `Debut` workup: every shape at
-64², 96² and 128² over 12 seeds, and against all eight characters. Verdict:
-**nothing binned.** Attempts 1.00 nearly everywhere (worst: Isthmus 1.58 at
-64², where the neck is tight; NShape × Karst 1.3), 0 unmet guarantees, 0 water
-faults, 0 Gates out of the box, heartland 96.8–99.8% throughout. Land shares
-run 15–25% — mid-table against the old roster.
-
-`Harmony` forced one real mechanism: **grouped lobes** (`Lobe.Group`). A comma
-is a chain of five lobes that must fuse while the S between the two commas is
-carved, and the old rule — a cutting layout carves every seam — would have
-shredded it into beads. A lobe's group of −1 (the default) is a piece of its
-own, so every arrangement that existed before groups behaves to the cell as it
-did; two lobes sharing a named group keep their seam. `Quarters` and `Halves`
-are the symmetric, axis-aligned siblings Twins never was; `Isthmus` is two
-countries and a chokepoint; `Reef` is the one shape with a sheltered sound.
-
-The pool weights put the debutants behind `NewArrangements` with the rest of
-the newer shapes. The old `Spiral` stays dead: nothing in the set retries it,
-and the chrysanthemum it actually drew is still called `Rosette`.
-
-### The cube got a lid, and the layouts grew into their box
-
-Three constraints landed together (2026-09-01, the second arrangements pass).
-
-**Altitude answers to the cube.** A Size-cell Domain is now at most Size slabs
-keel to peak: `BoundAltitude` caps the two big vertical spenders — mountain
-rise and keel depth — at the share of the cube they take on a 128 Domain (40
-and 34 slabs), so 128 is untouched to the slab and smaller Domains come out
-proportionally lower rather than as a scale model of a mountain in a shoebox.
-Measured: spans of 37 / 41 / 46 / 63 / 77 slabs at the five sizes against lids
-of 48 / 64 / 72 / 96 / 128 — everything under, nothing clipped, and the audit
-counts overflows (`altOverCap`, want 0).
-
-**The footprint band.** Maxim's observation, generalised: half the layouts
-crouched in the middle of their own Domain — Twins took 38% of its box, Reef
-39%, and the first fix (measuring the raw mask) missed them, because the
-<i>linker</i> drags every unbridgeable stray inward and shrinks a scattered
-layout after the mask is drawn. The fit pass therefore wraps the whole mask
-stage — bites, islet filter, linker — and rebuilds scaled up about the centre
-until the landmass's bounding rectangle covers 55–85% of the grid, erring big
-per the brief. All thirty arrangements now sit in 55.5–81%.
-
-**The five-size roster.** `IslandParams.SupportedSizes` = 48/64/72/96/128 —
-the 64/96/128 ladder and Maxim's 48/72/96 alternative overlaid until he picks.
-The `Sizes` sweep runs the guarantee set at all five: 72 and 96 are as clean as
-128 (1.00 attempts), 64 re-rolls mildly (1.17), and **48 is the strained one**
-— 1.4–1.5 attempts and the occasional unmet seed, which is a 48-cell footprint
-carrying constants (region scale, shelf minima) tuned for more room. Worth
-knowing before the ladder is chosen.
-
-Two portrait-driven fixes rode along: `Square` went from nine conjoined blobs
-to a solid block (deep overlap plus a `Solid` floor of 0.85 — a few crevasse
-slits remain and read as character), and `Harmony` earned its own extra-wide
-strait (4.6 cells at the widest) because its commas overlap so deeply that the
-default S healed shut on half the seeds — and a Harmony with one landmass is a
-blob. The arrangement dropdown also learned to scroll; thirty entries had put
-the newest shapes below the bottom of the window.
-
-### Where the small footprints pinch, by name
-
-Maxim's read — some arrangements come out deformed at 64 and especially 48 —
-measured by the `Strain` sweep: every arrangement at 48², 64² and 128² (the
-control), 12 seeds each, sorted by 48² attempts. The re-rolls do cluster, and
-the cluster has a shape: it is the **multi-piece ring and split family**, the
-layouts that must deliver several pieces, each at least `MinIsletCells`, parted
-by straits and still linkable — three demands that a 48-cell box cannot host at
-once.
-
-The shortlist for the future size gate (48² numbers, 12 seeds):
-
-| arrangement | attempts | unmet | short of its masses | clean from |
-|---|---|---|---|---|
-| `Halves` | 2.25 | **6** | 3 | 64² |
-| `BrokenArc` | 2.25 | **7** | 3 | 96² (1.42 att at 64²) |
-| `BrokenRing` | 1.67 | 3 | 1 | 64² |
-| `Archipelago` | 1.67 | 0 | 0 | re-rolls its way out; 64² clean |
-| `Atoll` | 1.58 | 1 | 0 | 96² (1 unmet at 64²) |
-| `BrokenFractal` | 1.25 | 0 | **5** | 64² — at 48² it ships with fewer stepping stones than it names |
-| `Reef` | 1.00 | 0 | 3 | 64² — the barrier chain collapses into fewer beads |
-
-Everything else runs 1.0–1.5 attempts at 48² with no unmet seeds, and the
-whole roster is clean at 96² and 128². One oddity worth its own note:
-`Harmony` is clean at the small sizes but **fuses on a quarter of 128² seeds**
-(3 of 12 short of its two commas) — the fit pass grows the disc, the commas'
-overlap deepens absolutely, and the S heals in the middle; widening the strait
-past its current 5.4 cells starts reading as a gulf, so this wants a smarter
-cut, not a wider one. `Satellites` chronically drops one islet at every size.
-
-Nothing is gated yet — the intended mechanism is `ArrangementPool` filtered by
-`Size` when Maxim picks the ladder, which is one switch on data that already
-exists. The sweep stays in the audit so the list re-derives itself when the
-constants move.
-
-### The satellite the bite ate, and the seam between pieces
-
-The two chronic shortfalls in that table were both structural, and neither was
-a tuning problem (2026-09-01).
-
-**Satellites dropped one islet at every size** because of the bites. Only
-`Single` and `Satellites` take bites, and a bite deletes whole regions under
-guards that protect the *total* — no bite takes a third of what is left, the
-island keeps 60% of what it started with. An islet is a tenth of the land,
-well inside both caps, so a bite landing on it deleted it whole and the layout
-shipped short. A bite now eats coastline, never a satellite: any region with a
-cell off the largest landmass is exempt. Measured over the `Strain` sweep,
-Satellites' shortfall went 1/1/1 (48/64/128) → 0/0/0.
-
-**Harmony fused on a quarter of 128² seeds**, and the appendix's guess —
-"wants a smarter cut, not a wider one" — turned out to be exactly right. The
-strait was carved where the two nearest *lobes* disagreed; deep in the commas'
-overlap, both nearest lobes belong to **one** comma chain, so no seam was seen
-there at all, and no width could fix a cut drawn in the wrong place. The seam
-is now measured between **pieces** — the nearest distance per `Lobe.Group`,
-with an ungrouped lobe a piece of its own, so every pre-group arrangement
-computes cell-for-cell what it did before. Harmony's shortfall at 128² went
-3 of 12 → 0, and the strait width stays at 5.4 cells rather than growing into
-a gulf.
-
-### The gorge that cannot be bridged, measured
-
-Maxim's worry, and a fair one: rivers often run between two cliffs — the
-grammar makes gorges on purpose — and if the two rims were misaligned too
-often, a gorge would be a wall you must walk the whole length of. The audit now
-measures this with the exact rule the reach flood builds bridges with
-(`Traversal.Walkable` endpoints, `DeckFits` over the gap, banks within
-`MaxBridgeRise`), so what it reports is what the game would let you build. A
-gorge cell is a river cell with dry ground 3+ slabs over its water on both
-sides of an axis — looked for *through* the channel, since a navigable river's
-rim stands beyond its partner — and a reach is a 4-connected run of them,
-counted from three cells.
-
-The answer is: **it does not happen.** Over 60 preset islands: 796 gorge cells
-in 47 reaches (median 9 cells, longest 51) on 18 islands — **47 of 47
-crossable**, 0 sealed, 0 refused for misalignment alone. The worst walk from
-any gorge cell to its nearest deck site is 9 cells; the median is 0, meaning
-most gorge cells can be bridged where you stand. Swept across `Crossings`
-(12 seeds each): Easy 7 reaches / 0 sealed / worst walk 3, Medium 14 / 0 / 1,
-Hard 13 / 0 / 1 — even on Easy Domains, where the span is one cell and
-misalignment is the *only* thing that could seal a stream gorge, nothing does.
-
-Why it is benign is structural, not luck: every pass that cuts a gorge —
-valleys, banks, the flattened reaches — lowers a slab at a time under the
-taper, so the two rims come off the same ground and rarely part by more than a
-slab or two, which `MaxBridgeRise = 2` absorbs; and `DeckFits` reads a deep
-gorge as a *chasm*, so the deck over it gets the full bridge span rather than
-the three-cell water limit. The check stays in the audit as a tripwire: if a
-future pass starts shearing rims apart, `gorgeSealed` is in the baseline and
-will shout.
-
-### Three dead branches nobody could see
-
-`Surfaces.Pick` decides what the top of a column is made of. Three of its arms
-were wrong in ways that compile, run, produce plausible islands, and are
-invisible without a histogram:
-
-```csharp
-if (slope >= 3) return height > 0.72f ? Stone : Stone;   // both arms
-if (damp <= Damp) return Grass;
-if (damp <= Dry)  return Grass;                          // and again
-int damp = wet[x, z] < 0 ? Dry : wet[x, z];              // never exceeds Dry
-```
-
-The first is a ternary with one answer. The second collapses three moisture bands
-into two, so `Damp` was a constant that did nothing. The third is subtler and
-worse: the wetness flood stops expanding at `Dry`, so no cell ever comes back
-*above* it, and a cell the flood never reached was given exactly `Dry` — which
-the last test reads as still-green. Between them, **`Heath` was 0.0% of every
-island the generator had ever produced.** The driest ground on a Domain came out
-the same colour as a water meadow.
-
-None of this was findable by reading, and none of it broke a guarantee. What
-found it was printing a share per material with `NEVER` beside the empty ones —
-which the audit now does, and the lab's `surface` view now paints honestly.
-Distribution after the fix: stone 11%, scree 15%, snow 13%, sand 21%, silt 5%,
-grass 3%, heath 23%, dust 2%, meadow 8%.
-
-**That classifier has since been replaced** (2026-09-01) by the habitat vector —
-see *The anchors that were banks*, below — but the lesson stands, and the
-tooling it bought (the `NEVER` histogram, the `surface` view) is what the
-replacement was verified with.
-
-### The anchors that were banks, and the habitat vector
-
-Two of Maxim's reads landed together (2026-09-01). **The cliff anchors were
-nonsense**: `CliffCells` marked any cell whose *ground* stood three slabs from a
-neighbour's — and for a river column the ground is the bed, so every bank of a
-navigable river was a "cliff" on the strength of the water being deep, and both
-sides of every real face registered, brink and foot indistinguishable. **The
-surface mapping was nonsense in a subtler way**: height was normalised per
-island, so the top fifth of *any* island wore snow (13% of all land — a flat
-island's highest hill was its own private mountaintop), and an altitude band
-unconditionally returned scree, which is where the stone-deserts came from.
-
-The fix for the first is one idea: every geometric question is asked of the
-**effective surface** (`IslandData.EffectiveLevel` — the water surface where a
-column is flooded), because anchors describe what a place looks like.
-`CliffCells` became brinks only; `CliffFootCells` (the ground under a face),
-`BankCells` (the walkable wet margin, ≤ 1 slab over the water) and `Summits`
-(highest dry cells of genuinely high country, spaced) joined the set. Banks
-came out at ~150 per island tracing the water network, brinks fell to what is
-actually a wall, and the gorge rims that remain (~2.3k of 20k) are honestly
-three slabs over the water itself.
-
-The fix for the second is the **habitat vector** (`Habitat.cs`): moisture,
-warmth, ruggedness, exposure, rim distance — one byte each per column, five
-separate axes on purpose, so the biome layer can compose them rather than
-unpick a score. Warmth uses a fixed lapse anchored to the mountain cap for the
-footprint (`Size × 40/128`), which is what "snow is for mountaintops" means in
-numbers: snow fell from 13% of land to 1%, and only where the country genuinely
-climbs. `Material` is now a provisional reading of the vector, kept for the
-lab; the vector is the part the next branch builds on.
-
-Verified by looking: the audit's `FieldMaps` flag writes the five axes, the
-anchors and the surface as PNGs per seed — moisture visibly follows the rivers,
-banks trace the courses, the brink/foot pair lines the gorges, and the S of a
-sculpted canyon reads in the ruggedness panel. The lab grew five habitat views
-(`moisture` / `warmth` / `rugged` / `exposure` / `rim`) for the same review by
-hand.
-
-### Beaches, measured
-
-They work, and they are commoner than the name suggests: **81% of coast cells
-step down onto a beach**, and no island in 60 lacks one. `MakeBeaches` drops the
-outer two cells of any gentle coast — Plain, Hills or Dunes, dry, even within a
-slab — by a single slab, which is free-step ground, and marks them. That single
-slab is deliberate: a graduated two-slab beach spends the entire tolerance a
-landing strip has, and when it was tried, hanging Gates fell to a quarter.
-
-Two things follow that are worth knowing rather than fixing. A beach is the
-*normal* coast rather than a special one, which makes it a weak anchor — 21% of
-all land is classified `Sand`, most of it shoreline. And the doc comment claims a
-beach "gives a quay somewhere natural to sit", which is not wired: `BuildBerths`
-does not read `Beach` at all.
+A cell that is a fall at all throws a sheet off every aether edge beside it and
+toward every neighbouring water a fall's depth below it, so a corner spills both
+ways and the level partner of a navigable pair pours beside its axis. Sheets
+land only on water or in aether, never on dry ground: a sheet onto dry land
+would be a course the drainage never routed, so nothing new gets wet. The
+lab's sub-fall cataract sheets are renderer-side only; the falls list stays the
+falls, because `Traversal` cuts ferry bodies at falls.
+
+### Wide rivers, and the idle ferries
+
+A course turns navigable below its first real confluence (`NavigableShare`),
+where a barge would in fact get in; tuned any stricter, a median island had one
+short reach and read as having none. In the audited sample every body of water
+can be bridged, so berth pruning keeps none and `berths` is 0 in the baseline:
+the ferry machinery is intact and idle, and earns its keep on low-`Crossings`
+Domains where a two-cell river is already past the span.
+
+### Lakes that are not one big lake
+
+Filling a patch's interior gave every island the same lake at a different size.
+Where the pool is big enough to have an inside it rolls a shape, and every shape
+is a subset of the pool the containment approved, so the dry rim is untouched
+and fragmented islands are unaffected by construction. Total area at the top of
+the slider is a fifth lower than a plain fill and the body count half again
+higher, which is the trade the feature is.
 
 ### A slider that only changes a count saturates
 
-`Lakes` used to set one thing: the chance that a flat patch holds water. But a
-patch beside one that already holds water stays dry (see *Lake chains*, below),
-so raising the chance past a point only makes more patches lose that draw — the
-count approaches a maximal independent set and stops. Swept, the top quarter of
-the slider bought 10% more water and looked identical.
+`Lakes` once set one thing, the chance a flat patch floods; a patch beside one
+that holds water stays dry, so past a point more patches just lost the draw. It
+now sets three: the chance, the smallest patch worth flooding, and how far the
+shore wanders in. The general rule: a parameter that drives only a count
+saturates wherever the thing it counts has a spacing rule. Check both ends.
 
-It now sets three things: the chance, the smallest patch worth flooding (40 cells
-down to 12), and how far the shore wanders in from the patch rim, so a wet Domain
-fills more of each patch as well as more patches. Lake cells per island across
-the range: 0 / 47 / 124 / 288 / **390**, and the largest single lake 0 / 98 / 156
-/ 409 / 449.
+### Goo never mixes, three ways
 
-The general lesson is the one the `Knobs` sweep exists for: **a parameter that
-drives only a count will saturate wherever the thing it counts has a spacing
-rule.** Check what the slider does at both ends, not at the default.
+Goo is placed only where no water stands within a king's move; the rivers' keep
+mask covers goo's whole king's-move neighbourhood so no channel, widening or
+braid can approach; and `Rivers.Route` treats goo as not-land, so no course
+drains through a puddle and a goo body has no spill. `gooTouchesWater` counts
+the failures and wants 0. `Sailable` and `Walkable` both refuse it. Geysers were
+pure scenery with no rules and were binned; the hook (`Geyser`,
+`IslandData.Geysers`, the lab's jets) stays for the biome layer to fill.
 
-### Four hanging Gates, and the rewrite that made them the default
+### The cube has a lid, and Gates hang inside it
 
-Asked for the hardest thing there is — an Entry and three Exits, one per edge,
-every one of them flown to — the greedy placer delivered on **25% of runs** across
-all 176 arrangement × character combinations. It is now **100%**, at 1.00 attempts,
-and every reduction from it (fewer Exits, land Gates at either end, a named entry
-edge) is met on every seed. Getting there took finding out what was actually
-wrong, and three plausible answers were not it:
+A Size-cell Domain is at most Size slabs keel to peak: `BoundAltitude` caps the
+mountain rise and the keel depth at their 128 share, so a small Domain is
+proportionally lower, not a scale model in a shoebox (`altOverCap`, want 0). A
+hanging portal juts off the rim toward a wall, so the Gates are the first thing
+the walls bite: the hanging offset is five cells (four reads as a doorway just
+off the step; ten put a fifth of the portals outside small grids), and
+`Flyable` refuses any site whose portal would stand outside the grid, which
+makes the box a law of placement rather than a hope (`gateOutOfBox`, want 0).
 
-| | |
-|---|---|
-| **Not the strip tolerance.** | Raising `StripTolerance` from 3 slabs to 5 changed the outcome by **nothing at all** — 25% and 41%, identical to the digit over 528 runs. |
-| **Not the separation.** | Dropping `GateSeparation` back from 0.42 to 0.30 bought 25% → 27%. Real but small, and it is the rule that keeps two Links out of one bay. |
-| **Not the coast.** | Counted with the other Gates removed, **every edge of every island** offered a hanging Gate — 4.0 of 4 edges, 130–160 candidate cells each, on all eight characters. |
-| **Not the scoring.** | Weighting each Gate toward the middle of its own edge, on the theory that a Gate in a corner moves the line the next one has to beat, made it **worse**: three hanging Exits fell 41% → 33%. |
+### The fit band wraps the linker
 
-Two things were wrong, and both were structural.
+Half the layouts crouched in the middle of their Domain, and measuring the raw
+mask missed it, because `LinkLandmasses` drags every unbridgeable stray inward
+after the mask is drawn and shrinks every scattered layout. So the fit pass
+wraps the whole mask stage, bites, islet filter and linker, and rebuilds scaled
+up until the landmass covers 55–85% of the grid. Five footprints are supported
+and audited (`Sizes`); 48² is the strained one, carrying constants tuned for
+more room, and the multi-piece ring and split family is what re-rolls there
+(`Strain` names them). The intended size gate is `ArrangementPool` filtered by
+`Size`, once the ladder is chosen.
 
-**The Gates were placed greedily.** Each has to out-reach every other on *both*
-axes, so the first one placed constrains the second, the second the third, and by
-the fourth there is nowhere left — with the other Gates in place the same funnel
-that showed 150 candidates per edge showed about 30, on one edge. Choosing the
-four as a **set** is the fix: each edge offers its best sixteen sites in score
-order and a depth-first search takes the first combination where every pair
-agrees. It is a search over at most 16⁴ with heavy pruning and a node budget, so
-it costs nothing measurable, and an edge with no workable candidate is left empty
-rather than failing the whole assignment.
+### Grouped lobes, and the seam between pieces
 
-**The strip had to be found rather than built.** A 3 × 5 berth that already
-agreed with itself to within three slabs left an island 14 to 20 viable cells
-across all four edges; four Gates out of that was a coincidence. It was also the
-wrong requirement in the first place — a Gate is a built structure and so is the
-ground under it. The strip is now 1 × 3 and is **levelled** once chosen, to the
-height of its innermost cell so the join to the island does not move. Gate
-placement therefore became the one pass that both reads the traversal analysis and
-changes the terrain, and `Place` returns whether it moved a slab so the analysis
-can be run again.
+A comma of `Harmony` is a chain of lobes that must fuse while the S between the
+commas is carved, and "a cutting layout carves every seam" would have shredded
+it into beads. Lobes sharing a `Lobe.Group` keep their seams; a lobe's default
+group of −1 is a piece of its own, so every earlier arrangement behaves to the
+cell as before. The strait is measured between pieces (nearest distance per
+group), not between nearest lobes: deep in an overlap both nearest lobes belong
+to one comma, and no width can fix a cut drawn in the wrong place.
 
-Shrinking the portal from 3 × 12 to a single block is the third piece. A
-three-cell portal needs three cells of footing, three of clear flight path and a
-strip three across, and every one of those is a coast that has to agree with
-itself over a wider span.
+### Bites eat coastline, never a satellite
 
-What it bought beyond the guarantee: the ground behind a Gate fell from a
-worst case of 20% of the Domain to **6%**, the mainland share rose from 33.9% to
-39.8%, and roads that can simply be walked went from 23 to 32 of about 120 —
-levelled strips join up ground that used to need a step built onto it.
+Only `Single` and `Satellites` take bites, and the guards protect the total, so
+a bite could delete an islet whole and ship the layout short. Any region with a
+cell off the largest landmass is exempt.
 
-**What still cannot be done.** A Domain whose heartland has no coast facing one of
-the four ways cannot have a Gate on that edge. On a 128² footprint this never
-happens. At 64² it happens for `ThousandIsles` — sixteen islets on a small map —
-on 2 of 176 combinations.
+### The gorge tripwire
 
-### Gate parameters are requests, and requests get re-rolled
+Rivers often run between two cliffs on purpose, and a gorge whose two rims are
+misaligned is a wall you must walk the length of. The audit measures gorge
+reaches with the exact rule the reach flood builds bridges with. It is
+structurally benign: every pass that cuts a gorge lowers a slab at a time under
+the taper, so the rims come off the same ground and rarely part by more than
+`MaxBridgeRise`, and `DeckFits` reads a deep gorge as a chasm and gives the deck
+the full span. `gorgeSealed` is in the baseline (5 as accepted) so a future pass
+that shears rims apart will shout; see the open gaps.
 
-`EntryGate`, `EntryEdge`, `ExitGates` and `ExitGate` are the only inputs set from
-**outside** the Domain — the world-tree decides which edge you arrive on and what
-kind of Gate you arrive through — so "usually" is not an answer for them.
+### Print the empty bins
 
-Three separate things were quietly not honouring them, and all three were
-symptoms of searching for each Gate in turn against a set of rules that could
-refuse:
+`Surfaces.Pick` once had a ternary with one answer, two moisture bands
+returning the same material, and an unreached cell given exactly the threshold
+value, and between them Heath was 0.0% of every island ever generated. Nothing
+broke a guarantee. What found it was printing a share per category with `NEVER`
+beside the empty ones, which the audit does for every enum the generator
+assigns. A branch that never fires looks exactly like a branch that works.
 
-- **The Exit ladder stopped too early.** The tier ladder was the outer loop and
-  broke at the first rung that produced *any* Exit, so a Domain asked for three
-  got one whenever the strict rung only allowed one. Median Exits per island: 1.
-- **A named kind was traded at the first refusal.** `ExitGate = Land` tried Land
-  then immediately Hanging *at the same rung*, rather than holding Land down the
-  whole ladder.
-- **`EntryEdge` was not in `Unmet`.** The kind was checked, the edge was not, so
-  the last-resort fallbacks fired and nothing objected.
+### The effective surface, and the fixed lapse
 
-The first two were fixed in the ladder and took the Entry edge to 100% and the
-kind to 93–100%. The **rewrite** removed the question instead: the four sites are
-chosen before any of them has a role, so a named edge simply *is* the Entry, a
-named kind is applied to it, and `ExitGates` is a subtraction. All four checks
-stayed in `Unmet`, and nothing now reaches them — measured over sixteen seeds per
-request, every edge, kind and count is delivered on **100%** of seeds at a mean of
-**1.00 attempts**. The lab's readout still says `COAST WOULD NOT` where a Domain
-genuinely cannot oblige, which is now only a small island with a missing coast.
+Anchors and habitat describe what a place looks like, so every geometric
+question is asked of `EffectiveLevel`, the water where a column is flooded:
+against the bed, every bank of a navigable river was a "cliff". Warmth uses a
+fixed lapse per slab anchored to the tallest a mountain can stand at the
+footprint, because normalising per island put snow on the top fifth of every
+island, a flat one's highest hill included. `FieldMaps` writes the axes as PNGs
+so both can be looked at headless.
 
-### The mainland is where you land
+### A beach is one slab
 
-`Mainland` and `Heartland` used to be whichever area was largest. That answers a
-different question, and it could name a mainland on the far side of a strait from
-the only way in — making every number derived from it a number about somewhere
-else. They are re-anchored on the Entry Gate's apron once the Gates are placed.
+The outer two cells of a gentle coast step down one slab, which is free-step
+ground. A graduated two-slab beach spends the whole tolerance a landing strip
+has, and hanging Gates fell to a quarter when it was tried. A beach is the
+normal coast rather than a special one, so it is a weak anchor; berth placement
+does not read it.
+
+### Four hanging Gates, chosen as a set
+
+Each Gate has to out-reach every other on both axes, so placing them one at a
+time has the first move the line the next must beat until there is nowhere
+left; the strip tolerance, the separation and the scoring were each suspected
+and each measured to be innocent. The fix is structural: every edge offers its
+best sixteen sites in score order and a depth-first search takes the first
+combination where every pair agrees, leaving an edge empty rather than failing
+the set. Two more things made the maximum request routine: the strip is built,
+not found (levelled to its innermost cell once chosen, so the join to the island
+does not move), and the portal is a single block rather than three cells and
+twelve slabs, so a coast has to agree with itself over one cell rather than
+three. What still cannot be done is a Gate on an edge the heartland has no coast
+facing; only a very small quilt manages that.
+
+### Gate parameters are hard requirements
+
+`EntryGate`, `EntryEdge`, `ExitGates` and `ExitGate` are the only inputs set
+from outside the Domain: the world-tree decides which edge you arrive on and
+through what. Searching for each Gate in turn against rules that could refuse
+kept trading them away; choosing the four sites before any has a role makes a
+named edge simply the Entry and a named kind something applied to it, and all
+four stay checked in `Unmet` so a Domain that genuinely cannot oblige is
+re-rolled rather than shrugged at. `Mainland` and `Heartland` are re-anchored on
+the Entry's apron, since the largest area can sit across a strait from the only
+way in.
 
 ---
 
@@ -753,248 +248,135 @@ else. They are re-anchored on the Entry Gate's apron once the Gates are placed.
 
 | | |
 |---|---|
-| **Ramps** | A generated ramp cut into a cliff. It read as a construction rather than as terrain, and one ramp per cliff made every escarpment the same. Replaced by **passes**: a saddle where one plateau sags to meet the next, which is a landform rather than a fixture. |
-| **Lake chains** | Neighbouring patches each holding water at slightly different levels, joined by notched channels. It spread one sheet of water over more of the island and read as flooding. Now a patch beside one that holds water stays dry. Provisional — "not for now", not "wrong". |
-| **`Fragmentation`, a float** | One number asked to mean both "how broken up" and "into how many pieces" and delivered neither. Replaced by named `IslandArrangement`s. |
-| **Damping the coastline noise on multi-blob layouts** | It stopped `Twins` fusing and made every multi-island arrangement a field of discs. Replaced by **carving the strait** along the seam, so the layout decides where the land is and the noise decides that no coast is a circle. |
-| **Craters, and the `Volcanic` character** | A ring wall round a sunken floor, breached on one side. It came out either messy or indistinguishable from a mesa-and-basin pair, and it was 16% of everything the player could not reach. Binned 2026-08-31; the sculpt mechanism it used is the same one the others use, so it can come back cheaply if the biome layer wants a caldera. |
-| **A two-cell-wide fall sheet** | A navigable river's fall drawn as one sheet of width 2, centred on one cell — so half of it straddled the bank and looked like water pouring out of solid rock. Both cells of the pair emit their own one-cell sheet instead. |
-| **Overhangs anywhere with an 8-slab face** | Karst towers, basin rims and sinkhole walls all qualify on height, and a lip off a two-cell tower reads as a hole punched through it. Undercuts now need **backing**. |
-| **Streams fordable everywhere** | Which is the same as not being there: a watercourse that costs nothing to cross at any point on its length is a line drawn on the map. It also made roads walk *down* streams, since the bed was exactly as cheap as the bank. Now the crossing is a place. |
-| **A berth wherever the domino fits** | Three thousand per audit, nearly all on water you could walk round. Berths are now pruned against a ferry-less reach flood: 97 survive, on 2 of 60 islands. |
-| **A pad bigger than the Domain** | `PlaceLobes` kept every blob inside the footprint by clamping its centre to `[r + 3, n - 1 - r - 3]`, which is an empty range once a lobe is wider than half the map — so any `Size` small enough for the auto radius to fill it **crashed outright** (`Math.Clamp` throws when its minimum passes its maximum). At 64 cells the radius is 28.8, the pad 31.8 and the room 31.2. The pad is now capped at half the footprint, which puts an over-large lobe in the middle, where it belongs. Found by testing the Gate guarantee at a smaller `Size`. |
-| **Arches over open aether** | An arch out into the void puts rock in a column the land mask says is empty — no region, no landform, no keel — and everything that reads "has land ⇒ has a region" is then wrong about it. (It crashed the audit.) Arches span gorges and channels, which is the commoner form anyway. |
-| **`Spiral`** | A thin arm wound inward over two and a half turns. Keeping it one landmass took a coil thick enough and links dense enough that it came out as a `Rosette` with more steps — and cost twice the generation time doing it. Binned 2026-08-31. |
-| **`FluidKind`** | A Domain-wide `Water` / `Lava` / `Essence`. What shipped was two `if` statements (no fords, no ferries) and a dropdown with nothing visible behind it; the whole idea is the *look*, and there was no renderer for it. Removed 2026-08-31, to come back with the thing that makes it mean something. |
-| **Dropping the Gate edge band outright** | The relaxed placement rung used to remove the "stay near your own edge" test entirely rather than widening it. A Gate then only had to out-reach the other Gates, which put up to **73%** of the Domain behind the player as they arrived — at which point "the south Gate" names nothing. The band now widens to 45% and never disappears. |
-| **A four-cell floor under Gate separation** | The last placement rung dropped the distance two Gates must keep to `Gate.Width + 1`, which is not a relaxation of "keep your distance" but a repeal of it. The floor is now a third of the footprint. |
+| **Ramps** | A ramp cut into a cliff read as a fixture, and one per cliff made every escarpment the same. Replaced by passes: a saddle where one plateau sags to meet the next. |
+| **Lake chains** | Neighbouring patches holding water at slightly different levels read as flooding. A patch beside one that holds water stays dry. Provisional: "not for now", not "wrong". |
+| **`Fragmentation`, a float** | One number asked to mean both "how broken up" and "into how many pieces". Replaced by named `IslandArrangement`s. |
+| **Damping the coastline noise on multi-blob layouts** | Made every multi-island arrangement a field of discs. Replaced by carving the strait along the seam, so the layout decides where the land is and the noise decides no coast is a circle. |
+| **Craters and the `Volcanic` character** | Either messy or indistinguishable from a mesa-and-basin pair, and a large share of unreachable ground. The sculpt mechanism is the same one the others use, so a caldera can come back if the biome layer wants one. |
+| **A two-cell-wide fall sheet** | Centred on one cell, half of it poured out of solid rock. Each cell of a navigable pair emits its own sheet. |
+| **Overhangs anywhere with an 8-slab face** | A lip off a two-cell karst tower reads as a hole punched through it. Undercuts need backing. |
+| **Streams fordable everywhere** | A watercourse that costs nothing to cross anywhere is a line on the map, and roads walked down the bed. The crossing is now a place. |
+| **A berth wherever the domino fits** | Thousands per audit, nearly all on water you could walk round. Berths are pruned against a ferry-less reach flood. |
+| **A pad bigger than the Domain** | Clamping a lobe's centre to `[r + 3, n − 1 − r − 3]` is an empty range once a lobe is wider than half the map, and `Math.Clamp` throws. The pad is capped at half the footprint. |
+| **Arches over open aether** | Rock in a column the mask says is empty breaks every "has land ⇒ has a region" assumption. Arches span gorges and channels. |
+| **`Spiral`** | Kept as one landmass it was a `Rosette` with more steps, at twice the generation time. |
+| **A Domain-wide `FluidKind`** | `Water` / `Lava` / `Essence` as one dropdown was two `if` statements with nothing visible behind them. The fluid came back per column, as `IslandData.Fluid`, with `Goo` the first thing that behaves differently. |
+| **Dropping the Gate edge band outright** | Removing "stay near your own edge" at the relaxed rung put most of the Domain behind the player as they arrived. The band widens and never disappears. |
+| **A four-cell floor under Gate separation** | Not a relaxation of "keep your distance" but a repeal of it. The floor is a third of the footprint. |
+| **Geysers as terrain** | Jets placed where the rock was; where a jet belongs is a fact about the biome. The hook stays empty. |
 
 ---
 
-## D. The audit
+## D. The audit and the checksum
 
-```bash
-godot --path . --headless --quit-after 3 scenes/dev/generation_audit.tscn
+```
+godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
+godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-`scenes/dev/generation_audit.tscn` runs the **real generator** over 60 seeds and
-measures `IslandData` directly. It re-implements nothing, so there is nothing to
-drift — the numbers in this file were originally produced by a stand-alone
-harness against substitute noise, and when the real generator was finally
-measured, several claims turned out optimistic.
+The audit runs the real generator over 60 seeds and measures `IslandData`
+directly, so it re-implements nothing and cannot drift; the numbers once quoted
+from a stand-alone harness against substitute noise turned out optimistic. Its
+opt-in sweeps are the `[Export]` flags of `GenerationAudit`, documented on the
+properties, and every flag can be given on the command line after `--`
+(`-- Knobs Portraits=<dir>`). The sweeps hold everything else at the preset and
+vary one thing, which is what makes their columns comparable; the ordinary audit
+rolls from `Auto`, where every request is trivially satisfied because nothing
+was asked for.
 
-Flags on the scene:
+**The baseline** (`docs/audit-baseline.json`) holds thirty headline numbers
+from the last accepted run and every run prints what moved. It is a diff, not a
+test: numbers are expected to move when the generator changes, and the point is
+to see them move and decide whether you meant it.
 
-| flag | |
-|---|---|
-| `Silhouettes` | an ASCII map of one island per arrangement — is a `Ring` a ring? |
-| `Waterways` | one island's water at full resolution — does a river bend? |
-| `Sculpts` | a close-up height map of each sculpted landform — is a badlands a maze or one trench? |
-| `Feasibility` | every arrangement × every character — see below |
-| `GateRequests` | ask for each Entry edge and kind, and each Exit count and kind, and report what came out — the only parameters set from outside the Domain |
-| `GateMatrix` | ask every arrangement × character for four hanging Gates — the maximum request — then check that asking for less works too. See above |
-| `Knobs` | sweep `Lakes`, `Rivers` and `Valleys` from 0 to 1 and print what each one moves. A slider that does not change the island is worse than one that is not there, and a summary at one setting cannot tell you which it is |
-| `FieldMaps` | a directory path: write the habitat vector (five panels), the anchors and the surface mapping as PNGs for the first few seeds. "31k banks" says nothing about whether the banks lie along the rivers, and a moisture field wrong by a transpose still has a plausible mean — this is how Stage 10 gets looked at headless |
-| `AcceptBaseline` | write this run's headline numbers as the new accepted answer |
+**The checksum** (`docs/checksum-baseline.txt`) hashes every field of
+`IslandData` for 440 islands across the parameter matrix. It is the bit-for-bit
+gate: a change meant to leave generation alone reports `0 of 440 islands moved`;
+a change meant to alter it re-baselines with `-- accept` and says so in its
+commit. `docs/dev-scenes.md` has both scenes in detail.
 
-`GateRequests` and `Knobs` share `SweepSeeds` (12 by default). Both hold
-everything else at the preset and vary one thing, which is what makes their
-columns comparable — the ordinary audit rolls from `Auto`, where every parameter
-is trivially satisfied because nothing was asked for.
+### What the baseline does not carry
 
-### The baseline
-
-`docs/audit-baseline.json` holds the last accepted headline numbers, and every
-run prints what moved. It is a **diff, not a test**: every number is expected to
-move when the generator changes, and the point is to see it move and decide
-whether you meant it.
-
-It exists because of a specific near-miss: when lake outflows were fixed, navigable
-river cells fell from 1,642 to 146 and it was very nearly read past.
-
-### What it currently says
+Measured on the accepted run of 2026-09-01 (60 seeds, 128²); nothing here is
+diffed automatically.
 
 | | |
 |---|---|
-| step grammar | **94.1% free**, 0.5% two-slab, 5.4% cliff, over 378k adjacent pairs |
-| two-slab steps off mountains | 643 — riverbanks and valley sides the pass is not allowed to cut |
-| cliffs between patches | plain-plain, plain-mesa, plain-basin, mesa-mesa — the pairs the rules allow |
-| rivers | 5.1k cells on 60 of 60 islands, ~1,850 navigable, ~700 falls, **0 running uphill** |
-| how a course runs | 60% straight / 40% turning |
-| lakes | ~132 on 51 of 60 (~156 distinct bodies, median 23 cells — the shapes), **0 leaks, 0 water touching the void** |
-| goo | ~530 cells on 20 of 60, **0 within a king's move of water** (geysers are an empty hook — see *The other fluid*) |
-| gorges | 70 walled reaches on 22 of 60 — 65 of 70 bridgeable; **5 sealed**, all misaligned rims, lengths 4–19 cells. This crept up from 1 while the flattened reaches and valley tilts landed (the baseline held 7 before the 2026-09-01 session ended on 5) — the tripwire is doing its job, and the number wants an owner: see the open list |
-| bounding box | **0 Gates outside it**, at 64², 96² and 128² alike |
-| ferries | 0 berths of 4,621 sites — no island in this sample has water a bridge cannot span; the machinery is intact and idle (see *The wide rivers that were not there*) |
-| surface | stone 10.5%, scree 8%, **snow 1%** (was 13% — now only where the country genuinely climbs), sand 21%, silt 7%, grass 5%, heath 17%, dust 18%, meadow 12% — none NEVER |
-| habitat | per-island means: moisture 19–125, warmth 177–241, rugged 42–161, exposure 170–243, rim distance 1–13 cells |
-| anchors | 34.5k coast (84% of it beached), 20.6k cliff brink (2.2k of them honest gorge rims), 20k cliff foot, 8.6k bank, 127 summits, 351 overhang, 363 ford, 546 gate landing |
-| overhangs | ~270 columns with a second span |
-| walk / reach | **37% mainland on foot, 95% heartland with building**, 52 of 60 islands one whole |
-| what stays out of reach | mountain and karst tower — landforms whose point is the height |
-| Gates | 1 entry and 1-3 exits on every island (median 2 exits); 0 on a shared edge, 0 off the heartland, 0 not outermost on their own axis |
-| Gate landings | every one exactly 3 cells and dead level — **0 short or sloped** |
-| Gates asked for | every edge, kind and count delivered on **100%** of seeds at 1.00 attempts; **four hanging Gates on 100%** of 176 arrangement x character combinations |
-| roads | one per Exit on every island, **0 exits without one**; median 1 work |
-| re-rolls | median 1 attempt, **0 seeds that never met the guarantees** |
+| surface | stone 10.5%, scree 8.0%, snow 1.0%, sand 21.3%, silt 7.4%, grass 5.1%, heath 16.8%, dust 18.3%, meadow 11.7%; nothing `NEVER` |
+| habitat, per-island means | moisture 19–125, warmth 177–241, rugged 42–161, exposure 170–243, rim distance 1–13 cells |
+| anchors | 34.5k coast (84% beached), 20.6k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 8.6k bank, 127 summits, 351 overhang, 363 ford, 546 Gate landing, 0 quay |
+| Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |
+| roads | one per Exit; median one work; roughly a third can simply be walked |
+| requests | `GateRequests` and `GateMatrix` report every edge, kind and count delivered on every seed, and four hanging Gates on every arrangement × character |
 
-### Feasibility: every arrangement against every character
+### Feasibility
 
-`Feasibility` runs every arrangement × all 8 characters. The ordinary audit rolls
-from `Auto`, so it measures the combinations the weights happen to produce — but
-a Domain's biome and world-tree position will name both, and a combination that
-takes four attempts is a bug nobody would ever see from the summary.
-
-What it found, and what was done:
-
-| combination | | |
-|---|---|---|
-| `Spiral` / anything | **removed.** First it came out as 13–21 separate islets — the per-blob coverage threshold perforates a thin arm — and the fix was a floor under `Coverage` (`Layout.Solid`) plus a coil stopping short of the centre. That got it to 1.0 masses, at the price of an arm thick enough and links dense enough that the result read as a `Rosette` with extra steps. Two names for one shape is worse than one shape, so it is gone; `Layout.Solid` stays, because `Fractal` needs it for the same reason. |
-| `ThousandIsles` / `Tablelands`, `Badlands` | **known.** 1.5 attempts and ~78% reachable — fifteen islets, some of which the linker cannot nudge into range. It is the hardest layout by design. |
-| `BrokenFractal` | **known.** 1.5 attempts; a chain of seven pieces has the same problem in miniature. |
-| everything else | 1.0 attempts, 90–99% reachable, 65–250 ms |
-
-It was also the slowest layout by a factor of two, because it placed 44–54 lobes
-and the mask evaluates every lobe against every cell — which is what a layout
-built out of a great many overlapping blobs costs.
+`Feasibility` runs every arrangement against every character. `ThousandIsles`
+and `BrokenFractal` are the hard ones (the most attempts; a piece the linker
+cannot always nudge into range); everything else runs at one attempt with most
+of the island reachable.
 
 ### Open gaps
 
 | | |
 |---|---|
-| two-slab steps at a riverbank or valley side | 830 in 378k pairs, all where the ground the pass would have to cut is a landform, a bridgehead or standing water. It rose from ~730 when valleys started working and fell back from 948 when pairs stopped sinking unevenly; the alternative is eating the landform. |
-| ~~3 crossings with banks more than 2 slabs apart~~ | **closed.** It came in with the sculpted landforms and went out with the crater cull and the beach reordering: 0 of 149. |
-| 3 gates in a corner of their own edge | The relaxed placement rungs firing where a coast will not take four Gates under the full rules. No pair is inside the separation floor any more. The alternative is a Domain with fewer Links, which is worse. |
-| ~~2 river cells running uphill in 4,578~~ | **closed** by `Settle` (descend + pair-levelling run to a fixed point) — and the last case was a mainstem pouring a drawn fall into the stream beside it, which is water falling, not climbing. 0 of 4,506. |
-| ~~3 hanging Exits delivered ~2/3 of the time~~ | **closed** by the set-wise placer and the built strip: 100% at every count, and 100% for four hanging Gates. |
-| a landmass adrift on the two most broken layouts | `BrokenFractal` and `ThousandIsles`, per the feasibility table. The Stage 11 guarantees still hold, so it is one islet of fifteen rather than a broken island. |
-| basins on a `Highlands` island | ~80% of islands, not 100% — adjacency cannot always place one beside a massif. *Accepted.* |
-| undersized patches on `ThousandIsles` / `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. *Accepted.* |
-| overhangs are not walkable | Stage 6 runs after the analysis by design. Span-as-node traversal is its own problem. |
-| feature anchors | Rethought 2026-09-01 — brinks, feet, banks, summits, all against the effective surface (see *The anchors that were banks*). What is still missing is the layer that uses them. |
-| `Halves` and `Triplets` fuse on one 128² seed in twelve | Ungrouped layouts, so not the Harmony seam bug; not chronic, and the re-roll absorbs it. Logged by the `Strain` sweep. |
-| 5 sealed gorge reaches, up from 1 | All misaligned rims (a deck fits, the banks disagree by 3+), lengths 4–19 cells. Crept up as the flattened reaches and valley tilts landed. The Stage 11 reach guarantees still hold on every island, so nothing is cut off — but a 19-cell reach with no deck is a real detour, and a pass that re-levels the two rims at the least-misaligned cell of a sealed reach would close it properly. Not attempted this session: it is the same class of surgery as `LevelBridgeheads`, and worth doing deliberately. |
+| two-slab steps at a riverbank or valley side | `twoSlabOffMountain` in the baseline: all where the ground the pass would have to cut is a landform, a bridgehead or standing water. The alternative is eating the landform. |
+| a landmass adrift on the two most broken layouts | `BrokenFractal` and `ThousandIsles`. The guarantees still hold; it is one islet of thirty. |
+| basins on a `Highlands` island | About nine islands in ten, not all: adjacency cannot always place one beside a massif. Accepted. |
+| undersized patches on `ThousandIsles` and `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. Accepted. |
+| overhangs are not walkable | By design; span-as-node traversal is its own problem (§E). |
+| `Halves` and `Triplets` fuse on one 128² seed in twelve | Ungrouped layouts, so not the seam bug; the re-roll absorbs it. Logged by `Strain`. |
+| 5 sealed gorge reaches | Misaligned rims, 4–19 cells, on which a deck fits but the banks disagree by three or more. Nothing is cut off, but a 19-cell reach with no deck is a real detour. A pass that re-levels the two rims at the least-misaligned cell would close it; it is the same class of surgery as `LevelBridgeheads` and worth doing deliberately. |
 
 ---
 
 ## E. Ideas not taken yet
 
-Logged rather than done, so the reasoning survives the conversation it came out
-of. The numbered ones that have since been **done** are marked.
-
-1. ~~A biome / material layer~~ — **done twice**: first as `Surfaces.Classify`
-   at the ground level, then rebuilt (2026-09-01) as the **habitat vector**
-   (`Habitat.cs` — moisture, warmth, ruggedness, exposure, rim distance) with
-   `Material` a provisional reading of it. The *living* layer above — what
-   grows where — is the next branch, and the vector is its input.
-2. **Settlement placement.** Everything it needs now exists. It is the first
-   thing that would expose whether the terrain rules produce good *play* rather
-   than good pictures.
-3. ~~Feature anchors~~ — **done**, and **rethought** 2026-09-01: `CoastCells`,
-   `CliffCells` (brinks), `CliffFootCells`, `BankCells`, `Summits`,
-   `Overhangs`, all measured against the effective surface.
-4. ~~Beaches~~ — **done**.
-5. **A real cost model for works.** Every work costs 1 point today, which makes
-   `Passage.Cost` mean "how many projects" — right as a first answer, but a
-   six-cell bridge and a one-cell step are not the same project. Pricing by span,
-   climb and ferry distance turns `Cost` into a budget, which the settlement
-   layer will want the moment it has money.
-6. ~~Valleys~~ — **done**, with a `Valleys` knob, because at any strength it
-   starts eating the landform patchwork.
-7. **The world-tree.** `EntryEdge` and `EntryGate` exist precisely so a Domain
-   can be generated to match the one that sent you. What is missing is the layer
-   above: which Domains exist, their characters and arrangements, and how
-   difficulty moves with distance from home. The next *system*, not the next
-   feature.
-8. ~~Naming~~ — **done**, as scaffolding for the culture layer to replace.
-9. ~~An audit baseline~~ — **done**.
-10. ~~Screenshots from the lab~~ — **done**: **F2** writes a PNG.
-
-Still open, added since:
-
-11. **Span-aware pathing**, which is what would make an overhang or an arch
-    walkable, and what a natural-bridge shortcut would need to matter.
-12. **Moving a crossing that cannot be levelled**, per the open gaps above.
-13. **Fjords.** Long narrow inlets cut into one landmass along a grain — the one
-    obvious real-world coastline the arrangements do not produce. It is a mask
-    operation (radial or parallel cuts inward from the rim) rather than a
-    landform, so it belongs with Stage 1.
-14. **Size-gating the arrangement pool.** The `Strain` sweep names the layouts
-    that fight a 48² box — `Halves`, `BrokenArc`, `BrokenRing`, `Atoll`,
-    `Archipelago`, `BrokenFractal`, `Reef` — and the fix is one filter on
-    `ArrangementPool` by `Size`, to be wired when Maxim picks the ladder. See
-    *Where the small footprints pinch*.
-15. **Plunge pools.** When the falls learned to pour every plausible way, the
-    sheets were restricted to landing on existing water so nothing floods — but
-    the other road was to *dig* the landing: a small pool under a fall onto dry
-    ground, fed by it, maybe spilling on. Maxim called a lake fed by waterfalls
-    an aesthetically pleasant idea, and it is; what it costs is that a pool is
-    standing water on ground the traversal already counted, so it wants the same
-    guards as a lake (bridgeheads, landing strips, roads) and a re-run of the
-    analysis. Worth doing when water gets its content pass.
+1. **Settlement placement.** Everything it needs exists: shelves, berths, roads,
+   Gate aprons. It is the first thing that would show whether the terrain rules
+   make good play rather than good pictures.
+2. **A real cost model for works.** Every work costs one point today, so
+   `Passage.Cost` means "how many projects". Pricing by span, climb and ferry
+   distance turns it into a budget the settlement layer will want.
+3. **The world-tree.** `EntryEdge` and `EntryGate` exist so a Domain can be
+   generated to match the one that sent you. Missing is the layer above: which
+   Domains exist, their characters and arrangements, and how difficulty moves
+   with distance from home. The next system, not the next feature.
+4. **Span-aware pathing**, which is what would make an overhang or an arch
+   walkable, and what a natural-bridge shortcut needs to matter.
+5. **Re-levelling a sealed gorge**, per the open gaps.
+6. **Fjords.** Long narrow inlets cut into one landmass along a grain, the one
+   obvious coastline the arrangements do not produce. A mask operation, so it
+   belongs with `Footprint`.
+7. **Size-gating the arrangement pool.** One filter on `ArrangementPool` by
+   `Size`, to be wired when the ladder is chosen; `Strain` names the layouts.
+8. **Plunge pools.** A small pool dug under a fall onto dry ground, fed by it.
+   Standing water on ground the traversal already counted, so it wants the same
+   guards as a lake and a re-run of the analysis. For water's content pass.
 
 ---
 
-## F. Otherworldly terrain — thoughts
+## F. Otherworldly terrain
 
-Asked for, and worth writing down before any of it is built.
+Most of it is the biome layer's job: a Domain feels alien because of what is on
+it, the light, what grows, what the rock and the water are made of, far more
+than because of its geometry. The cheap wins are materials, features and light.
+What terrain itself can do:
 
-**The honest answer is that most of it is the biome layer's job.** A Domain feels
-alien because of what is *on* it — the colour of the light, what grows, what the
-rock is, what the water is made of — far more than because of its geometry. Two
-Domains with identical terrain and different `Material` palettes read as two
-different worlds; two Domains with the same palette and different terrain read as
-the same world twice. So the cheap wins are all in materials, features and light,
-and they should not be spent on terrain rules.
-
-That said, terrain can do things Earth does not, and the model already supports
-more of it than is being used:
-
-**Already possible, not yet used.**
-
-- **Non-water fluids.** `FluidKind` *was* in and parametrised — `Lava` and
-  `Essence` turned every watercourse from a road into a wall, which is a large
-  change to how a Domain plays. It has been **removed**, because what it actually
-  shipped was two `if` statements (no fords, no ferries) and a dropdown with no
-  visible effect: the whole idea is the *look* — glow, and a fluid not drawn like
-  water — and none of that existed. Better to bring it back with the renderer
-  that makes it mean something than to leave a control that does nothing. The two
-  lines it gated are the only thing to restore; see the commit that removed it.
-- **Arches and overhangs** already produce geometry no height field can, and at
-  the moment they are decoration. Made walkable, a natural bridge is a free
-  crossing you did not build, which is a very "somewhere else" thing to find.
-- **The keel.** Nobody stands on the underside, and it is the most alien surface
-  on the island. Inverted features — hanging spires, roots, stalactite ridges —
-  cost nothing in gameplay terms because nothing walks there.
-
-**Worth building, in rough order of value per unit of work.**
-
-- **Aether-carved terrain.** The one thing this setting has that Earth does not is
-  that the island *flies*. Wind and aether-scour would come from a fixed
-  direction per Domain, so the windward rim is bare, undercut and streaked, and
-  the lee is where soil and forest survive. It reuses the dune grain (already
-  implemented, already directional) and the overhang machinery, and it makes
-  "which way is the Domain moving" a visible fact.
-- **Columnar forests.** Not karst — karst towers are scenery. A *forest* of
-  narrow columns is a field of one-cell pillars close enough together that the
-  gaps between them are the country: you walk the floor and the sky is broken
-  into shafts. Mechanically it is karst with a much lower threshold and a much
-  smaller tower footprint; visually it is completely different, and it makes a
-  Domain that is genuinely hard to cross without being hard to *reach*.
-- **Floating fragments.** Small masses hanging *above* the main island, tethered
-  by nothing. The span model represents them for free (a column with a high span
-  and no keel — which is exactly the case the arch work found is dangerous, so it
-  would need the region and landform planes filled in for those columns). Reached
-  by air only, which gives the aethership something to do that a bridge cannot.
-- **Inverted watercourses.** Water that falls *upward* off the rim, or a lake
-  whose surface is the underside of a slab. Cheap to render, deeply strange, and
-  it would want its own traversal answer.
-- **A Domain with no down.** Gravity is a per-Domain constant in the design
-  already. A Domain where it points along an axis, or toward the island's core,
-  is a large piece of engine work and probably a late-game set-piece rather than
-  a generation option.
-
-**What I would not do:** more Earth landforms for their own sake. There are ten
-now, and the honest constraint is that a landform has to say something in the
-grammar — walkable, climbable, a wall, a floor — or it is a texture, and textures
-belong to the material layer.
+- **Already possible, not yet used:** a fluid that is not water (`Fluid` is per
+  column; goo is the first; a glowing one wants a renderer first); arches and
+  overhangs made walkable, so a natural bridge is a crossing you did not build;
+  the keel, the most alien surface on the island and one nothing walks on, so
+  hanging spires and roots cost nothing in play.
+- **Worth building, in order of value per unit of work:** aether-carved terrain
+  (scour from the wind direction the dune grain already gives, so the windward
+  rim is bare and undercut and the lee is where soil survives); columnar forests
+  (karst with a far lower threshold and one-cell towers, so the gaps are the
+  country); floating fragments above the main island, reached by air only (the
+  span model represents them, but their columns need region and landform
+  planes, which is exactly what the arch work found dangerous); inverted
+  watercourses; and, as a late set-piece rather than an option, a Domain whose
+  gravity points elsewhere.
+- **Not worth doing:** more Earth landforms for their own sake. A landform has
+  to say something in the grammar, walkable, climbable, a wall, a floor, or it
+  is a texture, and textures belong to the material layer.

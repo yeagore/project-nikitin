@@ -1,18 +1,16 @@
 # Project Nikitin
 
 A single-player economic/exploration strategy game built in **Godot 4.7**. The
-player is a merchant-pioneer running a trading company across the **Ecumene** — a
+player is a merchant-pioneer running a trading company across the **Ecumene**, a
 tree of floating-island worlds (**Domains**) connected by **Gates**. Think Anno /
 early Paradox economy sim, fantasy setting, procedurally generated worlds, an
 in-fiction Age of Exploration driven by opening links between Domains.
 
-**Documentation split:** the **Notion wiki is the general design overview**
-(premise, concepts, glossary, decisions) — see **Design source of truth** below.
-**Technical detail and specs live in this repo** — this file for orientation,
-`docs/*.md` for longer specs. Write technical write-ups locally, not in Notion.
-Much of the wiki is still stubs; when a task needs a design fact that isn't
-written down, ask rather than invent — and offer to log the answer in the Notion
-Decision Log.
+**Documentation split:** the **Notion wiki is the design overview** (premise,
+concepts, glossary, decisions); see **Design source of truth** below. **Technical
+detail lives in this repo**: this file for orientation, `docs/*.md` for specs.
+When a task needs a design fact that is not written down, ask rather than
+invent, and offer to log the answer in the Notion Decision Log.
 
 ---
 
@@ -20,345 +18,119 @@ Decision Log.
 
 | | |
 |---|---|
-| Engine | Godot **4.7**, Forward+ renderer |
-| Graphics API | Direct3D 12 (`rendering_device/driver.windows="d3d12"`) |
-| Physics | **Jolt** (`3d/physics_engine="Jolt Physics"`) |
-| Scripting | **C#** (Godot .NET). `Project Nikitin.csproj` uses `Godot.NET.Sdk/4.7.0`, `net8.0`, nullable enabled, root namespace `ProjectNikitin`. `Project Nikitin.sln` is committed for IDE tooling. Requires the .NET-enabled ("Mono") build of the Godot editor. |
-| Editor tooling | VS Code (per the Notion task list) |
+| Engine | Godot **4.7**, Forward+ renderer, Direct3D 12, **Jolt** physics |
+| Scripting | **C#** (Godot .NET). `Project Nikitin.csproj` uses `Godot.NET.Sdk/4.7.2`, `net8.0`, nullable enabled, root namespace `ProjectNikitin`. Needs the .NET ("Mono") build of the editor. |
 | Main scene | `res://scenes/main/main.tscn` |
-| Platform | Windows 11. Shell is PowerShell; a Bash tool is also available. |
+| Platform | Windows. Shell is PowerShell; a Bash tool is also available. |
 
-`.godot/` is generated (import cache, shader cache) and git-ignored — never edit
-or commit it.
+`.godot/` is generated and git-ignored; never edit or commit it. `*.uid`
+sidecars are tracked.
 
 ### Building & running
 
-The C# side builds standalone: `dotnet build "Project Nikitin.csproj"`. The SDK
-is **10.0.400**, which builds the project's `net8.0` target fine; the
-`Godot.NET.Sdk` NuGet restores from nuget.org. Do this after editing any `.cs` to
-catch compile errors without the editor.
-
-**Godot lives on the D: drive, not on `PATH`:**
+The C# side builds standalone with `dotnet build "Project Nikitin.csproj"`; do
+this after editing any `.cs`. Godot lives on the D: drive, off `PATH`:
 
 ```
-D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64.exe
 D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe
 ```
 
-Use the `_console` variant from a shell — it writes to stdout. Quote the path.
-**It runs headless**, so scenes can be executed and their `GD.Print` output read
-without a window:
+It runs headless, so the dev scenes can be executed from a shell and their
+output read without a window. **`docs/dev-scenes.md`** is the manual for the
+three of them: the island lab (F6 in the editor), the audit, and the checksum.
+The two commands that matter after touching the generator:
 
 ```
-godot --path . --editor                              # open the project (also builds C#)
-godot --path . --headless --build-solutions --quit   # build C# + import, no window
-godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 440 islands moved?
+godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 ```
 
-Two gotchas: headless Godot often does **not** exit on `--quit-after`, so run it
-with a timeout and kill it rather than blocking; and this machine's locale prints
-decimals with a comma (`1,02`), which breaks naive `grep`/`Select-String` patterns
-looking for `\.`.
-
-Headless gives no rendering — numbers can be verified this way, **appearance
-cannot**. Anything about how terrain *looks* still needs a human at the editor.
+Run both under a timeout (headless Godot does not always exit), and note this
+machine prints decimals with a comma.
 
 ---
 
 ## Spatial model (from Notion → "The Ecumene")
 
-This is the part that governs terrain, generation, and rendering code.
+- A **Domain** is a 3D landmass or archipelago of terrain units suspended in
+  aether: flying islands, coarse scale (one unit's top face is an orchard or a
+  housing compound). Gravity points −Y. Each Domain sits in an invisible bounding
+  cube that keeps vessels in but does not block Gate travel.
+- The terrain unit is a **slab**: a square cell 1 wide and **1/4 as tall**
+  (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The
+  ratio is decided; the Notion wiki still says a tentative "8?".
+- **Traversal:** a one-slab step (0.25 u) is free; a face of two or more slabs
+  is an obstacle needing infrastructure. Terrain generated under a one-slab
+  slope limit is walkable by construction; every cliff is one some rule put there.
+- **Five supported footprints: 48², 64², 72², 96², 128²** (128² is the stress
+  target). Altitude is bounded by the same number in slabs, so the bounding
+  cube is a real shape, and the landmass takes 55–85% of the grid's extent.
+  30–40 Domains per game; up to four side Links per Domain, one Gate per edge.
+- **Terrain is stored per column**, not as a voxel array: each `(x, z)` holds a
+  short list of `Span(bottom, top)` solid runs. The air gap between two spans is
+  an overhang or arch; branching caves are not supported. Never one node per
+  slab: a 128² island is tens of thousands of columns, which is why the columnar
+  model and a batched mesher exist.
+- **Biome features** (forests, herds, coral, vines) are a separate layer that
+  sits on, beside or under slab stacks. It does not exist yet.
 
-- A **Domain** is a 3D landmass (or archipelago) of terrain units, magically
-  suspended in aether. Visually: flying islands, like Skyblock in Minecraft, but
-  the scale is coarser — **one unit's top face ≈ an orchard or a housing
-  compound**, not a person.
-- The terrain unit is a **slab**: a square cell **1 wide/long and 1/4 as tall**
-  (`SLAB_HEIGHT = CELL_SIZE / 4`). The 1:4 ratio is decided (the Notion wiki says
-  a tentative "8?"); it lets terrain express hills and gentle grades in 0.25-unit
-  steps instead of only sheer cliffs. Not yet reflected in Notion.
-- **Traversal:** a **one-slab** step (0.25 u) is free; a face of two or more
-  slabs is an obstacle needing infrastructure. So a noise surface that rises ≤1
-  slab per cell is walkable everywhere; cliffs form at coastlines and at terrace
-  faces.
-- **Gravity** always points down (−Y) by default.
-- Each Domain sits inside an **invisible bounding cube** that keeps vessels from
-  drifting off; it does not block Gate travel.
-- **Biome features** (forests, herds, coral/essencercoral growths, vines, fungal
-  mats) are structures that sit *on top of, on the sides of, or underneath* slab
-  stacks. They are a separate layer from the slabs themselves.
-- Domain size: **five supported footprints — 48², 64², 72², 96², 128²** — two
-  candidate ladders (64/96/128 and 48/72/96) overlaid until Maxim picks one
-  (2026-09-01; the Notion "Ecumene" page still says 16³–64³ — decision not yet
-  logged). The roster lives in `IslandParams.SupportedSizes`; the lab picks
-  from a dropdown, and the audit's `Sizes` sweep runs the guarantee set at all
-  five; 128² stays the stress target. **Altitude is bounded by the same number
-  in slabs** (`BoundAltitude`), so the bounding cube is a real shape, and the
-  landmass must take **55–85% of the grid's extent** (the fit pass). 30–40
-  Domains per game, laid out on a plane by their position
-  in the world-tree (a Domain linked "north" is found by scrolling north). Up to
-  4 side Links per Domain now (maybe 6 — incl. top/bottom — later).
-- **Terrain is stored per column, not as a 3D voxel array.** Each `(x,z)` holds a
-  short list of `Span(bottom, top)` solid runs, bounds as **slab indices**; the
-  air gap between two spans is an overhang / arch. Whole island resident, no
-  per-slab storage. Overhangs and arches are supported; branching caves/tunnels
-  are not. See `docs/island-generation.md`.
-- Performance: per-node-per-slab is impossible (a 128² island is tens of
-  thousands of columns, each many slabs deep), which is why the columnar model +
-  a batched mesher exist. Treat a full 128² footprint as the stress target.
-
-### Code conventions derived from the above
-
-These are set here so every session stays consistent. Change them in one place.
+### Code conventions
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `CELL_SIZE` | `1.0` | X/Z size of one cell, in Godot units (metres). In fiction one cell is ~an orchard. |
-| `SLAB_HEIGHT` | `0.25` | Y size of one slab = `CELL_SIZE / 4`. Terrain Y is an integer slab index. |
-| Grid → world | `Vector3(gx * CELL_SIZE, gy * SLAB_HEIGHT, gz * CELL_SIZE)` | `gx, gy, gz` integers; `gy` is a slab index. |
+| `Terrain.CellSize` | `1.0` | X/Z size of one cell, in metres. |
+| `Terrain.SlabHeight` | `0.25` | Y size of one slab. |
+| Grid → world | `Vector3(gx * CellSize, gy * SlabHeight, gz * CellSize)` | `gy` is a slab index. |
 
-Defined in code as `ProjectNikitin.Generation.Terrain.CellSize` / `.SlabHeight`.
+Godot axes: **Y up**, right-handed, cameras look down −Z, 1 unit = 1 metre.
 
-Godot axis conventions (unchanged): **Y up**, right-handed, cameras look down
-**−Z**, `1 unit = 1 metre`.
+**`.tscn` `Transform3D` gotcha:** the text form serialises the basis row-major,
+the transpose of the constructor. Do not hand-author rotated bases; use
+translation-only transforms and orient cameras and lights in code (`LookAt`).
 
-**`.tscn` `Transform3D` gotcha:** the text form serializes the basis
-**row-major** — the transpose of the `Transform3D(xAxis, yAxis, zAxis, origin)`
-constructor. Do not hand-author rotated bases into scene files; use identity
-(translation-only) transforms and orient cameras/lights in code (`LookAt`) or in
-the editor. `scripts/CameraRig.cs` aims itself with `LookAt` for this reason.
+---
 
-### Rendering an island (the current epic)
+## Island generation
 
-Full spec: **`docs/island-generation.md`** — the model, the pipeline in the order
-it runs, the parameters, the rendering handoff. The reasoning, the things tried
-and removed, the audit numbers and the ideas not yet taken are in
-**`docs/island-generation-appendix.md`**. Being built on the `island-generation`
-branch.
+Full spec: **`docs/island-generation.md`**. Reasoning, things tried and removed,
+the audit and the ideas not taken: **`docs/island-generation-appendix.md`**.
 
-Generation is a pure function `Generate(seed, IslandParams)` producing the
-columnar `IslandData` (Y in slab indices); a separate chunked mesher will turn
-that into per-chunk `ArrayMesh` + trimesh colliders. **Never one node per slab.**
+`IslandGenerator.Generate(seed, IslandParams)` is a pure function producing the
+columnar `IslandData`; it re-rolls (from a derived seed) a Domain that comes out
+unplayable. `IslandGenerator` is the orchestrator; each stage is a static class
+under `scripts/generation/`, in the order they run:
 
-**The free step is the whole grammar.** A one-slab step is free and two or more
-needs building, so terrain generated under a one-slab slope limit is walkable by
-construction and every cliff is one some rule put there on purpose. The island is
-a blanket of **landform patches** — a warped Voronoi, each patch with a
-`LandformType` and a rung on a plateau ladder — not a quantised height field,
-which makes step sizes an accident of the gradient and contours into rings.
+| Stage | Class | What it settles |
+|---|---|---|
+| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid. |
+| Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
+| Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
+| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
+| Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords, falls. |
+| Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
+| Traversal | `Traversal` | Read-back: walk areas, reach areas (once built), water bodies, ferry berths, shelves. |
+| Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
+| Roads | `Passages` | The least-works road from the Entry to each Exit. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The five-byte habitat vector, the feature anchors and a provisional material per column, names. |
+| Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
-**Ten landforms.** Six are relief under a slope limit: `Plain`, `Hills`,
-`Mountain`, `Mesa`, `Basin`, `Dunes`. Four are **sculpted** — cut into a surface
-the limiter has already settled, then exempted from it, which is how they carry
-cliffs *inside* a patch: `Badlands` (flat fingers, a maze of gullies), `Karst` (a
-floor you walk with towers you cannot), `Massif` (concentric terraces climbing to
-a summit), `Sinkholes` (round pits in open ground). Nothing is sculpted on a
-patch's outer ring, so every border stays bound. `TerrainCharacter` says which an
-island is built from, **by quota**: every landform a character names is
-guaranteed to appear. A character is a *recipe*, not a list of what came out — the
-lab names the landforms an island actually got.
+Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
+`SeedHash` (two mixers, `TerrainHash` and `FeatureHash`; every salt was tuned
+against its own), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Thirty arrangements**, one shape per `IslandArrangement`: `Single`,
-`Satellites`, `Twins`, `Triplets`, `Archipelago`, `Ring`, `BrokenRing`, `Arc`,
-`BrokenArc`, `Atoll`, `ThousandIsles`, `Cross`, `TShape`, `LShape`,
-`BrokenCross`, `BrokenT`, `BrokenL`, `Fractal`, `BrokenFractal`,
-`Rosette`, `Star`, `Shards` — and the geometric set of 2026-09-01: `Square`,
-`Rhomb`, `NShape` (the letter itself), `Quarters`, `Halves`, `Harmony` (the
-yin-yang, built from **grouped** lobes whose own seams fuse while the S between
-the commas is carved), `Isthmus`, `Reef`. Blobs are placed deliberately and the
-seam where two
-meet is either left alone (they fuse) or **carved into a strait** — that one flag
-is the whole difference between `Ring` and `BrokenRing`. Crosses, Ts, Ls and
-stars are axis-aligned, so an arm points at an edge and therefore at a Gate.
-`ThousandIsles` is a **quilt** over the whole footprint — any scatter wider than
-the bridge span gets huddled back together by the linker, which is why its isles
-used to crowd the middle. The audit writes top-view **portraits** (PNGs) so a
-shape can be looked at headlessly.
-`NewArrangements` / `NewLandforms` keep the newer shapes out of **`Auto`'s pool**
-without taking them out of the code — they gate the dice and nothing else, so
-with an arrangement and a character both named by hand they do nothing at all,
-which is what the lab's panel now says under the checkbox. (`Spiral` was binned
-2026-08-31: keeping the coil continuous made it a `Rosette` with extra steps.)
+**Two regression gates.** `generation_checksum.tscn` hashes every field of
+`IslandData` for 440 islands against `docs/checksum-baseline.txt`: a change
+meant to leave generation alone must report zero moved; one meant to change it
+re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
+measured guarantees and diffs thirty headline numbers against
+`docs/audit-baseline.json`. Determinism hangs on details a refactor can break
+silently: hash salts, `Noise` seed offsets, float expression order, scan and
+neighbour order, `List.Sort` (unstable) versus `OrderBy`, and dictionary
+insertion order. When in doubt, run the checksum.
 
-**Water.** Lakes sink into a flat patch's interior with the patch's own rim as
-containment, and the shore inset wanders so a lake is not a scale copy of a
-Voronoi polygon. A big pool rolls a **shape** — single, thousand-lakes scatter,
-ring, crescent, cross, or a small tarn — every shape a subset of the approved
-pool, so fragmented islands are untouched while broad flat country comes out
-wetter and more varied. Rivers are routed by a priority flood inward from the rim, with
-**ties broken on a noise field — which is what makes them bend**. Sources are
-named: every summit, and **one outflow per lake**. A river has a bed; a stream is
-crossed **at a ford** (one every ~11 cells) and is an obstacle everywhere else; a
-navigable river is two cells wide, not fordable, earned below a course's first
-confluence, and sometimes splits round an **eyot**.
-
-**Fluids.** `IslandData.Fluid` is per column (the removed Domain-wide `FluidKind`
-dropdown came back upside down, 2026-09-01): water is the default and the only
-fluid that behaves. **Goo** — violet puddles on ~30% of islands — makes no
-rivers (the routing treats it as not-land) and **never mixes with water, even
-diagonally**; the audit checks that at zero. **Geysers were binned the same day
-they landed** (Maxim looked; they did not turn out): where a jet belongs is a
-fact about the biome, which does not exist yet. `Geyser`, `IslandData.Geysers`
-and the lab's rendering stay as the dormant hook that layer will fill. The ground sinks toward a course in tapered bands (`Valleys`) — **and
-the channel sinks with them**, one band deeper than its own bank, because a bank
-already stands one slab above the water and a valley that only lowers the ground
-beside a river comes out as a moat around it. Valleys favour the courses that
-descend through uneven country; a river crossing a plain keeps its bare incision.
-A navigable river is a **stair of pools** — dead level between falls, its two
-cells always at one level (`Settle` in `Rivers.cs`) — and water **pours every way
-it plausibly can**: off every aether edge beside a cell and toward any
-neighbouring water a fall's depth below it, never onto dry ground, so nothing new
-gets wet. Every river reaches the rim and
-pours off it, because there is no sea. Everything is water: `FluidKind` (lava,
-essence) was removed 2026-08-31 — it was two `if`s and a dropdown with nothing
-visible behind it, and the whole idea is the look.
-
-**Three kinds of works cross what you cannot walk.** A **bridge** is a level run
-of slabs spanning aether (up to `Crossings` cells), water (3), or a **chasm** —
-ground 5 slabs or more below the deck, which is how one cliff top is bridged to
-another. A **stair** climbs 8 slabs and stands on two cells that nothing else is
-built on. A **ferry** runs between two quays on one body of water; a waterfall
-cuts a body in two, and berths are pruned against a ferry-less reach flood so
-only the load-bearing ones survive.
-
-`Traversal.Analyse` reads the finished terrain back: `Walk` (on foot), `Reach`
-(once built), water bodies, ferry berths and `Shelves` (level enough to settle
-on). `GatePlacement` then puts **four hanging Gates on the Domain, one per edge**
-— the maximum — and everything else is a *subtraction* from that: an Exit the
-Domain does not need is deleted, and a Gate asked to be a land one is moved from
-the end of its flight path down onto its own landing strip. A Gate is **one
-block** (1 cell, 4 slabs), its strip is **1 × 3** running inland, and the strip is
-**levelled** rather than found level — a Gate is a built structure and so is the
-ground under it. The four are chosen as a **set** by a small backtracking search,
-because each has to out-reach every other on both axes and placing them one at a
-time paints the island into a corner.
-
-The Entry's **kind and edge are inputs**, because a Link joins two Gates and a
-Domain reached by travelling east comes out on its west side — and so are
-`ExitGates` and `ExitGate`. Since the sites are chosen before any of them has a
-role, the named edge simply *is* the Entry and the named kind is applied to it.
-Measured over 176 arrangement × character combinations: **four hanging Gates on
-100% of runs, every edge/kind/count request met on 100% of seeds at 1.00
-attempts, and every landing exactly 3 cells and dead level.** Gate placement is
-the one pass that both reads the traversal analysis and changes the terrain, so
-`Traversal.Analyse` runs again when it moved a slab.
-
-`Passages` is the payoff: the **least-infrastructure road from the Entry to each
-Exit**, walking free and every work one point. Five elevators inside fifteen
-cells is a *flight*, which marks the Domain `Rough`. `Habitat` then measures the
-**habitat vector** — five bytes per column the biome layer will read: moisture,
-warmth (a fixed lapse, so snow is for mountaintops, not for every island's top
-fifth), ruggedness, exposure to the Domain's wind, and rim distance — and
-`Surfaces` collects the feature anchors (`CoastCells`, `CliffCells` — brinks
-only, `CliffFootCells`, `BankCells`, `Summits`, `Overhangs`), everything
-measured against the **effective surface** (the water, where a column is
-flooded — measured against the bed, every river bank was a "cliff"), and maps
-the vector to a provisional `Material`; `Names` names the Domain and its parts.
-Stage 6
-overhangs and arches give some columns a second span — rendered and collidable,
-**not yet walkable**, because pathing over a two-level column wants spans as
-nodes and that is its own problem.
-
-Finally `Generate` **re-rolls an unplayable Domain**, or one built to the wrong
-specification: one Entry of the right kind *on the right edge*, at least one Exit
-and as many as `ExitGates` asked for, of the kind `ExitGate` asked for, a road to
-every Exit, a buildable shelf on the heartland, and three quarters of the land
-reachable from it.
-
-**Launching the island lab:**
-
-1. Open the project in the .NET Godot editor; build C# (hammer icon, or
-   `dotnet build "Project Nikitin.csproj"`).
-2. In the FileSystem dock open `scenes/dev/island_lab.tscn`, then press **F6**
-   ("Run Current Scene"). It is not the project's main scene, so F5 won't run it.
-3. **The control panel down the left is the interface** — dropdowns for the view,
-   arrangement, character, entry kind and edge, exit kind and crossing
-   ease; a dropdown for the size (48/64/72/96/128); sliders for hilliness, mix,
-   relief, rivers, lakes and valleys; spin
-   boxes for the plateau rungs, cliff height, region scale
-   and exit count; a
-   checkbox each for the newer shapes and every overlay. **Tab** hides it. Every
-   control is also a key, and both write the same `Params`: **N** new seed, **R**
-   rebuild, **F** frame, **C** view, **V** character, **G** arrangement, **H**
-   hilliness, **M** mix, **L** rungs, **U** new shapes, **T** entry kind, **Y**
-   crossings, **B J K O P X** the overlays, **F2** a screenshot.
-   Camera: **WASD** move, **Q/E** or middle-drag rotate, middle-drag or **up/down
-   arrows** tilt, **wheel** zoom, **Shift** faster. (Fords moved from **D** to
-   **O** — D is the camera's strafe, so the two fought.)
-4. Views: `height` / `landform` / `region` / `walk` (what connects on foot) /
-   `reach` (what connects once you build — red is out of reach whatever you
-   build) / `shelves` / `surface` (what the ground is made of: stone, scree, snow,
-   sand, silt, grass, meadow, heath, dust) / `anchors` (what the content layer
-   attaches to: coast, cliff brink, cliff foot, bank, overhang, beach, ford,
-   gate landing, ferry quay, summit — everything else dimmed) / and the five
-   habitat axes as ramps: `moisture`, `warmth`, `rugged`, `exposure`, `rim`.
-   Water is coloured by kind: pale a ford, mid a stream,
-   deep a navigable reach, dark a lake — and goo is violet, in every view.
-5. Overlays: **B** bridge sites, **J** the ground each Gate is served by (its
-   1 × 3 landing strip, whichever kind of Gate it is),
-   **K** ferry berths (quay and hull), **O** fords, **P** the roads between
-   the Gates (pale yellow walk; red stair, gold bridge, cyan ferry), **X** the
-   compass, each Gate's landward vector, the **prevailing wind** drawn along
-   each dune field (the ridges lie across it), and **two bounding boxes** — the
-   faint cube of the Domain (the grid, the maximal extent; nothing the
-   generator builds, Gates above all, may hang outside it, and the audit
-   checks it) and a gold box tight round the landmass itself, keel to peak,
-   waterfalls and Gates left out.
-6. The readout is at the **top right**: what the view means, then what this island
-   turned out to be — its name, arrangement, the landforms it actually got, the
-   ladder, walk and reach shares, shelves, berths, rivers, Gates, and what each
-   road out costs. `ROUGH GOING` means a road climbs five elevators in fifteen
-   cells; `COAST WOULD NOT` means a Gate you asked for is not the Gate you got.
-7. **The window is 1152 × 648 and will not stretch?** That is the editor
-   *embedding* the game, not the project — the base viewport is 1920 × 1080 and
-   the UI scales. Editor Settings → Run → Window Placement → **Game Embed Mode:
-   Disabled** runs it as its own OS window.
-
-**Where the numbers live.** `resources/island_default.tres` is the `IslandParams`
-preset, and **both** the lab and the audit load it — so the audit measures the
-island you are tuning. Edit the `.tres` in the Inspector to change it durably, or
-use the lab's own panel (or the **Remote** tab of the Scene dock) for a throwaway
-experiment that is never written to disk.
-
-CLI: `godot --path . scenes/dev/island_lab.tscn`
-
-**Checking generation without looking at it:**
-`scenes/dev/generation_audit.tscn` runs the real generator over 60 seeds headless
-and prints the measured guarantees. Run it after any change to the generator. It
-also prints **what moved since the last accepted run** against
-`docs/audit-baseline.json` — a diff, not a test; set `AcceptBaseline` to accept
-the current numbers. Thirteen opt-in flags print what a summary cannot show:
-`Silhouettes` (one island per arrangement), `Waterways` (one island's water, full
-resolution), `Sculpts` (a close-up of each sculpted landform), `Feasibility`
-(every arrangement × every character, flagging the combinations the pipeline
-finds hard), `GateRequests` (ask for each Entry edge and kind and each Exit count
-and kind, and report what came out), `GateMatrix` (ask every arrangement ×
-character for **four hanging Gates** — the maximum request — and then check the
-reductions; it also prints the funnel saying *why* a coast refuses one),
-`Knobs` (sweep `Lakes` / `Rivers` / `Valleys` from 0 to 1 and print what each one
-moves — **this is how you check a slider does anything**, and it is how the
-inverted valley pass was found), `Bulk` (land share per arrangement, thinnest
-first — how the thin half of the layouts was found and fattened), `Sizes`
-(the guarantee set at 64² / 96² / 128², which is what makes the three footprints
-supported rather than untested), `Debut` (the workup for arrangements on
-probation: the newest shapes at every footprint and against every character),
-`Strain` (every arrangement at 48²/64²/128², hardest-pressed first — where the
-re-rolls cluster, a shape is fighting its room; the shortlist for the future
-size gate) and
-`Portraits` (a directory path rather than a bool: writes top-view PNGs, two
-islands per arrangement plus the probationers at 64² — how a shape gets *looked
-at* headlessly, and how the quilt was told from the huddle) and
-`FieldMaps` (also a directory path: the habitat vector, the anchors and the
-surface mapping as PNGs for the first few seeds — how Stage 10 gets looked at,
-and how the bank-cliffs and the everywhere-snow were confirmed fixed).
-Appearance still needs a human at the editor — or **F2** in the lab.
-See `docs/island-generation-appendix.md` §D for what the audit currently says and
-which gaps are open.
-
-
-`scenes/terrain/grass_block.tscn` was reshaped to the 1×0.25×1 slab (and
-`main.tscn`'s camera pivot dropped to 0.125) on 2026-09-01 — the block detour is
-closed.
+Newer content ships behind a toggle that takes it out of `Auto`'s dice without
+taking it out of the code (`NewArrangements`, `NewLandforms`).
 
 ---
 
@@ -366,196 +138,138 @@ closed.
 
 ```
 project.godot                  Engine config. run/main_scene points at main.tscn.
-Project Nikitin.csproj / .sln   .NET project (Godot.NET.Sdk 4.7.0, net8.0).
-icon.svg                       Default project icon (placeholder).
+Project Nikitin.csproj / .sln   .NET project (Godot.NET.Sdk 4.7.2, net8.0).
 scenes/
-  main/main.tscn               Entry scene: WorldEnvironment + sun + camera rig + one block.
-  terrain/grass_block.tscn     Prototype grass-topped terrain block.
-scripts/
-  CameraRig.cs                  Strategy camera: pan / yaw / wheel-zoom, LookAt-aimed.
-  generation/                   Namespace ProjectNikitin.Generation
-    Terrain.cs                  CellSize / SlabHeight constants.
-    Span.cs, IslandData.cs      Per-column span-list terrain model (+ water, regions).
-    IslandParams.cs             [GlobalClass] generator inputs.
-    LandformType.cs             Plain / Hills / Mountain / Mesa / Basin / Badlands / Karst /
-                                Massif / Dunes / Sinkholes.
-    TerrainCharacter.cs         Which landforms an island is built from.
-    ReliefStyle.cs              Where the high ground sits (internal, per character).
-    Noise.cs, FieldOps.cs       FastNoiseLite wrapper + field helpers.
-    IslandGenerator.cs          Generate(seed, params) — mask, patches, relief, lakes, keel, re-roll.
-    IslandArrangement.cs        The thirty named layouts.
-    Traversal.cs                Stage 5: walk areas, reach areas, water bodies, ferry
-                                berths, buildable shelves.
-    BridgeEase.cs               Easy / Medium / Hard — cells one bridge spans.
-    Crossing.cs                 A bridge site: two banks, a deck level, a span.
-    Ferry.cs                    A ferry berth: a quay, its water, the body it reaches.
-    Habitat.cs                  The habitat vector: moisture, warmth, ruggedness,
-                                exposure, rim distance — what the biome layer reads.
-    Surfaces.cs                 The feature anchors, and the provisional materials.
-    Names.cs                    Names for the Domain, its districts and its water.
-    Rivers.cs                   Drainage routing, channels, banks, eyots, waterfalls.
-    Fall.cs                     One waterfall; the off-rim ones are the silhouette.
-    FluidKind.cs                What a body of standing fluid is (water, goo).
-    Geyser.cs                   One jet of a geyser field.
-    Gate.cs / GatePlacement.cs  Where the Links come out.
-    Passage.cs                  The least-works road from the Entry to each Exit, and
-                                the works — stair, bridge, ferry — along it.
-    Overhangs.cs                Undercut lips and arches — the only stage that gives
-                                a column two spans.
-  dev/IslandLab.cs              Runtime harness for scenes/dev/island_lab.tscn.
-  dev/GenerationAudit.cs        Headless audit of the measured guarantees.
-resources/
-  island_default.tres          The IslandParams preset both dev scenes load.
-scenes/
-  main/main.tscn               Single-slab viewer.
+  main/main.tscn               Single-slab viewer: environment, sun, camera rig, one slab.
   terrain/grass_block.tscn     Prototype terrain slab (1 × 0.25 × 1).
-  dev/island_lab.tscn          Island generation harness.
-  dev/generation_audit.tscn    Headless guarantee audit (see docs §4d).
+  dev/island_lab.tscn          Island generation harness (see docs/dev-scenes.md).
+  dev/generation_audit.tscn    Headless guarantee audit.
+  dev/generation_checksum.tscn Headless bit-for-bit checksum.
+scripts/
+  CameraRig.cs                 Strategy camera: pan / yaw / pitch / zoom, LookAt-aimed.
+  generation/                  Namespace ProjectNikitin.Generation
+    IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
+    Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
+    Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
+    Roster.cs                  The terrain stages (see the table above).
+    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords.
+    Traversal*.cs, WalkArea.cs, Shelf.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
+                               The read-back analysis and its value types.
+    Passage.cs, Works.cs       The roads between the Gates.
+    Gate.cs, GatePlacement.cs, GateSites.cs
+    Habitat.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
+    IslandData.cs, IslandParams.cs, Span.cs, Terrain.cs
+    LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
+    FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs
+    Grid.cs, SeedHash.cs, Flood.cs, Noise.cs, FieldOps.cs
+  dev/
+    IslandLab*.cs              The lab.
+    GenerationAudit*.cs        The audit.
+    GenerationChecksum.cs      The checksum.
+resources/island_default.tres  The IslandParams preset all three dev scenes load.
 docs/
-  island-generation.md         The generation spec: model, pipeline, parameters.
+  island-generation.md         The generation spec.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
+  dev-scenes.md                The lab, audit and checksum manual.
   audit-baseline.json          The last accepted audit numbers.
+  checksum-baseline.txt        The last accepted island hashes.
 CLAUDE.md                      This file.
 ```
 
-Planned (create as needed, keep the tree shallow):
-
-```
-scripts/terrain/  the chunked span-aware mesher (IslandData -> ArrayMesh + colliders)
-resources/        .tres data resources (biomes, cultural archetypes, goods)
-addons/           third-party plugins
-```
+Planned, create as needed and keep the tree shallow: `scripts/terrain/` for the
+chunked span-aware mesher, `resources/` for biome, archetype and goods data,
+`addons/` for plugins.
 
 ### Naming
 
-- Scenes, `.tscn`/`.tres`, and their folders: `snake_case` (Godot convention).
-- C# files: `PascalCase`, one `public partial class` per file, file name = class
-  name (e.g. `CameraRig.cs`). Namespace `ProjectNikitin` (or a sub-namespace).
-- Nodes and C# types: `PascalCase`. `[Export]` properties `PascalCase`.
-- Use the design vocabulary in code: `Domain`, `Slab`, `Gate`, `Link`,
-  `Polity`, `Settlement`, `Essence` — not synonyms like "block", "portal",
-  "faction", "town". The terrain unit is a `Slab` (1:4 height ratio; the wiki's
-  "8?" is superseded).
+- Scenes, `.tscn`/`.tres` and their folders: `snake_case`.
+- C# files `PascalCase`, one type per file, file name = type name; a class split
+  across files uses `Name.Part.cs`. Namespace `ProjectNikitin` or a sub-namespace.
+- Use the design vocabulary in code: `Domain`, `Slab`, `Gate`, `Link`, `Polity`,
+  `Settlement`, `Essence`, not "block", "portal", "faction", "town".
 
 ---
 
 ## Glossary (condensed from Notion)
 
-- **Ecumene** — the whole game world: the tree of Domains.
-- **Domain** — one floating landmass / archipelago, surrounded by aether. The
-  **Home Domain** is where the player starts.
-- **Aether** — the space between Domains; hazardous to people.
-- **Link** — a fast, safe route through aether joining two Domains. **Gate** —
-  the built structure at each end of a Link. Links form a tree (no loops).
-- **Slab** — the atomic terrain unit: a cell 1×1 in footprint, 0.25 tall (1:4).
-  Terrain Y is measured in slab indices. **Biome** — a Domain's flora / fauna /
-  climate.
-- **Gate kinds** — a **hanging Gate** floats five cells off the rim and is flown
-  through, so the Domain owes it a landing strip (1 × 3 cells, running inland from
-  the coast under it); this is the **normal** case. A **land Gate** is the same
-  site with the portal moved down onto that strip, and is walked through. A Link
-  joins two Gates of the *same* kind. One Gate per cardinal edge, near that edge:
-  one Entry, and one to three Exits.
-- **Polity** — an NPC state ruling one or more Domains. **Metropole** — the
-  Polity the player answers to.
-- **Cultural Archetype** — a people's defining template (e.g. Steelfolk,
-  Lakefolk, Jadefolk). Carries **Traits**: School of Magicks, Societal
-  Structure, Political Situation, Means of Extraction.
-- **Class / Role / Prestige** — population is stratified into classes (per
-  Archetype); Role gates employment, Prestige gates promotion and consumption
-  expectations.
-- **Magicks** — the world's magic system. **Essence** — the refined magical
-  resource; currently also doubles as currency (provisional). **Means of
-  Extraction** — how a Domain refines Essence early game (e.g. Essencercoral
-  Milling).
-- **Settlement** — the basic economic unit: a market + warehouses + districts +
-  surrounding facilities and land. **Needs** — Food, Intoxicants, Clothing,
-  Wares — modulated by **Habits**, **Sophistication**, **Pickiness**, **Fashion**.
-- **Player Avatar / "you the unit"** — the player's on-map character; acts as a
-  mobile order relay. **Pioneers / Aethernaut / Aethership** — expedition crew,
-  scout, and vessel for crossing Gates. **Aspiration** — the run's win
-  condition, tied to starting culture.
+- **Ecumene**: the whole game world, the tree of Domains. **Domain**: one
+  floating landmass or archipelago. The **Home Domain** is where the player starts.
+- **Aether**: the space between Domains; hazardous to people.
+- **Link**: a fast, safe route through aether joining two Domains. **Gate**: the
+  built structure at each end. Links form a tree. A **hanging Gate** floats five
+  cells off the rim and is flown through, so the Domain owes it a 1 × 3 landing
+  strip running inland; this is the normal case. A **land Gate** is the same
+  site with the portal on the strip, walked through. A Link joins two Gates of
+  the same kind. One Gate per edge: one Entry, one to three Exits.
+- **Slab**: the terrain unit, 1 × 1 × 0.25. **Biome**: a Domain's flora, fauna
+  and climate.
+- **Polity**: an NPC state ruling Domains. **Metropole**: the Polity the player
+  answers to. **Cultural Archetype**: a people's template (Steelfolk, Lakefolk,
+  Jadefolk), carrying Traits: School of Magicks, Societal Structure, Political
+  Situation, Means of Extraction.
+- **Class / Role / Prestige**: population stratification; Role gates employment,
+  Prestige gates promotion and consumption.
+- **Magicks**: the magic system. **Essence**: the refined magical resource,
+  provisionally also the currency. **Means of Extraction**: how a Domain refines
+  Essence early on.
+- **Settlement**: the basic economic unit: market, warehouses, districts,
+  facilities and land. **Needs**: Food, Intoxicants, Clothing, Wares, modulated
+  by Habits, Sophistication, Pickiness and Fashion.
+- **Player Avatar**: the on-map character, a mobile order relay. **Pioneers /
+  Aethernaut / Aethership**: expedition crew, scout and vessel. **Aspiration**:
+  the run's win condition.
 
 ---
 
 ## Design source of truth — Notion
 
-Wiki database **"🪙 Project Nikitin"** (accessed via the Notion MCP connector).
-Key pages:
+Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 
 | Page | State | Notes |
 |---|---|---|
 | Premise and Vision | written | What the game is and why. |
-| The Ecumene | written | Domains, slabs, Links/Gates, scale. **Read before terrain/generation work.** |
-| Mechanics and Concepts | index | Parent of the mechanics pages below. |
-| The Gameplay Loop → The First Hour | written (narrative) | Best single description of moment-to-moment play; sample opening of a run. |
-| Economy, Population and Settlements | written (draft) | Settlements, classes, Needs, monetary economy. Explicitly pre-structure. |
-| Generation → Island Generation | short | Requirements checklist for island gen (sizes, terrain types, cliffs, layers). |
-| Terrain, Polities, Magicks, Lore, Content | stubs / empty | |
-| Glossary | partial | Terms defined above; many entries still blank. |
-| Decision Log | DB, ~empty | Log firm design decisions here (with the "why" and alternatives). |
-| Open Questions | DB | Unresolved design questions; see below. |
-| Production Tasks → Tasks | DB | Roadmap. Stages: Prototype 0 → Prototype 1 → Vertical slice → Later. |
-| Journal for Thoughts and Bits | DB | Loose ideas not yet promoted (multiplayer, difficulty levels, Stellaris-like starts). |
+| The Ecumene | written | Domains, slabs, Links, Gates, scale. Read before terrain work. |
+| Mechanics and Concepts | index | Parent of the mechanics pages. |
+| The Gameplay Loop → The First Hour | written | Best description of moment-to-moment play. |
+| Economy, Population and Settlements | draft | Settlements, classes, Needs, money. |
+| Generation → Island Generation | short | Requirements checklist for island generation. |
+| Terrain, Polities, Magicks, Lore, Content | stubs | |
+| Glossary | partial | |
+| Decision Log | DB, near-empty | Log firm decisions here, with the why and the alternatives. |
+| Open Questions | DB | Unresolved design questions. |
+| Production Tasks → Tasks | DB | Roadmap: Prototype 0 → Prototype 1 → Vertical slice → Later. |
+| Journal for Thoughts and Bits | DB | Loose ideas not yet promoted. |
 
-Workflow: consult the relevant page before non-trivial design or systems work.
-When a decision gets made in a session, offer to add it to the **Decision Log**
-and to answer/close the matching **Open Question**.
-
----
-
-## Roadmap (from the Tasks DB)
-
-- **Prototype 0** — Set up dev environment (git, Godot, Claude, VS Code). *In
-  progress:* repo scaffolded and pushed to GitHub (`yeagore/project-nikitin`).
-- **Epic: Render an island** — on branch `island-generation`, PR
-  [#2](https://github.com/yeagore/project-nikitin/pull/2). Spec:
-  `docs/island-generation.md`. Done: footprint → landform patches → relief under
-  per-landform slope limits → lakes → keel, plus the lab and the audit scene.
-
-All eleven stages are done: footprint, regions and landforms, surface, water,
-keel, overhangs, traversal, Gates, the roads between them, surfaces and names,
-and the re-roll guarantees. So are beaches, valleys, fords, ferries, the feature
-anchors, the audit baseline and lab screenshots. Five footprints are supported
-and audited — **48², 64², 72², 96², 128²** — with 128² the stress target, and
-altitude bounded by the size in slabs.
-
-Next, in rough order: the **chunked span-aware mesher + colliders** — the biggest
-piece left, and the only thing that will answer the performance question for
-real; **settlement placement**, which is the first thing that would show whether
-the terrain rules make good play rather than good pictures; the **biome layer**
-above `Material` — what grows where, as opposed to what the ground is; and
-**span-aware pathing**, which is what would make an overhang walkable.
-
-**Ideas logged rather than done** — a real cost model for works, the world-tree
-above the Domain, fjords, and a page of thinking about otherworldly terrain — are
-in `docs/island-generation-appendix.md` §E and §F, with the reasoning.
+Consult the relevant page before non-trivial design work. When a decision gets
+made in a session, offer to add it to the Decision Log and to close the matching
+Open Question. Two decisions are made but not yet logged there: the slab's 1:4
+ratio, and the five supported footprints (the Ecumene page still says 16³–64³).
 
 ---
 
-## Open questions / unconfirmed assumptions
+## Roadmap
 
-Flagged so they aren't silently hard-coded:
+- **Prototype 0**: dev environment (git, Godot, Claude, VS Code). Done; the repo
+  is at `yeagore/project-nikitin`.
+- **Render an island**, branch `island-generation`, PR
+  [#2](https://github.com/yeagore/project-nikitin/pull/2). Every generation
+  stage is done and audited at all five footprints. What is next, in rough
+  order, is in `docs/island-generation.md` §6: the chunked span-aware mesher and
+  colliders (the only thing that will answer the performance question), settlement
+  placement, the biome layer above `Material`, and span-aware pathing.
 
-1. *(resolved 2026-08-29)* Scripting is **C#**, not GDScript.
-2. **Terrain unit = slab, 1:4.** Settled 2026-08-29 (after a detour through full
-   cubes): a slab is 1×1 footprint × 0.25 tall. The wiki's tentative "8?" is
-   superseded and Notion is not yet updated — needs a Decision Log entry.
-3. **Essence as currency.** The design leans toward Essence = money for now but
-   expects to revisit (grades of Essence, per-Polity currencies).
-4. **Domains loaded at once.** Whether only the active Domain is fully simulated
-   / rendered, or several. Drives the whole streaming/LOD approach.
-5. **Camera.** `scripts/CameraRig.cs`: fixed pitch (set by the camera's offset
-   direction), `LookAt`-aimed at the rig pivot. Pans (WASD, Shift faster, speed
-   scales with zoom), yaws (Q/E, middle-mouse drag), wheel-zooms between
-   `MinZoomDistance`/`MaxZoomDistance`. Undesigned: edge-scroll, pitch adjust,
-   orthographic, pan bounds, auto-framing, InputMap actions.
-6. **Terrain representation.** Per-column list of `Span(bottom, top)` runs
-   (slab-indexed), not a 3D lattice — see `docs/island-generation.md`. Supports
-   overhangs/arches (gap between spans); rules out branching caves/tunnels.
-7. **Domain size.** Five supported footprints — 48², 64², 72², 96², 128² — two
-   candidate ladders overlaid, audited by the `Sizes` sweep (2026-09-01), with
-   altitude bounded by the size in slabs; Maxim picks the final ladder later.
-   16³–64³ in Notion is stale. Still unlogged in the Decision Log.
-8. *(resolved 2026-09-01)* **`grass_block.tscn`** reshaped to a 1×0.25×1 slab;
-   `main.tscn`'s camera pivot adjusted to 0.125.
+---
+
+## Open questions
+
+Flagged so they are not silently hard-coded:
+
+1. **Essence as currency.** Provisional; expect grades of Essence or per-Polity
+   currencies later.
+2. **Domains loaded at once.** Whether only the active Domain is simulated and
+   rendered, or several. Drives the streaming and LOD approach.
+3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
+   `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
+   bounds, an InputMap.
+4. **Domain size ladder.** Two candidate ladders (64/96/128 and 48/72/96) are
+   overlaid in the five supported footprints until Maxim picks one.
