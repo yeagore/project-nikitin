@@ -619,11 +619,7 @@ public partial class GenerationAudit
                 }
                 if (entries != 1 || exits < 1 || exits > 3) gateFault++;
 
-                int gc = 0, cross = 0, sealedUp = 0, skew = 0;
-                var scratch = new List<int>();
-                AnalyseGorges(d, ref gc, scratch, scratch, scratch,
-                              ref cross, ref sealedUp, ref skew);
-                sealedGorges += sealedUp;
+                sealedGorges += AnalyseGorges(d).Sealed;
 
                 short peak = short.MinValue, bilge = short.MaxValue;
                 for (int x = 0; x < n; x++)
@@ -716,15 +712,15 @@ public partial class GenerationAudit
         {
             var p = (IslandParams)Params.Duplicate();
             p.Crossings = ease;
-            int cells = 0, cross = 0, sealedUp = 0, skew = 0, reaches = 0;
-            var lens = new List<int>();
-            var sealedLens = new List<int>();
+            int sealedUp = 0, skew = 0, reaches = 0;
             var walks = new List<int>();
             for (int i = 0; i < SweepSeeds; i++)
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
-                reaches += AnalyseGorges(d, ref cells, lens, sealedLens, walks,
-                                         ref cross, ref sealedUp, ref skew);
+                GorgeStats g = AnalyseGorges(IslandGenerator.Generate(FirstSeed + i * 6151, p));
+                reaches += g.Reaches;
+                sealedUp += g.Sealed;
+                skew += g.Skew;
+                walks.AddRange(g.Detours);
             }
             int worst = 0;
             foreach (int w in walks) worst = Math.Max(worst, w);

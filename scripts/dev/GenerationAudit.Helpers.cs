@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using ProjectNikitin.Generation;
 using static ProjectNikitin.Generation.Grid;
@@ -9,6 +8,10 @@ namespace ProjectNikitin.Dev;
 
 public partial class GenerationAudit
 {
+    /// <summary>The i-th seed of the summary and of every sweep that follows its schedule.</summary>
+    private int SeedAt(int i) => FirstSeed + i * 6151;
+
+    /// <summary>Prints min / median / max of a list, which it sorts in place.</summary>
     private static void Report(string label, List<int> values, string unit)
     {
         if (values.Count == 0) { GD.Print($"{label}: none"); return; }
@@ -17,6 +20,14 @@ public partial class GenerationAudit
             + $"max {values[^1]} {unit}  (n={values.Count})");
     }
 
+    /// <summary>Integer percent, or "-" when there is nothing to divide by.</summary>
+    private static string Pct(int part, int whole)
+        => whole == 0 ? "-" : $"{100 * part / whole}%";
+
+    /// <summary>
+    /// BFS distance of each land cell from its region's border (off-grid, aether or
+    /// another region); -1 off land.
+    /// </summary>
     private static int[,] InwardDistance(IslandData d, int n)
     {
         var dist = new int[n, n];
@@ -53,6 +64,7 @@ public partial class GenerationAudit
         return dist;
     }
 
+    /// <summary>The deepest inward distance of each region, indexed by region id.</summary>
     private static int[] MaxInwardPerRegion(IslandData d, int[,] inward, int n)
     {
         int highest = 0;
@@ -67,8 +79,12 @@ public partial class GenerationAudit
         return max;
     }
 
-    /// <summary>Labels each 4-connected landmass; returns how many there are.</summary>
-    private static int LabelLandmasses(IslandData d, int n, int[,] into)
+    /// <summary>
+    /// Labels the 4-connected components of <paramref name="inSet"/> into
+    /// <paramref name="into"/> (-1 outside) and returns how many there are. x-major
+    /// scan, Dx order, explicit stack: ids are in discovery order.
+    /// </summary>
+    private static int Label(int n, Func<int, int, bool> inSet, int[,] into)
     {
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++) into[x, z] = -1;
@@ -79,7 +95,7 @@ public partial class GenerationAudit
         for (int sx = 0; sx < n; sx++)
         for (int sz = 0; sz < n; sz++)
         {
-            if (!d.HasLand(sx, sz) || into[sx, sz] >= 0) continue;
+            if (!inSet(sx, sz) || into[sx, sz] >= 0) continue;
             int id = found++;
             into[sx, sz] = id;
             stack.Push((sx, sz));
@@ -90,7 +106,7 @@ public partial class GenerationAudit
                 {
                     int nx = x + Dx[k], nz = z + Dz[k];
                     if (!InBounds(n, nx, nz)) continue;
-                    if (!d.HasLand(nx, nz) || into[nx, nz] >= 0) continue;
+                    if (!inSet(nx, nz) || into[nx, nz] >= 0) continue;
                     into[nx, nz] = id;
                     stack.Push((nx, nz));
                 }
@@ -99,114 +115,104 @@ public partial class GenerationAudit
         return found;
     }
 
-    private static int CountComponents(IslandData d, int n)
-    {
-        var seen = new bool[n, n];
-        var stack = new Stack<(int X, int Z)>();
-        int found = 0;
+    /// <summary>Labels each 4-connected landmass; returns how many there are.</summary>
+    private static int LabelLandmasses(IslandData d, int n, int[,] into)
+        => Label(n, d.HasLand, into);
 
+    /// <summary>4-connected components of the channel network: one river each.</summary>
+    private static int LabelRivers(IslandData d, int[,] basin)
+        => Label(d.Size, (x, z) => d.River[x, z], basin);
+
+    /// <summary>Land columns not under standing water.</summary>
+    private static long DryCells(IslandData d)
+    {
+        int n = d.Size;
+        long dry = 0;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand) dry++;
+        return dry;
+    }
+
+    /// <summary>
+    /// Highest span top and lowest keel over the land — the island's height in slabs
+    /// against the cube's lid; Crest stays short.MinValue when there is no land.
+    /// </summary>
+    private static (short Crest, short Bilge) CubeLid(IslandData d)
+    {
+        int n = d.Size;
+        short crest = short.MinValue, bilge = short.MaxValue;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            if (!d.HasLand(x, z) || seen[x, z]) continue;
-            found++;
-            seen[x, z] = true;
-            stack.Push((x, z));
-            while (stack.Count > 0)
-            {
-                var (cx, cz) = stack.Pop();
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (!InBounds(n, nx, nz)) continue;
-                    if (!d.HasLand(nx, nz) || seen[nx, nz]) continue;
-                    seen[nx, nz] = true;
-                    stack.Push((nx, nz));
-                }
-            }
+            if (!d.HasLand(x, z)) continue;
+            Span top = d.Spans[x, z][^1];
+            if (top.Top > crest) crest = top.Top;
+            short keel = d.KeelLevel(x, z);
+            if (keel < bilge) bilge = keel;
         }
-        return found;
+        return (crest, bilge);
     }
 
-    private static string Pct(int part, int whole)
-        => whole == 0 ? "-" : $"{100 * part / whole}%";
+    /// <summary>A Gate whose Center has left the grid, which is the bounding cube's wall.</summary>
+    private static bool OutOfBox(Gate g, int n)
+        => g.Center.X < 0 || g.Center.Z < 0 || g.Center.X >= n || g.Center.Z >= n;
 
-    /// <summary>
-    /// The landmass count an arrangement's name promises — the audit's copy of
-    /// the generator's own bar, for measuring shortfall from outside.
-    /// </summary>
-    private static int MassesTheShapeNames(IslandArrangement how) => how switch
+    /// <summary>Bounds-checked "is water" probe; IslandData.HasLand does not bounds-check.</summary>
+    private static bool Wet(IslandData d, int x, int z)
+        => x >= 0 && z >= 0 && x < d.Size && z < d.Size
+           && d.WaterLevel[x, z] != IslandData.NoLand;
+
+    /// <summary>Corner-only touches: a join you can neither walk nor swim through.</summary>
+    private static int DiagonalOnly(int n, Func<int, int, bool> inSet, int[,]? sameAs = null)
     {
-        IslandArrangement.Twins => 2,
-        IslandArrangement.Triplets => 3,
-        IslandArrangement.Satellites => 3,
-        IslandArrangement.Archipelago => 4,
-        IslandArrangement.BrokenRing => 4,
-        IslandArrangement.BrokenArc => 3,
-        IslandArrangement.Atoll => 5,
-        IslandArrangement.ThousandIsles => 8,
-        IslandArrangement.Shards => 4,
-        IslandArrangement.BrokenCross => 4,
-        IslandArrangement.BrokenT => 3,
-        IslandArrangement.BrokenL => 2,
-        IslandArrangement.BrokenFractal => 4,
-        IslandArrangement.Quarters => 4,
-        IslandArrangement.Halves => 2,
-        IslandArrangement.Harmony => 2,
-        IslandArrangement.Reef => 3,
-        _ => 1,
-    };
+        bool Same(int ax, int az, int bx, int bz)
+            => sameAs == null || sameAs[ax, az] == sameAs[bx, bz];
 
-    /// <summary>The arrangements still on probation — see <see cref="Debut"/>.</summary>
-    private static readonly IslandArrangement[] Debutants =
-    {
-        IslandArrangement.Square, IslandArrangement.Rhomb, IslandArrangement.NShape,
-        IslandArrangement.Quarters, IslandArrangement.Halves, IslandArrangement.Harmony,
-        IslandArrangement.Isthmus, IslandArrangement.Reef,
-    };
+        int bad = 0;
+        for (int x = 0; x + 1 < n; x++)
+        for (int z = 0; z + 1 < n; z++)
+        {
+            bool a = inSet(x, z), b = inSet(x + 1, z + 1);
+            bool c = inSet(x + 1, z), e = inSet(x, z + 1);
+            if (a && b && !c && !e && Same(x, z, x + 1, z + 1)) bad++;
+            if (c && e && !a && !b && Same(x + 1, z, x, z + 1)) bad++;
+        }
+        return bad;
+    }
 
     /// <summary>
-    /// How many slabs the ground gains between one cell from a watercourse and
-    /// five, averaged over the island. This is what a valley <i>is</i> — the land
-    /// falling toward its river for a long way before it reaches it — and it is
-    /// measurable where "does the valley pass look right" is not.
+    /// What <see cref="AnalyseGorges"/> found on one island: Cells counts every walled
+    /// cell, the rest only reaches of three cells or more.
     /// </summary>
+    private readonly record struct GorgeStats(int Cells, int Reaches, int Crossable, int Sealed,
+                                              int Skew, List<int> Lengths, List<int> SealedLengths,
+                                              List<int> Detours);
+
     /// <summary>
-    /// Whether the island's walled river reaches can actually be bridged.
-    ///
-    /// A river running between two cliffs is fine — the grammar makes gorges on
-    /// purpose, and not every river should be crossable everywhere. But a gorge
-    /// whose two rims never line up within a deck's tolerance <i>anywhere along
-    /// its length</i> is a wall with water at the bottom: the only way across is
-    /// to walk the whole reach round. This measures how often that happens,
-    /// using the exact rule the reach flood builds bridges with —
-    /// <see cref="Traversal.Walkable"/> endpoints, <see cref="Traversal.DeckFits"/>
-    /// over the gap, levels within <see cref="Traversal.MaxBridgeRise"/> — so
-    /// what it reports is what the game would let you build, not a re-derivation.
-    ///
-    /// A <b>gorge cell</b> is a river cell with dry ground three slabs or more
-    /// above its water on both sides of one axis; a <b>reach</b> is a
-    /// 4-connected run of them, counted from three cells long, since a one-cell
-    /// gorge is a doorway rather than a wall. A reach is <b>sealed</b> when no
-    /// legal deck crosses any of its cells on either axis, and <b>misaligned</b>
-    /// when, additionally, a deck's geometry fit somewhere along it and only the
-    /// rims' disagreement refused it — the pure frustration case the analysis
-    /// exists to count.
+    /// Whether the island's walled river reaches can be bridged, by the reach flood's own
+    /// rule (<see cref="Traversal.Walkable"/> ends, <see cref="Traversal.DeckFits"/> over the
+    /// gap, rise within <see cref="Traversal.MaxBridgeRise"/>). A gorge cell is a river cell
+    /// with dry ground 3+ slabs above its water on both sides of one axis; a reach is a
+    /// 4-connected run of 3+ of them; sealed means no legal deck crosses any of its cells;
+    /// Skew (misaligned) means a deck fit somewhere along it and only the rims' disagreement
+    /// refused it.
     /// </summary>
-    private static int AnalyseGorges(IslandData d, ref int cells, List<int> lengths,
-                                     List<int> sealedLengths, List<int> detours,
-                                     ref int crossable, ref int shut, ref int skew)
+    private static GorgeStats AnalyseGorges(IslandData d)
     {
         int n = d.Size;
         int span = Math.Max(1, d.BridgeSpan);
+        int cells = 0, crossable = 0, shut = 0, skew = 0;
+        var lengths = new List<int>();
+        var sealedLengths = new List<int>();
+        var detours = new List<int>();
 
         var walled = new bool[n, n];
         var canCross = new bool[n, n];
         var riseOnly = new bool[n, n];
 
-        // The first dry ground out from the water on this side, looked for
-        // through the channel itself — a navigable river is two cells across,
-        // and its gorge wall stands beyond its partner, not beside each cell.
+        // The first dry ground out from the water, looked for through the channel itself:
+        // a navigable river is two cells across and its wall stands beyond its partner.
         bool Rim(int x, int z, int dx, int dz, short w)
         {
             for (int step = 1; step <= 3; step++)
@@ -232,9 +238,7 @@ public partial class GenerationAudit
                 if (Rim(x, z, -dx, -dz, w) && Rim(x, z, dx, dz, w))
                     walled[x, z] = true;
 
-                // Every deck whose run crosses this cell on this axis: near end
-                // i cells back, far end j cells on, the whole thing inside the
-                // span the reach flood would allow.
+                // Every deck crossing this cell on this axis: i cells back, j cells on, inside the span.
                 for (int i = 1; i <= span && !canCross[x, z]; i++)
                 for (int j = 1; i + j <= span + 1; j++)
                 {
@@ -296,9 +300,7 @@ public partial class GenerationAudit
             }
             crossable++;
 
-            // How far the walk to the nearest deck is from the worst cell of
-            // the reach — one site on a fifty-cell gorge is still a detour, and
-            // this is the number that says how long a one.
+            // The walk to the nearest deck from the worst cell of the reach.
             var dist = new Dictionary<(int X, int Z), int>();
             var q = new Queue<(int X, int Z)>();
             foreach (var m in members)
@@ -320,9 +322,14 @@ public partial class GenerationAudit
                 if (dist.TryGetValue(m, out int got)) worst = Math.Max(worst, got);
             detours.Add(worst);
         }
-        return reaches;
+        return new GorgeStats(cells, reaches, crossable, shut, skew, lengths, sealedLengths, detours);
     }
 
+    /// <summary>
+    /// How many slabs the ground gains between one cell from a watercourse and five,
+    /// averaged per river (a cell belongs to the first river's flood to reach it);
+    /// false when there is no river or nothing measurable.
+    /// </summary>
     private static bool ValleyRise(IslandData d, out double rise, List<double>? perRiver = null)
     {
         rise = 0;
@@ -331,10 +338,6 @@ public partial class GenerationAudit
         var basin = new int[n, n];
         var q = new Queue<(int X, int Z)>();
 
-        // Which watercourse each cell belongs to, carried out with the distance —
-        // `Valleys` now acts per river, so a single island-wide average would hide
-        // exactly the thing the knob is for: at a half, some courses should have a
-        // narrow valley and some a wide one.
         int rivers = LabelRivers(d, basin);
 
         for (int x = 0; x < n; x++)
@@ -394,57 +397,37 @@ public partial class GenerationAudit
         return true;
     }
 
-    /// <summary>4-connected components of the channel network: one river each.</summary>
-    private static int LabelRivers(IslandData d, int[,] basin)
+    /// <summary>
+    /// The landmass count an arrangement's name promises — the audit's own copy of
+    /// IslandGenerator.MassesWanted, so a lowered bar in the generator shows here.
+    /// </summary>
+    private static int MassesTheShapeNames(IslandArrangement how) => how switch
     {
-        int n = d.Size;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++) basin[x, z] = -1;
+        IslandArrangement.Twins => 2,
+        IslandArrangement.Triplets => 3,
+        IslandArrangement.Satellites => 3,
+        IslandArrangement.Archipelago => 4,
+        IslandArrangement.BrokenRing => 4,
+        IslandArrangement.BrokenArc => 3,
+        IslandArrangement.Atoll => 5,
+        IslandArrangement.ThousandIsles => 8,
+        IslandArrangement.Shards => 4,
+        IslandArrangement.BrokenCross => 4,
+        IslandArrangement.BrokenT => 3,
+        IslandArrangement.BrokenL => 2,
+        IslandArrangement.BrokenFractal => 4,
+        IslandArrangement.Quarters => 4,
+        IslandArrangement.Halves => 2,
+        IslandArrangement.Harmony => 2,
+        IslandArrangement.Reef => 3,
+        _ => 1,
+    };
 
-        int count = 0;
-        var stack = new Stack<(int X, int Z)>();
-        for (int sx = 0; sx < n; sx++)
-        for (int sz = 0; sz < n; sz++)
-        {
-            if (!d.River[sx, sz] || basin[sx, sz] >= 0) continue;
-            int id = count++;
-            basin[sx, sz] = id;
-            stack.Push((sx, sz));
-            while (stack.Count > 0)
-            {
-                (int cx, int cz) = stack.Pop();
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = cx + Dx[k], nz = cz + Dz[k];
-                    if (!InBounds(n, nx, nz)) continue;
-                    if (!d.River[nx, nz] || basin[nx, nz] >= 0) continue;
-                    basin[nx, nz] = id;
-                    stack.Push((nx, nz));
-                }
-            }
-        }
-        return count;
-    }
-
-    private static bool Wet(IslandData d, int x, int z)
-        => x >= 0 && z >= 0 && x < d.Size && z < d.Size
-           && d.WaterLevel[x, z] != IslandData.NoLand;
-
-    /// <summary>Corner-only touches: a join you can neither walk nor swim through.</summary>
-    private static int DiagonalOnly(int n, Func<int, int, bool> inSet, int[,]? sameAs = null)
+    /// <summary>The arrangements still on probation — see <see cref="Debut"/>.</summary>
+    private static readonly IslandArrangement[] Debutants =
     {
-        bool Same(int ax, int az, int bx, int bz)
-            => sameAs == null || sameAs[ax, az] == sameAs[bx, bz];
-
-        int bad = 0;
-        for (int x = 0; x + 1 < n; x++)
-        for (int z = 0; z + 1 < n; z++)
-        {
-            bool a = inSet(x, z), b = inSet(x + 1, z + 1);
-            bool c = inSet(x + 1, z), e = inSet(x, z + 1);
-            if (a && b && !c && !e && Same(x, z, x + 1, z + 1)) bad++;
-            if (c && e && !a && !b && Same(x + 1, z, x, z + 1)) bad++;
-        }
-        return bad;
-    }
+        IslandArrangement.Square, IslandArrangement.Rhomb, IslandArrangement.NShape,
+        IslandArrangement.Quarters, IslandArrangement.Halves, IslandArrangement.Harmony,
+        IslandArrangement.Isthmus, IslandArrangement.Reef,
+    };
 }

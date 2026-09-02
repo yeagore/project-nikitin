@@ -1,26 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using ProjectNikitin.Generation;
-using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
 /// <summary>
-/// Measures the <b>real</b> generator over many seeds and prints a report, so the
-/// guarantees in docs/island-generation.md can be checked rather than asserted.
-///
-/// Run it headless — no rendering needed, it only reads <see cref="IslandData"/>:
-/// <code>
-/// godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
-/// </code>
-///
-/// This exists because the numbers in the spec were originally produced by a
-/// stand-alone harness that re-implemented the pipeline against substitute noise
-/// (FastNoiseLite needs the engine). That validated the architecture but not the
-/// shipped output. Measuring <c>IslandData</c> directly needs no re-implementation
-/// at all, so there is nothing to drift out of sync.
+/// Measures the real generator over many seeds and prints the guarantees of
+/// docs/island-generation.md as numbers; headless, since it only reads <see cref="IslandData"/>:
+/// <c>godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn</c>.
+/// Every export can also be set after <c>--</c> on the command line — a bare name turns a
+/// flag on, <c>Portraits=&lt;dir&gt;</c> / <c>FieldMaps=&lt;dir&gt;</c> set the paths and
+/// <c>Seeds=&lt;n&gt;</c> (FirstSeed, FeasibilitySeeds, SweepSeeds) the ints, so
+/// <c>-- Knobs Portraits=C:/x</c> works.
 /// </summary>
 public partial class GenerationAudit : Node
 {
@@ -28,1362 +20,138 @@ public partial class GenerationAudit : Node
     [Export] public int FirstSeed { get; set; } = 5000;
     [Export] public IslandParams Params { get; set; } = null!;
 
-    /// <summary>
-    /// Print an ASCII silhouette of one island per arrangement as well. Shape is
-    /// measurable headless where appearance is not, so this is how a change to the
-    /// footprint can be checked without opening the lab.
-    /// </summary>
+    /// <summary>ASCII silhouette of one island per arrangement: shape is checkable headless where appearance is not.</summary>
     [Export] public bool Silhouettes { get; set; } = false;
 
-    /// <summary>
-    /// Print one island's water at full resolution as well: lakes, streams,
-    /// navigable reaches and falls, a character to the cell. How a river
-    /// <i>runs</i> is a fact about the routing, so it can be checked headless.
-    /// </summary>
+    /// <summary>One island's water at full resolution, a character to the cell.</summary>
     [Export] public bool Waterways { get; set; } = false;
 
-    /// <summary>
-    /// Print how much land each arrangement actually delivers — mean land cells,
-    /// share of the footprint, and landmasses — over <see cref="SweepSeeds"/>
-    /// seeds per arrangement. "The rings are too thin" is a claim about area,
-    /// and area per arrangement is a thing the ordinary summary cannot show:
-    /// <c>Auto</c> rolls give some arrangements one island in sixty.
-    /// </summary>
+    /// <summary>Land per arrangement over SweepSeeds seeds each, thinnest first; Auto rolls give some shapes one island in sixty.</summary>
     [Export] public bool Bulk { get; set; } = false;
 
-    /// <summary>
-    /// Run the guarantee set at every supported footprint — 64, 96, 128 — over
-    /// <see cref="SweepSeeds"/> seeds each, and print what holds and what
-    /// degrades. Every constant tuned at 128 is a suspect at 64, and this is the
-    /// table that convicts them.
-    /// </summary>
+    /// <summary>The guarantee set at every supported footprint — 48, 64, 72, 96, 128 — over SweepSeeds seeds each.</summary>
     [Export] public bool Sizes { get; set; } = false;
 
-    /// <summary>
-    /// Directory to write a top-view PNG of two islands per arrangement into,
-    /// or empty for none. Headless Image drawing needs no rendering device, so
-    /// this is how a shape gets <i>looked at</i> without a human at the editor —
-    /// whether a spiral is a spiral or a rosette with more steps is not a thing
-    /// a summary number can say.
-    /// </summary>
+    /// <summary>Directory for a top-view PNG of two islands per arrangement, or empty for none: how a shape gets looked at headless.</summary>
     [Export] public string Portraits { get; set; } = "";
 
-    /// <summary>
-    /// Directory to write habitat, anchor and surface maps into, or empty for
-    /// none — one triple of PNGs for each of the first few seeds. The habitat
-    /// vector and the anchor lists are exactly the kind of output a summary
-    /// number cannot vouch for: "31k banks" says nothing about whether the
-    /// banks lie along the rivers, and a moisture field wrong by a transpose
-    /// still has a plausible mean.
-    /// </summary>
+    /// <summary>Directory for habitat, anchor and surface PNGs of the first few seeds, or empty for none.</summary>
     [Export] public string FieldMaps { get; set; } = "";
 
-    /// <summary>
-    /// The workup for arrangements on probation: each of the newest shapes at
-    /// every footprint, and against every character — attempts, unmet
-    /// guarantees, land, connectivity, the water and box laws. An arrangement
-    /// that cannot pass this is binned, not tuned in the dark.
-    /// </summary>
+    /// <summary>The probation workup: each of the newest arrangements at every footprint and against every character.</summary>
     [Export] public bool Debut { get; set; } = false;
 
-    /// <summary>
-    /// Every arrangement at the small footprints, hardest-pressed first: where
-    /// the re-rolls cluster, a shape is fighting the room it was given — the
-    /// candidates for restricting to larger sizes. 128² rides along as the
-    /// control column.
-    /// </summary>
+    /// <summary>Every arrangement at 48² / 64² / 128², hardest-pressed first — the shortlist for a future size gate.</summary>
     [Export] public bool Strain { get; set; } = false;
 
-    /// <summary>
-    /// Print a close-up height map of one patch of each sculpted landform —
-    /// badlands, karst, ziggurat, dunes. Their shape is the point of them, and a
-    /// median step height cannot tell a maze of gullies from one trench.
-    /// </summary>
+    /// <summary>A digit height map of one patch each of badlands, karst, massif, dunes and sinkholes.</summary>
     [Export] public bool Sculpts { get; set; } = false;
 
-    /// <summary>
-    /// Run every arrangement against every character and report which combinations
-    /// the pipeline finds hard — see <see cref="PrintFeasibility"/>. Slower than
-    /// the rest of the audit put together, so it is opt-in.
-    /// </summary>
+    /// <summary>Every arrangement x character, FeasibilitySeeds each; slower than the rest of the audit put together.</summary>
     [Export] public bool Feasibility { get; set; } = false;
 
-    /// <summary>Seeds per combination in the feasibility sweep.</summary>
+    /// <summary>Seeds per combination in the Feasibility and GateMatrix sweeps.</summary>
     [Export] public int FeasibilitySeeds { get; set; } = 3;
 
-    /// <summary>
-    /// Ask for each Entry edge and kind in turn, and each Exit count and kind, and
-    /// report how often the Domain delivered what was asked for.
-    ///
-    /// The Gate parameters are the ones a *neighbouring* Domain sets, so "usually"
-    /// is not an answer — a Link whose far end came out on the wrong edge is a
-    /// Link that points somewhere else. Nothing else in the audit tests a
-    /// parameter against its own request; the rest measures islands generated with
-    /// everything on Auto, where every Gate is trivially the one that was asked
-    /// for.
-    /// </summary>
+    /// <summary>Ask for each Entry edge and kind, and each Exit count and kind, and report what came out.</summary>
     [Export] public bool GateRequests { get; set; } = false;
 
-    /// <summary>
-    /// Ask every arrangement x character for the hardest Gate request there is —
-    /// four hanging Gates, one per edge — and then check that asking for less
-    /// works too. See <see cref="PrintGateMatrix"/>.
-    /// </summary>
+    /// <summary>Four hanging Gates — the maximum request — for every arrangement x character, then the reductions.</summary>
     [Export] public bool GateMatrix { get; set; } = false;
 
-    /// <summary>
-    /// Sweep the water knobs — Lakes, Rivers, Valleys — from 0 to 1 and report what
-    /// each one actually moves.
-    ///
-    /// A slider that does not change the island is worse than one that is not
-    /// there, and a summary over seeds at one setting cannot tell you which is
-    /// which. This holds everything else at the preset and steps one knob, so the
-    /// column either climbs or it does not.
-    /// </summary>
+    /// <summary>Sweep Lakes, Rivers, Crossings and Valleys with everything else held, so a knob that does nothing shows.</summary>
     [Export] public bool Knobs { get; set; } = false;
 
-    /// <summary>Seeds per setting in the <see cref="GateRequests"/> and <see cref="Knobs"/> sweeps.</summary>
+    /// <summary>Seeds per setting in the GateRequests, Knobs, Bulk, Sizes, Debut and Strain sweeps.</summary>
     [Export] public int SweepSeeds { get; set; } = 12;
 
-    /// <summary>
-    /// Write this run's headline numbers to <c>docs/audit-baseline.json</c> as the
-    /// new accepted answer. Off by default: the audit reports what moved, and
-    /// accepting the move is a decision.
-    /// </summary>
+    /// <summary>Write this run's headline numbers to docs/audit-baseline.json as the accepted answer.</summary>
     [Export] public bool AcceptBaseline { get; set; } = false;
 
+    /// <summary>Landform names in <see cref="LandformType"/> order, for the printed buckets.</summary>
     private static readonly string[] TypeName =
     {
         "plain", "hills", "mountain", "mesa", "basin", "badlands", "karst",
         "massif", "dunes", "sinkholes",
     };
 
-    /// <summary>How many landform types there are — the audit buckets by all of them.</summary>
     private static readonly int Forms = TypeName.Length;
 
     public override void _Ready()
     {
+        ApplyCommandLine();
         Params ??= new IslandParams();
-
-        long free = 0, ambiguous = 0, cliff = 0;
-        long ambiguousOffMountain = 0, pairsOffMountain = 0;
-        var cliffByBorder = new Dictionary<string, int>();
-        var ambiguousWhere = new Dictionary<string, int>();
-
-        var patchSizes = new List<int>();
-        int patchesUndersized = 0;
-
-        var mesaClear = new List<int>();
-        var basinDrop = new List<int>();
-        int mesaTouchesMountain = 0, mesaTouchesOther = 0;
-
-        var hillsRelief = new List<int>();
-        var hillsSpan = new List<int>();
-        var mountainRise = new List<int>();
-        int footPairs = 0, footDrops = 0;
-        var stepByBand = new Dictionary<int, List<int>>();
-
-        int riverCells = 0, navigableCells = 0, fallCells = 0, rimFalls = 0;
-        var innerFalls = new List<int>();
-        var riverDepth = new List<int>();
-        int islandsWithRiver = 0, riverIslandsReachingRim = 0;
-        int riverUphill = 0, riverDry = 0;
-        var riverPerIsland = new List<int>();
-        int riverStraight = 0, riverBends = 0, eyotCells = 0;
-        var straightRuns = new List<int>();
-
-        int berths = 0, waterBodies = 0, islandsWithBerth = 0, badQuay = 0;
-        int berthSites = 0, islandsNeedingFerry = 0;
-        var materialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
-        long coastAnchors = 0, cliffAnchors = 0, beachCells = 0, fordCells = 0, landingCells = 0;
-        long cliffFootAnchors = 0, bankAnchors = 0, summitAnchors = 0;
-        long brinksBesideWater = 0;
-        long beachedCoast = 0;
-        int islandsWithoutBeach = 0;
-        var moistureMeans = new List<int>();
-        var warmthMeans = new List<int>();
-        var ruggedMeans = new List<int>();
-        var exposureMeans = new List<int>();
-        var rimMeans = new List<int>();
-        var quayRise = new List<int>();
-
-        int exitsWithoutRoad = 0, roadsFree = 0, roadJumps = 0, roughIslands = 0, flights = 0;
-        int roadStairs = 0, roadBridges = 0, roadFerries = 0;
-        var roadCosts = new List<int>();
-        var roadLengths = new List<int>();
-
-        var gullyDepths = new List<int>();
-        var towerRises = new List<int>();
-        var terraceSteps = new List<int>();
-        var sinkDepths = new List<int>();
-
-        int lakes = 0, lakeCells = 0, leaks = 0, waterAtVoid = 0, islandsWithLake = 0;
-        var shoreSteps = new List<int>();
-        var lakeBodySizes = new List<int>();
-
-        int gooCells = 0, gooIslands = 0, gooTouchesWater = 0;
-
-        var altSpans = new List<int>();
-        int altOverCap = 0;
-
-        int gorgeCells = 0, gorgeReaches = 0, gorgeCrossable = 0, gorgeSealed = 0;
-        int gorgeMisaligned = 0, gorgeIslands = 0;
-        var gorgeLengths = new List<int>();
-        var gorgeSealedLengths = new List<int>();
-        var gorgeDetours = new List<int>();
-
-        int landmasses = 0, diagonalLand = 0, diagonalWater = 0;
-        int overhangCells = 0, overhangIslands = 0;
-        var lipAir = new List<int>();
-
-        int noEntry = 0, badExitCount = 0, sharedEdge = 0, wrongEntryKind = 0;
-        int gateOffHeartland = 0, gateApronShort = 0, gateInWater = 0, gateOutOfBox = 0;
-        int landGates = 0, hangingGates = 0, stripMissing = 0, hangingOnLand = 0;
-        int gateInCorner = 0, gateNotOutermost = 0, gatesCrowded = 0;
-        var gateBehind = new List<int>();
-        int crossings = 0, deckSteep = 0, deckOffBank = 0;
-        var crossingSpans = new List<int>();
-        var shelfDrops = new List<int>();
-        var attempts = new List<int>();
-        int unplayable = 0;
-        int airstripIslands = 0;
-        var airstripCells = new List<int>();
-        var exitCounts = new List<int>();
-        var gateSpacing = new List<int>();
-        var apronSizes = new List<int>();
-        var stripLengths = new List<int>();
-        var byArrangement = new Dictionary<IslandArrangement, (int Islands, int Masses, int Linked)>();
-
-        // Which landforms each character actually delivered, island by island.
-        var charIslands = new Dictionary<TerrainCharacter, int>();
-        var charHas = new Dictionary<TerrainCharacter, int[]>();
-
-        long walkLand = 0, walkMainland = 0, walkBroken = 0;
-        long mesaCells = 0, mesaOnMainland = 0;
-        int districts = 0, scraps = 0;
-        var mainlandShare = new List<int>();
-        var strandedShare = new List<int>();
-        var reachShare = new List<int>();
-        long reachHeartland = 0;
-        int islandsFullyReachable = 0;
-        long mesaReachable = 0;
-        var strandedByForm = new long[Forms];
-        int passes = 0, passIslands = 0, passesJoined = 0;
-        long passCells = 0;
-        var passGrade = new List<int>();
-
-        int buildableShelves = 0, islandsWithShelf = 0;
-        var widestShelf = new List<int>();
-        var shelfOffMainland = new List<int>();
-
+        var t = new Tally(Params);
         ulong t0 = Time.GetTicksMsec();
 
         for (int i = 0; i < Seeds; i++)
         {
-            int seed = FirstSeed + i * 6151;
-            IslandData d = IslandGenerator.Generate(seed, Params);
-            int n = d.Size;
-
-            short Top(int x, int z) => d.SurfaceLevel(x, z);
-            bool Land(int x, int z) => InBounds(n, x, z) && d.HasLand(x, z);
-
-            // The height you actually cross a column at. A stream's channel is cut
-            // one slab below its banks and filled to the old level, so you ford it
-            // at the water, not at the bed — measuring the bed would report a
-            // two-slab step at every bank that happened to stand a slab proud.
-            short Cross(int x, int z)
-                => d.River[x, z] && !d.Navigable[x, z] ? d.WaterLevel[x, z] : d.SurfaceLevel(x, z);
-
-            // A navigable river is not ground: two cells wide and meant for
-            // barges, it is a gap you bridge, not a step you take.
-            bool Ground(int x, int z) => Land(x, z) && !d.Navigable[x, z]
-                                         && (d.River[x, z] || d.WaterLevel[x, z] == IslandData.NoLand);
-            LandformType Form(int x, int z) => (LandformType)d.Landform[x, z];
-
-            // ---- step grammar, and where cliffs fall -------------------------
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Ground(x, z)) continue;
-                for (int k = 0; k < 2; k++)                     // +X and +Z: each pair once
-                {
-                    int nx = x + (k == 0 ? 1 : 0), nz = z + (k == 0 ? 0 : 1);
-                    if (!Ground(nx, nz)) continue;
-
-                    int diff = Math.Abs(Cross(x, z) - Cross(nx, nz));
-                    if (diff <= 1) free++;
-                    else if (diff == 2) ambiguous++;
-                    else cliff++;
-
-                    bool mountain = Form(x, z) == LandformType.Mountain
-                                    || Form(nx, nz) == LandformType.Mountain;
-                    if (!mountain)
-                    {
-                        pairsOffMountain++;
-                        if (diff == 2)
-                        {
-                            ambiguousOffMountain++;
-                            // Where the ambiguous step is, rather than only how
-                            // many there are: a bank the river was not allowed to
-                            // cut reads very differently from one the terrain rules
-                            // left behind.
-                            int a2 = (int)Form(x, z), b2 = (int)Form(nx, nz);
-                            string where = d.River[x, z] || d.River[nx, nz]
-                                ? "riverbank"
-                                : $"{TypeName[Math.Min(a2, b2)]}-{TypeName[Math.Max(a2, b2)]}";
-                            ambiguousWhere.TryGetValue(where, out int had);
-                            ambiguousWhere[where] = had + 1;
-                        }
-                    }
-
-                    if (diff >= 3 && d.Region[x, z] != d.Region[nx, nz])
-                    {
-                        int a = (int)Form(x, z), b = (int)Form(nx, nz);
-                        // A canyon wall is a cliff no rule forbids: the trench is cut
-                        // deliberately, and across any pair of patches. Bucket it as
-                        // itself, or it reads as a leak in the landform rules.
-                        // A mountain flank is the mountain: massifs take no rung, so
-                        // the slope limiter never binds their borders and a steep
-                        // face there is the landform, not a leak.
-                        string key = d.Canyon[x, z] || d.Canyon[nx, nz]
-                            ? "canyon (any pair)"
-                            : a == (int)LandformType.Mountain || b == (int)LandformType.Mountain
-                            ? "mountain flank"
-                            : $"{TypeName[Math.Min(a, b)]}-{TypeName[Math.Max(a, b)]}";
-                        cliffByBorder.TryGetValue(key, out int c);
-                        cliffByBorder[key] = c + 1;
-                    }
-                }
-            }
-
-            // ---- patches ------------------------------------------------------
-            var area = new Dictionary<int, int>();
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z)) continue;
-                area.TryGetValue(d.Region[x, z], out int c);
-                area[d.Region[x, z]] = c + 1;
-            }
-            foreach (int a in area.Values)
-            {
-                patchSizes.Add(a);
-                if (a < Params.MinRegionArea) patchesUndersized++;
-            }
-
-            // ---- mesas, basins, and their adjacency ---------------------------
-            var worstMesa = new Dictionary<int, int>();
-            var worstBasin = new Dictionary<int, int>();
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z)) continue;
-                LandformType t = Form(x, z);
-                if (t != LandformType.Mesa && t != LandformType.Basin) continue;
-                int r = d.Region[x, z];
-
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    if (!Land(nx, nz) || d.Region[nx, nz] == r) continue;
-                    LandformType o = Form(nx, nz);
-
-                    if (o == LandformType.Mountain) mesaTouchesMountain++;
-                    else if (o != LandformType.Plain && o != t) mesaTouchesOther++;
-
-                    if (o == t) continue;                       // stepped mesas / basins are fine
-                    // Measured against the ground, not against a channel cut
-                    // through it: a river beside a basin runs below the basin
-                    // floor by design, and counting its bed would report the
-                    // escarpment as inverted.
-                    if (d.River[nx, nz] || d.River[x, z]) continue;
-                    int delta = Top(x, z) - Top(nx, nz);
-                    var into = t == LandformType.Mesa ? worstMesa : worstBasin;
-                    int signed = t == LandformType.Mesa ? delta : -delta;
-                    if (!into.TryGetValue(r, out int cur) || signed < cur) into[r] = signed;
-                }
-            }
-            mesaClear.AddRange(worstMesa.Values);
-            basinDrop.AddRange(worstBasin.Values);
-
-            // ---- hills: how much relief a mound actually carries ---------------
-            // Amplitude is only half the story. Hills keep a slope limit of one
-            // slab, so a patch can never be taller than about half its own width
-            // in slabs however high Hilliness is set — the width is reported
-            // alongside so the ceiling is visible rather than inferred.
-            var hiOf = new Dictionary<int, int>();
-            var loOf = new Dictionary<int, int>();
-            var wideOf = new Dictionary<int, int>();
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z) || Form(x, z) != LandformType.Hills) continue;
-                int r = d.Region[x, z];
-                if (!hiOf.TryGetValue(r, out int hi) || Top(x, z) > hi) hiOf[r] = Top(x, z);
-                if (!loOf.TryGetValue(r, out int lo) || Top(x, z) < lo) loOf[r] = Top(x, z);
-                wideOf.TryGetValue(r, out int c);
-                wideOf[r] = c + 1;
-            }
-            foreach (var (r, hi) in hiOf)
-            {
-                hillsRelief.Add(hi - loOf[r]);
-                hillsSpan.Add((int)Math.Sqrt(wideOf[r]));
-            }
-
-            // ---- mountains: rise above the foot, and the step profile ---------
-            int[,] inward = InwardDistance(d, n);
-            var peak = new Dictionary<int, int>();
-            var footOf = new Dictionary<int, int>();
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z) || Form(x, z) != LandformType.Mountain) continue;
-                int r = d.Region[x, z];
-
-                if (!peak.TryGetValue(r, out int hi) || Top(x, z) > hi) peak[r] = Top(x, z);
-
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    if (!Land(nx, nz) || Form(nx, nz) == LandformType.Mountain) continue;
-                    footPairs++;
-                    if (Top(nx, nz) > Top(x, z)) footDrops++;   // massif below the ground it meets
-                    if (!footOf.TryGetValue(r, out int lo) || Top(nx, nz) < lo) footOf[r] = Top(nx, nz);
-                }
-            }
-            foreach (var (r, hi) in peak)
-                if (footOf.TryGetValue(r, out int lo)) mountainRise.Add(hi - lo);
-
-            int[] bandMax = MaxInwardPerRegion(d, inward, n);
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z) || Form(x, z) != LandformType.Mountain) continue;
-                int r = d.Region[x, z];
-                if (bandMax[r] <= 0) continue;
-                int band = Math.Min(9, inward[x, z] * 10 / (bandMax[r] + 1));
-
-                for (int k = 0; k < 2; k++)
-                {
-                    int nx = x + (k == 0 ? 1 : 0), nz = z + (k == 0 ? 0 : 1);
-                    if (!Land(nx, nz) || d.Region[nx, nz] != r) continue;
-                    if (!stepByBand.TryGetValue(band, out var list)) stepByBand[band] = list = new List<int>();
-                    list.Add(Math.Abs(Top(x, z) - Top(nx, nz)));
-                }
-            }
-
-            // ---- lakes ---------------------------------------------------------
-            // Goo is standing fluid and gets the same physics checks — a leak is
-            // a leak whatever stands over it — but it is not a lake, ignores the
-            // Lakes knob, and does not belong in the lake counts.
-            var lakeRegions = new HashSet<int>();
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                short w = d.WaterLevel[x, z];
-                if (w == IslandData.NoLand || d.River[x, z]) continue;
-                bool watery = d.Fluid[x, z] == (byte)FluidKind.Water;
-
-                if (watery)
-                {
-                    lakeCells++;
-                    lakeRegions.Add(d.Region[x, z]);
-                }
-
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    if (!Land(nx, nz)) { waterAtVoid++; continue; }
-                    if (d.WaterLevel[nx, nz] != IslandData.NoLand) continue;
-                    if (Top(nx, nz) < w) leaks++;               // dry ground *under* the water
-                    else if (watery) shoreSteps.Add(Top(nx, nz) - w);
-                }
-            }
-            lakes += lakeRegions.Count;
-            if (lakeRegions.Count > 0) islandsWithLake++;
-
-            // Distinct bodies and their sizes — a patch is no longer one lake by
-            // definition, so the region count above and this can disagree, and
-            // the gap between them is the shaped lakes working.
-            var lakeSeen = new bool[n, n];
-            var lakeStack = new Stack<(int X, int Z)>();
-            for (int sx = 0; sx < n; sx++)
-            for (int sz = 0; sz < n; sz++)
-            {
-                if (lakeSeen[sx, sz] || d.WaterLevel[sx, sz] == IslandData.NoLand
-                    || d.River[sx, sz]) continue;
-                if (d.Fluid[sx, sz] != (byte)FluidKind.Water) continue;
-
-                int size = 0;
-                lakeSeen[sx, sz] = true;
-                lakeStack.Push((sx, sz));
-                while (lakeStack.Count > 0)
-                {
-                    var (cx, cz) = lakeStack.Pop();
-                    size++;
-                    for (int k = 0; k < 4; k++)
-                    {
-                        int nx = cx + Dx[k], nz = cz + Dz[k];
-                        if (!InBounds(n, nx, nz) || lakeSeen[nx, nz]) continue;
-                        if (d.WaterLevel[nx, nz] == IslandData.NoLand || d.River[nx, nz]) continue;
-                        if (d.Fluid[nx, nz] != (byte)FluidKind.Water) continue;
-                        lakeSeen[nx, nz] = true;
-                        lakeStack.Push((nx, nz));
-                    }
-                }
-                lakeBodySizes.Add(size);
-            }
-
-            // ---- goo -----------------------------------------------------------
-            int gooHere = 0;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (d.WaterLevel[x, z] == IslandData.NoLand
-                    || d.Fluid[x, z] != (byte)FluidKind.Goo) continue;
-                gooHere++;
-                // Never mixes, including diagonally: no water within a king's move.
-                for (int ox = -1; ox <= 1; ox++)
-                for (int oz = -1; oz <= 1; oz++)
-                {
-                    int nx = x + ox, nz = z + oz;
-                    if (!InBounds(n, nx, nz)) continue;
-                    if (d.WaterLevel[nx, nz] != IslandData.NoLand
-                        && d.Fluid[nx, nz] == (byte)FluidKind.Water) gooTouchesWater++;
-                }
-            }
-            gooCells += gooHere;
-            if (gooHere > 0) gooIslands++;
-
-            // ---- the cube's lid ------------------------------------------------
-            // A Domain is Size cells across and Size *slabs* tall, and the whole
-            // island — keel to peak, overhang roofs included — has to fit.
-            short crest = short.MinValue, bilge = short.MaxValue;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!d.HasLand(x, z)) continue;
-                Span top = d.Spans[x, z][^1];
-                if (top.Top > crest) crest = top.Top;
-                short keel = d.KeelLevel(x, z);
-                if (keel < bilge) bilge = keel;
-            }
-            if (crest > short.MinValue)
-            {
-                altSpans.Add(crest - bilge);
-                if (crest - bilge > n) altOverCap++;
-            }
-
-            // ---- gorges: can the walled reaches actually be bridged? -----------
-            int reachesHere = AnalyseGorges(d, ref gorgeCells, gorgeLengths,
-                                            gorgeSealedLengths, gorgeDetours,
-                                            ref gorgeCrossable, ref gorgeSealed,
-                                            ref gorgeMisaligned);
-            gorgeReaches += reachesHere;
-            if (reachesHere > 0) gorgeIslands++;
-
-            // ---- what the character delivered ----------------------------------
-            charIslands.TryGetValue(d.Character, out int seen);
-            charIslands[d.Character] = seen + 1;
-            if (!charHas.TryGetValue(d.Character, out int[]? has) || has == null)
-                charHas[d.Character] = has = new int[Forms];
-
-            var present = new bool[Forms];
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-                if (Land(x, z)) present[(int)Form(x, z)] = true;
-            for (int t = 0; t < Forms; t++) if (present[t]) has[t]++;
-
-            // ---- walkability ---------------------------------------------------
-            // The traversal rule made visible: how much of the island is one piece
-            // you can cross on foot, and how much is broken ground — the contour
-            // benches of a mountain flank, each its own connected set.
-            long islandLand = 0, islandMainland = 0, islandHeart = 0;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Land(x, z)) continue;
-                islandLand++;
-                int w = d.Walk[x, z];
-                bool onMain = w == d.Mainland && w >= 0;
-                if (onMain) islandMainland++;
-                if (w >= 0 && !d.Areas[w].IsDistrict) walkBroken++;
-
-                if (d.Reach[x, z] == d.Heartland && d.Heartland >= 0) islandHeart++;
-                else if (d.WaterLevel[x, z] == IslandData.NoLand) strandedByForm[(int)Form(x, z)]++;
-
-                if (Form(x, z) != LandformType.Mesa) continue;
-                mesaCells++;
-                if (onMain) mesaOnMainland++;
-                if (d.Reach[x, z] == d.Heartland && d.Heartland >= 0) mesaReachable++;
-            }
-            walkLand += islandLand;
-            walkMainland += islandMainland;
-            reachHeartland += islandHeart;
-            if (islandLand > 0)
-            {
-                mainlandShare.Add((int)(100 * islandMainland / islandLand));
-                strandedShare.Add((int)(100 * (islandLand - islandMainland) / islandLand));
-                reachShare.Add((int)(100 * islandHeart / islandLand));
-                // Flooded columns are not ground, so a lake's own cells never join
-                // the heartland; the land around it is what has to.
-                long dry = 0;
-                for (int x = 0; x < n; x++)
-                for (int z = 0; z < n; z++)
-                    if (Land(x, z) && d.WaterLevel[x, z] == IslandData.NoLand) dry++;
-                if (islandHeart >= dry) islandsFullyReachable++;
-            }
-            foreach (WalkArea a in d.Areas) { if (a.IsDistrict) districts++; else scraps++; }
-
-            // ---- rivers --------------------------------------------------------
-            // There is no sea, so the one thing every watercourse must do is reach
-            // the rim. A river that stops inland is water with nowhere to go.
-            int here = 0;
-            bool reachedRim = false;
-            var pours = new HashSet<(Vector2I, Vector2I)>();
-            foreach (Fall f in d.Falls) pours.Add((f.Cell, f.Flow));
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!d.River[x, z]) continue;
-                here++;
-                riverCells++;
-                if (d.Navigable[x, z]) navigableCells++;
-
-                short level = d.WaterLevel[x, z];
-                if (Land(x, z) && Top(x, z) >= level) riverDry++;      // channel not cut
-
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    if (!Land(nx, nz)) { reachedRim = true; continue; }
-                    // Water running uphill: a downstream cell standing above this
-                    // one by more than a slab of noise.
-                    // Excused where the higher neighbour pours a drawn fall into
-                    // this cell: that is water falling, which is the opposite of
-                    // climbing. The flow comparison is a heuristic for "more
-                    // downstream", and two chains running side by side at
-                    // different levels can trip it — the fall is the proof of
-                    // which way the water actually goes.
-                    if (d.River[nx, nz] && d.WaterLevel[nx, nz] > level + 1
-                        && d.Flow[nx, nz] > d.Flow[x, z]
-                        && !pours.Contains((new Vector2I(nx, nz), new Vector2I(x - nx, z - nz))))
-                        riverUphill++;
-                }
-            }
-            foreach (Fall f in d.Falls)
-            {
-                fallCells++;
-                if (f.OffRim) rimFalls++;
-                else innerFalls.Add(f.Drop);
-            }
-            if (here > 0)
-            {
-                islandsWithRiver++;
-                riverPerIsland.Add(here);
-                if (reachedRim) riverIslandsReachingRim++;
-            }
-
-            // ---- how straight the water runs -----------------------------------
-            // The one measurable proxy for "rivers should bend". A cell with two
-            // river neighbours is on a reach; if they are opposite each other the
-            // reach is running straight through it, and if they are at right
-            // angles the course turns there. A breadth-first flood produced a tree
-            // of straight cardinal rays and scored near 100% straight; anything
-            // that meanders spends far more of its length turning.
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!d.River[x, z] || d.Navigable[x, z]) continue;   // a 2-wide reach is not a line
-                bool east = x + 1 < n && d.River[x + 1, z], west = x > 0 && d.River[x - 1, z];
-                bool south = z + 1 < n && d.River[x, z + 1], north = z > 0 && d.River[x, z - 1];
-                int touching = (east ? 1 : 0) + (west ? 1 : 0) + (south ? 1 : 0) + (north ? 1 : 0);
-                if (touching != 2) continue;                        // a source, a mouth, a junction
-                if ((east && west) || (north && south)) riverStraight++;
-                else riverBends++;
-            }
-
-            // The longest run a course holds one direction for, which is the thing
-            // that reads as ruled-with-a-ruler when it is long.
-            for (int x = 0; x < n; x++)
-            {
-                int run = 0;
-                for (int z = 0; z <= n; z++)
-                {
-                    bool on = z < n && d.River[x, z] && !d.Navigable[x, z];
-                    if (on) { run++; continue; }
-                    if (run >= 3) straightRuns.Add(run);
-                    run = 0;
-                }
-            }
-            for (int z = 0; z < n; z++)
-            {
-                int run = 0;
-                for (int x = 0; x <= n; x++)
-                {
-                    bool on = x < n && d.River[x, z] && !d.Navigable[x, z];
-                    if (on) { run++; continue; }
-                    if (run >= 3) straightRuns.Add(run);
-                    run = 0;
-                }
-            }
-
-            // ---- eyots ---------------------------------------------------------
-            // Dry land with the same river either side of it: the island a braided
-            // reach parts around.
-            for (int x = 1; x + 1 < n; x++)
-            for (int z = 1; z + 1 < n; z++)
-            {
-                if (!Land(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
-                bool acrossX = d.River[x - 1, z] && d.River[x + 1, z];
-                bool acrossZ = d.River[x, z - 1] && d.River[x, z + 1];
-                if (acrossX || acrossZ) eyotCells++;
-            }
-
-            // ---- overhangs and arches ------------------------------------------
-            // A column with two spans is the one thing the span model exists for.
-            // What is worth checking is that the two never touch — a gap of zero
-            // is one span written twice — and that an arch has nothing under it.
-            if (d.Overhangs.Count > 0) overhangIslands++;
-            foreach (Vector2I c in d.Overhangs)
-            {
-                Span[] spans = d.Spans[c.X, c.Y];
-                overhangCells++;
-                for (int s = 1; s < spans.Length; s++)
-                    lipAir.Add(spans[s].Bottom - spans[s - 1].Top - 1);
-            }
-            // ---- ferries -------------------------------------------------------
-            berths += d.Berths.Count;
-            berthSites += d.BerthSites;
-
-            // ---- surface and anchors ------------------------------------------
-            coastAnchors += d.CoastCells.Count;
-            cliffAnchors += d.CliffCells.Count;
-            cliffFootAnchors += d.CliffFootCells.Count;
-            bankAnchors += d.BankCells.Count;
-            summitAnchors += d.Summits.Count;
-            foreach (Vector2I c in d.CoastCells) if (d.Beach[c.X, c.Y]) beachedCoast++;
-
-            // How many brinks are gorge rims — dry ground three slabs over the
-            // water itself. Before the effective-surface fix this was most of
-            // the list, because every bank measured three slabs over its own bed.
-            foreach (Vector2I c in d.CliffCells)
-            {
-                for (int k = 0; k < 4; k++)
-                {
-                    int bx = c.X + Dx[k], bz = c.Y + Dz[k];
-                    if (!InBounds(n, bx, bz)) continue;
-                    if (d.WaterLevel[bx, bz] == IslandData.NoLand) continue;
-                    brinksBesideWater++;
-                    break;
-                }
-            }
-
-            int beachHere = 0;
-            long moistSum = 0, warmSum = 0, rugSum = 0, expSum = 0, rimSum = 0;
-            int landHere = 0;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!d.HasLand(x, z)) continue;
-                materialCells[d.Material[x, z]]++;
-                if (d.Beach[x, z]) beachHere++;
-                if (d.Ford[x, z]) fordCells++;
-                if (d.Landings[x, z]) landingCells++;
-                landHere++;
-                moistSum += d.Moisture[x, z];
-                warmSum += d.Warmth[x, z];
-                rugSum += d.Ruggedness[x, z];
-                expSum += d.Exposure[x, z];
-                rimSum += d.RimDistance[x, z];
-            }
-            beachCells += beachHere;
-            if (beachHere == 0) islandsWithoutBeach++;
-            if (landHere > 0)
-            {
-                moistureMeans.Add((int)(moistSum / landHere));
-                warmthMeans.Add((int)(warmSum / landHere));
-                ruggedMeans.Add((int)(rugSum / landHere));
-                exposureMeans.Add((int)(expSum / landHere));
-                rimMeans.Add((int)(rimSum / landHere));
-            }
-            waterBodies += d.WaterBodies;
-            if (d.Berths.Count > 0) { islandsWithBerth++; islandsNeedingFerry++; }
-            foreach (FerryBerth berth in d.Berths)
-            {
-                int rise = Cross(berth.Land.X, berth.Land.Y) - berth.Level;
-                if (rise < 0 || rise > Traversal.MaxQuayRise) badQuay++;
-                if (!Traversal.Sailable(d, berth.Water.X, berth.Water.Y)) badQuay++;
-                quayRise.Add(rise);
-            }
-
-            // ---- roads between the Gates ---------------------------------------
-            if (d.Rough) roughIslands++;
-            int exitCount = 0;
-            foreach (Gate g in d.Gates) if (g.Role == GateRole.Exit) exitCount++;
-            if (d.Passages.Count < exitCount) exitsWithoutRoad += exitCount - d.Passages.Count;
-            foreach (Passage road in d.Passages)
-            {
-                roadCosts.Add(road.Cost);
-                roadLengths.Add(road.Path.Count);
-                flights += road.Flights;
-                if (road.Cost == 0) roadsFree++;
-                foreach (Works w in road.Built)
-                {
-                    if (w.Kind == WorksKind.Stair) roadStairs++;
-                    else if (w.Kind == WorksKind.Bridge) roadBridges++;
-                    else roadFerries++;
-                }
-                // The road has to be a road: every step of it either a neighbour,
-                // a bridge inside the span, or a ferry — and a ferry is the only
-                // move that may cover any distance at all, so it is checked
-                // against what the passage actually recorded rather than guessed
-                // at from the geometry.
-                var sailed = new HashSet<(Vector2I, Vector2I)>();
-                foreach (Works w in road.Built)
-                    if (w.Kind == WorksKind.Ferry) sailed.Add((w.From, w.To));
-
-                for (int hop = 1; hop < road.Path.Count; hop++)
-                {
-                    Vector2I a = road.Path[hop - 1], b = road.Path[hop];
-                    if (sailed.Contains((a, b))) continue;
-                    int gap = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
-                    if (gap > d.BridgeSpan + 1 || (a.X != b.X && a.Y != b.Y)) roadJumps++;
-                }
-            }
-
-            // ---- the sculpted landforms ----------------------------------------
-            // Their cliffs are *inside* a patch, which is the whole point of them,
-            // so what is worth measuring is how tall those are: a gully wall, a
-            // tower side and a terrace riser all have to clear the ambiguous two.
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!Ground(x, z)) continue;
-                LandformType t = Form(x, z);
-                if (t is not (LandformType.Badlands or LandformType.Karst
-                              or LandformType.Massif or LandformType.Sinkholes)) continue;
-
-                for (int k = 0; k < 2; k++)
-                {
-                    int nx = x + (k == 0 ? 1 : 0), nz = z + (k == 0 ? 0 : 1);
-                    if (!Ground(nx, nz) || Form(nx, nz) != t) continue;
-                    if (d.Region[x, z] != d.Region[nx, nz]) continue;
-
-                    int step = Math.Abs(Cross(x, z) - Cross(nx, nz));
-                    if (step < 2) continue;
-                    if (t == LandformType.Badlands) gullyDepths.Add(step);
-                    else if (t == LandformType.Karst) towerRises.Add(step);
-                    else if (t == LandformType.Massif) terraceSteps.Add(step);
-                    else sinkDepths.Add(step);
-                }
-            }
-
-            // ---- passes --------------------------------------------------------
-            // Did the saddle actually do its job? A pass works when the two patches
-            // it straddles end up in ONE walk area — walkable, not merely lower.
-            passes += d.Passes.Count;
-            if (d.Passes.Count > 0) passIslands++;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-            {
-                if (!d.Pass[x, z]) continue;
-                passCells++;
-
-                // Steepest step out of a pass cell: the whole point is that it is
-                // 1. Lake beds and canyon floors are skipped — a pass whose disc
-                // happens to take in one is measuring that feature's drop, not the
-                // saddle's grade.
-                if (d.WaterLevel[x, z] != IslandData.NoLand || d.Canyon[x, z]) continue;
-                int worst = 0;
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = x + Dx[k], nz = z + Dz[k];
-                    if (!Land(nx, nz) || !d.Pass[nx, nz]) continue;
-                    if (d.WaterLevel[nx, nz] != IslandData.NoLand || d.Canyon[nx, nz]) continue;
-                    worst = Math.Max(worst, Math.Abs(Top(x, z) - Top(nx, nz)));
-                }
-                passGrade.Add(worst);
-            }
-            foreach (Vector2I site in d.Passes)
-            {
-                var across = new HashSet<int>();
-                for (int dx = -2; dx <= 2; dx++)
-                for (int dz = -2; dz <= 2; dz++)
-                {
-                    int x = site.X + dx, z = site.Y + dz;
-                    if (Land(x, z) && d.Walk[x, z] >= 0) across.Add(d.Region[x, z]);
-                }
-                // Two patches meeting at the site, one walk area covering both.
-                if (across.Count < 2) continue;
-                var walks = new HashSet<int>();
-                for (int dx = -2; dx <= 2; dx++)
-                for (int dz = -2; dz <= 2; dz++)
-                {
-                    int x = site.X + dx, z = site.Y + dz;
-                    if (Land(x, z) && d.Walk[x, z] >= 0) walks.Add(d.Walk[x, z]);
-                }
-                if (walks.Count == 1) passesJoined++;
-            }
-
-            // ---- shelves -------------------------------------------------------
-            int islandShelves = 0, widest = 0, offMain = 0;
-            foreach (Shelf shelf in d.Shelves)
-            {
-                widest = Math.Max(widest, shelf.Width);
-                if (!shelf.Buildable) continue;
-                islandShelves++;
-                shelfDrops.Add(shelf.Drop);
-                if (d.Walk[shelf.Center.X, shelf.Center.Y] != d.Mainland) offMain++;
-            }
-            buildableShelves += islandShelves;
-            if (islandShelves > 0) islandsWithShelf++;
-            widestShelf.Add(widest);
-            shelfOffMainland.Add(offMain);
-
-            // ---- Gates ---------------------------------------------------------
-            int entries = 0, exits = 0;
-            var edges = new HashSet<Cardinal>();
-
-            foreach (Gate g in d.Gates)
-            {
-                if (g.Role == GateRole.Entry) entries++; else exits++;
-                if (!edges.Add(g.Facing)) sharedEdge++;
-
-                // The bounding box is the grid. A Domain sits inside an invisible
-                // bounding cube, and a Gate — hung off the rim toward an edge —
-                // is the one built thing that could poke through its wall.
-                if (g.Center.X < 0 || g.Center.Z < 0
-                    || g.Center.X >= n || g.Center.Z >= n) gateOutOfBox++;
-
-                apronSizes.Add(g.ApronArea);
-                if (g.ApronArea < GatePlacement.ApronArea) gateApronShort++;
-
-                if (g.Kind == GateKind.Land)
-                {
-                    landGates++;
-                    // Standing on ground: dry, and part of the heartland.
-                    if (!Land(g.Center.X, g.Center.Z)) gateOffHeartland++;
-                    else if (d.WaterLevel[g.Center.X, g.Center.Z] != IslandData.NoLand) gateInWater++;
-                    else if (d.Reach[g.Center.X, g.Center.Z] != d.Heartland) gateOffHeartland++;
-                }
-                else
-                {
-                    hangingGates++;
-                    // Hanging in the aether: there must be nothing under it.
-                    if (Land(g.Center.X, g.Center.Z)) hangingOnLand++;
-                }
-
-                // <b>Every Gate's landing, held to the letter.</b> Full length, no
-                // exceptions, and <i>dead</i> level rather than level to within the
-                // free step — the strips are built now, so "sometimes short" and
-                // "sometimes sloped" are not tolerances, they are bugs. Both kinds
-                // of Gate own one: a land Gate stands on the strip a vessel would
-                // otherwise have landed on.
-                {
-                    Vector2I outward = g.Outward;
-                    Vector2I head = g.Kind == GateKind.Hanging
-                        ? new Vector2I(g.Center.X, g.Center.Z)
-                          - outward * GatePlacement.HangingOffset
-                        : new Vector2I(g.Center.X, g.Center.Z);
-
-                    bool strip = Land(head.X, head.Y)
-                              && g.Landing == GatePlacement.StripLength;
-                    if (strip)
-                    {
-                        short level = Top(head.X, head.Y);
-                        for (int along = 0; along < GatePlacement.StripLength && strip; along++)
-                        {
-                            int sx = head.X - outward.X * along;
-                            int sz = head.Y - outward.Y * along;
-                            strip = Land(sx, sz) && Top(sx, sz) == level
-                                    && d.WaterLevel[sx, sz] == IslandData.NoLand
-                                    && d.Reach[sx, sz] == d.Heartland;
-                        }
-                    }
-                    if (!strip) stripMissing++; else stripLengths.Add(g.Landing);
-                }
-
-                // ---- is it on the side of the map it claims? -------------------
-                // Three separate questions, because they fail separately: how much
-                // of the Domain is left behind the player as they arrive, whether
-                // the Gate has slid into a corner, and whether the east Gate is in
-                // fact the easternmost thing on the island.
-                Vector2I outAxis = g.Outward, sideAxis = g.Across;
-                int gateAlong = g.Center.X * outAxis.X + g.Center.Z * outAxis.Y;
-                long beyond = 0, dry = 0;
-                int sideMin = int.MaxValue, sideMax = int.MinValue;
-                for (int x = 0; x < n; x++)
-                for (int z = 0; z < n; z++)
-                {
-                    if (!Land(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
-                    dry++;
-                    if (x * outAxis.X + z * outAxis.Y > gateAlong) beyond++;
-                    int s = x * sideAxis.X + z * sideAxis.Y;
-                    if (s < sideMin) sideMin = s;
-                    if (s > sideMax) sideMax = s;
-                }
-                if (dry > 0) gateBehind.Add((int)(100 * beyond / dry));
-
-                int gateSide = g.Center.X * sideAxis.X + g.Center.Z * sideAxis.Y;
-                int width = sideMax - sideMin;
-                if (width > 0 && (gateSide > sideMax - width * 0.12f
-                                  || gateSide < sideMin + width * 0.12f)) gateInCorner++;
-
-                foreach (Gate o in d.Gates)
-                {
-                    if (o.Facing == g.Facing) continue;
-                    if (o.Center.X * outAxis.X + o.Center.Z * outAxis.Y >= gateAlong)
-                        gateNotOutermost++;
-
-                    // Against the rule that is actually in force, not a number of
-                    // the audit's own: GatePlacement.CrowdedSeparation is the floor
-                    // the last rung of the placement ladder still has to clear, so
-                    // a pair under it is a rule broken rather than a coast that was
-                    // awkward. The spread is reported beside it, because "none
-                    // broke the floor" and "half of them are sitting on it" are
-                    // different islands.
-                    //
-                    // Apron to apron, like the rule: a hanging Gate's Center is out
-                    // in the aether, and the distance that matters is the one on the
-                    // ground.
-                    int apart = Math.Abs(o.Apron.X - g.Apron.X)
-                              + Math.Abs(o.Apron.Y - g.Apron.Y);
-                    gateSpacing.Add(apart);
-                    if (apart < GatePlacement.MinSeparation * n) gatesCrowded++;
-                }
-            }
-
-            if (entries != 1) noEntry++;
-            if (exits < 1 || exits > 3) badExitCount++;
-            exitCounts.Add(exits);
-            foreach (Gate g in d.Gates)
-                if (g.Role == GateRole.Entry && Params.EntryGate != GateKind.Auto
-                    && g.Kind != Params.EntryGate) wrongEntryKind++;
-
-            // ---- crossings -----------------------------------------------------
-            // A bridge is a level deck, so the only thing worth measuring is
-            // whether you can walk onto it: one slab at each end, no more.
-            foreach (Crossing c in d.Bridges)
-            {
-                crossings++;
-                crossingSpans.Add(c.Span);
-                int a = Traversal.CrossLevel(d, c.A.X, c.A.Y);
-                int b = Traversal.CrossLevel(d, c.B.X, c.B.Y);
-                if (Math.Abs(a - b) > Traversal.MaxBridgeRise) deckSteep++;
-                if (Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1) deckOffBank++;
-            }
-
-            // ---- the Stage 6 guarantees ----------------------------------------
-            attempts.Add(d.Attempts);
-            if (d.Unmet.Length > 0)
-            {
-                unplayable++;
-                GD.Print($"  seed {seed} gave up after {d.Attempts}: {d.Unmet}");
-            }
-
-            // ---- airstrips -----------------------------------------------------
-            int strips = 0;
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++) if (d.Landings[x, z]) strips++;
-            if (strips > 0) airstripIslands++;
-            airstripCells.Add(strips);
-
-            // ---- continuity ----------------------------------------------------
-            int masses = CountComponents(d, n);
-            landmasses += masses;
-
-            // The archipelago guarantee, asked of the *landmasses* rather than of
-            // every cell: does every piece of land have somewhere the heartland
-            // can bridge to? A summit nobody can climb is a separate question and
-            // would otherwise drown this one.
-            var massOf = new int[n, n];
-            int massCount = LabelLandmasses(d, n, massOf);
-            var reached = new bool[massCount];
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
-                if (massOf[x, z] >= 0 && d.Reach[x, z] == d.Heartland) reached[massOf[x, z]] = true;
-
-            bool allLinked = true;
-            foreach (bool r in reached) allLinked &= r;
-
-            byArrangement.TryGetValue(d.Arrangement, out var acc);
-            byArrangement[d.Arrangement] =
-                (acc.Islands + 1, acc.Masses + masses, acc.Linked + (allLinked ? 1 : 0));
-
-            // Within a landmass only. Two separate islands a corner apart are not
-            // a broken join, they are two islands — and every arrangement but
-            // Single has them by design.
-            diagonalLand += DiagonalOnly(n, (x, z) =>
-                InBounds(n, x, z) && massOf[x, z] >= 0, massOf);
-            diagonalWater += DiagonalOnly(n, (x, z) =>
-                InBounds(n, x, z) && d.WaterLevel[x, z] != IslandData.NoLand);
+            int seed = SeedAt(i);
+            t.Measure(new Island(seed, IslandGenerator.Generate(seed, Params)));
         }
 
         ulong ms = Time.GetTicksMsec() - t0;
-        long pairs = free + ambiguous + cliff;
-
         GD.Print($"=== generation audit: {Seeds} islands, {Params.Size}², {ms} ms total ===\n");
+        PrintSteps(t);
+        PrintPatches(t);
+        PrintLandforms(t);
+        PrintRivers(t);
+        PrintFerries(t);
+        PrintOverhangs(t);
+        PrintSurfaces(t);
+        PrintHabitat(t);
+        PrintWater(t);
+        PrintGorges(t);
+        PrintCharacters(t);
+        PrintWalkability(t);
+        PrintPasses(t);
+        PrintShelves(t);
+        PrintCrossings(t);
+        PrintGates(t);
+        PrintRoads(t);
+        PrintArrangements(t);
+        PrintRerolls(t);
+        PrintSweeps();
+        PrintContinuity(t);
+        Baseline(BaselineNumbers(t));
+    }
 
-        GD.Print($"step grammar ({pairs} adjacent pairs)");
-        GD.Print($"  free (0-1 slabs)          {100.0 * free / pairs,6:0.0}%");
-        GD.Print($"  two-slab                  {100.0 * ambiguous / pairs,6:0.0}%");
-        GD.Print($"  cliff (3+ slabs)          {100.0 * cliff / pairs,6:0.0}%");
-        GD.Print($"  two-slab off mountains    {ambiguousOffMountain} of {pairsOffMountain}");
-        foreach (var (k, v) in ambiguousWhere.OrderByDescending(e => e.Value))
-            GD.Print($"    {k,-20} {v,6}");
-        GD.Print("");
-
-        GD.Print("cliffs by the landforms either side (rule: plain-plain, mesa-mesa, basin-basin)");
-        foreach (var kv in cliffByBorder.OrderByDescending(k => k.Value))
-            GD.Print($"  {kv.Key,-20} {kv.Value,6}");
-        GD.Print("");
-
-        patchSizes.Sort();
-        GD.Print($"patches: {patchSizes.Count}, min {patchSizes[0]}, median "
-            + $"{patchSizes[patchSizes.Count / 2]}, max {patchSizes[^1]}"
-            + $"  (target min {Params.MinRegionArea}); undersized {patchesUndersized}");
-
-        Report("mesa clearance above neighbours", mesaClear, "slabs");
-        Report("basin drop below neighbours", basinDrop, "slabs");
-        GD.Print($"  mesa/basin touching a mountain (want 0): {mesaTouchesMountain}");
-        GD.Print($"  mesa/basin touching another kind (want 0): {mesaTouchesOther}\n");
-
-        Report($"hills relief per patch (Hilliness {Params.Hilliness:0.00})", hillsRelief, "slabs");
-        Report("  that patch's width", hillsSpan, "cells");
-
-        // The sculpted landforms carry their cliffs inside a patch, so the steps
-        // below are the landform rather than a leak in the rules. What matters is
-        // that none of them is two slabs — that height is neither a step nor a
-        // cliff, and it is the one thing the grammar forbids everywhere.
-        Report("badlands: gully wall", gullyDepths, "slabs");
-        Report("karst: tower side", towerRises, "slabs");
-        Report("massif: terrace riser", terraceSteps, "slabs");
-        Report("sinkholes: pit wall", sinkDepths, "slabs");
-
-        Report($"mountain rise above foot (MountainHeight {Params.MountainHeight})", mountainRise, "slabs");
-        GD.Print($"  border cells where a massif sits below the ground it meets: "
-            + $"{footDrops} of {footPairs}\n");
-
-        GD.Print("mountain step profile, by distance into the massif");
-        foreach (int band in stepByBand.Keys.OrderBy(k => k))
+    /// <summary>Exports named after <c>--</c> on the command line: bare flags, Name=dir paths, Name=n ints.</summary>
+    private void ApplyCommandLine()
+    {
+        foreach (string arg in OS.GetCmdlineUserArgs())
         {
-            var list = stepByBand[band];
-            if (list.Count < 20) continue;
-            GD.Print($"  {band / 10.0:0.0}-{(band + 1) / 10.0:0.0}   mean {list.Average(),5:0.00}   max {list.Max(),3}");
-        }
-        GD.Print("");
-
-        GD.Print($"rivers: {riverCells} cells on {islandsWithRiver} of {Seeds} islands, "
-            + $"{navigableCells} of them navigable");
-        Report("  river cells per island", riverPerIsland, "cells");
-        GD.Print($"  islands whose rivers reach the rim: {riverIslandsReachingRim}"
-            + $" of {islandsWithRiver}   (there is no sea; they must)");
-        GD.Print($"  falls: {fallCells}, of which {rimFalls} pour off the rim");
-        GD.Print($"  channel not cut below its own water (want 0): {riverDry}");
-        GD.Print($"  water running uphill (want 0):                {riverUphill}");
-
-        // How much of a course's length is spent going straight. A flood that
-        // breaks its ties first-in-first-out gives a tree of straight cardinal
-        // rays and scores in the high nineties; the meander field is what pulls
-        // this down, and the longest run is the thing the eye reads as ruled.
-        int reachCells = riverStraight + riverBends;
-        if (reachCells > 0)
-            GD.Print($"  how the courses run: {100.0 * riverStraight / reachCells:0}% straight, "
-                + $"{100.0 * riverBends / reachCells:0}% turning  (n={reachCells})");
-        Report("  longest run held in one direction", straightRuns, "cells");
-        GD.Print($"  eyots: {eyotCells} cells of island parted by a braided reach\n");
-
-        GD.Print($"ferries: {berths} berths on {waterBodies} bodies of water, "
-            + $"over {islandsWithBerth} of {Seeds} islands");
-        // Sites against berths is the number that says whether the pruning is
-        // right. Nearly every lake shore fits the domino rule; a berth survives
-        // only where the water actually separates two pieces of the reach graph,
-        // so a low count is the pruning working unless the *sites* are low too.
-        GD.Print($"  of {berthSites} sites the domino rule found "
-            + $"({(berthSites > 0 ? 100 * berths / berthSites : 0)}% load-bearing)");
-        GD.Print($"  islands with water a bridge cannot span: {islandsNeedingFerry} of {Seeds}");
-        Report("  quay above the water", quayRise, "slabs");
-        GD.Print($"  berth that is not a quay on sailable water (want 0): {badQuay}\n");
-
-        GD.Print($"overhangs and arches: {overhangCells} columns carrying a second span, "
-            + $"on {overhangIslands} of {Seeds} islands");
-        Report("  air under a lip", lipAir, "slabs");
-        GD.Print("");
-
-        // What the ground is made of, and what the content layer can hang off it.
-        // Both are lists nothing else in the audit reads, which is exactly how a
-        // material that never gets picked or an anchor list that quietly empties
-        // would go unnoticed until the biome layer was built on top of them.
-        GD.Print("surface: what the ground is made of, as a share of land");
-        {
-            var parts = new List<string>();
-            long land = 0;
-            foreach (long v in materialCells) land += v;
-            foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
+            int eq = arg.IndexOf('=');
+            string key = eq < 0 ? arg : arg[..eq];
+            string value = eq < 0 ? "" : arg[(eq + 1)..];
+            switch (key)
             {
-                long cells = materialCells[(int)m];
-                parts.Add($"{m.ToString().ToLowerInvariant()} "
-                    + (land > 0 ? $"{100.0 * cells / land:0.0}%" : "-")
-                    + (cells == 0 ? " NEVER" : ""));
+                case nameof(Silhouettes): Silhouettes = true; break;
+                case nameof(Waterways): Waterways = true; break;
+                case nameof(Bulk): Bulk = true; break;
+                case nameof(Sizes): Sizes = true; break;
+                case nameof(Debut): Debut = true; break;
+                case nameof(Strain): Strain = true; break;
+                case nameof(Sculpts): Sculpts = true; break;
+                case nameof(Feasibility): Feasibility = true; break;
+                case nameof(GateRequests): GateRequests = true; break;
+                case nameof(GateMatrix): GateMatrix = true; break;
+                case nameof(Knobs): Knobs = true; break;
+                case nameof(AcceptBaseline): AcceptBaseline = true; break;
+                case nameof(Portraits): Portraits = value; break;
+                case nameof(FieldMaps): FieldMaps = value; break;
+                case nameof(Seeds): Seeds = int.Parse(value); break;
+                case nameof(FirstSeed): FirstSeed = int.Parse(value); break;
+                case nameof(FeasibilitySeeds): FeasibilitySeeds = int.Parse(value); break;
+                case nameof(SweepSeeds): SweepSeeds = int.Parse(value); break;
+                default: GD.Print($"audit: unknown argument '{arg}'"); break;
             }
-            GD.Print("  " + string.Join(", ", parts));
         }
-        GD.Print($"anchors: {coastAnchors} coast, {cliffAnchors} cliff brink, "
-            + $"{cliffFootAnchors} cliff foot, {bankAnchors} bank, {summitAnchors} summit, "
-            + $"{overhangCells} overhang, {beachCells} beach, {fordCells} ford, "
-            + $"{landingCells} gate landing, {berths} quay");
-        GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {brinksBesideWater}");
-        GD.Print($"  islands with no beach at all: {islandsWithoutBeach} of {Seeds}");
-        // Against the coast *ring*, not against the beach's own cell count: a
-        // beach is two cells deep, so beach-cells-over-coast-cells reads 151% and
-        // means nothing. What is worth knowing is how much of the shoreline
-        // arrives gently.
-        GD.Print($"  coast that steps down onto a beach: "
-            + (coastAnchors > 0 ? $"{100.0 * beachedCoast / coastAnchors:0}%" : "-")
-            + "   (the rest breaks off to the keel)\n");
+    }
 
-        // The habitat vector, as per-island means. A mean cannot vouch for the
-        // shape of a field — that is what FieldMaps is for — but a mean that
-        // jumps is a field that changed, and a mean pinned at 0 or 255 is an
-        // axis that stopped measuring anything.
-        GD.Print("habitat: per-island mean of each axis, 0-255");
-        Report("  moisture (0 parched - 255 waterside)", moistureMeans, "");
-        Report("  warmth   (0 frozen - 255 warm)", warmthMeans, "");
-        Report("  rugged   (0 flat - 255 broken)", ruggedMeans, "");
-        Report("  exposure (0 lee - 255 windswept)", exposureMeans, "");
-        Report("  rim distance", rimMeans, "cells");
-        GD.Print("");
-
-        GD.Print($"lakes: {lakes} over {lakeCells} cells, on {islandsWithLake} of {Seeds} islands");
-        Report("  shore step above water", shoreSteps, "slabs");
-        GD.Print($"  dry land BELOW a water surface (want 0): {leaks}");
-        GD.Print($"  water touching the void (want 0):        {waterAtVoid}");
-        Report("  lake bodies", lakeBodySizes, "cells");
-
-        GD.Print($"goo: {gooCells} cells of puddle on {gooIslands} of {Seeds} islands");
-        GD.Print($"  goo within a king's move of water (want 0): {gooTouchesWater}\n");
-
-        Report("altitude, keel to peak", altSpans, "slabs");
-        GD.Print($"  islands taller than their own size in slabs (want 0): {altOverCap}\n");
-
-        GD.Print($"gorges (a course walled 3+ slabs on both sides): {gorgeCells} cells, "
-            + $"{gorgeReaches} reaches of 3+ cells, on {gorgeIslands} of {Seeds} islands");
-        Report("  reach length", gorgeLengths, "cells");
-        GD.Print($"  reaches a bridge could cross somewhere along them: "
-            + $"{gorgeCrossable} of {gorgeReaches}");
-        GD.Print($"  sealed reaches — no legal deck anywhere on their length: {gorgeSealed}"
-            + $", of which {gorgeMisaligned} misaligned rims (a deck fits, banks disagree 3+)");
-        Report("  sealed reach length", gorgeSealedLengths, "cells");
-        Report("  walk to the nearest deck, worst cell per reach", gorgeDetours, "cells");
-
-        GD.Print("landforms delivered, by character (share of that character's islands)");
-        foreach (var (c, islands) in charIslands.OrderBy(k => k.Key.ToString()))
-        {
-            int[] has = charHas[c];
-            var parts = new List<string>();
-            for (int t = 0; t < Forms; t++)
-                if (has[t] > 0) parts.Add($"{TypeName[t]} {100 * has[t] / islands}%");
-            GD.Print($"  {c,-10} {islands,3} islands   {string.Join(", ", parts)}");
-        }
-        GD.Print("");
-
-        GD.Print("walkability (one-slab step free, 2+ a wall; water is not ground)");
-        GD.Print($"  land on the mainland        {100.0 * walkMainland / walkLand,6:0.0}%");
-        Report("  mainland share per island", mainlandShare, "%");
-        Report("  stranded off the mainland", strandedShare, "%");
-        GD.Print($"  broken ground               {100.0 * walkBroken / walkLand,6:0.0}%"
-            + $"  in {scraps} scraps, against {districts} districts");
-        GD.Print($"\n  with stairs, hoists and bridges ("
-            + $"face <= {Traversal.InfrastructureStep} slabs, span <= {(int)Params.Crossings} cells)");
-        GD.Print($"  land on the heartland       {100.0 * reachHeartland / walkLand,6:0.0}%");
-        Report("  heartland share per island", reachShare, "%");
-        GD.Print($"  islands whose dry land is ONE reachable whole: {islandsFullyReachable} of {Seeds}");
-        long stranded = 0;
-        foreach (long v in strandedByForm) stranded += v;
-        if (stranded > 0)
-        {
-            var bits = new List<string>();
-            for (int t = 0; t < Forms; t++)
-                if (strandedByForm[t] > 0) bits.Add($"{TypeName[t]} {100 * strandedByForm[t] / stranded}%");
-            GD.Print($"  what stays out of reach: {string.Join(", ", bits)}");
-        }
-        GD.Print($"  mesa top reachable at all   "
-            + (mesaCells > 0 ? $"{100.0 * mesaReachable / mesaCells,6:0.0}% of mesa cells"
-                             : "no mesas"));
-
-        GD.Print($"  mesa top reachable on foot  "
-            + (mesaCells > 0 ? $"{100.0 * mesaOnMainland / mesaCells,6:0.0}% of mesa cells"
-                             : "no mesas")
-            + "\n");
-
-        GD.Print($"passes: {passes} cut on {passIslands} of {Seeds} islands, "
-            + $"{passesJoined} joining their two patches into one walk area, "
-            + $"{(passes > 0 ? passCells / passes : 0)} cells each");
-        Report("  steepest step inside a pass", passGrade, "slabs");
-        GD.Print("");
-
-        GD.Print($"shelves (flat, >= {Traversal.MinShelfArea} cells and "
-            + $">= {Traversal.MinShelfWidth} wide): {buildableShelves} buildable, "
-            + $"on {islandsWithShelf} of {Seeds} islands");
-        Report("  widest square of flat ground", widestShelf, "cells");
-        Report("  buildable shelves off the mainland", shelfOffMainland, "per island");
-        Report("  descent across one shelf", shelfDrops, "slabs");
-        GD.Print("");
-
-        GD.Print($"crossings: {crossings} bridge sites over {Seeds} islands"
-            + $"  (span <= {(int)Params.Crossings} cells)");
-        Report("  span", crossingSpans, "cells");
-        GD.Print($"  banks disagreeing by more than {Traversal.MaxBridgeRise} slabs (want 0): {deckSteep}");
-        GD.Print($"  deck more than a slab off a bank (want 0):   {deckOffBank}\n");
-
-        GD.Print($"gates: {landGates} standing on land, {hangingGates} hanging in the aether");
-        GD.Print($"  islands without exactly one entry (want 0): {noEntry}");
-        GD.Print($"  islands whose exits are not 1-3 (want 0):   {badExitCount}");
-        Report("  exits per island", exitCounts, "");
-        GD.Print($"  two gates on one edge (want 0):             {sharedEdge}");
-        GD.Print($"  entry gate not the kind asked for (want 0): {wrongEntryKind}");
-        Report("  buildable ground within 4 cells of the landing", apronSizes, "cells");
-        GD.Print($"  gate off the heartland or in water (want 0): "
-            + $"{gateOffHeartland + gateInWater}");
-        GD.Print($"  gate outside the bounding box (want 0):     {gateOutOfBox}");
-        GD.Print($"  hanging gate standing on land (want 0):     {hangingOnLand}");
-        Report("  landing strip", stripLengths, "cells");
-        GD.Print($"  gate with a short or sloped landing (want 0):  {stripMissing}");
-        GD.Print($"  gate that is not the outermost on its own axis (want 0): {gateNotOutermost}");
-        GD.Print($"  gate in a corner of its own edge (want 0):   {gateInCorner}");
-        Report("  how far apart two gates are", gateSpacing, "cells");
-        GD.Print($"  two gates closer than the {GatePlacement.MinSeparation:P0} floor"
-            + $" (want 0): {gatesCrowded / 2}");
-        Report("  dry land left behind a gate", gateBehind, "%");
-        GD.Print($"  islands with a landing strip: {airstripIslands} of {Seeds}"
-            + "   (only the strips the hanging gates took are marked)");
-        Report("  ground marked as strip", airstripCells, "cells");
-        GD.Print("");
-
-        // The road from the Gate the player arrives by to each Gate they can leave
-        // by, priced in things that have to be built. Every Exit must have one:
-        // an Exit you cannot get to is a Domain with one Link, wearing several.
-        GD.Print($"roads from the entry gate to the exits: {roadCosts.Count} over {Seeds} islands");
-        GD.Print($"  exits with no road at all (want 0): {exitsWithoutRoad}");
-        Report("  works to build on one road", roadCosts, "crossings");
-        Report("  length of one road", roadLengths, "cells");
-        GD.Print($"  roads you can simply walk: {roadsFree} of {roadCosts.Count}");
-        GD.Print($"  what they need built: {roadStairs} stairs, {roadBridges} bridges, "
-            + $"{roadFerries} ferries");
-        GD.Print($"  a step on a road longer than one bridge (want 0): {roadJumps}");
-        GD.Print($"  flights of five-plus elevators: {flights}, on {roughIslands} of {Seeds} "
-            + "islands (marked Rough — hard country, not a fault)\n");
-
-        GD.Print("arrangements: landmasses per island, and whether all of it links up");
-        foreach (var (a, v) in byArrangement.OrderBy(k => k.Key.ToString()))
-            GD.Print($"  {a,-12} {v.Islands,3} islands   {(float)v.Masses / v.Islands,4:0.0} masses each"
-                + $"   fully linked {100 * v.Linked / v.Islands,3}%");
-        GD.Print("");
-
-        Report("re-rolls: islands built per seed", attempts, "");
-        GD.Print($"  seeds that never met the guarantees (want 0): {unplayable}\n");
-
+    /// <summary>The opt-in printers, in the order they have always run.</summary>
+    private void PrintSweeps()
+    {
         if (Silhouettes) PrintSilhouettes();
         if (Waterways) PrintWaterways();
         if (Sculpts) PrintSculpts();
@@ -1397,67 +165,12 @@ public partial class GenerationAudit : Node
         if (Strain) PrintStrain();
         if (Portraits.Length > 0) WritePortraits();
         if (FieldMaps.Length > 0) WriteFieldMaps();
-
-        GD.Print($"continuity: {landmasses} landmasses over {Seeds} islands "
-            + $"(more than one is the arrangement's doing, not a fault); "
-            + $"diagonal-only joins within a landmass: land {diagonalLand}, water {diagonalWater}");
-
-        Baseline(new Godot.Collections.Dictionary<string, Variant>
-        {
-            ["free%"] = Math.Round(100.0 * free / pairs, 1),
-            ["twoSlab%"] = Math.Round(100.0 * ambiguous / pairs, 1),
-            ["cliff%"] = Math.Round(100.0 * cliff / pairs, 1),
-            ["twoSlabOffMountain"] = ambiguousOffMountain,
-            ["patchesUndersized"] = patchesUndersized,
-            ["riverCells"] = riverCells,
-            ["navigableCells"] = navigableCells,
-            ["riverStraight%"] = reachCells > 0 ? Math.Round(100.0 * riverStraight / reachCells) : 0,
-            ["falls"] = fallCells,
-            ["lakes"] = lakes,
-            ["waterLeaks"] = leaks,
-            ["riverUphill"] = riverUphill,
-            ["gooCells"] = gooCells,
-            ["gooTouchesWater"] = gooTouchesWater,
-            ["gorgeReaches"] = gorgeReaches,
-            ["gorgeSealed"] = gorgeSealed,
-            ["gateOutOfBox"] = gateOutOfBox,
-            ["altOverCap"] = altOverCap,
-            ["berths"] = berths,
-            ["overhangColumns"] = overhangCells,
-            ["mainland%"] = Math.Round(100.0 * walkMainland / walkLand, 1),
-            ["heartland%"] = Math.Round(100.0 * reachHeartland / walkLand, 1),
-            ["islandsOneWhole"] = islandsFullyReachable,
-            ["buildableShelves"] = buildableShelves,
-            ["crossings"] = crossings,
-            ["deckSteep"] = deckSteep,
-            ["noEntry"] = noEntry,
-            ["exitsWithoutRoad"] = exitsWithoutRoad,
-            ["roadsFree"] = roadsFree,
-            ["unplayable"] = unplayable,
-        });
     }
 
-    /// <summary>
-    /// Where the numbers from the last accepted run are kept, so a change that
-    /// moves one is noticed rather than read past.
-    /// </summary>
+    /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>
     private const string BaselinePath = "res://docs/audit-baseline.json";
 
-    /// <summary>
-    /// Compares this run's headline numbers against the last accepted ones and
-    /// prints what moved.
-    ///
-    /// <para>The audit prints sixty numbers and a human compares them to the last
-    /// run by eye, which works right up until it does not: when the lake outflow
-    /// was fixed, navigable river cells fell from 1,642 to 146 and it was very
-    /// nearly read past. A file of the accepted values and a diff costs nothing
-    /// and catches exactly that.</para>
-    ///
-    /// <para>It is a <b>diff, not a test</b> — every number here is expected to
-    /// move when the generator changes, and the point is to see it move and decide
-    /// whether you meant it. Set <c>AcceptBaseline</c> on the scene to write the
-    /// current run as the new accepted answer.</para>
-    /// </summary>
+    /// <summary>Prints every headline number that moved since the accepted run, or accepts this run as the baseline.</summary>
     private void Baseline(Godot.Collections.Dictionary<string, Variant> now)
     {
         string json = Json.Stringify(now, "  ", sortKeys: true);
