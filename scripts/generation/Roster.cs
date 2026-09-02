@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Godot;
-using static ProjectNikitin.Generation.Grid;
 using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
