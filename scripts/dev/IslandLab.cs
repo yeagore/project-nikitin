@@ -3,198 +3,361 @@ using System.Collections.Generic;
 using Godot;
 using ProjectNikitin;
 using ProjectNikitin.Generation;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
 /// <summary>
-/// Dev harness for island generation. Open <c>scenes/dev/island_lab.tscn</c> and
-/// run it (F6). Edit the <see cref="Params"/> resource (or <see cref="Seed"/>)
-/// in the running scene's remote inspector — the island rebuilds automatically
-/// when a value changes.
-///
-/// Camera: WASD move, Q/E or middle-mouse-drag rotate, wheel zoom, Shift for
-/// faster pan (see <see cref="CameraRig"/>). <b>F</b> re-frames the island,
-/// <b>R</b> forces a regenerate.
-///
-/// Renders one scaled <c>MultiMesh</c> box per span (keel → surface), in slab
-/// units — no mesher, no per-face culling; that comes later. NOT a <c>[Tool]</c>
-/// script: generating in-editor bakes the MultiMesh buffer into the scene file.
+/// Dev harness for island generation (<c>scenes/dev/island_lab.tscn</c>, run with F6).
+/// Rebuilds whenever <see cref="Seed"/> or a <see cref="Params"/> field changes, so
+/// remote-inspector edits take effect live. NOT a <c>[Tool]</c> script: generating
+/// in-editor bakes the MultiMesh buffer into the scene file.
 /// </summary>
 public partial class IslandLab : Node3D
 {
-    [Export] public int Seed { get; set; } = 1337;
-    [Export] public IslandParams Params { get; set; } = null!;
+	[Export] public int Seed { get; set; } = 1337;
+	[Export] public IslandParams Params { get; set; } = null!;
 
-    private MultiMeshInstance3D _terrain = null!;
-    private CameraRig _rig = null!;
-    private BoxMesh _unitBox = null!;
-    private int _lastSignature;
+	private MultiMeshInstance3D _terrain = null!;
+	private MultiMeshInstance3D _water = null!;
+	private MultiMeshInstance3D _goo = null!;
+	private MultiMeshInstance3D _falls = null!;
+	private MultiMeshInstance3D _gates = null!;
+	private MultiMeshInstance3D _marks = null!;
+	private BoxMesh _gateBox = null!;
+	private BoxMesh _markBox = null!;
+	private CameraRig _rig = null!;
+	private BoxMesh _unitBox = null!;
+	private PlaneMesh _waterQuad = null!;
+	private PlaneMesh _gooQuad = null!;
+	private PlaneMesh _fallQuad = null!;
+	private readonly List<Label3D> _compass = new();
+	private Label3D _windLabel = null!;
+	private int _lastSignature;
+	private IslandData? _data;
 
-    private Vector3 _islandCenter = Vector3.Zero;
-    private float _islandRadius = 10f;
-    private bool _framedOnce;
+	private Vector3 _islandCenter = Vector3.Zero;
+	private float _islandRadius = 10f;
+	private bool _framedOnce;
 
-    public override void _Ready()
-    {
-        _terrain = GetNode<MultiMeshInstance3D>("Terrain");
-        _rig = GetNode<CameraRig>("CameraRig");
-        _unitBox = new BoxMesh { Size = Vector3.One };
-        _unitBox.Material = new StandardMaterial3D
-        {
-            VertexColorUseAsAlbedo = true,
-            Roughness = 1f,
-        };
-        AddControlsHint();
-        Rebuild();
-    }
+	private View _view = View.Height;
 
-    public override void _Process(double delta)
-    {
-        if (Signature() != _lastSignature)
-            Rebuild();
-    }
+	private bool _showBridges;
+	private bool _showLandings;
+	private bool _showFerries;
+	private bool _showRoutes;
+	private bool _showFords;
+	private bool _showCompass = true;
+	private bool _showLiquid = true;
+	private bool _showPanel = true;
 
-    public override void _UnhandledInput(InputEvent @event)
-    {
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
-        switch (key.Keycode)
-        {
-            case Key.R: Rebuild(); break;
-            case Key.F: _rig.Frame(_islandCenter, _islandRadius); break;
-        }
-    }
+	public override void _Ready()
+	{
+		_terrain = GetNode<MultiMeshInstance3D>("Terrain");
+		_rig = GetNode<CameraRig>("CameraRig");
+		_unitBox = new BoxMesh { Size = Vector3.One };
+		// Matte and unspecular, so a face's colour is its vertex colour times the light.
+		_unitBox.Material = new StandardMaterial3D
+		{
+			VertexColorUseAsAlbedo = true,
+			Roughness = 1f,
+			Metallic = 0f,
+			SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+		};
 
-    private int Signature()
-    {
-        var h = new HashCode();
-        h.Add(Seed);
-        if (Params != null)
-        {
-            h.Add(Params.Size);
-            h.Add(Params.Radius);
-            h.Add(Params.Coverage);
-            h.Add(Params.Fragmentation);
-            h.Add(Params.Relief);
-            h.Add(Params.Roughness);
-            h.Add(Params.HeightScale);
-            h.Add(Params.TerraceCount);
-            h.Add(Params.TerraceGrip);
-            h.Add(Params.RimDepth);
-            h.Add(Params.RimFalloff);
-        }
-        return h.ToHashCode();
-    }
+		// A steep white sun over a neutral 0.3 ambient (set on the scene's Environment,
+		// with linear tonemapping): a top face reads at about the legend's colour and
+		// the shaded sides still separate. Oriented here: a rotated basis in the .tscn
+		// is the transpose gotcha.
+		var sun = GetNode<DirectionalLight3D>("Sun");
+		sun.LookAt(sun.GlobalPosition + new Vector3(0.35f, -0.85f, 0.45f), Vector3.Up);
 
-    private void Rebuild()
-    {
-        if (_terrain == null || _unitBox == null) return;
-        Params ??= new IslandParams();
-        _lastSignature = Signature();
+		// Water is one flat quad per cell, not a box: alpha-blended boxes draw their
+		// shared faces twice and that doubled alpha is a dark grid line on every edge.
+		_waterQuad = new PlaneMesh
+		{
+			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
+			Orientation = PlaneMesh.OrientationEnum.Y,
+		};
+		_waterQuad.Material = WaterMaterial(0.66f);
+		if (_waterQuad.Material is StandardMaterial3D lit) lit.VertexColorUseAsAlbedo = true;
+		_water = Sheet("Water");
 
-        ulong t0 = Time.GetTicksUsec();
-        IslandData data = new IslandGenerator().Generate(Seed, Params);
-        int spans = RenderSpans(data);
-        GD.Print($"[IslandLab] seed {Seed}, {Params.Size}² -> {spans} spans "
-            + $"in {(Time.GetTicksUsec() - t0) / 1000f:0.0} ms");
+		// Goo gets its own material: the water material's blue albedo multiplies any
+		// warm vertex tint down to nothing.
+		_gooQuad = new PlaneMesh
+		{
+			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
+			Orientation = PlaneMesh.OrientationEnum.Y,
+		};
+		_gooQuad.Material = GooMaterial();
+		_goo = Sheet("Goo");
 
-        if (!_framedOnce)
-        {
-            _rig.Frame(_islandCenter, _islandRadius);
-            _framedOnce = true;
-        }
-    }
+		_fallQuad = new PlaneMesh
+		{
+			Size = Vector2.One,
+			Orientation = PlaneMesh.OrientationEnum.Z,
+		};
+		_fallQuad.Material = WaterMaterial(0.75f);
+		// RenderPriority 1: both sheets sit at the world origin, so without it the
+		// falls and the water sort against each other by camera distance and pop.
+		if (_fallQuad.Material is StandardMaterial3D fallLit) fallLit.RenderPriority = 1;
+		_falls = Sheet("Falls");
 
-    private int RenderSpans(IslandData d)
-    {
-        int n = d.Size;
-        float half = n * 0.5f;
-        const float sh = Terrain.SlabHeight;
-        const float cs = Terrain.CellSize;
+		// A Gate is one cell by four slabs; NoDepthTest so a Gate on the far side is findable.
+		_gateBox = new BoxMesh { Size = Vector3.One };
+		_gateBox.Material = GateMaterial();
+		_gates = Sheet("Gates");
 
-        var xf = new List<Transform3D>();
-        var col = new List<Color>();
+		// Overlay markers: unshaded so they never read as terrain, depth-tested so a
+		// mountain hides what is behind it.
+		_markBox = new BoxMesh { Size = Vector3.One };
+		_markBox.Material = MarkMaterial();
+		_marks = Sheet("Overlays");
 
-        int topMax = 1, topMin = 0;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            Span[] spans = d.Spans[x, z];
-            if (spans == null) continue;
-            foreach (Span s in spans)
-            {
-                topMax = Math.Max(topMax, s.Top);
-                topMin = Math.Min(topMin, s.Top);
-            }
-        }
-        float tintSpan = Math.Max(1, topMax - topMin);
+		BuildCompass();
+		BuildOverlayUi();
+		Rebuild();
+	}
 
-        var low = new Color(0.24f, 0.20f, 0.13f);   // deep / dirt
-        var mid = new Color(0.30f, 0.42f, 0.18f);   // grass
-        var high = new Color(0.66f, 0.72f, 0.52f);  // highlands
+	/// <summary>A shadowless MultiMesh node, added as a child.</summary>
+	private MultiMeshInstance3D Sheet(string name)
+	{
+		var node = new MultiMeshInstance3D
+		{
+			Name = name,
+			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+		};
+		AddChild(node);
+		return node;
+	}
 
-        var bbMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-        var bbMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+	public override void _Process(double delta)
+	{
+		if (Signature() != _lastSignature)
+			Rebuild();
+	}
 
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            Span[] spans = d.Spans[x, z];
-            if (spans == null) continue;
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+		switch (key.Keycode)
+		{
+			case Key.Tab:
+			case Key.F1:
+				_showPanel = !_showPanel;
+				_panel.Visible = _showPanel;
+				return;
+			case Key.N: Seed = (int)(GD.Randi() & 0x7FFFFFFF); break;
+			case Key.R: Rebuild(); break;
+			case Key.F: _rig.Frame(_islandCenter, _islandRadius); break;
+			case Key.C: _view = (View)(((int)_view + 1) % ViewCount); Rebuild(); break;
+			case Key.V: CycleCharacter(); break;
+			case Key.G: CycleArrangement(); break;
+			case Key.H: Cycle(v => Params.Hilliness = v, Params?.Hilliness ?? 0.5f, "Hilliness"); break;
+			case Key.M: Cycle(v => Params.LandformMix = v, Params?.LandformMix ?? 0.5f, "LandformMix"); break;
+			case Key.T: CycleEntryGate(); break;
+			case Key.Y: CycleCrossings(); break;
+			case Key.L: CyclePlateaus(); break;
+			case Key.U: CycleNewShapes(); break;
+			case Key.B: _showBridges = !_showBridges; Redraw(); break;
+			case Key.J: _showLandings = !_showLandings; Redraw(); break;
+			case Key.K: _showFerries = !_showFerries; Redraw(); break;
+			case Key.P: _showRoutes = !_showRoutes; Redraw(); break;
+			// O, not D: the rig polls D every frame for strafe.
+			case Key.O: _showFords = !_showFords; Redraw(); break;
+			case Key.X: _showCompass = !_showCompass; Redraw(); break;
+			// I, not W: the rig polls W every frame for forward.
+			case Key.I: _showLiquid = !_showLiquid; Redraw(); break;
+			case Key.F2: Capture(); break;
+		}
+		Sync();
+	}
 
-            foreach (Span s in spans)
-            {
-                float hWorld = s.Height * sh;
-                float yCenter = (s.Bottom + s.Top + 1) * 0.5f * sh;
-                var origin = new Vector3((x - half) * cs, yCenter, (z - half) * cs);
+	/// <summary>Writes the viewport to <c>user://island-{seed}-{view}.png</c> — the only headless-reviewable look.</summary>
+	private void Capture()
+	{
+		Image shot = GetViewport().GetTexture().GetImage();
+		string path = $"user://island-{Seed}-{_view.ToString().ToLowerInvariant()}.png";
+		Error err = shot.SavePng(path);
+		GD.Print(err == Error.Ok
+			? $"[IslandLab] wrote {ProjectSettings.GlobalizePath(path)}"
+			: $"[IslandLab] could not write {path}: {err}");
+	}
 
-                xf.Add(new Transform3D(
-                    Basis.Identity.Scaled(new Vector3(cs, hWorld, cs)), origin));
+	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>
+	private void Cycle(Action<float> set, float current, string label)
+	{
+		Params ??= new IslandParams();
+		float next = Mathf.Round(current * 4f + 1f) / 4f;
+		if (next > 1.001f) next = 0f;
+		set(next);
+		GD.Print($"[IslandLab] {label} = {next:0.00}");
+	}
 
-                float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
-                col.Add(t < 0.5f ? low.Lerp(mid, t * 2f) : mid.Lerp(high, (t - 0.5f) * 2f));
+	private void CycleArrangement()
+	{
+		Params ??= new IslandParams();
+		// By the values, not the ints: the enum has gaps where shapes were removed.
+		IslandArrangement[] all = Enum.GetValues<IslandArrangement>();
+		int at = Array.IndexOf(all, Params.Arrangement);
+		Params.Arrangement = all[(at + 1) % all.Length];
+		GD.Print($"[IslandLab] Arrangement = {Params.Arrangement}");
+	}
 
-                var ext = new Vector3(cs * 0.5f, hWorld * 0.5f, cs * 0.5f);
-                bbMin = bbMin.Min(origin - ext);
-                bbMax = bbMax.Max(origin + ext);
-            }
-        }
+	private void CycleCharacter()
+	{
+		Params ??= new IslandParams();
+		int count = Enum.GetValues<TerrainCharacter>().Length;
+		Params.Character = (TerrainCharacter)(((int)Params.Character + 1) % count);
+		GD.Print($"[IslandLab] Character = {Params.Character}");
+	}
 
-        if (xf.Count > 0)
-        {
-            _islandCenter = (bbMin + bbMax) * 0.5f;
-            _islandRadius = Mathf.Max(1f, (bbMax - bbMin).Length() * 0.5f);
-        }
+	// Auto -> Hanging -> Land: deliberately not GateKind's declared order.
+	private void CycleEntryGate()
+	{
+		Params ??= new IslandParams();
+		Params.EntryGate = Params.EntryGate switch
+		{
+			GateKind.Auto => GateKind.Hanging,
+			GateKind.Hanging => GateKind.Land,
+			_ => GateKind.Auto,
+		};
+		GD.Print($"[IslandLab] EntryGate = {Params.EntryGate}");
+	}
 
-        var mm = new MultiMesh
-        {
-            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true,
-            Mesh = _unitBox,
-            InstanceCount = xf.Count,
-        };
-        for (int i = 0; i < xf.Count; i++)
-        {
-            mm.SetInstanceTransform(i, xf[i]);
-            mm.SetInstanceColor(i, col[i]);
-        }
-        _terrain.Multimesh = mm;
-        return xf.Count;
-    }
+	/// <summary>Steps the plateau ladder through 1..4 rungs.</summary>
+	private void CyclePlateaus()
+	{
+		Params ??= new IslandParams();
+		Params.PlateauLevels = Params.PlateauLevels >= 4 ? 1 : Params.PlateauLevels + 1;
+		GD.Print($"[IslandLab] PlateauLevels = {Params.PlateauLevels} rungs "
+			+ $"of {Params.CliffHeight} slabs");
+	}
 
-    private void AddControlsHint()
-    {
-        var layer = new CanvasLayer();
-        AddChild(layer);
-        var label = new Label
-        {
-            Text = "WASD move   Q/E rotate   MMB-drag rotate   wheel zoom   Shift faster"
-                 + "\nF frame island   R regenerate",
-            Position = new Vector2(12, 8),
-        };
-        label.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.85f));
-        label.AddThemeColorOverride("font_shadow_color", new Color(0f, 0f, 0f, 0.6f));
-        label.AddThemeConstantOverride("shadow_offset_x", 1);
-        label.AddThemeConstantOverride("shadow_offset_y", 1);
-        layer.AddChild(label);
-    }
+	/// <summary>Takes the newer arrangements and landforms in or out of <c>Auto</c>'s pool, both at once.</summary>
+	private void CycleNewShapes()
+	{
+		Params ??= new IslandParams();
+		bool on = !(Params.NewArrangements && Params.NewLandforms);
+		Params.NewArrangements = on;
+		Params.NewLandforms = on;
+		GD.Print($"[IslandLab] new arrangements and landforms {(on ? "on" : "off")}");
+	}
+
+	private void CycleCrossings()
+	{
+		Params ??= new IslandParams();
+		Params.Crossings = Params.Crossings switch
+		{
+			BridgeEase.Easy => BridgeEase.Medium,
+			BridgeEase.Medium => BridgeEase.Hard,
+			_ => BridgeEase.Easy,
+		};
+		GD.Print($"[IslandLab] Crossings = {Params.Crossings} ({(int)Params.Crossings} cells)");
+	}
+
+	/// <summary>
+	/// The change detector <see cref="_Process"/> polls. Every field Generate reads
+	/// must be hashed here, or an inspector edit silently does nothing.
+	/// </summary>
+	private int Signature()
+	{
+		var h = new HashCode();
+		h.Add(Seed);
+		if (Params != null)
+		{
+			h.Add(Params.Size);
+			h.Add(Params.Radius);
+			h.Add(Params.Coverage);
+			h.Add(Params.Arrangement);
+			h.Add(Params.Irregularity);
+			h.Add(Params.Character);
+			h.Add(Params.LandformMix);
+			h.Add(Params.Relief);
+			h.Add(Params.Hilliness);
+			h.Add(Params.RegionScale);
+			h.Add(Params.CliffHeight);
+			h.Add(Params.PlateauLevels);
+			h.Add(Params.MountainHeight);
+			h.Add(Params.MesaHeight);
+			h.Add(Params.BasinDepth);
+			h.Add(Params.Rivers);
+			h.Add(Params.Crossings);
+			h.Add(Params.EntryGate);
+			h.Add(Params.ExitGates);
+			h.Add(Params.NewArrangements);
+			h.Add(Params.NewLandforms);
+			h.Add(Params.Lakes);
+			h.Add(Params.Valleys);
+			h.Add(Params.ExitGate);
+			h.Add(Params.EntryEdge);
+			h.Add(Params.OverhangDensity);
+			h.Add(Params.EdgeThickness);
+			h.Add(Params.KeelDepth);
+			h.Add(Params.KeelRoughness);
+			h.Add(Params.Moisture);
+			h.Add(Params.Warmth);
+		}
+		return h.ToHashCode();
+	}
+
+	private void Rebuild()
+	{
+		if (_terrain == null || _unitBox == null) return;
+		Params ??= new IslandParams();
+		_lastSignature = Signature();
+
+		ulong t0 = Time.GetTicksUsec();
+		_data = IslandGenerator.Generate(Seed, Params);
+		int spans = RenderSpans(_data);
+		float ms = (Time.GetTicksUsec() - t0) / 1000f;
+		int lakes = Redraw();
+		GD.Print($"[IslandLab] seed {Seed}, {Params.Size}², {_data.Character} ({_data.Style})"
+			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
+
+		if (!_framedOnce)
+		{
+			_rig.Frame(_islandCenter, _islandRadius);
+			_framedOnce = true;
+		}
+	}
+
+	/// <summary>Everything but the terrain, so toggling an overlay does not regenerate the island.</summary>
+	private int Redraw()
+	{
+		if (_data == null) return 0;
+		int lakes = RenderWater(_data);
+		RenderFalls(_data);
+		RenderGates(_data);
+		RenderOverlays(_data);
+		// Liquid off shows the beds; the columns are drawn already.
+		_water.Visible = _goo.Visible = _falls.Visible = _showLiquid;
+		UpdateText(_data, lakes);
+		return lakes;
+	}
+
+	private void UpdateText(IslandData d, int lakes)
+	{
+		if (_status == null) return;
+
+		string newer = Roster.IsNewerShape(d.Arrangement)
+					|| Roster.IsNewerShape(d.Character) ? " (newer shape)" : "";
+
+		_status.Text =
+			$"{d.Name}   seed {Seed}   {d.Arrangement}   {d.Character}{newer}: {Made(d)}"
+			+ $"   high ground {d.Style}"
+			+ (d.Rough ? "   ROUGH GOING" : "")
+			+ (d.Unmet.Length > 0 ? $"   UNMET: {d.Unmet}" : "")
+			+ $"\nladder {Params.PlateauLevels} rungs x {Params.CliffHeight} slabs   "
+			+ $"crossings {Params.Crossings} ({d.BridgeSpan} cells)   lakes {lakes}   "
+			+ $"built in {d.Attempts} attempt{(d.Attempts == 1 ? "" : "s")}\n"
+			+ WalkSummary(d) + "\n"
+			+ GroundSummary(d) + "\n"
+			+ GateSummary(d) + "\n"
+			+ RoadSummary(d);
+
+		ShowLegend(ViewLegend(_view));
+		Sync();
+	}
 }

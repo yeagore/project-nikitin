@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Generation;
 
@@ -13,18 +15,96 @@ public static class FieldOps
         return t * t * (3f - 2f * t);
     }
 
-    /// <summary>
-    /// The value v such that a fraction <paramref name="q"/> of the field is ≤ v
-    /// (q in [0, 1]). One sort; used to turn a target land fraction into a
-    /// mask threshold without an iterative search.
-    /// </summary>
-    public static float Quantile(float[,] field, float q)
+    /// <summary>The value v such that a fraction q of the samples is ≤ v. Copies before sorting.</summary>
+    public static float Quantile(List<float> samples, float q)
+        => samples.Count == 0 ? 0f : Quantile(samples.ToArray(), q);
+
+    private static float Quantile(float[] flat, float q)
     {
-        var flat = new float[field.Length];
-        int k = 0;
-        foreach (float v in field) flat[k++] = v;
         Array.Sort(flat);
         int idx = Math.Clamp((int)(q * (flat.Length - 1)), 0, flat.Length - 1);
         return flat[idx];
+    }
+
+    /// <summary>Bilinear sample of a field at fractional coordinates, clamped at the edges.</summary>
+    public static float Sample(float[,] field, float x, float z)
+    {
+        int n = field.GetLength(0);
+        x = Math.Clamp(x, 0f, n - 1.001f);
+        z = Math.Clamp(z, 0f, n - 1.001f);
+
+        int x0 = (int)x, z0 = (int)z;
+        float fx = x - x0, fz = z - z0;
+        float a = field[x0, z0], b = field[x0 + 1, z0];
+        float c = field[x0, z0 + 1], d = field[x0 + 1, z0 + 1];
+        float ab = a + (b - a) * fx;
+        float cd = c + (d - c) * fx;
+        return ab + (cd - ab) * fz;
+    }
+
+    /// <summary>
+    /// Clamps each cell of a drop field to its lowest land neighbour + 1, making it 1-Lipschitz
+    /// so a lowering pass tapers out one slab per cell instead of leaving a step at its edge.
+    /// In-place Gauss-Seidel sweep, direction alternating per pass, capped at 32 passes.
+    /// </summary>
+    public static void Taper(int[,] drop, bool[,] land)
+    {
+        int n = drop.GetLength(0);
+        for (int pass = 0; pass < 32; pass++)
+        {
+            bool changed = false;
+            bool forward = (pass & 1) == 0;
+
+            for (int a = 0; a < n; a++)
+            for (int b = 0; b < n; b++)
+            {
+                int x = forward ? a : n - 1 - a;
+                int z = forward ? b : n - 1 - b;
+                if (!land[x, z] || drop[x, z] <= 0) continue;
+
+                int cap = int.MaxValue;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k];
+                    int nz = z + Dz[k];
+                    if (!InBounds(n, nx, nz)) continue;
+                    if (!land[nx, nz]) continue;                 // the rim is not a neighbour
+                    cap = Math.Min(cap, drop[nx, nz] + 1);
+                }
+                if (cap == int.MaxValue || drop[x, z] <= cap) continue;
+                drop[x, z] = cap;
+                changed = true;
+            }
+            if (!changed) return;
+        }
+    }
+
+    /// <summary>In-place 3×3 box blur over the cells flagged in <paramref name="mask"/>, repeated <paramref name="passes"/> times (Jacobi).</summary>
+    public static void Blur(float[,] field, bool[,] mask, int passes)
+    {
+        int n = field.GetLength(0);
+        var tmp = new float[n, n];
+
+        for (int pass = 0; pass < passes; pass++)
+        {
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!mask[x, z]) { tmp[x, z] = field[x, z]; continue; }
+
+                float sum = 0f;
+                int taken = 0;
+                for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    int nx = x + dx, nz = z + dz;
+                    if (!InBounds(n, nx, nz)) continue;
+                    sum += field[nx, nz];
+                    taken++;
+                }
+                tmp[x, z] = sum / taken;
+            }
+            Array.Copy(tmp, field, field.Length);
+        }
     }
 }

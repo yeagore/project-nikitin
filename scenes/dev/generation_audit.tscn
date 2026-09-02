@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/GenerationAudit.cs" id="1_audit"]
+[ext_resource type="Resource" path="res://resources/island_default.tres" id="2_params"]
+
+[node name="GenerationAudit" type="Node"]
+script = ExtResource("1_audit")
+Seeds = 60
+FirstSeed = 5000
+Params = ExtResource("2_params")

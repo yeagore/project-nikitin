@@ -1,223 +1,440 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Deterministic island generator: <see cref="Generate"/> is a pure function of
-/// <c>(seed, params)</c>. All Y values it works in are <b>slab indices</b>.
-/// Pipeline stages are documented in docs/island-generation.md §4. Implemented:
-/// 1 (mask), 2 (height), 3 (terracing — without the minimum-width morphological
-/// open yet), 4 (keel + one span per column). Overhangs (4b), feature anchors
-/// and guarantees are still to come.
+/// The island generator: <see cref="Generate"/> is a pure function of
+/// <c>(seed, params)</c>, and every Y it works in is a slab index. The island is
+/// a blanket of regions, each with a <see cref="LandformType"/> and a rung on a
+/// plateau ladder, each built under its own slope limit — not a smooth field
+/// that gets quantised. The stages are the static classes this file calls, in
+/// the order it calls them; docs/island-generation.md describes each.
 /// </summary>
-public sealed class IslandGenerator
+public static class IslandGenerator
 {
-    public IslandData Generate(int seed, IslandParams p)
-    {
-        int n = p.Size;
-        var data = new IslandData(n);
+    /// <summary>Islands built for one seed before the best failure ships.</summary>
+    private const int Attempts = 4;
 
-        bool[,] land = BuildMask(seed, p);
-        float[,] height = BuildHeight(seed, p, land);
-        short[,] surface = Terrace(seed, p, land, height);
-        short[,] keel = BuildKeel(seed, p, land, surface);
+    /// <summary>Share of the dry land that must be reachable, once built, from the heartland.</summary>
+    private const float MinHeartlandShare = 0.75f;
+
+    /// <summary>
+    /// Generates the Domain, re-rolling one that comes out unplayable. Still a
+    /// pure function of (seed, params): a rejected island is rebuilt from a seed
+    /// derived from the one asked for.
+    /// </summary>
+    public static IslandData Generate(int seed, IslandParams p)
+    {
+        p = BoundAltitude(p);
+        IslandData? best = null;
+        int bestMissing = int.MaxValue;
+
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            int use = attempt == 0 ? seed : unchecked((int)Hash(seed, 0x5E1Fu + (uint)attempt));
+            IslandData d = Build(use, p);
+            d.Attempts = attempt + 1;
+            List<string> missing = Unmet(d, p);
+            d.Unmet = string.Join(", ", missing);
+
+            if (missing.Count == 0) return d;
+            // The best failure, not the last: short of one guarantee beats short of three.
+            if (missing.Count < bestMissing) { best = d; bestMissing = missing.Count; }
+        }
+        return best!;
+    }
+
+    /// <summary>Which guarantees this island misses; empty means playable.</summary>
+    private static List<string> Unmet(IslandData d, IslandParams p)
+    {
+        var missing = new List<string>();
+
+        // The Entry is checked against what was asked for: its kind and edge are
+        // the sending Domain's decision, so a wrong one is a Domain built to the
+        // wrong specification.
+        int entries = 0, exits = 0, wrongExitKind = 0;
+        bool rightKind = true, rightEdge = true;
+        foreach (Gate g in d.Gates)
+        {
+            if (g.Role == GateRole.Exit)
+            {
+                exits++;
+                if (p.ExitGate != GateKind.Auto && g.Kind != p.ExitGate) wrongExitKind++;
+                continue;
+            }
+            entries++;
+            if (p.EntryGate != GateKind.Auto && g.Kind != p.EntryGate) rightKind = false;
+            if (p.EntryEdge != GateEdge.Auto && (int)g.Facing != (int)p.EntryEdge - 1)
+                rightEdge = false;
+        }
+        if (entries != 1 || !rightKind) missing.Add("entry gate");
+        if (!rightEdge) missing.Add("entry on the edge asked for");
+
+        if (exits < 1) missing.Add("way out");
+        else if (d.Passages.Count < exits) missing.Add("a road to every exit");
+
+        if (p.ExitGates > 0 && exits < Math.Clamp(p.ExitGates, 1, 3))
+            missing.Add("the exits asked for");
+        if (wrongExitKind > 0) missing.Add("exits of the kind asked for");
+
+        bool buildable = false;
+        foreach (Shelf shelf in d.Shelves)
+        {
+            if (!shelf.Buildable) continue;
+            if (d.Heartland >= 0 && d.Reach[shelf.Center.X, shelf.Center.Y] != d.Heartland) continue;
+            buildable = true;
+            break;
+        }
+        if (!buildable) missing.Add("somewhere to build");
+
+        int dry = 0;
+        for (int x = 0; x < d.Size; x++)
+        for (int z = 0; z < d.Size; z++)
+            if (d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand) dry++;
+
+        int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
+        if (dry > 0 && heart < dry * MinHeartlandShare) missing.Add("one island");
+
+        return missing;
+    }
+
+    /// <summary>
+    /// The working state one island is built through. Every stage reads and
+    /// writes the same array instances, so nothing may be reordered: later stages
+    /// read what earlier ones left.
+    /// </summary>
+    private sealed class Draft
+    {
+        public readonly int Seed;
+        public readonly IslandParams P;
+        public readonly int N;
+        public readonly IslandData Data;
+        public readonly IslandArrangement How;
+        public readonly int Span;
+
+        public bool[,] Land = null!;
+        public List<(Vector2I A, Vector2I B)> Bridges = null!;
+        public int[,] Region = null!;
+        public int RegionCount;
+        public float[,] ToCoast = null!;
+        public float[,] Envelope = null!;
+        public Dictionary<long, List<(int X, int Z)>> Borders = null!;
+        public RegionPlan[] Plan = null!;
+        public float[,] Inward = null!;
+        public short[,] Surface = null!;
+        public bool[,]? Canyon;
+        public bool[,]? Pass;
+        public bool[,] Exempt = null!;
+        public short[,] Water = null!;
+        public byte[,] Fluid = null!;
+
+        public Draft(int seed, IslandParams p)
+        {
+            Seed = seed;
+            P = p;
+            N = p.Size;
+            Data = new IslandData(N)
+            {
+                Style = Roster.ResolveStyle(seed, p),
+                Character = Roster.ResolveCharacter(seed, p),
+            };
+            How = Roster.ResolveArrangement(seed, p);
+            Data.Arrangement = How;
+            Span = Math.Max(1, (int)p.Crossings);
+            Data.BridgeSpan = Span;
+        }
+    }
+
+    private static IslandData Build(int seed, IslandParams p)
+    {
+        var d = new Draft(seed, p);
+        FitFootprint(d);
+        PlanRegions(d);
+        ShapeSurface(d);
+        PlaceStandingWater(d);
+        Settle(d);
+        CarveRivers(d);
+        Pack(d);
+        ReadBack(seed, p, d.Data);
+        return d.Data;
+    }
+
+    /// <summary>
+    /// Stage 1. The landmass should cover 55–85% of the grid, measured after the
+    /// bites, the islet filter and the linker (which shrinks every scattered
+    /// layout), so the whole mask stage runs inside the fit loop.
+    /// </summary>
+    private static void FitFootprint(Draft d)
+    {
+        float scale = 1f;
+        for (int fit = 0; fit < 3; fit++)
+        {
+            d.Land = Footprint.BuildMask(d.Seed, d.P, d.How, scale);
+
+            // Bites are for a single landmass; on Twins a bite ate a twin.
+            if (d.How == IslandArrangement.Single || d.How == IslandArrangement.Satellites)
+            {
+                int[,] draft = Regions.BuildRegions(d.Seed, d.P, d.Land, out int draftCount);
+                Footprint.BiteRegions(d.Seed, d.P, d.Land, draft, draftCount);
+            }
+            Landmasses.CloseDiagonalJoins(d.Land);
+
+            // Every arrangement but Single keeps its pieces, and then has to earn
+            // them: the linker nudges them until each is within one bridge of the next.
+            if (d.How == IslandArrangement.Single) Landmasses.KeepLargestComponent(d.Land);
+            else
+            {
+                Landmasses.DropComponentsUnder(d.Land, Landmasses.MinIsletCells);
+                Landmasses.LinkLandmasses(d.Land, d.Span);
+            }
+            Landmasses.CloseDiagonalJoins(d.Land);
+
+            float share = Footprint.ExtentShare(d.Land);
+            if (share <= 0f || (share >= Footprint.ExtentFloor && share <= Footprint.ExtentCeiling)) break;
+            float target = share < Footprint.ExtentFloor ? 0.68f : 0.78f;
+            float factor = Math.Clamp(MathF.Sqrt(target / share), 0.8f, 1.35f);
+            if (MathF.Abs(factor - 1f) < 0.03f) break;
+            scale *= factor;
+        }
+        d.Bridges = Landmasses.FindBridgeSites(d.Land, d.Span);
+    }
+
+    /// <summary>Stage 2. The patchwork, what each patch is, and the rung it stands on.</summary>
+    private static void PlanRegions(Draft d)
+    {
+        int seed = d.Seed;
+        IslandParams p = d.P;
+        bool[,] land = d.Land;
+
+        int[,] region = Regions.BuildRegions(seed, p, land, out int regionCount);
+        d.ToCoast = Keel.DistanceToCoast(land);
+        d.Envelope = Regions.ReliefEnvelope(seed, p, land, d.ToCoast);
+        Regions.BuildBorders(land, region, regionCount, out HashSet<int>[] firstPass);
+        LandformType[] types = Landforms.AssignTypes(seed, p, land, region, regionCount, d.Envelope, d.ToCoast);
+
+        // Adjacent mountains become one massif: penned in one region a mountain
+        // has no room for a foot and can only be a wall.
+        region = Landforms.MergeAdjacentOfType(land, region, firstPass, ref regionCount, ref types);
+
+        d.Borders = Regions.BuildBorders(land, region, regionCount, out HashSet<int>[] neighbours);
+        Landforms.RepairAdjacency(region, regionCount, neighbours, types);
+
+        // A bridgehead lands on a plain: a mesa, basin or mountain would ignore
+        // the rung agreement between the two banks.
+        var bridgeheads = new HashSet<int>();
+        foreach (var (ca, cb) in d.Bridges)
+        {
+            foreach (Vector2I c in new[] { ca, cb })
+            {
+                if (!land[c.X, c.Y]) continue;
+                int r = region[c.X, c.Y];
+                bridgeheads.Add(r);
+                if (Landforms.IsTable(types[r]) || types[r] == LandformType.Mountain
+                    || Landforms.IsSculpted(types[r]))
+                    types[r] = LandformType.Plain;
+            }
+        }
+        Landforms.RepairAdjacency(region, regionCount, neighbours, types);
+
+        // The quota is restored last, after everything that flattens a region has had its say.
+        Landforms.RestoreMissingLandforms(p, seed, region, regionCount, neighbours, types,
+                                          Regions.RegionCells(land, region, regionCount), bridgeheads);
+        d.Plan = Landforms.AssignPlateaus(seed, p, land, region, regionCount, d.Envelope,
+                                          neighbours, types, d.Bridges);
+        d.Inward = Regions.InwardDistance(land, region, regionCount);
+        d.Region = region;
+        d.RegionCount = regionCount;
+    }
+
+    /// <summary>
+    /// Stage 3. Relief under each landform's slope limit, settled once; then the
+    /// sculpted landforms, a canyon and the passes are cut into the settled
+    /// surface and exempted from the limiter, which is how they carry cliffs
+    /// inside a patch. A pass is the opposite of exempt: the limiter reaches
+    /// across its border so it can be walked.
+    /// </summary>
+    private static void ShapeSurface(Draft d)
+    {
+        int n = d.N;
+        d.Surface = Relief.BuildSurface(d.Seed, d.P, d.Land, d.Region, d.Plan, d.Inward, out int duneGrain);
+        d.Data.DuneGrain = duneGrain;
+        StepGrammar.LimitSlope(d.Surface, d.Region, d.Land, d.Plan);
+
+        bool[,] sculpted = Sculpting.Sculpt(d.Seed, d.P, d.Land, d.Region, d.Plan, d.Surface, d.Inward);
+
+        d.Canyon = Sculpting.WantsCanyon(d.Seed, d.P)
+            ? Sculpting.CarveCanyon(d.Seed, d.P, d.Land, d.Region, d.Plan, d.Surface, d.Borders)
+            : null;
+        d.Pass = Sculpting.CutPasses(d.Seed, d.P, d.Land, d.Region, d.Plan, d.Surface, d.Borders, d.Data.Passes);
+
+        d.Exempt = new bool[n, n];
+        Array.Copy(sculpted, d.Exempt, sculpted.Length);
+        if (d.Canyon != null)
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++) d.Exempt[x, z] |= d.Canyon[x, z];
+        StepGrammar.LimitSlope(d.Surface, d.Region, d.Land, d.Plan, d.Exempt, d.Pass);
+        StepGrammar.ResolveAmbiguousSteps(d.Surface, d.Region, d.Land, d.Plan, null, d.Exempt);
+    }
+
+    /// <summary>
+    /// Stage 4a. Lakes sink into the surface after every grammar pass (which they
+    /// must not undo) and before the keel measures thickness. A patch a canyon or
+    /// pass cuts through would fill to the bottom of the cut and pour out, so it
+    /// holds no water. Goo comes after the lakes so it can keep its distance.
+    /// </summary>
+    private static void PlaceStandingWater(Draft d)
+    {
+        int n = d.N;
+        bool[,]? drains = d.Canyon;
+        if (d.Pass != null)
+        {
+            drains = new bool[n, n];
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                drains[x, z] = d.Pass[x, z] || (d.Canyon != null && d.Canyon[x, z]);
+        }
+        d.Water = Lakes.PlaceLakes(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, drains);
+        d.Fluid = new byte[n, n];
+        Lakes.PlaceGoo(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, d.Water, d.Fluid);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.Water[x, z] != IslandData.NoLand) d.Exempt[x, z] = true;
+    }
+
+    /// <summary>
+    /// Beaches, then the three lowering passes cycled together until nothing
+    /// moves: resolving a two-slab step can expose a three, closing that can
+    /// expose a new two, and the bridgeheads have to be re-levelled after either.
+    /// All three only ever lower, so the cycle terminates.
+    /// </summary>
+    private static void Settle(Draft d)
+    {
+        Beaches.MakeBeaches(d.Seed, d.Land, d.Surface, d.Water, d.Region, d.Plan, d.Data.Beach);
+
+        for (int settle = 0; settle < 6; settle++)
+        {
+            bool moved = Bridgeheads.LevelBridgeheads(d.Land, d.Surface, d.Water, d.Region, d.Plan, d.Bridges);
+            moved |= StepGrammar.LimitSlope(d.Surface, d.Region, d.Land, d.Plan, d.Exempt, d.Pass);
+            moved |= StepGrammar.ResolveAmbiguousSteps(d.Surface, d.Region, d.Land, d.Plan, d.Water, d.Exempt);
+            if (!moved) break;
+        }
+    }
+
+    /// <summary>
+    /// Stage 4b. Rivers are cut across the finished patchwork and carry their own
+    /// step grammar. The bridgeheads are off limits to the water (a channel
+    /// through one un-levels the crossing), and so is goo with its whole
+    /// king's-move neighbourhood: fluids never touch, even diagonally.
+    /// </summary>
+    private static void CarveRivers(Draft d)
+    {
+        int n = d.N;
+        var form = new byte[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            form[x, z] = d.Land[x, z] ? (byte)d.Plan[d.Region[x, z]].Type : (byte)0;
+
+        var keep = new bool[n, n];
+        foreach (var (ca, cb) in d.Bridges)
+        foreach (Vector2I c in new[] { ca, cb })
+            if (InBounds(n, c.X, c.Y)) keep[c.X, c.Y] = true;
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            data.Land[x, z] = land[x, z];
-            if (!land[x, z]) continue;
+            if (d.Fluid[x, z] != (byte)FluidKind.Goo) continue;
+            for (int ox = -1; ox <= 1; ox++)
+            for (int oz = -1; oz <= 1; oz++)
+            {
+                int nx = x + ox, nz = z + oz;
+                if (InBounds(n, nx, nz)) keep[nx, nz] = true;
+            }
+        }
 
-            short top = surface[x, z];
+        Rivers.Carve(d.Seed, d.P, d.Land, d.Surface, d.Water, d.Data.River, d.Data.Navigable,
+                     d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid);
+
+        // The valley and bank passes only lower; a cell can end up under the water beside it.
+        Lakes.RaiseSunkenShores(d.Land, d.Surface, d.Water);
+    }
+
+    /// <summary>Stage 5. The keel, then the columns written into the IslandData.</summary>
+    private static void Pack(Draft d)
+    {
+        int n = d.N;
+        IslandData data = d.Data;
+        short[,] keel = Keel.BuildKeel(d.Seed, d.P, d.Land, d.Surface, d.ToCoast);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            data.Land[x, z] = d.Land[x, z];
+            data.Region[x, z] = d.Region[x, z];
+            if (!d.Land[x, z]) continue;
+
+            short top = d.Surface[x, z];
             short bottom = keel[x, z];
-            if (bottom > top) bottom = top;                 // safety
+            if (bottom > top) bottom = top;
             data.Spans[x, z] = new[] { new Span(bottom, top) };
             data.Material[x, z] = 0;
+            data.Landform[x, z] = (byte)d.Plan[d.Region[x, z]].Type;
+            data.WaterLevel[x, z] = d.Water[x, z];
+            data.Fluid[x, z] = d.Fluid[x, z];
+            data.Canyon[x, z] = d.Canyon != null && d.Canyon[x, z];
+            data.Pass[x, z] = d.Pass != null && d.Pass[x, z];
         }
-        return data;
+
+        Bridgeheads.RecordCrossings(data, d.Bridges);
+        Rivers.DropFallsPastTheKeel(data);      // a rim fall pours past the keel, only known now
+        Rivers.MarkFords(data);                 // read by the traversal analysis
     }
 
-    // ---- Stage 1: footprint mask ----------------------------------------------
-
-    private static bool[,] BuildMask(int seed, IslandParams p)
+    /// <summary>
+    /// Stages 7–10: read the finished terrain back. Gate placement is the one
+    /// pass that both reads the analysis and moves slabs (it levels its landing
+    /// strips), so the analysis runs again when it did. Overhangs come last: the
+    /// lip of an overhang is a roof, not ground.
+    /// </summary>
+    private static void ReadBack(int seed, IslandParams p, IslandData data)
     {
-        int n = p.Size;
-        float radius = AutoRadius(p);
-        float cx = (n - 1) * 0.5f, cz = (n - 1) * 0.5f;
+        Traversal.Analyse(data);
+        if (GatePlacement.Place(seed, p, data)) Traversal.Analyse(data);
 
-        var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
-            .WithWarp(amplitude: 0.35f * n, frequency: 0.6f / n);
-        var blobs = new Noise(seed + 17, frequency: 0.09f, octaves: 3, ridged: true);
-
-        var field = new float[n, n];
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
+        // The mainland is the ground the Entry lands you on, not the largest piece.
+        foreach (Gate g in data.Gates)
         {
-            float d = NormRadius(x, z, cx, cz, radius);
-            float fall = 1f - FieldOps.SmoothStep(0.45f, 1f, d);
-            float body = 0.35f + 0.65f * shape.At(x, z);
-            float frag = Mathf.Lerp(1f, blobs.At(x, z), p.Fragmentation);
-            field[x, z] = fall * body * frag;
+            if (g.Role != GateRole.Entry) continue;
+            Traversal.AnchorOn(data, g.Apron);
+            break;
         }
 
-        float threshold = FieldOps.Quantile(field, 1f - Math.Clamp(p.Coverage, 0.01f, 0.99f));
-
-        var mask = new bool[n, n];
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            bool insideBox = NormRadius(x, z, cx, cz, radius) < 1.15f;
-            mask[x, z] = insideBox && field[x, z] > threshold;
-        }
-        return mask; // connected-component cleanup is a later stage
+        Passages.Find(data);
+        Habitat.Measure(seed, p, data);
+        Surfaces.Classify(seed, data);
+        Names.Give(seed, data);
+        Overhangs.Carve(seed, p, data);
     }
 
-    // ---- Stage 2: raw height (slab units) -----------------------------------
-
-    private static float[,] BuildHeight(int seed, IslandParams p, bool[,] land)
+    /// <summary>
+    /// The bounding cube is Size cells across and Size slabs tall. The mountain's
+    /// rise and the keel's depth are capped at the share of the cube they take on
+    /// a 128 Domain (40 and 34 slabs), so a smaller island is proportionally
+    /// lower rather than a scale model of a mountain in a shoebox.
+    /// </summary>
+    private static IslandParams BoundAltitude(IslandParams p)
     {
-        int n = p.Size;
-        float radius = AutoRadius(p);
-        float cx = (n - 1) * 0.5f, cz = (n - 1) * 0.5f;
-        float gain = 0.35f + 0.30f * p.Roughness;
+        int mountainCap = Mathf.RoundToInt(p.Size * (40f / 128f));
+        int keelCap = Mathf.RoundToInt(p.Size * (34f / 128f));
+        if (p.MountainHeight <= mountainCap && p.KeelDepth <= keelCap) return p;
 
-        var baseNoise = new Noise(seed + 101, frequency: 0.04f, octaves: 5, gain: gain);
-        var ridge = new Noise(seed + 202, frequency: 0.03f, octaves: 4, ridged: true);
-
-        float peak = 1f + p.HeightScale * p.Relief;         // slabs
-
-        var h = new float[n, n];
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (!land[x, z]) continue;
-            float d = Math.Min(1f, NormRadius(x, z, cx, cz, radius));
-            float bias = 1f - d * d;                         // relief rises inland
-            float b = baseNoise.At(x, z);
-            float m = ridge.At(x, z);
-            float mix = Mathf.Lerp(b, 0.4f * b + 0.6f * m, p.Relief);
-            h[x, z] = mix * bias * peak;
-        }
-        return h;
+        var bounded = (IslandParams)p.Duplicate();
+        bounded.MountainHeight = Math.Min(p.MountainHeight, mountainCap);
+        bounded.KeelDepth = Math.Min(p.KeelDepth, keelCap);
+        return bounded;
     }
-
-    // ---- Stage 3: terracing → slab levels ---------------------------------
-
-    private static short[,] Terrace(int seed, IslandParams p, bool[,] land, float[,] h)
-    {
-        int n = p.Size;
-        int tc = Math.Max(0, p.TerraceCount);
-
-        float hmax = 0f;
-        foreach (float v in h) if (v > hmax) hmax = v;
-
-        var shelves = new float[Math.Max(tc, 1)];
-        if (tc > 0)
-        {
-            var jitter = new Noise(seed + 303, frequency: 1f, octaves: 1);
-            float step = hmax / tc;
-            for (int i = 0; i < tc; i++)
-                shelves[i] = (i + 0.5f) * step + (jitter.At(i * 7.3f, 0.5f) - 0.5f) * step * 0.6f;
-            Array.Sort(shelves, 0, tc);
-        }
-        // Snap band, in slabs. Wider band = flatter, more terrace-dominated.
-        float band = p.TerraceGrip * (tc > 0 ? hmax / tc : 1f) * 0.5f;
-
-        var surf = new short[n, n];
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (!land[x, z]) { surf[x, z] = IslandData.NoLand; continue; }
-
-            float hv = h[x, z];
-            float target = Mathf.Round(hv);                  // 1-slab risers on slopes
-            if (tc > 0)
-            {
-                float nearest = shelves[0];
-                for (int i = 1; i < tc; i++)
-                    if (Math.Abs(shelves[i] - hv) < Math.Abs(nearest - hv)) nearest = shelves[i];
-                if (Math.Abs(hv - nearest) <= band) target = Mathf.Round(nearest);
-            }
-            surf[x, z] = SlabClamp(target);
-        }
-        return surf;
-        // TODO Stage 3 finish: morphological open at MinShelfWidth, re-flatten,
-        // gentle descent.
-    }
-
-    // ---- Stage 4: keel / underside → one span per column -----------------
-
-    private static short[,] BuildKeel(int seed, IslandParams p, bool[,] land, short[,] surface)
-    {
-        int n = p.Size;
-        int[,] toCoast = DistanceToCoast(land);
-        var noise = new Noise(seed + 404, frequency: 0.06f, octaves: 3);
-
-        // How many cells inland the thick rim reaches.
-        float reach = 2f + p.RimFalloff * 20f;
-
-        var keel = new short[n, n];
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (!land[x, z]) { keel[x, z] = IslandData.NoLand; continue; }
-
-            float coast = Math.Clamp(1f - toCoast[x, z] / reach, 0f, 1f);   // 1 at edge, 0 inland
-            float thick = 2f + p.RimDepth * coast + noise.At(x, z) * 4f;    // slabs
-            int k = surface[x, z] - Mathf.RoundToInt(thick);
-            keel[x, z] = SlabClamp(Math.Min(k, surface[x, z] - 1));
-        }
-        return keel;
-    }
-
-    /// <summary>Chebyshev-ish BFS distance in cells from each land cell to the nearest non-land cell.</summary>
-    private static int[,] DistanceToCoast(bool[,] land)
-    {
-        int n = land.GetLength(0);
-        var dist = new int[n, n];
-        var q = new Queue<(int x, int z)>();
-
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            if (!land[x, z]) { dist[x, z] = 0; q.Enqueue((x, z)); }
-            else dist[x, z] = int.MaxValue;
-        }
-
-        var dirs = new[] { (dx: 1, dz: 0), (dx: -1, dz: 0), (dx: 0, dz: 1), (dx: 0, dz: -1) };
-        while (q.Count > 0)
-        {
-            (int x, int z) = q.Dequeue();
-            foreach (var (dx, dz) in dirs)
-            {
-                int nx = x + dx, nz = z + dz;
-                if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
-                if (dist[nx, nz] > dist[x, z] + 1)
-                {
-                    dist[nx, nz] = dist[x, z] + 1;
-                    q.Enqueue((nx, nz));
-                }
-            }
-        }
-        return dist;
-    }
-
-    // ---- shared --------------------------------------------------------------
-
-    private static float AutoRadius(IslandParams p)
-        => p.Radius > 0f ? p.Radius : p.Size * 0.45f;
-
-    private static float NormRadius(int x, int z, float cx, float cz, float radius)
-    {
-        float dx = (x - cx) / radius, dz = (z - cz) / radius;
-        return MathF.Sqrt(dx * dx + dz * dz);
-    }
-
-    private static short SlabClamp(float level)
-        => (short)Math.Clamp((int)MathF.Round(level), short.MinValue + 1, short.MaxValue);
-
-    private static short SlabClamp(int level)
-        => (short)Math.Clamp(level, short.MinValue + 1, short.MaxValue);
 }
