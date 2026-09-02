@@ -397,7 +397,7 @@ Moisture1	29604	fa6550a6221e7a40
 Warmth0	23453	b1f85fd5610cca7a
 Warmth0	29604	b2e58e3b2e42a3b4
 Warmth1	23453	eb5540acf8615f1f
-Warmth1	29604	a7a53d30553d904e
+Warmth1	29604	f6c0c688df17454e
 PlateauLevels1	35755	4a51eecd0cc80cea
 PlateauLevels1	41906	fac0c8d4a72e1051
 PlateauLevels4	35755	75c379c6d18beb97

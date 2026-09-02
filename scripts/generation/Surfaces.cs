@@ -52,7 +52,14 @@ internal static class Surfaces
     private const int WetFrom = 170;
 
     /// <summary>Cells from fresh water a hot floodplain reaches; wet hot ground further off is savanna.</summary>
-    private const int FloodplainReach = 4;
+    private const int FloodplainReach = 3;
+
+    /// <summary>
+    /// Warmth from which a wet riverside is floodplain: the hot line less what the
+    /// water's tempering takes off a bank, so the bank and the strip behind it read
+    /// the same and a floodplain never starts a cell away from its river.
+    /// </summary>
+    private const int FloodplainFrom = 158;
 
     /// <summary>The noise bar cold wet ground must clear to be bog rather than moorland: occasional, not the rule.</summary>
     private const float BogBar = 0.6f;
@@ -119,7 +126,27 @@ internal static class Surfaces
             d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, bog);
         }
 
+        WipeStrandedFloodplain(d);
         FindSummits(d);
+    }
+
+    /// <summary>
+    /// A floodplain is the flat beside the water: any patch of it that does not
+    /// touch fresh water through other floodplain is savanna instead. One flood
+    /// over the footprint, so it costs nothing worth measuring.
+    /// </summary>
+    private static void WipeStrandedFloodplain(IslandData d)
+    {
+        int n = d.Size;
+        int[,] linked = Flood.Distance(n,
+            (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                      && d.Fluid[x, z] != (byte)FluidKind.Goo,
+            (_, _, nx, nz) => d.HasLand(nx, nz) && d.Material[nx, nz] == (byte)SurfaceMaterial.Floodplain);
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.Material[x, z] == (byte)SurfaceMaterial.Floodplain && linked[x, z] < 0)
+                d.Material[x, z] = (byte)SurfaceMaterial.Savanna;
     }
 
     /// <summary>
@@ -214,9 +241,9 @@ internal static class Surfaces
             return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
         }
 
+        if (wet && near <= FloodplainReach && warmth >= FloodplainFrom) return SurfaceMaterial.Floodplain;
         if (warmth >= HotFrom)
         {
-            if (wet && near <= FloodplainReach) return SurfaceMaterial.Floodplain;
             if (warmth >= SandFrom) return SurfaceMaterial.Sand;
             return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
         }

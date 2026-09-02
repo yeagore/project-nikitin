@@ -497,10 +497,15 @@ island reads as a place in the lab before the biome layer exists. In order:
 |---|---|---|---|
 | **cold** | tundra | moorland | bog where a noise field allows (about a third), moorland otherwise |
 | **temperate** | steppe | meadow | grass |
-| **hot** | dust | savanna | floodplain within four cells of a river or lake, savanna beyond |
+| **hot** | dust | savanna | floodplain within three cells of a river or lake, savanna beyond |
 
-Past the ends: hot ground at a warmth of 205 or more is sand unless it is a
-floodplain, and a mountain's top is snow whatever the climate.
+A floodplain has its own warmth line (158, under the hot line by what the
+water's tempering takes off a bank), so the bank and the strip behind it read
+the same; and any floodplain patch that does not touch fresh water through
+other floodplain is wiped to savanna — one flood over the footprint, so a
+floodplain never starts a cell away from its river. Past the ends: hot ground
+at a warmth of 205 or more is sand unless it is a floodplain, and a mountain's
+top is snow whatever the climate.
 The preset (moisture 0.45, warmth 0.5) is temperate and balanced: meadow with
 grass along the water. The audit's `Climate` sweep prints the whole grid, and
 the two ends, as material shares. The biome layer is expected to replace the
