@@ -6,15 +6,22 @@ namespace ProjectNikitin.Generation;
 /// <summary>Gentle coasts stepped down a slab, so a shallow shore meets the aether instead of stopping at a cliff.</summary>
 internal static class Beaches
 {
-    /// <summary>Cells of coast a beach takes. Berth placement does not read beaches.</summary>
-    private const int BeachWidth = 2;
+    /// <summary>Cells of coast a beach takes: a strand, not a shelf. Berth placement does not read beaches.</summary>
+    private const int BeachWidth = 1;
 
     /// <summary>
-    /// Steps the outermost cells of a gentle coast down one slab and flags them in
-    /// <paramref name="beach"/>. The drop is band-wise and tapered, so the only new
-    /// step is the free one; steep coasts, table rims and flooded cells are left alone.
+    /// The noise bar a stretch of gentle coast must clear to get a beach, so beaches
+    /// come in runs with plain coast between them rather than ringing the island.
     /// </summary>
-    internal static void MakeBeaches(bool[,] land, short[,] surface, short[,] water,
+    private const float BeachBar = 0.56f;
+
+    /// <summary>
+    /// Steps the outermost cell of a gentle coast down one slab, in stretches chosen
+    /// by one low-frequency noise field, and flags them in <paramref name="beach"/>.
+    /// The drop is band-wise and tapered, so the only new step is the free one;
+    /// steep coasts, table rims and flooded cells are left alone.
+    /// </summary>
+    internal static void MakeBeaches(int seed, bool[,] land, short[,] surface, short[,] water,
                                     int[,] region, RegionPlan[] plan, bool[,] beach)
     {
         int n = land.GetLength(0);
@@ -22,6 +29,7 @@ internal static class Beaches
             (x, z) => land[x, z] && AtRim(land, n, x, z),
             (_, _, nx, nz) => land[nx, nz],
             cap: BeachWidth);
+        var where = new Noise(seed + 5150, frequency: 0.04f, octaves: 2);
 
         // One slab, not a ramp: a two-slab beach spends a landing strip's whole tolerance.
         var drop = new int[n, n];
@@ -30,6 +38,7 @@ internal static class Beaches
         {
             if (!land[x, z] || toRim[x, z] < 0 || toRim[x, z] >= BeachWidth) continue;
             if (water[x, z] != IslandData.NoLand) continue;
+            if (where.At(x, z) < BeachBar) continue;
 
             LandformType type = plan[region[x, z]].Type;
             if (type is not (LandformType.Plain or LandformType.Hills or LandformType.Dunes))

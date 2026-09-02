@@ -104,13 +104,14 @@ public partial class IslandLab
 			}
 
 			case View.Moisture:
-				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: "
-					+ "nearness to fresh water (goo waters nothing). What the biome layer will grow things by";
+				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: walk from "
+					+ "fresh water (goo waters nothing), two cells more per slab climbed, so a river "
+					+ "waters the plain it crosses and not the mountain it passes";
 
 			case View.Warmth:
-				return $"[b]warmth[/b]   {Ramp(DevPalette.WarmthRamp)}  frozen … warm lowland: the altitude "
-					+ "lapse, absolute. Anchored to the tallest a mountain can be at this size — "
-					+ "a flat island is warm all over";
+				return $"[b]warmth[/b]   {Ramp(DevPalette.WarmthRamp)}  frozen … warm: one climate up to a "
+					+ "third of the tallest a mountain can be at this size, then the lapse; windswept "
+					+ "ground, the rim and dry country colder, wet ground tempered";
 
 			case View.Rugged:
 				return $"[b]rugged[/b]   {Ramp(DevPalette.RuggedRamp)}  flat … broken: local relief within "

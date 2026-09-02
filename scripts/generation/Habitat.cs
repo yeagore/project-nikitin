@@ -13,17 +13,42 @@ namespace ProjectNikitin.Generation;
 /// </summary>
 internal static class Habitat
 {
-    /// <summary>Cells over which moisture decays to 1/e.</summary>
-    private const float MoistureFalloff = 6.5f;
+    /// <summary>Cells of level walk over which moisture decays to 1/e.</summary>
+    private const float MoistureFalloff = 11f;
+
+    /// <summary>Cells of walk one slab of climb costs the water: it spreads along and down, not up.</summary>
+    private const int ClimbCost = 2;
+
+    /// <summary>Walk cost beyond which a cell is parched anyway (e^-7 of full), so the flood stops.</summary>
+    private const int MoistureReach = 80;
 
     /// <summary>How far (±) noise wobbles a cell's effective water distance.</summary>
     private const float MoistureWobble = 0.3f;
 
     /// <summary>
-    /// Warmth lost over the full mountain cap (<see cref="MountainCap"/>). Anchored
+    /// Warmth lost at the full mountain cap (<see cref="MountainCap"/>). Anchored
     /// to the cap, not the island's own range, so a flat island stays warm to its top.
     /// </summary>
     private const float LapseShare = 235f;
+
+    /// <summary>Share of the cap below which altitude costs no warmth: the lowland and the middle heights are one climate.</summary>
+    private const float LapseKnee = 0.3f;
+
+    /// <summary>Curve of the lapse above the knee; over 1 so the cold gathers at the top.</summary>
+    private const float LapseCurve = 1.3f;
+
+    /// <summary>Warmth a fully windswept cell loses.</summary>
+    private const float WindChill = 25f;
+
+    /// <summary>Warmth the rim loses, fading to nothing <see cref="RimChillReach"/> cells inland.</summary>
+    private const float RimChill = 20f;
+    private const int RimChillReach = 16;
+
+    /// <summary>Warmth's middle, which wet ground is pulled toward: water tempers both the heat and the cold.</summary>
+    private const float Temperate = 190f;
+
+    /// <summary>How far waterside ground is pulled toward <see cref="Temperate"/>.</summary>
+    private const float MoistTemper = 0.3f;
 
     /// <summary>Cells upwind a cell looks for cover.</summary>
     private const int WindScan = 10;
@@ -34,45 +59,59 @@ internal static class Habitat
     /// <summary>The tallest mountain a footprint allows, in slabs.</summary>
     internal static float MountainCap(int size) => Math.Max(8f, size * (40f / 128f));
 
-    /// <summary>Fills the five axes, in a fixed order.</summary>
+    /// <summary>Fills the five axes, in a fixed order: warmth last, since it reads the other four.</summary>
     public static void Measure(int seed, IslandData d)
     {
         MeasureMoisture(seed, d);
-        MeasureWarmth(d);
         MeasureRuggedness(d);
         MeasureExposure(d);
         MeasureRimDistance(d);
+        MeasureWarmth(d);
     }
 
     /// <summary>
-    /// Flood distance from watered columns (goo waters nothing), wobbled by noise,
-    /// decayed exponentially. Land the flood never reaches is parched (0).
+    /// Walk cost from watered columns (goo waters nothing): a cell per cell along or
+    /// down, <see cref="ClimbCost"/> more per slab up, so a river waters the plain
+    /// it crosses and not the mountain or the canyon wall it passes. Wobbled by
+    /// noise, decayed exponentially. Land the flood never reaches is parched (0).
     /// </summary>
     private static void MeasureMoisture(int seed, IslandData d)
     {
         int n = d.Size;
-        var dist = new int[n, n];
-        var q = new Queue<Vector2I>();
+        var cost = new int[n, n];
+        // A bucket per unit of cost (Dial's queue): integer costs, scan order kept.
+        var buckets = new List<Vector2I>[MoistureReach + 1];
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
-            dist[x, z] = -1;
+            cost[x, z] = -1;
             if (!d.HasLand(x, z) || d.WaterLevel[x, z] == IslandData.NoLand) continue;
             if (d.Fluid[x, z] == (byte)FluidKind.Goo) continue;
-            dist[x, z] = 0;
-            q.Enqueue(new Vector2I(x, z));
+            cost[x, z] = 0;
+            (buckets[0] ??= new List<Vector2I>()).Add(new Vector2I(x, z));
         }
-        while (q.Count > 0)
+
+        for (int c = 0; c <= MoistureReach; c++)
         {
-            Vector2I c = q.Dequeue();
-            for (int k = 0; k < 4; k++)
+            List<Vector2I>? bucket = buckets[c];
+            if (bucket == null) continue;
+            for (int i = 0; i < bucket.Count; i++)
             {
-                int nx = c.X + Dx[k], nz = c.Y + Dz[k];
-                if (!InBounds(n, nx, nz)) continue;
-                if (!d.HasLand(nx, nz) || dist[nx, nz] >= 0) continue;
-                dist[nx, nz] = dist[c.X, c.Y] + 1;
-                q.Enqueue(new Vector2I(nx, nz));
+                Vector2I at = bucket[i];
+                if (cost[at.X, at.Y] != c) continue;             // relaxed since it was queued
+                short here = d.EffectiveLevel(at.X, at.Y);
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = at.X + Dx[k], nz = at.Y + Dz[k];
+                    if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
+                    int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here);
+                    int next = c + 1 + climb * ClimbCost;
+                    if (next > MoistureReach) continue;
+                    if (cost[nx, nz] >= 0 && cost[nx, nz] <= next) continue;
+                    cost[nx, nz] = next;
+                    (buckets[next] ??= new List<Vector2I>()).Add(new Vector2I(nx, nz));
+                }
             }
         }
 
@@ -81,16 +120,21 @@ internal static class Habitat
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
-            if (dist[x, z] < 0) { d.Moisture[x, z] = 0; continue; }
+            if (cost[x, z] < 0) { d.Moisture[x, z] = 0; continue; }
 
             float sway = 1f + MoistureWobble * (wobble.At(x, z) * 2f - 1f);
-            float cells = dist[x, z] * sway;
+            float cells = cost[x, z] * sway;
             d.Moisture[x, z] = (byte)Mathf.Clamp(
                 Mathf.RoundToInt(255f * MathF.Exp(-cells / MoistureFalloff)), 0, 255);
         }
     }
 
-    /// <summary>A fixed lapse per slab above the lowest visible ground; no land leaves it all zero.</summary>
+    /// <summary>
+    /// Warmth: one climate from the lowest ground up to <see cref="LapseKnee"/> of
+    /// the mountain cap, then a lapse that steepens toward the cap; the wind, the
+    /// rim and dry ground each make it colder — wet ground is pulled toward
+    /// <see cref="Temperate"/> from either side. No land leaves it all zero.
+    /// </summary>
     private static void MeasureWarmth(IslandData d)
     {
         int n = d.Size;
@@ -109,8 +153,14 @@ internal static class Habitat
         {
             if (!d.HasLand(x, z)) continue;
             float rise = d.EffectiveLevel(x, z) - low;
-            d.Warmth[x, z] = (byte)Mathf.Clamp(
-                Mathf.RoundToInt(255f - LapseShare * rise / cap), 0, 255);
+            float t = Mathf.Clamp((rise / cap - LapseKnee) / (1f - LapseKnee), 0f, 1f);
+            float warmth = 255f - LapseShare * MathF.Pow(t, LapseCurve);
+
+            warmth -= WindChill * d.Exposure[x, z] / 255f;
+            warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);
+            warmth = Temperate + (warmth - Temperate) * (1f - MoistTemper * d.Moisture[x, z] / 255f);
+
+            d.Warmth[x, z] = (byte)Mathf.Clamp(Mathf.RoundToInt(warmth), 0, 255);
         }
     }
 

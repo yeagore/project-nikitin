@@ -314,7 +314,7 @@ public static class IslandGenerator
     /// </summary>
     private static void Settle(Draft d)
     {
-        Beaches.MakeBeaches(d.Land, d.Surface, d.Water, d.Region, d.Plan, d.Data.Beach);
+        Beaches.MakeBeaches(d.Seed, d.Land, d.Surface, d.Water, d.Region, d.Plan, d.Data.Beach);
 
         for (int settle = 0; settle < 6; settle++)
         {

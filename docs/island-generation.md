@@ -43,7 +43,9 @@ there on purpose.
 `IslandGenerator.BoundAltitude` caps the mountain rise and the keel depth at the
 share of the cube they take on a 128 Domain (40 and 34 slabs), so a smaller
 island is proportionally lower, and nothing the generator builds — Gates
-included — may leave the cube.
+included — may leave the cube. Vertically the cube stands on the keel's lowest
+point: the audit's `altOverCap` is keel-to-crest against `Size`, and the lab
+draws the same box.
 
 Everything the later stages work out — landform, water and fluid, the habitat
 vector, the anchor lists, Gates, roads, names — lives on `IslandData` beside
@@ -239,8 +241,9 @@ fills them, because where a jet belongs is a fact about the biome.
 ### Settle (`Beaches`, `Bridgeheads`, `StepGrammar`)
 
 **Beaches.** Where the ground reaches the rim gently — a plain, hills or dunes,
-level with its neighbours — the outermost two cells step down a slab per cell,
-a whole band at a time so the only new step is the free one. It is the
+level with its neighbours — the outermost cell steps down a slab, in stretches
+picked by one low-frequency noise field (`BeachBar`), so a beach is a strand
+along part of a coast rather than a shelf ringing the island. It is the
 difference between land that stops and land that *meets* the aether, and it
 gives the content layer a shoreline anchor (`IslandData.Beach`). Steep coasts,
 mesa rims, basin walls and anything under water are left alone; berth placement
@@ -439,8 +442,8 @@ them instead of unpicking one score.
 
 | axis | 0 … 255 | how it is measured |
 |---|---|---|
-| `Moisture` | parched … waterside | breadth-first distance from fresh water (goo waters nothing), wobbled by noise so the bands are not contour lines of the water network, decayed to 1/e at ~6.5 cells |
-| `Warmth` | frozen … warm lowland | a **fixed lapse per slab** above the island's lowest ground, anchored to the tallest a mountain can stand at this footprint (`Size × 40/128` — the `BoundAltitude` cap). Absolute on purpose: the top of what a mountain *can be* is always frozen, and a flat island is warm to its highest hill |
+| `Moisture` | parched … waterside | **walk cost** from fresh water (goo waters nothing): a cell per cell along or down, two more per slab climbed, so a river waters the plain it crosses and not the mountain or the canyon wall it passes; wobbled by noise so the bands are not contour lines of the water network; decayed to 1/e at 11 cells of level walk |
+| `Warmth` | frozen … warm lowland | **one climate from the lowest ground up to 30% of the mountain cap** (`Size × 40/128` — the `BoundAltitude` cap), then a lapse that steepens toward the cap, where it is frozen. Absolute on purpose: the top of what a mountain *can be* is always frozen, and a flat island is warm to its highest hill. Then the modifiers: a fully windswept cell is 25 colder, the rim 20 colder fading over 16 cells inland, and wet ground is pulled 30% of the way toward the temperate middle (190) from either side — water tempers heat and cold alike. Measured last, since it reads the other four axes |
 | `Ruggedness` | flat … broken | local relief within two cells, 32 per slab, with **water read as its bank** (a slab over its surface): a stream through a plain is flat country and a gorge is still its walls. Measured against the water surface instead, every shore read a slab rougher than the country round it |
 | `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter. The wind is rolled for every Domain, dunes or not |
 | `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |

@@ -61,8 +61,10 @@ berths; **O** fords; **P** the roads between the Gates (pale yellow walk; red
 stair, gold bridge, cyan ferry); **X** the compass, each Gate's landward vector,
 the Domain's wind — a run of orange arrows standing off the upwind edge with
 its name, whether or not there are dunes, plus its grain along each dune field —
-and two bounding boxes: the faint cube of the Domain (nothing the generator
-builds may hang outside it) and a gold box tight round the landmass.
+and two bounding boxes: the faint cube of the Domain (Size cells across and
+Size slabs tall, standing on the keel's lowest point; nothing the generator
+builds may hang outside it, and its shape never changes between seeds) and a
+gold box tight round the landmass.
 
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and

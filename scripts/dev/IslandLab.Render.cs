@@ -534,7 +534,12 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>Two boxes: gold round the land itself, faint round the Domain's cube (Gates included).</summary>
+	/// <summary>
+	/// Two boxes: gold tight round the land itself, and the Domain's cube — Size
+	/// cells across, Size slabs tall, standing on the keel's lowest point, the
+	/// shape the audit's altitude check measures against. The cube never changes
+	/// shape between seeds; what it contains does.
+	/// </summary>
 	private static void DrawBounds(IslandData d, MarkList m)
 	{
 		const float sh = Terrain.SlabHeight;
@@ -582,10 +587,7 @@ public partial class IslandLab
 			Box(xLo - 0.5f, xHi + 0.5f, yLo - sh, yHi + sh, zLo - 0.5f,
 				zHi + 0.5f, cs * 0.14f, new Color(1f, 0.78f, 0.25f, 0.6f));
 
-			float cubeHi = yHi;
-			foreach (Gate g in d.Gates)
-				cubeHi = Mathf.Max(cubeHi, (g.Center.Y + Gate.Height) * sh);
-			Box(-0.5f, n - 0.5f, yLo - 2f * cs, cubeHi + 2f * cs, -0.5f,
+			Box(-0.5f, n - 0.5f, yLo, yLo + n * sh, -0.5f,
 				n - 0.5f, cs * 0.1f, new Color(0.92f, 0.96f, 1f, 0.3f));
 		}
 	}
