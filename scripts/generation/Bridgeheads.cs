@@ -9,32 +9,17 @@ namespace ProjectNikitin.Generation;
 /// <summary>Levelling the two banks of every crossing, and recording the crossings as built.</summary>
 internal static class Bridgeheads
 {
-    /// <summary>
-    /// Slabs of disagreement between two banks that levelling will still close.
-    /// Beyond this the crossing is left alone: cutting a bank down by more than
-    /// a stair's worth to meet the far side gouges a notch in the coast, and the
-    /// two banks were meant to have been put on one rung long before this.
-    /// </summary>
+    /// <summary>Slabs of disagreement between two banks that levelling will still close; beyond it the crossing is left alone rather than notching the coast.</summary>
     private const int MaxBridgeheadDrop = 8;
 
     /// <summary>Cells either side of a bridgehead that come down with it.</summary>
     private const int BridgeheadPad = 1;
 
     /// <summary>
-    /// Brings the two ends of every crossing to one level.
-    ///
-    /// <b>A bridge is a run of slabs at a single level.</b> It does not climb, so
-    /// a deck between banks eight slabs apart is not a bridge — it is a lift with
-    /// a deck on it, which is what the old <c>MaxBridgeRise</c> was quietly
-    /// allowing. Levelling here, rather than relaxing the rule there, is what
-    /// makes a crossing something you can walk onto at both ends.
-    ///
-    /// It only ever <i>lowers</i>, which is what lets the settle loop that
-    /// follows clean up the step it leaves without a special case — and it will
-    /// not touch ground beside a lake, since cutting a shore down is how you
-    /// empty one.
+    /// Brings the two ends of every crossing to one level: a bridge is a run of slabs at a single level.
+    /// It only ever lowers, so the settle loop cleans up the step it leaves, and never touches ground
+    /// beside water, since cutting a shore down is how you empty a lake. Returns whether anything moved.
     /// </summary>
-    /// <returns>Whether any ground was lowered.</returns>
     internal static bool LevelBridgeheads(bool[,] land, short[,] surface, short[,] water,
                                          int[,] region, RegionPlan[] plan,
                                          List<(Vector2I A, Vector2I B)> bridges)
@@ -56,6 +41,7 @@ internal static class Bridgeheads
         return moved;
     }
 
+    /// <summary>Lowers the pad round a bridgehead to <paramref name="target"/>: only Plain/Hills ground, never below a basin's escarpment.</summary>
     private static bool FlattenPad(bool[,] land, short[,] surface, short[,] water,
                                    int[,] region, RegionPlan[] plan,
                                    Vector2I c, short target, int n)
@@ -68,11 +54,6 @@ internal static class Bridgeheads
             if (!InBounds(n, x, z)) continue;
             if (!land[x, z] || surface[x, z] <= target) continue;
             if (NearWater(water, n, x, z)) continue;
-            // A landing is plains ground. Cutting a pad into a mesa's rim or a
-            // mountain's foot would take the landform's own height away from it —
-            // and cutting the plain beside a basin down past the basin floor turns
-            // the escarpment upside down, which is how a basin came out standing
-            // three slabs *above* the country around it.
             if (plan[region[x, z]].Type is not (LandformType.Plain or LandformType.Hills))
                 continue;
             if (target < StepGrammar.BasinFloorNear(land, surface, region, plan, n, x, z)) continue;
@@ -95,11 +76,7 @@ internal static class Bridgeheads
         return false;
     }
 
-    /// <summary>
-    /// Records each crossing as it finally stands: the level its deck runs at,
-    /// halfway between the two banks so each end is a one-slab step, and how many
-    /// cells of nothing it has to cover.
-    /// </summary>
+    /// <summary>Records each crossing as it finally stands: the deck halfway between the banks (so each end is a one-slab step) and the cells of nothing it covers.</summary>
     internal static void RecordCrossings(IslandData d, List<(Vector2I A, Vector2I B)> pairs)
     {
         foreach (var (a, b) in pairs)
