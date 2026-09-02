@@ -417,8 +417,9 @@ public partial class GenerationAudit
     {
         GD.Print($"\n=== climate scout: {ClimateScout} seeds at {ClimateGridSize}², "
             + "diverse terrain and visible water first ===");
-        GD.Print($"  {"seed",7} {"score",5} {"forms",5} {"mats",4} {"land%",5} {"lake",5} "
-            + $"{"river",5} {"nav",4} {"bodies",6} {"walk%",5}  arrangement / character");
+        GD.Print($"  {"seed",7} {"score",5} {"forms",5} {"mats",4} {"high%",5} {"land%",5} "
+            + $"{"lake",5} {"river",5} {"nav",4} {"bodies",6} {"walk%",5}  "
+            + "arrangement / character");
 
         var rows = new List<(int Score, string Line)>();
         for (int i = 0; i < ClimateScout; i++)
@@ -429,7 +430,7 @@ public partial class GenerationAudit
 
             var forms = new HashSet<byte>();
             var materials = new HashSet<byte>();
-            long land = 0, lake = 0, river = 0, nav = 0, walk = 0;
+            long land = 0, lake = 0, river = 0, nav = 0, walk = 0, high = 0;
             for (int x = 0; x < d.Size; x++)
             for (int z = 0; z < d.Size; z++)
             {
@@ -437,6 +438,9 @@ public partial class GenerationAudit
                 land++;
                 forms.Add(d.Landform[x, z]);
                 materials.Add(d.Material[x, z]);
+                // Ground that can climb past the plateau ceiling, so the lapse is visible.
+                if ((LandformType)d.Landform[x, z] is LandformType.Mountain
+                    or LandformType.Massif) high++;
                 if (d.Walk[x, z] == d.Mainland) walk++;
                 if (d.WaterLevel[x, z] == IslandData.NoLand) continue;
                 if (d.River[x, z]) { river++; if (d.Navigable[x, z]) nav++; }
@@ -451,7 +455,8 @@ public partial class GenerationAudit
                 + (lake > 0 ? 10 : 0);
 
             rows.Add((score, $"  {seed,7} {score,5} {forms.Count,5} {materials.Count,4} "
-                + $"{100 * land / cells,5} {lake,5} {river,5} {nav,4} {d.WaterBodies,6} "
+                + $"{100 * high / Math.Max(1, land),5} {100 * land / cells,5} {lake,5} "
+                + $"{river,5} {nav,4} {d.WaterBodies,6} "
                 + $"{100 * walk / Math.Max(1, land),5}  {d.Arrangement} / {d.Character}"));
         }
 

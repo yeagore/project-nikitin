@@ -38,6 +38,13 @@ Camera: **WASD** pan, **Q/E** or middle-drag yaw, middle-drag or **Up/Down**
 tilt, wheel zoom, **Shift** faster. (Fords are on **O** because **D** is the
 strafe, and liquid on **I** because **W** is forward.)
 
+**N** rolls a seed; the **Seed** field under the buttons takes one you already
+have — a seed named in an audit run, a commit or a screenshot — and **Enter** or
+**Build** generates it against whatever the panel's parameters currently say.
+Anything that is not a whole number is put back. The field is a `LineEdit`, so
+while it has focus it swallows the single-key shortcuts; the camera still polls
+**WASD** every frame, but a seed is digits.
+
 Views: `height`, `landform`, `region`, `walk` (what connects on foot), `reach`
 (what connects once you build; red is out of reach whatever you build),
 `shelves`, `surface` (stone, scree, snow, sand, silt and the climate grid —

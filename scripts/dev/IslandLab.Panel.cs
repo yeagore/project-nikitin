@@ -27,6 +27,7 @@ public partial class IslandLab
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
 	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
 	private CheckBox _liquidBox = null!;
+	private LineEdit _seedField = null!;
 	private bool _syncing;
 
 	private void BuildOverlayUi()
@@ -73,6 +74,25 @@ public partial class IslandLab
 		AddButton(doing, "New seed  (N)", () => { Seed = (int)(GD.Randi() & 0x7FFFFFFF); Sync(); });
 		AddButton(doing, "Frame  (F)", () => _rig.Frame(_islandCenter, _islandRadius));
 		AddButton(doing, "Rebuild  (R)", Rebuild);
+
+		// The seed as a field, so a seed named in the audit, a commit or a screenshot can
+		// be typed back in and built against whatever the parameters below happen to say.
+		rows.AddChild(Caption("Seed  (Enter builds it)"));
+		var seedRow = new HBoxContainer();
+		seedRow.AddThemeConstantOverride("separation", 4);
+		rows.AddChild(seedRow);
+		_seedField = new LineEdit
+		{
+			Text = SeedText,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			SizeFlagsStretchRatio = 2f,
+			TooltipText = "A whole number. Generation is a pure function of this and the "
+				+ "parameters below, so the same pair always gives the same Domain; "
+				+ "anything that is not a whole number is put back.",
+		};
+		_seedField.TextSubmitted += _ => UseTypedSeed();
+		seedRow.AddChild(_seedField);
+		AddButton(seedRow, "Build", UseTypedSeed);
 
 		Heading(rows, "what the island is");
 		_viewPick = Choice<View>(rows, "View  (C)", () => _view,
@@ -229,6 +249,31 @@ public partial class IslandLab
 
 	private ImageTexture? _swatch;
 
+	/// <summary>The seed as the field shows it; culture-invariant, since this machine's is not.</summary>
+	private string SeedText => Seed.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+	/// <summary>
+	/// Takes the seed typed into the panel. The rebuild is not done here: setting
+	/// <see cref="Seed"/> moves the signature and <c>_Process</c> notices, the same
+	/// path a remote-inspector edit takes. Anything that is not a whole number is put
+	/// back, because a half-typed seed is not a Domain.
+	/// </summary>
+	private void UseTypedSeed()
+	{
+		if (int.TryParse(_seedField.Text.Trim(), System.Globalization.NumberStyles.Integer,
+				System.Globalization.CultureInfo.InvariantCulture, out int typed))
+		{
+			Seed = typed;
+			GD.Print($"[IslandLab] seed {Seed} from the panel");
+		}
+		else
+		{
+			GD.Print($"[IslandLab] '{_seedField.Text}' is not a whole number; kept seed {Seed}");
+			_seedField.Text = SeedText;
+		}
+		Sync();
+	}
+
 	/// <summary>
 	/// Pulls every widget back into line with what it displays. The <see cref="_syncing"/>
 	/// guard stops the write coming back round as a change signal.
@@ -259,6 +304,9 @@ public partial class IslandLab
 		_cliff.Value = Params.CliffHeight;
 		_patch.Value = Params.RegionScale;
 		_exits.Value = Params.ExitGates;
+
+		// Not while it is being typed into: N and the keys write the seed too.
+		if (!_seedField.HasFocus()) _seedField.Text = SeedText;
 
 		_newShapes.ButtonPressed = Params.NewArrangements && Params.NewLandforms;
 		_poolNote.Text = PoolNote();
