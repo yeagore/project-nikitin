@@ -109,7 +109,7 @@ internal static partial class Rivers
         var carve = new float[basins];
         for (int b = 0; b < basins; b++)
         {
-            float rank = FeatureHash01(seed, 0x7A11Eu ^ (uint)b * 2654435761u);
+            float rank = Hash01(seed, 0x7A11Eu ^ (uint)b * 2654435761u);
             // The tilt is up to ±0.35 of the range.
             float relief = hi[b] < lo[b] ? 0f
                 : Math.Clamp((hi[b] - lo[b] - 3) / 12f, 0f, 1f);

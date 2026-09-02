@@ -116,8 +116,7 @@ under `scripts/generation/`, in the order they run:
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
-`SeedHash` (two mixers, `TerrainHash` and `FeatureHash`; every salt was tuned
-against its own), `Flood`, `Terrain`, `FieldOps`, `Noise`.
+`SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
 `IslandData` for 440 islands against `docs/checksum-baseline.txt`: a change

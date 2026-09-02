@@ -159,7 +159,7 @@ internal static class Sculpting
     }
 
     /// <summary>Whether this island gets a canyon: one in five.</summary>
-    internal static bool WantsCanyon(int seed, IslandParams p) => TerrainHash01(seed, 0x4C17) < 0.20f;
+    internal static bool WantsCanyon(int seed, IslandParams p) => Hash01(seed, 0x4C17) < 0.20f;
 
     /// <summary>
     /// Cuts up to two passes: a broad wobbled sag where one plateau comes down to
@@ -173,7 +173,7 @@ internal static class Sculpting
                                       Dictionary<long, List<(int X, int Z)>> borders,
                                       List<Vector2I> sites)
     {
-        float roll = TerrainHash01(seed, 0x9E15);
+        float roll = Hash01(seed, 0x9E15);
         int want = roll < 0.35f ? 0 : roll < 0.80f ? 1 : 2;
         if (want == 0) return null;
 
@@ -242,7 +242,7 @@ internal static class Sculpting
             }
             if (bx < 0) continue;
 
-            float jitter = 0.6f + 0.8f * TerrainHash01(seed, 0x5A11u ^ (uint)key * 2654435761u);
+            float jitter = 0.6f + 0.8f * Hash01(seed, 0x5A11u ^ (uint)key * 2654435761u);
             options.Add((cells.Count * jitter / bestDrop, bx, bz, bestDrop));
         }
         return options;
@@ -330,7 +330,7 @@ internal static class Sculpting
 
         int n = p.Size;
         // The seed set covers both sides of the border, so the trench is two cells wide before it grows.
-        int halfWidth = TerrainHash01(seed, 0x3B71) < 0.7f ? 0 : 1;        // 2 or 4 cells across
+        int halfWidth = Hash01(seed, 0x3B71) < 0.7f ? 0 : 1;        // 2 or 4 cells across
         int depth = Math.Max(4, (int)MathF.Round(p.CliffHeight * 1.8f));
 
         var dist = new int[n, n];

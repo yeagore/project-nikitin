@@ -31,12 +31,12 @@ internal static class Regions
         var centre = new Vector2((n - 1) * 0.5f, (n - 1) * 0.5f);
         ReliefStyle style = Roster.ResolveStyle(seed, p);
 
-        float a1 = TerrainHash01(seed, 0x7A11) * Mathf.Tau;
-        float a2 = TerrainHash01(seed, 0x1B93) * Mathf.Tau;
+        float a1 = Hash01(seed, 0x7A11) * Mathf.Tau;
+        float a2 = Hash01(seed, 0x1B93) * Mathf.Tau;
         var axis = new Vector2(MathF.Cos(a1), MathF.Sin(a1));
-        var p1 = centre + axis * radius * (0.30f + 0.20f * TerrainHash01(seed, 0x44D2));
+        var p1 = centre + axis * radius * (0.30f + 0.20f * Hash01(seed, 0x44D2));
         var p2 = centre + new Vector2(MathF.Cos(a2), MathF.Sin(a2))
-                          * radius * (0.30f + 0.25f * TerrainHash01(seed, 0x6E05));
+                          * radius * (0.30f + 0.25f * Hash01(seed, 0x6E05));
 
         var drift = new Noise(seed + 606, frequency: 0.02f, octaves: 3);
 
@@ -225,8 +225,8 @@ internal static class Regions
         for (int j = 0; j < cols; j++)
         {
             uint key = (uint)i * 73856093u ^ (uint)j * 19349663u;
-            sx[i, j] = (i - 0.5f + 0.2f + 0.6f * TerrainHash01(seed, key)) * step;
-            sz[i, j] = (j - 0.5f + 0.2f + 0.6f * TerrainHash01(seed, key ^ 0x9E3779B9u)) * step;
+            sx[i, j] = (i - 0.5f + 0.2f + 0.6f * Hash01(seed, key)) * step;
+            sz[i, j] = (j - 0.5f + 0.2f + 0.6f * Hash01(seed, key ^ 0x9E3779B9u)) * step;
         }
 
         var warpX = new Noise(seed + 707, frequency: 0.035f, octaves: 2);

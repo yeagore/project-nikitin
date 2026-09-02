@@ -321,7 +321,7 @@ internal static partial class GatePlacement
                - MathF.Abs(side - middle) * 0.35f
                - roughness * 1.5f
                + ApronAt(d, x, z) * 0.01f
-               + FeatureHash01(seed, 0x2200u ^ (uint)(x * 733 + z)) * 0.5f;
+               + Hash01(seed, 0x2200u ^ (uint)(x * 733 + z)) * 0.5f;
     }
 
     /// <summary>

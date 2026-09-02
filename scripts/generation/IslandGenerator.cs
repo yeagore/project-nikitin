@@ -35,7 +35,7 @@ public static class IslandGenerator
 
         for (int attempt = 0; attempt < Attempts; attempt++)
         {
-            int use = attempt == 0 ? seed : unchecked((int)TerrainHash(seed, 0x5E1Fu + (uint)attempt));
+            int use = attempt == 0 ? seed : unchecked((int)Hash(seed, 0x5E1Fu + (uint)attempt));
             IslandData d = Build(use, p);
             d.Attempts = attempt + 1;
             List<string> missing = Unmet(d, p);

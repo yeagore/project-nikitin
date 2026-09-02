@@ -26,7 +26,7 @@ internal static class Roster
                 { ReliefStyle.Plateau, ReliefStyle.Tilted, ReliefStyle.OffsetPeak },
             _ => new[] { ReliefStyle.Ridge, ReliefStyle.TwinPeaks, ReliefStyle.OffsetPeak },
         };
-        return pool[(int)(TerrainHash(seed, 0x5EED) % (uint)pool.Length)];
+        return pool[(int)(Hash(seed, 0x5EED) % (uint)pool.Length)];
     }
 
     /// <summary>The relief style for this island's character, with <c>Auto</c> resolved.</summary>
@@ -111,7 +111,7 @@ internal static class Roster
         float total = 0f;
         for (int i = 0; i < upto; i++) total += ArrangementPool[i].Weight;
 
-        float pick = TerrainHash01(seed, 0x7A1Du) * total;
+        float pick = Hash01(seed, 0x7A1Du) * total;
         for (int i = 0; i < upto; i++)
         {
             pick -= ArrangementPool[i].Weight;
@@ -130,6 +130,6 @@ internal static class Roster
         int upto = p.NewLandforms
             ? Enum.GetValues<TerrainCharacter>().Length - 1      // minus Auto
             : ClassicCharacters;
-        return (TerrainCharacter)(1 + (int)(TerrainHash(seed, 0xC7A2) % (uint)upto));
+        return (TerrainCharacter)(1 + (int)(Hash(seed, 0xC7A2) % (uint)upto));
     }
 }

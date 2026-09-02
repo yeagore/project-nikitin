@@ -111,7 +111,7 @@ internal static class Lakes
 
             float chance = (t == LandformType.Mesa ? 0.10f : 0.22f) * wet * 2f;
             chance *= 1f + Math.Min(interior[r], 320) / 320f * 0.5f;
-            wants[r] = TerrainHash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
+            wants[r] = Hash01(seed, 0xB10Au ^ (uint)r * 2654435761u) < chance;
         }
 
         var tarn = new bool[count];
@@ -121,7 +121,7 @@ internal static class Lakes
             LandformType t = plan[r].Type;
             if (t != LandformType.Plain && t != LandformType.Basin) continue;
             if (interior[r] < minInterior || shore[r] == int.MaxValue) continue;
-            if (TerrainHash01(seed, 0x7AB0u ^ (uint)r * 2654435761u) >= 0.12f * wet * 2f) continue;
+            if (Hash01(seed, 0x7AB0u ^ (uint)r * 2654435761u) >= 0.12f * wet * 2f) continue;
             wants[r] = true;
             tarn[r] = true;
         }
@@ -137,7 +137,7 @@ internal static class Lakes
         {
             if (!wants[r]) continue;
             level[r] = shore[r] - 1;
-            bed[r] = level[r] - (2 + (int)(TerrainHash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
+            bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
         }
         return (level, bed);
     }
@@ -167,7 +167,7 @@ internal static class Lakes
             if (!wants[r] || plan[r].Type != LandformType.Mesa) continue;
             (int cx, int cz) = DeepestCell(region, inset, (i, j) => pool[i, j], r, n);
             if (cx < 0) continue;
-            float capped = 1.6f + TerrainHash01(seed, 0x7A2Bu ^ (uint)r * 40503u) * 1.2f;
+            float capped = 1.6f + Hash01(seed, 0x7A2Bu ^ (uint)r * 40503u) * 1.2f;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -190,12 +190,12 @@ internal static class Lakes
         for (int r = 0; r < count; r++)
         {
             if (!wants[r] || style[r] != LakeStyle.Single) continue;
-            if (TerrainHash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
+            if (Hash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
 
             (int cx, int cz) = DeepestCell(region, inset, (i, j) => pool[i, j], r, n);
             if (cx < 0) continue;
 
-            float rad = 0.9f + TerrainHash01(seed, 0x0DDu ^ (uint)r * 40503u) * 0.9f;
+            float rad = 0.9f + Hash01(seed, 0x0DDu ^ (uint)r * 40503u) * 0.9f;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -290,7 +290,7 @@ internal static class Lakes
             if (tarn[r]) { style[r] = LakeStyle.Tarn; continue; }
             if (area[r] < 40) continue;
 
-            float roll = TerrainHash01(seed, 0x5A9Eu ^ (uint)r * 2654435761u);
+            float roll = Hash01(seed, 0x5A9Eu ^ (uint)r * 2654435761u);
             style[r] = roll switch
             {
                 < 0.40f => LakeStyle.Single,
@@ -335,7 +335,7 @@ internal static class Lakes
                 case LakeStyle.Crescent:
                 {
                     // The ring with its core stamped out again off-centre; the overlap is the bite.
-                    int dir = (int)(TerrainHash01(seed, 0xC3E5u ^ (uint)r * 40503u) * 8f) & 7;
+                    int dir = (int)(Hash01(seed, 0xC3E5u ^ (uint)r * 40503u) * 8f) & 7;
                     int ox = x - ((RingWidth + 1) * Dx8[dir]);
                     int oz = z - ((RingWidth + 1) * Dz8[dir]);
                     drain = InBounds(n, ox, oz)
@@ -358,7 +358,7 @@ internal static class Lakes
                 {
                     var (tx, tz) = deepAt[r];
                     float dx = x - tx, dz = z - tz;
-                    float radius = 2.0f + TerrainHash01(seed, 0x7A2Cu ^ (uint)r * 40503u) * 1.4f;
+                    float radius = 2.0f + Hash01(seed, 0x7A2Cu ^ (uint)r * 40503u) * 1.4f;
                     drain = MathF.Sqrt(dx * dx + dz * dz) > radius;
                     break;
                 }
@@ -410,7 +410,7 @@ internal static class Lakes
                                  short[,] water, byte[,] fluid)
     {
         int n = p.Size;
-        if (TerrainHash01(seed, 0x600A11u) >= GooIslandChance) return;
+        if (Hash01(seed, 0x600A11u) >= GooIslandChance) return;
 
         int[,] inset = PatchInset(land, region);
 
@@ -436,9 +436,9 @@ internal static class Lakes
         if (takers.Count == 0) return;
 
         // In hash order, so which patches get a puddle is the seed's choice.
-        takers.Sort((a, b) => TerrainHash01(seed, 0x60011u ^ (uint)a * 40503u)
-            .CompareTo(TerrainHash01(seed, 0x60011u ^ (uint)b * 40503u)));
-        int puddles = 1 + (int)(TerrainHash01(seed, 0x600C7u) * 3f);
+        takers.Sort((a, b) => Hash01(seed, 0x60011u ^ (uint)a * 40503u)
+            .CompareTo(Hash01(seed, 0x60011u ^ (uint)b * 40503u)));
+        int puddles = 1 + (int)(Hash01(seed, 0x600C7u) * 3f);
 
         var wobble = new Noise(seed + 3434, frequency: 0.4f, octaves: 2);
         foreach (int r in takers)
@@ -459,7 +459,7 @@ internal static class Lakes
                                        short[,] surface, short[,] water, byte[,] fluid, Noise wobble)
     {
         var (cx, cz) = DeepestCell(region, inset, (i, j) => inset[i, j] >= 2, r, n);
-        float radius = 1.4f + TerrainHash01(seed, 0x600D3u ^ (uint)r * 2654435761u) * 1.6f;
+        float radius = 1.4f + Hash01(seed, 0x600D3u ^ (uint)r * 2654435761u) * 1.6f;
 
         var cells = new List<(int X, int Z)>();
         int reach = (int)radius + 1;

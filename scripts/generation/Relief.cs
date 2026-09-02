@@ -56,7 +56,7 @@ internal static class Relief
     /// </summary>
     private static int RollDuneGrain(int seed, out float gcos, out float gsin)
     {
-        int point = (int)(TerrainHash01(seed, 0xD0E5u) * 8f) & 7;
+        int point = (int)(Hash01(seed, 0xD0E5u) * 8f) & 7;
         float grain = point * (Mathf.Tau / 8f);
         gcos = MathF.Cos(grain);
         gsin = MathF.Sin(grain);

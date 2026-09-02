@@ -99,14 +99,14 @@ internal static partial class Rivers
         {
             if (!channel[sx, sz] || !navigable[sx, sz]) continue;
             if (mate[sx, sz].X < 0) continue;                    // not an axis cell
-            if (FeatureHash01(seed, 0xE70Au ^ (uint)(sx * 73856093 ^ sz * 19349663)) > EyotChance)
+            if (Hash01(seed, 0xE70Au ^ (uint)(sx * 73856093 ^ sz * 19349663)) > EyotChance)
                 continue;
 
             axis.Clear();
             isle.Clear();
             far.Clear();
             var c = new Vector2I(sx, sz);
-            int want = 4 + (int)(FeatureHash01(seed, 0xE70Bu ^ (uint)(sx * 31 + sz)) * 4f);
+            int want = 4 + (int)(Hash01(seed, 0xE70Bu ^ (uint)(sx * 31 + sz)) * 4f);
 
             for (int step = 0; step < want; step++)
             {

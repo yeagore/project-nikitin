@@ -94,7 +94,7 @@ internal static partial class GatePlacement
         }
         if (entry < 0)
         {
-            int first = (int)(FeatureHash01(seed, 0x3D1Fu) * chosen.Length);
+            int first = (int)(Hash01(seed, 0x3D1Fu) * chosen.Length);
             for (int k = 0; k < chosen.Length && entry < 0; k++)
             {
                 int i = (first + k) % chosen.Length;
@@ -109,7 +109,7 @@ internal static partial class GatePlacement
     {
         int exits = p.ExitGates > 0
             ? Math.Clamp(p.ExitGates, 1, 3)
-            : 1 + (int)(FeatureHash01(seed, 0x6A7Eu) * 3f);
+            : 1 + (int)(Hash01(seed, 0x6A7Eu) * 3f);
 
         var order = new List<int>();
         for (int i = 0; i < chosen.Length; i++)
@@ -123,7 +123,7 @@ internal static partial class GatePlacement
     private static GateKind RollKind(int seed, GateKind asked, uint salt)
         => asked != GateKind.Auto
             ? asked
-            : FeatureHash01(seed, salt) < LandGateShare ? GateKind.Land : GateKind.Hanging;
+            : Hash01(seed, salt) < LandGateShare ? GateKind.Land : GateKind.Hanging;
 
     /// <summary>A Gate from a site. A land Gate is the same site with the portal on the strip's head instead of at the end of the flight path.</summary>
     private static Gate Build(Site site, GateRole role, GateKind kind)

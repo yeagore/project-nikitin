@@ -94,10 +94,10 @@ internal static class Overhangs
                 // k is the way out over the low ground; k^1 is the way back into the rock.
                 if (!Backed(d, x, z, k ^ 1)) continue;
 
-                int depth = 1 + (int)(FeatureHash01(seed, 0x0EA5u ^ (uint)(x * 73856093 ^ z * 19349663))
+                int depth = 1 + (int)(Hash01(seed, 0x0EA5u ^ (uint)(x * 73856093 ^ z * 19349663))
                                       * reach);
                 int thick = LipThickness
-                            + (int)(FeatureHash01(seed, 0x11Fu ^ (uint)(x * 31 + z)) * 2f);
+                            + (int)(Hash01(seed, 0x11Fu ^ (uint)(x * 31 + z)) * 2f);
                 short bottom = (short)(high - thick + 1);
 
                 LayLip(d, n, lx, lz, k, depth, bottom, high);

@@ -274,8 +274,8 @@ internal static class Footprint
             return new Layout(made.ToArray(), lagoon, t.Straits, t.StraitWide, t.Solid);
         }
 
-        private float Aspect(uint salt) => Mathf.Lerp(1f, Stretch, irr * TerrainHash01(seed, salt));
-        private float Angle(uint salt) => TerrainHash01(seed, salt) * Mathf.Tau;
+        private float Aspect(uint salt) => Mathf.Lerp(1f, Stretch, irr * Hash01(seed, salt));
+        private float Angle(uint salt) => Hash01(seed, salt) * Mathf.Tau;
 
         private void Add(float x, float z, float r, uint salt, float aspect = 0f, float rot = float.NaN,
                          int group = -1)
@@ -284,7 +284,7 @@ internal static class Footprint
             made.Add(new Lobe(x, z, r,
                               aspect > 0f ? aspect : Aspect(salt),
                               float.IsNaN(rot) ? Angle(salt ^ 0x77u) : rot,
-                              LobeRings * (0.8f + 0.5f * TerrainHash01(seed, salt ^ 0xB3u)), wander,
+                              LobeRings * (0.8f + 0.5f * Hash01(seed, salt ^ 0xB3u)), wander,
                               group));
         }
 
@@ -303,16 +303,16 @@ internal static class Footprint
         private void Sweep(int count, float ringRadius, float blobRadius, float jitter, uint salt,
                            float tangential, float arc)
         {
-            float phase = TerrainHash01(seed, salt) * Mathf.Tau;
+            float phase = Hash01(seed, salt) * Mathf.Tau;
             float step = arc >= Mathf.Tau - 0.001f ? arc / count : arc / Math.Max(1, count - 1);
             for (int i = 0; i < count; i++)
             {
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
-                float a = phase + step * i + (TerrainHash01(seed, s) - 0.5f) * step * 0.7f;
-                float rr = ringRadius * (1f - jitter * 0.5f + jitter * TerrainHash01(seed, s ^ 0x5u));
-                float br = blobRadius * (0.75f + 0.5f * TerrainHash01(seed, s ^ 0x9u));
+                float a = phase + step * i + (Hash01(seed, s) - 0.5f) * step * 0.7f;
+                float rr = ringRadius * (1f - jitter * 0.5f + jitter * Hash01(seed, s ^ 0x5u));
+                float br = blobRadius * (0.75f + 0.5f * Hash01(seed, s ^ 0x9u));
                 float aspect = tangential > 0f
-                    ? tangential * (0.85f + 0.4f * TerrainHash01(seed, s ^ 0x11u))
+                    ? tangential * (0.85f + 0.4f * Hash01(seed, s ^ 0x11u))
                     : 0f;
                 Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr, br, s,
                     aspect, tangential > 0f ? a : float.NaN);
@@ -332,7 +332,7 @@ internal static class Footprint
             {
                 float a = spokes[i] * Mathf.Tau;
                 uint s = salt ^ (uint)(i + 1) * 2654435761u;
-                float arm = reach * (0.82f + 0.30f * TerrainHash01(seed, s));
+                float arm = reach * (0.82f + 0.30f * Hash01(seed, s));
                 Add(cx + MathF.Cos(a) * arm, cz + MathF.Sin(a) * arm,
                     radius * 0.37f, s, 1.7f, a + Mathf.Pi * 0.5f);
             }
@@ -346,7 +346,7 @@ internal static class Footprint
         private void Coil(uint salt, float sweep, float thick, int links)
         {
             const float inner = 0.08f;
-            float phase = TerrainHash01(seed, salt ^ 0x11u) * Mathf.Tau;
+            float phase = Hash01(seed, salt ^ 0x11u) * Mathf.Tau;
             float outer = radius * 0.86f * spread;
 
             for (int i = 0; i < links; i++)
@@ -356,7 +356,7 @@ internal static class Footprint
                 float rr = Mathf.Lerp(outer, radius * inner, t);
                 uint s = salt ^ (uint)(i + 3) * 2654435761u;
                 Add(cx + MathF.Cos(a) * rr, cz + MathF.Sin(a) * rr,
-                    radius * thick * (0.85f + 0.3f * TerrainHash01(seed, s)), s, 1.8f,
+                    radius * thick * (0.85f + 0.3f * Hash01(seed, s)), s, 1.8f,
                     a + Mathf.Pi * 0.5f);
             }
         }
@@ -369,7 +369,7 @@ internal static class Footprint
                 // A dominant landmass with islets round it.
                 case IslandArrangement.Satellites:
                     Add(cx, cz, radius * 0.61f, 0x1000u);
-                    Ring(2 + (int)(TerrainHash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
+                    Ring(2 + (int)(Hash01(seed, 0x1001u) * 3f), radius * 0.84f * spread,
                          radius * 0.23f, 0.26f, 0x1002u);
                     break;
 
@@ -390,9 +390,9 @@ internal static class Footprint
 
                 // Scattered and unequal: a few near the middle, more further out.
                 case IslandArrangement.Archipelago:
-                    Ring(2 + (int)(TerrainHash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
+                    Ring(2 + (int)(Hash01(seed, 0x4000u) * 2f), radius * 0.34f * spread,
                          radius * 0.24f, 0.55f, 0x4001u);
-                    Ring(3 + (int)(TerrainHash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
+                    Ring(3 + (int)(Hash01(seed, 0x4002u) * 3f), radius * 0.80f * spread,
                          radius * 0.23f, 0.55f, 0x4003u);
                     break;
 
@@ -401,7 +401,7 @@ internal static class Footprint
                 {
                     float ring = radius * 0.76f * spread;
                     float blob = radius * 0.33f;
-                    Ring(6 + (int)(TerrainHash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
+                    Ring(6 + (int)(Hash01(seed, 0x5000u) * 4f), ring, blob, 0.10f, 0x5001u, 2.1f);
                     lagoon = MathF.Max(4f, ring - blob * 0.55f);
                     break;
                 }
@@ -411,7 +411,7 @@ internal static class Footprint
                 {
                     float ring = radius * 0.74f * spread;
                     float blob = radius * 0.34f;
-                    Ring(9 + (int)(TerrainHash01(seed, 0x5100u) * 4f), ring, blob, 0.07f, 0x5101u, 2.2f);
+                    Ring(9 + (int)(Hash01(seed, 0x5100u) * 4f), ring, blob, 0.07f, 0x5101u, 2.2f);
                     lagoon = MathF.Max(4f, ring - blob * 0.75f);
                     break;
                 }
@@ -423,8 +423,8 @@ internal static class Footprint
                     bool whole = how == IslandArrangement.Arc;
                     float ring = radius * 0.74f * spread;
                     float blob = radius * (whole ? 0.34f : 0.33f);
-                    float arc = Mathf.Tau * (0.52f + 0.18f * TerrainHash01(seed, 0x5200u));
-                    int count = (whole ? 7 : 5) + (int)(TerrainHash01(seed, 0x5201u) * 3f);
+                    float arc = Mathf.Tau * (0.52f + 0.18f * Hash01(seed, 0x5200u));
+                    int count = (whole ? 7 : 5) + (int)(Hash01(seed, 0x5201u) * 3f);
                     Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 2.1f, arc);
                     lagoon = MathF.Max(4f, ring - blob * (whole ? 0.75f : 0.55f));
                     break;
@@ -435,7 +435,7 @@ internal static class Footprint
                 {
                     float ring = radius * 0.74f * spread;
                     float blob = radius * 0.29f;
-                    Ring(7 + (int)(TerrainHash01(seed, 0x5300u) * 3f), ring, blob, 0.05f, 0x5301u, 1.15f);
+                    Ring(7 + (int)(Hash01(seed, 0x5300u) * 3f), ring, blob, 0.05f, 0x5301u, 1.15f);
                     lagoon = MathF.Max(4f, ring - blob * 0.62f);
                     break;
                 }
@@ -443,7 +443,7 @@ internal static class Footprint
                 // One island cracked: a tight cluster, the seams cut narrow.
                 case IslandArrangement.Shards:
                     Add(cx, cz, radius * 0.44f, 0x9000u);
-                    Ring(3 + (int)(TerrainHash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
+                    Ring(3 + (int)(Hash01(seed, 0x9001u) * 3f), radius * 0.42f * spread,
                          radius * 0.42f, 0.18f, 0x9002u);
                     break;
             }
@@ -472,7 +472,7 @@ internal static class Footprint
                 // Five or six, so no two face each other and every bay is a wedge.
                 case IslandArrangement.Star:
                 {
-                    int points = 5 + (int)(TerrainHash01(seed, 0x7300u) * 2f);
+                    int points = 5 + (int)(Hash01(seed, 0x7300u) * 2f);
                     var spokes = new float[points];
                     for (int i = 0; i < points; i++) spokes[i] = (float)i / points;
                     Arms(spokes, 0x7301u);
@@ -495,16 +495,16 @@ internal static class Footprint
                     float heading = Angle(0x8000u);
                     float wx = cx + MathF.Cos(heading + Mathf.Pi) * radius * 0.45f;
                     float wz = cz + MathF.Sin(heading + Mathf.Pi) * radius * 0.45f;
-                    int links = 6 + (int)(TerrainHash01(seed, 0x8001u) * 3f);
+                    int links = 6 + (int)(Hash01(seed, 0x8001u) * 3f);
 
                     for (int i = 0; i < links; i++)
                     {
                         uint s = 0x8002u ^ (uint)(i + 1) * 2654435761u;
-                        float br = blob * (0.78f + 0.44f * TerrainHash01(seed, s));
+                        float br = blob * (0.78f + 0.44f * Hash01(seed, s));
                         Add(wx, wz, br, s, 1.5f, heading + Mathf.Pi * 0.5f);
 
                         // Turn, then step: turning first makes the chain wind rather than fan out.
-                        heading += (TerrainHash01(seed, s ^ 0x3Bu) - 0.5f) * Mathf.Pi * 0.62f;
+                        heading += (Hash01(seed, s ^ 0x3Bu) - 0.5f) * Mathf.Pi * 0.62f;
                         float stride = br * 1.35f;
                         float nx = wx + MathF.Cos(heading) * stride;
                         float nz = wz + MathF.Sin(heading) * stride;
@@ -531,7 +531,7 @@ internal static class Footprint
                 // A fat coil of one turn and a bit: the lobes overlap into a ring of round bays.
                 case IslandArrangement.Rosette:
                     Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
-                         links: 9 + (int)(TerrainHash01(seed, 0xA000u) * 4f));
+                         links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
                     break;
 
                 // The letter: two uprights and the diagonal joining top-left to bottom-right.
@@ -564,7 +564,7 @@ internal static class Footprint
                 case IslandArrangement.Harmony:
                 {
                     float disc = radius * 0.74f;
-                    float phase = (int)(TerrainHash01(seed, 0xB500u) * 4f) * Mathf.Tau / 4f;
+                    float phase = (int)(Hash01(seed, 0xB500u) * 4f) * Mathf.Tau / 4f;
                     for (int half = 0; half < 2; half++)
                     {
                         float flip = half == 0 ? 0f : Mathf.Pi;
@@ -585,8 +585,8 @@ internal static class Footprint
                 // Two broad heads and the neck between them.
                 case IslandArrangement.Isthmus:
                 {
-                    float a = (int)(TerrainHash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
-                              + (TerrainHash01(seed, 0xB601u) - 0.5f) * 0.5f;
+                    float a = (int)(Hash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
+                              + (Hash01(seed, 0xB601u) - 0.5f) * 0.5f;
                     float apart = radius * 0.58f * spread;
                     float hx = MathF.Cos(a) * apart, hz = MathF.Sin(a) * apart;
                     Add(cx + hx, cz + hz, radius * 0.42f, 0xB602u);
@@ -603,7 +603,7 @@ internal static class Footprint
                 // A main island behind a barrier chain of tangential islets, a sound between.
                 case IslandArrangement.Reef:
                 {
-                    float a = (int)(TerrainHash01(seed, 0xB700u) * 4f) * Mathf.Tau / 4f;
+                    float a = (int)(Hash01(seed, 0xB700u) * 4f) * Mathf.Tau / 4f;
                     float back = radius * 0.30f;
                     Add(cx - MathF.Cos(a) * back, cz - MathF.Sin(a) * back,
                         radius * 0.52f, 0xB701u);
@@ -673,8 +673,8 @@ internal static class Footprint
                     {
                         uint s = 0xB300u ^ (uint)(++i * 2654435761u);
                         Add(cx + sx * d, cz + sz * d,
-                            radius * 0.40f * (0.92f + 0.16f * TerrainHash01(seed, s)), s,
-                            1f + 0.25f * TerrainHash01(seed, s ^ 0x7u), 0f);
+                            radius * 0.40f * (0.92f + 0.16f * Hash01(seed, s)), s,
+                            1f + 0.25f * Hash01(seed, s ^ 0x7u), 0f);
                     }
                     break;
                 }
@@ -682,7 +682,7 @@ internal static class Footprint
                 // Two equal halves split along an axis, the strait pointing at two Gates.
                 case IslandArrangement.Halves:
                 {
-                    bool tall = TerrainHash01(seed, 0xB400u) < 0.5f;
+                    bool tall = Hash01(seed, 0xB400u) < 0.5f;
                     float d = radius * 0.31f * spread;
                     float dx = tall ? d : 0f, dz = tall ? 0f : d;
                     Add(cx + dx, cz + dz, radius * 0.56f, 0xB401u, 1.25f,
@@ -709,10 +709,10 @@ internal static class Footprint
             for (int gz = 0; gz < grid; gz++)
             {
                 uint s = 0x6001u ^ (uint)(++i * 2654435761u);
-                if (TerrainHash01(seed, s ^ 0xEu) < 0.12f) continue;    // a hole in the quilt
-                float px = pad + (gx + 0.30f + 0.40f * TerrainHash01(seed, s)) * cell;
-                float pz = pad + (gz + 0.30f + 0.40f * TerrainHash01(seed, s ^ 0x9u)) * cell;
-                Add(px, pz, cell * 0.55f * (0.8f + 0.4f * TerrainHash01(seed, s ^ 0x5u)), s);
+                if (Hash01(seed, s ^ 0xEu) < 0.12f) continue;    // a hole in the quilt
+                float px = pad + (gx + 0.30f + 0.40f * Hash01(seed, s)) * cell;
+                float pz = pad + (gz + 0.30f + 0.40f * Hash01(seed, s ^ 0x9u)) * cell;
+                Add(px, pz, cell * 0.55f * (0.8f + 0.4f * Hash01(seed, s ^ 0x5u)), s);
             }
         }
     }
@@ -922,18 +922,18 @@ internal static class Footprint
         for (int z = 0; z < n; z++)
             if (land[x, z] && massOf[x, z] != largest) offMain[region[x, z]] = true;
 
-        int bites = 1 + (int)(TerrainHash01(seed, 0x77A3) * (0.5f + 2.7f * irr));
+        int bites = 1 + (int)(Hash01(seed, 0x77A3) * (0.5f + 2.7f * irr));
         for (int i = 0; i < bites; i++)
         {
             uint salt = 0x9100u + (uint)i * 977u;
-            float ang = TerrainHash01(seed, salt) * Mathf.Tau;
+            float ang = Hash01(seed, salt) * Mathf.Tau;
 
             // An interior bite is placed well inside and kept small: a hole, not a notch.
-            bool interior = i == 0 && TerrainHash01(seed, salt ^ 0xA5u) < 0.35f;
-            float from = radius * (interior ? 0.10f + 0.35f * TerrainHash01(seed, salt ^ 0x31u)
-                                            : 0.25f + 0.85f * TerrainHash01(seed, salt ^ 0x31u));
-            float reach = radius * (interior ? 0.20f + 0.25f * TerrainHash01(seed, salt ^ 0x57u)
-                                             : 0.30f + 0.75f * TerrainHash01(seed, salt ^ 0x57u));
+            bool interior = i == 0 && Hash01(seed, salt ^ 0xA5u) < 0.35f;
+            float from = radius * (interior ? 0.10f + 0.35f * Hash01(seed, salt ^ 0x31u)
+                                            : 0.25f + 0.85f * Hash01(seed, salt ^ 0x31u));
+            float reach = radius * (interior ? 0.20f + 0.25f * Hash01(seed, salt ^ 0x57u)
+                                             : 0.30f + 0.75f * Hash01(seed, salt ^ 0x57u));
             var at = new Vector2(cx + MathF.Cos(ang) * from, cz + MathF.Sin(ang) * from);
 
             // The bite's own outline is lobed too, so a circle does not decide the patches.

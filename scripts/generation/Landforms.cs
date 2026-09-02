@@ -64,10 +64,10 @@ internal static class Landforms
         // Without jitter the top band is contiguous, and MergeAdjacentOfType welds it into
         // one range.
         bool cordillera = quota[(int)LandformType.Mountain] > 1
-                          && TerrainHash01(seed, 0x2B7F) < (Roster.ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f);
+                          && Hash01(seed, 0x2B7F) < (Roster.ResolveStyle(seed, p) == ReliefStyle.Ridge ? 0.9f : 0.55f);
 
         float Jitter(int r, uint salt, float amount)
-            => (TerrainHash01(seed, salt ^ (uint)r * 2654435761u) - 0.5f) * amount;
+            => (Hash01(seed, salt ^ (uint)r * 2654435761u) - 0.5f) * amount;
 
         void Take(LandformType t, Func<int, float> score)
         {
@@ -353,7 +353,7 @@ internal static class Landforms
             int g = groups.Find(r);
             float e = groupCells[g] > 0 ? groupEnv[g] / groupCells[g] : 0f;
             float rung = e * levels
-                         + (TerrainHash01(seed, 0xC3D4u ^ (uint)g * 2654435761u) - 0.5f) * 0.5f;
+                         + (Hash01(seed, 0xC3D4u ^ (uint)g * 2654435761u) - 0.5f) * 0.5f;
             plateau[r] = Math.Clamp((int)MathF.Round(rung), 0, levels) * p.CliffHeight;
         }
         return plateau;
