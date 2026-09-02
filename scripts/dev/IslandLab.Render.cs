@@ -172,9 +172,7 @@ public partial class IslandLab
 						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
-						col.Add(t < 0.5f
-							? HeightLow.Lerp(HeightMid, t * 2f)
-							: HeightMid.Lerp(HeightHigh, (t - 0.5f) * 2f));
+						col.Add(DevPalette.Height(t));
 						break;
 				}
 

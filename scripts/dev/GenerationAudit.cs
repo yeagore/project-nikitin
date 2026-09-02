@@ -62,6 +62,15 @@ public partial class GenerationAudit : Node
     /// <summary>Material shares at the four climate corners (dry/wet x cold/warm) and the preset: the rebalancing check.</summary>
     [Export] public bool Climate { get; set; } = false;
 
+    /// <summary>Directory for the moisture x warmth collage - 25 surface views of one seed - or empty for none.</summary>
+    [Export] public string ClimateGrid { get; set; } = "";
+
+    /// <summary>Footprint the ClimateGrid collage and its scout use; 72 reads at a glance where 128 does not.</summary>
+    [Export] public int ClimateGridSize { get; set; } = 72;
+
+    /// <summary>Score this many consecutive seeds from FirstSeed for the collage, or 0 for none.</summary>
+    [Export] public int ClimateScout { get; set; } = 0;
+
     /// <summary>Seeds per setting in the GateRequests, Knobs, Bulk, Sizes, Debut and Strain sweeps.</summary>
     [Export] public int SweepSeeds { get; set; } = 12;
 
@@ -138,6 +147,12 @@ public partial class GenerationAudit : Node
                 case nameof(GateMatrix): GateMatrix = true; break;
                 case nameof(Knobs): Knobs = true; break;
                 case nameof(Climate): Climate = true; break;
+                case nameof(ClimateGrid): ClimateGrid = value; break;
+                case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
+                case nameof(ClimateScout): ClimateScout = int.Parse(value); break;
+                // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
+                case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
+                case "Character": Params.Character = Enum.Parse<TerrainCharacter>(value, true); break;
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
@@ -161,12 +176,14 @@ public partial class GenerationAudit : Node
         if (GateMatrix) PrintGateMatrix();
         if (Knobs) PrintKnobs();
         if (Climate) PrintClimate();
+        if (ClimateScout > 0) PrintClimateScout();
         if (Bulk) PrintBulk();
         if (Sizes) PrintSizes();
         if (Debut) PrintDebut();
         if (Strain) PrintStrain();
         if (Portraits.Length > 0) WritePortraits();
         if (FieldMaps.Length > 0) WriteFieldMaps();
+        if (ClimateGrid.Length > 0) WriteClimateGrid();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>

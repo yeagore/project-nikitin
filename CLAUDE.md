@@ -167,6 +167,8 @@ scripts/
     IslandLab*.cs              The lab.
     GenerationAudit*.cs        The audit.
     GenerationChecksum.cs      The checksum.
+    DevPalette.cs, TinyFont.cs The shared colours, and a 5x7 bitmap font so a
+                               headless PNG can carry its own labels.
 resources/island_default.tres  The IslandParams preset all three dev scenes load.
 docs/
   island-generation.md         The generation spec.

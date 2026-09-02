@@ -42,17 +42,20 @@ internal static class Habitat
     private const float RockDroughtBar = 0.58f;
     private const int RockFringe = 3;
 
+    /// <summary>Warmth lost at the full lapse: from the warmest lowland to well under the snow.</summary>
+    private const float LapseShare = 255f;
+
     /// <summary>
-    /// Warmth lost at the full mountain cap (<see cref="MountainCap"/>). Anchored
-    /// to the cap, not the island's own range, so a flat island stays warm to its top.
+    /// Slabs of ordinary relief allowed above the plateau ceiling before the cold
+    /// starts: the hills' swell and a mesa's own crown. The ceiling itself is what
+    /// the plateau ladder and a chain of mesas can stack, read off the parameters, so
+    /// no plateau is ever cold and only what stands above every plateau — a
+    /// mountain's upper part — is.
     /// </summary>
-    private const float LapseShare = 235f;
+    private const float PlateauAllowance = 4f;
 
-    /// <summary>Share of the cap below which altitude costs no warmth: the lowland and the middle heights are one climate.</summary>
-    private const float LapseKnee = 0.3f;
-
-    /// <summary>Curve of the lapse above the knee; over 1 so the cold gathers at the top.</summary>
-    private const float LapseCurve = 1.3f;
+    /// <summary>Share of the mountain cap above the ceiling over which the lapse runs to its full loss.</summary>
+    private const float LapseReach = 0.6f;
 
     /// <summary>
     /// Where <see cref="IslandParams.Warmth"/> lands on the byte: 0 is a lowland of
@@ -175,11 +178,14 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// Warmth: the Domain's background (<see cref="IslandParams.Warmth"/>) from the
-    /// lowest ground up to <see cref="LapseKnee"/> of the mountain cap, then a lapse
-    /// that steepens toward the cap; the wind, the rim and dry ground each make it
-    /// colder — wet ground is pulled toward <see cref="Temperate"/> from either
-    /// side. No land leaves it all zero.
+    /// Warmth: the Domain's background (<see cref="IslandParams.Warmth"/>) over the
+    /// whole island up to the **plateau ceiling** — the lowest ground plus what the
+    /// plateau ladder and a chain of mesas can stack, plus <see cref="PlateauAllowance"/>
+    /// — then a lapse over <see cref="LapseReach"/> of the mountain cap, so only what
+    /// stands above every plateau, a mountain's upper part, is cold, and its top is
+    /// snow. Then the wind, the rim and dry ground each make it colder, and wet
+    /// ground is pulled toward <see cref="Temperate"/> from either side. No land
+    /// leaves it all zero.
     /// </summary>
     private static void MeasureWarmth(IslandParams p, IslandData d)
     {
@@ -193,15 +199,15 @@ internal static class Habitat
         }
         if (low == short.MaxValue) return;
 
-        float cap = MountainCap(d.Size);
+        float ceiling = low + p.PlateauLevels * p.CliffHeight + 2 * p.MesaHeight + PlateauAllowance;
+        float reach = Math.Max(1f, MountainCap(d.Size) * LapseReach);
         float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
-            float rise = d.EffectiveLevel(x, z) - low;
-            float t = Mathf.Clamp((rise / cap - LapseKnee) / (1f - LapseKnee), 0f, 1f);
-            float warmth = baseline - LapseShare * MathF.Pow(t, LapseCurve);
+            float t = Mathf.Clamp((d.EffectiveLevel(x, z) - ceiling) / reach, 0f, 1f);
+            float warmth = baseline - LapseShare * t;
 
             warmth -= WindChill * d.Exposure[x, z] / 255f;
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);

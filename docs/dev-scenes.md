@@ -96,14 +96,45 @@ landforms, every arrangement × character, every Gate request, the four-hanging-
 Gates matrix, the knob sweeps (how you check a slider does anything), the
 material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all five sizes, the newest shapes at every
-footprint, where re-rolls cluster, and PNG portraits and field maps written to a
-directory. Every flag can be given on the command line after `--`:
+footprint, where re-rolls cluster, and PNG portraits, field maps and the climate
+grid written to a directory. Every flag can be given on the command line after `--`:
 
 ```
 godot --path . --headless scenes/dev/generation_audit.tscn -- Knobs Sizes Portraits=C:/tmp/portraits
 ```
 
 Appearance still needs a human at the editor, or **F2** in the lab.
+
+### The climate grid — `ClimateGrid`
+
+`ClimateGrid=<dir>` writes one sheet showing the whole climate model at once: a
+single seed generated twenty-five times, at every pair of background moisture and
+warmth in quarters, drawn as the surface view with warmth across, moisture down,
+and a legend of every colour. Moisture and warmth are read by the Habitat stage
+alone, so the terrain is the same island in every tile and the sheet is the
+climate model on its own. Under the grid is a strip of the five fields the
+surface is read from — height, warmth, moisture, exposure and rim distance — each
+with its own ramp, which is the context for why a tile looks as it does: the snow
+line is the lapse crossing the height panel, the green threads are the fresh-water
+moisture strip. Height, exposure and rim hold across all twenty-five, so they are
+drawn once and the run prints the cell counts that prove it; warmth and moisture
+are the middle tile. `ClimateGridSize` picks the footprint (72 by default; 128
+does not read at a glance) and `FirstSeed` picks the seed. It also prints the
+material shares of each of the twenty-five, and drops the tiles beside the sheet.
+
+`ClimateScout=<n>` is how the seed gets chosen rather than guessed: it scores `n`
+consecutive seeds from `FirstSeed` at the same footprint for landform and material
+variety, lakes, rivers and navigable water, and prints them best first. Avoid the
+characters that force a material — Dunes, Karst, Badlands make sand and dust
+whatever the climate — or the sheet shows the character rather than the knobs.
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateScout=48 FirstSeed=7000
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=7046 ClimateGrid=C:/tmp/climate
+```
+
+The labels are pixels: headless Godot has no rendering device, so `TinyFont` draws
+a 5 × 7 bitmap alphabet straight into the `Image`.
 
 ## The checksum — `generation_checksum.tscn`
 

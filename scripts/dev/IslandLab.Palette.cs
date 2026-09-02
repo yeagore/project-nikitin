@@ -49,7 +49,7 @@ public partial class IslandLab
 		switch (view)
 		{
 			case View.Height:
-				return $"[b]height[/b]   {Ramp(HeightLow, HeightMid)}{Ramp(HeightMid, HeightHigh)}"
+				return $"[b]height[/b]   {Ramp(DevPalette.HeightLow, DevPalette.HeightMid)}{Ramp(DevPalette.HeightMid, DevPalette.HeightHigh)}"
 					+ "  low ground dark, high ground pale";
 
 			case View.Landform:
@@ -115,9 +115,9 @@ public partial class IslandLab
 				var stops = new List<string>();
 				foreach (byte w in new byte[] { 0, 64, 110, 150, 190, 205, 220, 235, 255 })
 					stops.Add(Swatch(DevPalette.WarmthTint(w)));
-				return $"[b]warmth[/b]   {string.Join("", stops)}  frozen … alpine (blue) … temperate "
-					+ "(yellow) … warm (orange): one climate up to a third of the tallest a mountain "
-					+ "can be at this size, then the lapse; windswept ground, the rim and dry country "
+				return $"[b]warmth[/b]   {string.Join("", stops)}  frozen … cold (blue) … temperate "
+					+ "(yellow) … hot (orange): one climate up to the plateau ceiling, what the ladder and "
+					+ "a mesa chain can stack, then the lapse over a mountain's upper part; windswept ground, the rim and dry country "
 					+ "colder, wet ground tempered";
 			}
 
@@ -166,11 +166,6 @@ public partial class IslandLab
 	private static readonly Color PassTint = new(0.92f, 0.85f, 0.42f);
 	private static readonly Color MainlandTint = new(0.42f, 0.62f, 0.28f);
 	private static readonly Color ShelfTooSmall = new(0.40f, 0.36f, 0.30f);
-
-	/// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
-	private static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
-	private static readonly Color HeightMid = new(0.30f, 0.42f, 0.18f);
-	private static readonly Color HeightHigh = new(0.66f, 0.72f, 0.52f);
 
 	private static readonly Color DeckTint = new(0.95f, 0.72f, 0.30f);
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);

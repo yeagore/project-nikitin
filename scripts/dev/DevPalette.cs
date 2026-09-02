@@ -23,6 +23,16 @@ internal static class DevPalette
         Brink, CliffFoot, Ledge, Overhang, Landing, Summit,
     };
 
+    /// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
+    public static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
+    public static readonly Color HeightMid = new(0.30f, 0.42f, 0.18f);
+    public static readonly Color HeightHigh = new(0.66f, 0.72f, 0.52f);
+
+    /// <summary>The height ramp at <paramref name="t"/>, 0 the lowest ground and 1 the highest.</summary>
+    public static Color Height(float t)
+        => t < 0.5f ? HeightLow.Lerp(HeightMid, t * 2f)
+                    : HeightMid.Lerp(HeightHigh, (t - 0.5f) * 2f);
+
     /// <summary>The two ends of each habitat axis's ramp, 0 then 255.</summary>
     public static readonly (Color Lo, Color Hi) MoistureRamp =
         (new Color(0.55f, 0.45f, 0.30f), new Color(0.10f, 0.52f, 0.62f));
@@ -33,14 +43,20 @@ internal static class DevPalette
     public static readonly (Color Lo, Color Hi) RimRamp =
         (new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f));
 
+    /// <summary>The four kinds of standing water, named so a legend can show them without an island to sample.</summary>
+    public static readonly Color FordTint = new(0.55f, 0.80f, 0.72f, 0.55f);
+    public static readonly Color ReachTint = new(0.10f, 0.45f, 0.60f, 0.85f);
+    public static readonly Color StreamTint = new(0.35f, 0.66f, 0.80f, 0.70f);
+    public static readonly Color LakeTint = new(0.13f, 0.30f, 0.55f, 0.80f);
+
     /// <summary>Standing fluid by kind: goo, then ford, navigable reach, stream, lake.</summary>
     public static Color Water(IslandData d, int x, int z)
     {
         if (d.Fluid[x, z] == (byte)FluidKind.Goo) return Goo;
-        if (d.Ford[x, z]) return new Color(0.55f, 0.80f, 0.72f, 0.55f);
-        if (d.Navigable[x, z]) return new Color(0.10f, 0.45f, 0.60f, 0.85f);
-        if (d.River[x, z]) return new Color(0.35f, 0.66f, 0.80f, 0.70f);
-        return new Color(0.13f, 0.30f, 0.55f, 0.80f);
+        if (d.Ford[x, z]) return FordTint;
+        if (d.Navigable[x, z]) return ReachTint;
+        if (d.River[x, z]) return StreamTint;
+        return LakeTint;
     }
 
     /// <summary>
