@@ -302,7 +302,7 @@ diffed automatically.
 
 | | |
 |---|---|
-| surface | stone 10.6%, scree 8.0%, snow 0.8%, sand 6.4%, silt 7.8%, grass 5.0%, heath 22.7%, dust 20.6%, meadow 18.1%; nothing `NEVER` |
+| surface | stone 9.0%, scree 4.1%, snow 0.8%, sand 6.4%, silt 7.8%, grass 5.6%, heath 24.7%, dust 21.3%, meadow 20.4%; nothing `NEVER`. Before rock was tied to rock landforms and tall faces it was stone 10.6%, scree 8.0% |
 | habitat, per-island means | moisture 26–125, warmth 197–222 (the lapse only bites at the top now), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |

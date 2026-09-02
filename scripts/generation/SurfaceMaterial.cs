@@ -6,10 +6,10 @@ namespace ProjectNikitin.Generation;
 /// </summary>
 public enum SurfaceMaterial : byte
 {
-    /// <summary>Bare rock: a cliff face and its brink, and the cold high ground.</summary>
+    /// <summary>Bare rock: the brink of a tall face, the broken parts of a rock landform, and the cold high ground.</summary>
     Stone = 0,
 
-    /// <summary>Loose broken rock: rugged country, and the alpine band.</summary>
+    /// <summary>Loose broken rock: talus under a tall face, the rougher parts of a rock landform, the alpine band.</summary>
     Scree = 1,
 
     /// <summary>The frozen top of what a mountain can be — see <see cref="IslandData.Warmth"/>.</summary>

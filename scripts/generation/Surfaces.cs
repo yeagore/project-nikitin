@@ -17,6 +17,15 @@ internal static class Surfaces
     /// <summary>Slabs of visible face that make a cliff — the traversal's own "needs a hoist".</summary>
     private const int CliffFace = 3;
 
+    /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung or a mesa wall is not one, a mountain flank or a canyon is.</summary>
+    private const int TallFace = 6;
+
+    /// <summary>Ruggedness (32 per slab) at which a rock landform shows stone off its cliffs.</summary>
+    private const int RockyStoneAt = 128;
+
+    /// <summary>Ruggedness at which a rock landform shows scree.</summary>
+    private const int RockyScreeAt = 96;
+
     /// <summary>Warmth below which ground is frozen.</summary>
     private const int SnowAt = 64;
 
@@ -38,8 +47,8 @@ internal static class Surfaces
     /// <summary>Moisture above which ground is heath; below it, parched dust.</summary>
     private const int HeathAt = 10;
 
-    /// <summary>Ruggedness at which temperate ground turns to scree.</summary>
-    private const int BrokenAt = 160;
+    /// <summary>Ruggedness at which soft ground turns to scree: seven slabs in five cells, which only stacked rungs manage.</summary>
+    private const int BrokenAt = 224;
 
     /// <summary>Rebuilds the anchor lists in scan order and picks every column's material.</summary>
     public static void Classify(IslandData d)
@@ -139,28 +148,49 @@ internal static class Surfaces
         }
     }
 
-    /// <summary>The material at one cell: built and wet first, then rock, cold, landform, moisture.</summary>
+    /// <summary>Whether the landform is made of rock: the only ground that bares stone off a tall face.</summary>
+    private static bool Rocky(LandformType form)
+        => form is LandformType.Mountain or LandformType.Massif or LandformType.Karst
+                or LandformType.Badlands or LandformType.Sinkholes;
+
+    /// <summary>
+    /// The material at one cell: built and wet first, then snow, then rock — a tall
+    /// face bares stone at its brink and drops scree at its foot anywhere, and a rock
+    /// landform shows stone and scree wherever it is broken — then the cold band,
+    /// the landform, the bank, and last the moisture ladder. A plateau rung or a mesa
+    /// wall in soft country changes nothing: the ground runs up to the edge.
+    /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face, bool bank)
     {
         if (d.Beach[x, z]) return SurfaceMaterial.Sand;
         if (d.WaterLevel[x, z] != IslandData.NoLand) return SurfaceMaterial.Silt;
 
         byte warmth = d.Warmth[x, z];
-
-        if (drop >= CliffFace || face >= CliffFace)
-            return warmth < SnowAt ? SurfaceMaterial.Snow : SurfaceMaterial.Stone;
-
         if (warmth < SnowAt) return SurfaceMaterial.Snow;
-        if (warmth < ColdAt)
-            return d.Ruggedness[x, z] >= AlpineScreeAt ? SurfaceMaterial.Scree : SurfaceMaterial.Stone;
 
+        byte rugged = d.Ruggedness[x, z];
         var form = (LandformType)d.Landform[x, z];
+        bool rocky = Rocky(form) || d.Canyon[x, z];
+
+        if (drop >= TallFace) return SurfaceMaterial.Stone;
+        if (face >= TallFace) return SurfaceMaterial.Scree;        // talus under the face
+
+        if (rocky)
+        {
+            if (drop >= CliffFace || face >= CliffFace || rugged >= RockyStoneAt)
+                return SurfaceMaterial.Stone;
+            if (rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
+        }
+
+        if (warmth < ColdAt)
+            return rugged >= AlpineScreeAt ? SurfaceMaterial.Scree : SurfaceMaterial.Stone;
+
         if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Dust;
 
         if (bank) return SurfaceMaterial.Silt;
-        if (d.Ruggedness[x, z] >= BrokenAt) return SurfaceMaterial.Scree;
+        if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
         byte moist = d.Moisture[x, z];
         if (moist >= SiltAt) return SurfaceMaterial.Silt;
