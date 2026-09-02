@@ -9,21 +9,45 @@ namespace ProjectNikitin.Dev;
 
 public partial class GenerationAudit
 {
+    /// <summary>A copy of the preset with one sweep's change applied.</summary>
+    private IslandParams Variant(Action<IslandParams> tweak)
+    {
+        var p = (IslandParams)Params.Duplicate();
+        tweak(p);
+        return p;
+    }
+
+    /// <summary>The islands of one sweep setting, generated in <see cref="SeedAt"/> order as they are read.</summary>
+    private IEnumerable<IslandData> Sweep(IslandParams p, int seeds)
+    {
+        for (int i = 0; i < seeds; i++) yield return IslandGenerator.Generate(SeedAt(i), p);
+    }
+
     /// <summary>
-    /// Every combination of arrangement and character, a few seeds each: which
-    /// ones the pipeline finds hard.
-    ///
-    /// <para>The ordinary audit rolls sixty islands from <c>Auto</c>, so it
-    /// measures the combinations the weights happen to produce and says nothing
-    /// about the ones they rarely do. But an <c>Auto</c> Domain is not how the
-    /// game will ask for islands — a Domain's biome and world-tree position will
-    /// name both, and if <c>Atoll</c> + <c>Karst</c> takes four attempts and comes
-    /// out unplayable, that is a bug nobody would ever see from the summary.</para>
-    ///
-    /// <para>What it looks for: <b>re-rolls</b> (the generator rejecting its own
-    /// output), <b>unmet guarantees</b> (it giving up), and the reachable share
-    /// (whether the island is one place). A combination that averages more than
-    /// one attempt is one the pipeline is fighting.</para>
+    /// Exits on the island and Gates of the wrong kind: every Exit against
+    /// <paramref name="exit"/> (Auto matches anything), the Entry against
+    /// <paramref name="entry"/> when one is given.
+    /// </summary>
+    private static (int Exits, int Wrong) CountExits(IslandData d, GateKind? entry, GateKind exit)
+    {
+        int exits = 0, wrong = 0;
+        foreach (Gate g in d.Gates)
+        {
+            if (g.Role == GateRole.Entry)
+            {
+                if (entry is GateKind e && g.Kind != e) wrong++;
+                continue;
+            }
+            exits++;
+            if (exit != GateKind.Auto && g.Kind != exit) wrong++;
+        }
+        return (exits, wrong);
+    }
+
+    /// <summary>
+    /// Every arrangement x character, FeasibilitySeeds each: attempts > 1 is the pipeline
+    /// fighting, unmet is it giving up, reach% (heartland over all land cells, water
+    /// included) is whether the island is one place.
     /// </summary>
     private void PrintFeasibility()
     {
@@ -38,17 +62,14 @@ public partial class GenerationAudit
             {
                 if (what == TerrainCharacter.Auto) continue;
 
-                var p = (IslandParams)Params.Duplicate();
-                p.Arrangement = how;
-                p.Character = what;
+                IslandParams p = Variant(q => { q.Arrangement = how; q.Character = what; });
 
                 int attempts = 0, unmet = 0;
                 float reach = 0f, masses = 0f;
                 ulong t0 = Time.GetTicksMsec();
 
-                for (int i = 0; i < FeasibilitySeeds; i++)
+                foreach (IslandData d in Sweep(p, FeasibilitySeeds))
                 {
-                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
 
@@ -93,14 +114,8 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// Does the Domain come out the way it was asked for? One row per Gate
-    /// request: every Entry edge crossed with every Entry kind, then every Exit
-    /// count crossed with every Exit kind.
-    ///
-    /// These are the only parameters set by something outside the Domain — the
-    /// world-tree decides which edge you arrive on and which kind of Gate you
-    /// arrive through — so they are the only ones where "it usually works" is a
-    /// bug report rather than a result.
+    /// Each Entry edge x kind, then each Exit count x kind, against what came out. These
+    /// are set by the neighbouring Domain, so "usually" is a bug report, not a result.
     /// </summary>
     private void PrintGateRequests()
     {
@@ -112,19 +127,16 @@ public partial class GenerationAudit
         foreach (GateEdge edge in new[] { GateEdge.North, GateEdge.East, GateEdge.South, GateEdge.West })
         foreach (GateKind kind in new[] { GateKind.Hanging, GateKind.Land })
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.EntryEdge = edge;
-            p.EntryGate = kind;
+            IslandParams p = Variant(q => { q.EntryEdge = edge; q.EntryGate = kind; });
 
             int rightEdge = 0, rightKind = 0, both = 0, attempts = 0;
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 attempts += d.Attempts;
                 foreach (Gate g in d.Gates)
                 {
                     if (g.Role != GateRole.Entry) continue;
-                    bool e = (int)g.Facing == (int)edge - 1;
+                    bool e = (int)g.Facing == (int)edge - 1;   // Cardinal North..West = 0..3, GateEdge has Auto = 0 first
                     bool k = g.Kind == kind;
                     if (e) rightEdge++;
                     if (k) rightKind++;
@@ -142,22 +154,13 @@ public partial class GenerationAudit
         foreach (int count in new[] { 1, 2, 3 })
         foreach (GateKind kind in new[] { GateKind.Auto, GateKind.Hanging, GateKind.Land })
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.ExitGates = count;
-            p.ExitGate = kind;
+            IslandParams p = Variant(q => { q.ExitGates = count; q.ExitGate = kind; });
 
             int met = 0, allKind = 0;
             var got = new List<int>();
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
-                int exits = 0, wrong = 0;
-                foreach (Gate g in d.Gates)
-                {
-                    if (g.Role != GateRole.Exit) continue;
-                    exits++;
-                    if (kind != GateKind.Auto && g.Kind != kind) wrong++;
-                }
+                var (exits, wrong) = CountExits(d, null, kind);
                 got.Add(exits);
                 if (exits >= count) met++;
                 if (wrong == 0) allKind++;
@@ -170,23 +173,19 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// The hardest Gate request there is, against every shape the generator can
-    /// build: <b>four hanging Gates</b> — an Entry and three Exits, one per edge,
-    /// every one of them flown to.
-    ///
-    /// <para>It is the right thing to test because it is the maximum. A hanging
-    /// Gate needs a coast that will give it a 3 × 5 landing strip with clear air
-    /// off the rim, on the right side of the island, a third of the footprint from
-    /// every other Gate — four times over, once per edge. Anything that can do
-    /// that can do fewer Gates and can do land Gates, which need a forecourt but
-    /// no flight path.</para>
-    ///
-    /// <para>"Can do fewer" is a claim and not a fact, though, so the reductions
-    /// are measured too rather than assumed: three, two and one Exit, and land
-    /// Gates at both ends. A rule that only fires when the pool of edges is full
-    /// would pass the maximum and fail the middle.</para>
+    /// Four hanging Gates, one per edge — the maximum request — against every arrangement
+    /// x character; then why a coast refuses one, per character; then the reductions,
+    /// measured because a rule may only fire when the pool of edges is full.
     /// </summary>
     private void PrintGateMatrix()
+    {
+        PrintFourHanging();
+        PrintGateFunnel();
+        PrintGateReductions();
+    }
+
+    /// <summary>Four hanging Gates per arrangement and per character, and the combinations that could not.</summary>
+    private void PrintFourHanging()
     {
         GD.Print($"\n=== four hanging gates, every arrangement x character "
             + $"({FeasibilitySeeds} seeds each) ===");
@@ -203,17 +202,18 @@ public partial class GenerationAudit
             {
                 if (what == TerrainCharacter.Auto) continue;
 
-                var p = (IslandParams)Params.Duplicate();
-                p.Arrangement = how;
-                p.Character = what;
-                p.EntryGate = GateKind.Hanging;
-                p.ExitGate = GateKind.Hanging;
-                p.ExitGates = 3;
+                IslandParams p = Variant(q =>
+                {
+                    q.Arrangement = how;
+                    q.Character = what;
+                    q.EntryGate = GateKind.Hanging;
+                    q.ExitGate = GateKind.Hanging;
+                    q.ExitGates = 3;
+                });
 
                 int four = 0, gates = 0, hanging = 0;
-                for (int i = 0; i < FeasibilitySeeds; i++)
+                foreach (IslandData d in Sweep(p, FeasibilitySeeds))
                 {
-                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     int here = d.Gates.Count, air = 0;
                     foreach (Gate g in d.Gates) if (g.Kind == GateKind.Hanging) air++;
                     gates += here;
@@ -254,12 +254,11 @@ public partial class GenerationAudit
         for (int i = 0; i < Math.Min(worst.Count, 20); i++)
             GD.Print($"    {worst[i].Combo,-34} four on {worst[i].Four}/{FeasibilitySeeds} seeds,"
                 + $" {worst[i].Gates:0.0} gates of which {worst[i].Hanging:0.0} hanging");
+    }
 
-        // ---- and where the hanging Gates actually die --------------------------
-        // Four tests stand between a coast cell and a hanging Gate. Knowing how
-        // many Gates were placed does not say which test refused, so the funnel is
-        // counted per character: usable ground, then the edge rules, then a
-        // landing strip, then a flight path to it.
+    /// <summary>The placement funnel per character: cells surviving each of GatePlacement.Funnel's tests, strict and loose rungs.</summary>
+    private void PrintGateFunnel()
+    {
         GD.Print($"\n  why a coast will not take a hanging gate, per character"
             + $"  ({FeasibilitySeeds} seeds, all four edges)");
         GD.Print($"  {"character",-14} {"rung",7} {"usable",8} {"on its edge",12} "
@@ -268,15 +267,15 @@ public partial class GenerationAudit
         foreach (TerrainCharacter what in Enum.GetValues<TerrainCharacter>())
         {
             if (what == TerrainCharacter.Auto) continue;
-            var p = (IslandParams)Params.Duplicate();
-            p.Character = what;
-            p.EntryGate = GateKind.Hanging;
-            p.ExitGate = GateKind.Hanging;
-            p.ExitGates = 3;
+            IslandParams p = Variant(q =>
+            {
+                q.Character = what;
+                q.EntryGate = GateKind.Hanging;
+                q.ExitGate = GateKind.Hanging;
+                q.ExitGates = 3;
+            });
 
-            var data = new List<IslandData>();
-            for (int i = 0; i < FeasibilitySeeds; i++)
-                data.Add(IslandGenerator.Generate(FirstSeed + i * 6151, p));
+            List<IslandData> data = Sweep(p, FeasibilitySeeds).ToList();
 
             (string Label, bool Loose)[] rungs = { ("strict", false), ("loose", true) };
             foreach (var (label, loose) in rungs)
@@ -297,8 +296,11 @@ public partial class GenerationAudit
                     + $"{edgesOffering / runs,8:0.0} of 4 edges");
             }
         }
+    }
 
-        // ---- and the reductions, which are not free just because the maximum is -
+    /// <summary>Asking for less than the maximum, on Auto x Auto: count met, kind met, median got.</summary>
+    private void PrintGateReductions()
+    {
         GD.Print("\n  reductions, on Auto x Auto — asking for less has to work too");
         GD.Print($"  {"asked",-30} {"count met",11} {"kind met",10} {"median got",11}");
         (string Label, GateKind Entry, GateKind Exit, int Count)[] cases =
@@ -314,23 +316,13 @@ public partial class GenerationAudit
         };
         foreach (var (label, entry, exit, count) in cases)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.EntryGate = entry;
-            p.ExitGate = exit;
-            p.ExitGates = count;
+            IslandParams p = Variant(q => { q.EntryGate = entry; q.ExitGate = exit; q.ExitGates = count; });
 
             int met = 0, kind = 0;
             var got = new List<int>();
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
-                int exits = 0, wrong = 0;
-                foreach (Gate g in d.Gates)
-                {
-                    if (g.Role == GateRole.Entry) { if (g.Kind != entry) wrong++; continue; }
-                    exits++;
-                    if (g.Kind != exit) wrong++;
-                }
+                var (exits, wrong) = CountExits(d, entry, exit);
                 got.Add(exits);
                 if (exits >= count) met++;
                 if (wrong == 0) kind++;
@@ -343,16 +335,8 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// What each water knob is worth, stepped from 0 to 1 with everything else
-    /// held at the preset. A slider whose column does not climb is a slider that
-    /// does nothing, and that is a thing a summary at one setting cannot say.
-    /// </summary>
-    /// <summary>
-    /// Where the small footprints hurt, per arrangement. Attempts are the
-    /// generator fighting its own guarantees; a masses shortfall is a layout
-    /// that could not stay the shape it names; unmet is a seed that shipped
-    /// broken anyway. Any of the three clustering on one arrangement at one
-    /// size marks it for the future size gate.
+    /// Every arrangement at 48² / 64² / 128², hardest-pressed first: att is the mean attempts,
+    /// short the islands under the masses the shape names, unmet the seeds that shipped broken.
     /// </summary>
     private void PrintStrain()
     {
@@ -365,25 +349,21 @@ public partial class GenerationAudit
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
-            int wanted = 1;
+            int wanted = MassesTheShapeNames(how);
             var bits = new List<string>();
             float att48 = 0;
 
             foreach (int size in new[] { 48, 64, 128 })
             {
-                var p = (IslandParams)Params.Duplicate();
-                p.Arrangement = how;
-                p.Size = size;
+                IslandParams p = Variant(q => { q.Arrangement = how; q.Size = size; });
 
                 float attempts = 0;
                 int unmet = 0, shortfall = 0;
-                for (int i = 0; i < SweepSeeds; i++)
+                foreach (IslandData d in Sweep(p, SweepSeeds))
                 {
-                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
                     int masses = LabelLandmasses(d, d.Size, new int[d.Size, d.Size]);
-                    wanted = MassesTheShapeNames(how);
                     if (masses < wanted) shortfall++;
                 }
                 float att = attempts / SweepSeeds;
@@ -397,6 +377,10 @@ public partial class GenerationAudit
         foreach (var r in rows) GD.Print($"  {r.Name,-14} {r.Cells}");
     }
 
+    /// <summary>
+    /// The debutants at every footprint over SweepSeeds (land% of the footprint, heart%
+    /// over dry cells, water and box faults), then against every character at the preset size.
+    /// </summary>
     private void PrintDebut()
     {
         GD.Print($"\n=== the debutants at every footprint ({SweepSeeds} seeds each) ===");
@@ -407,9 +391,7 @@ public partial class GenerationAudit
         {
             foreach (int size in IslandParams.SupportedSizes)
             {
-                var p = (IslandParams)Params.Duplicate();
-                p.Arrangement = how;
-                p.Size = size;
+                IslandParams p = Variant(q => { q.Arrangement = how; q.Size = size; });
 
                 float attempts = 0, masses = 0;
                 int unmet = 0, waterFault = 0, outBox = 0;
@@ -417,9 +399,8 @@ public partial class GenerationAudit
                 double heartShare = 0;
                 ulong t0 = Time.GetTicksMsec();
 
-                for (int i = 0; i < SweepSeeds; i++)
+                foreach (IslandData d in Sweep(p, SweepSeeds))
                 {
-                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     int n = d.Size;
                     attempts += d.Attempts;
                     if (d.Unmet.Length > 0) unmet++;
@@ -451,8 +432,7 @@ public partial class GenerationAudit
                     if (land > 0) heartShare += 100.0 * heart / land;
 
                     foreach (Gate g in d.Gates)
-                        if (g.Center.X < 0 || g.Center.Z < 0
-                            || g.Center.X >= n || g.Center.Z >= n) outBox++;
+                        if (OutOfBox(g, n)) outBox++;
                 }
 
                 float ms = (Time.GetTicksMsec() - t0) / (float)SweepSeeds;
@@ -463,8 +443,7 @@ public partial class GenerationAudit
             }
         }
 
-        // And against every character, since a shape that only works on plains
-        // is a shape that fails the moment the world-tree names a biome.
+        // A shape that only works on plains fails the moment the world-tree names a biome.
         GD.Print("\n  against every character, 128², 3 seeds each: attempts, ! = unmet");
         foreach (IslandArrangement how in Debutants)
         {
@@ -472,15 +451,12 @@ public partial class GenerationAudit
             foreach (TerrainCharacter c in Enum.GetValues<TerrainCharacter>())
             {
                 if (c == TerrainCharacter.Auto) continue;
-                var p = (IslandParams)Params.Duplicate();
-                p.Arrangement = how;
-                p.Character = c;
+                IslandParams p = Variant(q => { q.Arrangement = how; q.Character = c; });
 
                 float att = 0;
                 bool bad = false;
-                for (int i = 0; i < 3; i++)
+                foreach (IslandData d in Sweep(p, 3))
                 {
-                    IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                     att += d.Attempts;
                     bad |= d.Unmet.Length > 0;
                 }
@@ -490,11 +466,7 @@ public partial class GenerationAudit
         }
     }
 
-    /// <summary>
-    /// Land per arrangement, thinnest first. "The rings are too thin" is a claim
-    /// about area, and the ordinary summary cannot test it: Auto's rolls give
-    /// some arrangements one island in sixty. This forces each one in turn.
-    /// </summary>
+    /// <summary>Land per arrangement over SweepSeeds each, thinnest first: share, cells, masses and bounding extent.</summary>
     private void PrintBulk()
     {
         GD.Print($"\n=== land per arrangement ({SweepSeeds} seeds each, "
@@ -505,14 +477,12 @@ public partial class GenerationAudit
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
-            var p = (IslandParams)Params.Duplicate();
-            p.Arrangement = how;
+            IslandParams p = Variant(q => q.Arrangement = how);
 
             long cells = 0;
             float masses = 0, extent = 0;
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int n = d.Size;
                 int xLo = n, xHi = -1, zLo = n, zHi = -1;
                 for (int x = 0; x < n; x++)
@@ -543,10 +513,9 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// The guarantee set at every supported footprint. Every constant tuned at
-    /// 128 is a suspect at 64, and this is the table that convicts them: the
-    /// re-roll verdicts (attempts, unmet), the connectivity shares, the Gate
-    /// deliverables, the water physics and the gorge tripwire, per size.
+    /// The guarantee set at every supported footprint over SweepSeeds each: re-rolls,
+    /// connectivity over dry cells, Gate roles and box, rivers reaching the rim, water
+    /// physics, sealed gorges and the altitude cap.
     /// </summary>
     private void PrintSizes()
     {
@@ -557,8 +526,7 @@ public partial class GenerationAudit
 
         foreach (int size in IslandParams.SupportedSizes)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Size = size;
+            IslandParams p = Variant(q => q.Size = size);
 
             float attempts = 0;
             int unmet = 0, gateFault = 0, outBox = 0, rimMiss = 0, waterFault = 0;
@@ -566,9 +534,8 @@ public partial class GenerationAudit
             double mainShare = 0, heartShare = 0;
             ulong t0 = Time.GetTicksMsec();
 
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 int n = d.Size;
                 attempts += d.Attempts;
                 if (d.Unmet.Length > 0) unmet++;
@@ -595,8 +562,7 @@ public partial class GenerationAudit
                                    || !d.HasLand(nx, nz);
                         if (d.River[x, z] && off) reachedRim = true;
                         if (w == IslandData.NoLand || off) continue;
-                        // A dry neighbour under this water is a leak; a
-                        // neighbouring fluid of another kind is a mix. Both 0.
+                        // A dry neighbour under this water is a leak; a neighbouring fluid of another kind is a mix.
                         if (d.WaterLevel[nx, nz] == IslandData.NoLand
                             && d.SurfaceLevel(nx, nz) < w) waterFault++;
                         if (d.WaterLevel[nx, nz] != IslandData.NoLand
@@ -614,21 +580,13 @@ public partial class GenerationAudit
                 foreach (Gate g in d.Gates)
                 {
                     if (g.Role == GateRole.Entry) entries++; else exits++;
-                    if (g.Center.X < 0 || g.Center.Z < 0
-                        || g.Center.X >= n || g.Center.Z >= n) outBox++;
+                    if (OutOfBox(g, n)) outBox++;
                 }
                 if (entries != 1 || exits < 1 || exits > 3) gateFault++;
 
                 sealedGorges += AnalyseGorges(d).Sealed;
 
-                short peak = short.MinValue, bilge = short.MaxValue;
-                for (int x = 0; x < n; x++)
-                for (int z = 0; z < n; z++)
-                {
-                    if (!d.HasLand(x, z)) continue;
-                    if (d.Spans[x, z][^1].Top > peak) peak = d.Spans[x, z][^1].Top;
-                    if (d.KeelLevel(x, z) < bilge) bilge = d.KeelLevel(x, z);
-                }
+                var (peak, bilge) = CubeLid(d);
                 if (peak > short.MinValue)
                 {
                     altMax = Math.Max(altMax, peak - bilge);
@@ -644,30 +602,39 @@ public partial class GenerationAudit
         }
     }
 
+    /// <summary>
+    /// Each water knob stepped from 0 to 1 with everything else held at the preset, so a
+    /// slider whose column does not climb is caught; Crossings at each BridgeEase.
+    /// </summary>
     private void PrintKnobs()
     {
         GD.Print($"\n=== water knobs, swept 0 to 1 ({SweepSeeds} seeds each, "
             + "everything else held) ===");
 
         float[] steps = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+        PrintLakesSweep(steps);
+        PrintRiversSweep(steps);
+        PrintCrossingsSweep();
+        PrintValleysSweep(steps);
+    }
 
+    /// <summary>Lakes 0..1: water-only lake cells, bodies as distinct regions, the biggest.</summary>
+    private void PrintLakesSweep(float[] steps)
+    {
         GD.Print($"\n  {"lakes",6} {"lake cells",11} {"lakes",7} {"biggest",8}   "
             + "(area, not just how many)");
         foreach (float v in steps)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Lakes = v;
+            IslandParams p = Variant(q => q.Lakes = v);
             long cells = 0, bodies = 0, biggest = 0;
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 var perRegion = new Dictionary<int, int>();
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
                 {
                     if (d.WaterLevel[x, z] == IslandData.NoLand || d.River[x, z]) continue;
-                    // Not the goo: it ignores this knob, being no kind of lake.
-                    if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;
+                    if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;   // goo ignores this knob
                     cells++;
                     int r = d.Region[x, z];
                     perRegion[r] = perRegion.GetValueOrDefault(r) + 1;
@@ -678,16 +645,18 @@ public partial class GenerationAudit
             GD.Print($"  {v,6:0.00} {cells / (float)SweepSeeds,11:0.0} "
                 + $"{bodies / (float)SweepSeeds,7:0.0} {biggest,8}");
         }
+    }
 
+    /// <summary>Rivers 0..1: river cells, navigable cells, falls.</summary>
+    private void PrintRiversSweep(float[] steps)
+    {
         GD.Print($"\n  {"rivers",6} {"river cells",12} {"navigable",10} {"falls",7}");
         foreach (float v in steps)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Rivers = v;
+            IslandParams p = Variant(q => q.Rivers = v);
             long cells = 0, navigable = 0, falls = 0;
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
                 {
@@ -700,23 +669,21 @@ public partial class GenerationAudit
             GD.Print($"  {v,6:0.00} {cells / (float)SweepSeeds,12:0.0} "
                 + $"{navigable / (float)SweepSeeds,10:0.0} {falls / (float)SweepSeeds,7:0.0}");
         }
+    }
 
-        // The gorge question at every bridge span. The preset's Medium answers
-        // "how often can a walled river not be bridged" with zero — but Easy
-        // Domains only span one cell, so a two-cell channel is a wall there by
-        // rule, and misalignment is the one thing that can seal a stream gorge.
-        // This is where the frustration would live if it lived anywhere.
+    /// <summary>The gorge question at every bridge span; Easy spans one cell, so a two-cell channel is a wall there by rule.</summary>
+    private void PrintCrossingsSweep()
+    {
         GD.Print($"\n  {"crossings",-10} {"reaches",8} {"sealed",7} {"misaligned",11} "
             + $"{"worst walk",11}");
         foreach (BridgeEase ease in new[] { BridgeEase.Easy, BridgeEase.Medium, BridgeEase.Hard })
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Crossings = ease;
+            IslandParams p = Variant(q => q.Crossings = ease);
             int sealedUp = 0, skew = 0, reaches = 0;
             var walks = new List<int>();
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                GorgeStats g = AnalyseGorges(IslandGenerator.Generate(FirstSeed + i * 6151, p));
+                GorgeStats g = AnalyseGorges(d);
                 reaches += g.Reaches;
                 sealedUp += g.Sealed;
                 skew += g.Skew;
@@ -726,27 +693,26 @@ public partial class GenerationAudit
             foreach (int w in walks) worst = Math.Max(worst, w);
             GD.Print($"  {ease,-10} {reaches,8} {sealedUp,7} {skew,11} {worst,11}");
         }
+    }
 
-        // The rise is the valley; the rest is what deepening every channel on the
-        // island costs. A knob that makes the terrain prettier and the Domain
-        // unwalkable is not a knob that works.
-        // Per river, not per island. `Valleys` slides a window across the courses,
-        // so what matters is how many of them have a valley at all and how much
-        // they differ — an island-wide mean would read the same whether every
-        // river had half a valley or half the rivers had a whole one.
+    /// <summary>
+    /// Valleys 0..1, per river rather than per island since the knob slides a window across
+    /// the courses: the rise, how many courses have a valley, the deepest, and what it costs
+    /// in two-slab steps and walkability.
+    /// </summary>
+    private void PrintValleysSweep(float[] steps)
+    {
         GD.Print($"\n  {"valleys",7} {"rise 1->5",10} {"valleyed",12} {"deepest",8} "
             + $"{"2-slab",7} {"walk%",7} {"berths",7}");
         foreach (float v in steps)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Valleys = v;
+            IslandParams p = Variant(q => q.Valleys = v);
             double total = 0;
             int counted = 0;
             long steep = 0, berths = 0, walk = 0, dry = 0;
             var each = new List<double>();
-            for (int i = 0; i < SweepSeeds; i++)
+            foreach (IslandData d in Sweep(p, SweepSeeds))
             {
-                IslandData d = IslandGenerator.Generate(FirstSeed + i * 6151, p);
                 if (ValleyRise(d, out double rise, each)) { total += rise; counted++; }
                 berths += d.Berths.Count;
 
@@ -764,11 +730,7 @@ public partial class GenerationAudit
                     }
                 }
             }
-            // A course counts as having a valley when the ground gains a slab or
-            // more over the five cells out from it. The row at 0.00 is the
-            // control: a river runs in low ground anyway, so some courses clear
-            // the bar on natural relief alone and the column is worth reading as
-            // a rise above that row rather than as an absolute.
+            // The row at 0.00 is the control: read the column as a rise above it, not as an absolute.
             int withValley = 0;
             double deepest = 0;
             foreach (double one in each)

@@ -3,29 +3,32 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using ProjectNikitin.Generation;
-using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
 public partial class GenerationAudit
 {
-    /// <summary>
-    /// A coarse ASCII silhouette of one island per arrangement.
-    ///
-    /// Headless gives no rendering, so how terrain <i>looks</i> needs a human at
-    /// the editor — but the <b>shape</b> of a footprint is a fact about the mask,
-    /// and printing it is how a change to the arrangements can be checked at all
-    /// without opening the lab. Water and land only; two cells to the character,
-    /// so a 128² island fits in a terminal.
-    /// </summary>
+    /// <summary>Near-black aether, the same in every picture.</summary>
+    private static readonly Color Aether = new(0.07f, 0.08f, 0.11f);
+
+    /// <summary>A flooded column's colour by kind: goo violet, ford pale, navigable deep, stream mid, lake dark.</summary>
+    private static Color WaterTint(IslandData d, int x, int z)
+    {
+        if (d.Fluid[x, z] == (byte)FluidKind.Goo) return new Color(0.58f, 0.16f, 0.74f);
+        if (d.Ford[x, z]) return new Color(0.55f, 0.82f, 0.78f);
+        if (d.Navigable[x, z]) return new Color(0.12f, 0.42f, 0.68f);
+        if (d.River[x, z]) return new Color(0.3f, 0.58f, 0.8f);
+        return new Color(0.1f, 0.28f, 0.55f);
+    }
+
+    /// <summary>Land / water ASCII of one island per arrangement, n/64 cells to the character so 128² fits a terminal.</summary>
     private void PrintSilhouettes()
     {
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
 
-            var p = (IslandParams)Params.Duplicate();
-            p.Arrangement = how;
+            IslandParams p = Variant(q => q.Arrangement = how);
             IslandData d = IslandGenerator.Generate(FirstSeed, p);
             int n = d.Size, step = Math.Max(1, n / 64);
 
@@ -35,9 +38,7 @@ public partial class GenerationAudit
                 var row = new System.Text.StringBuilder();
                 for (int x = 0; x < n; x += step)
                 {
-                    // Whatever the sample lands on: land wins over water, water
-                    // over aether, so a one-cell strait still shows as a strait
-                    // only where it really is one.
+                    // Inside a sample: land over water, water over aether.
                     bool land = false, wet = false;
                     for (int dx = 0; dx < step; dx++)
                     for (int dz = 0; dz < step; dz++)
@@ -54,20 +55,12 @@ public partial class GenerationAudit
         }
     }
 
-    /// <summary>
-    /// One island's water at full resolution: lakes, streams, navigable reaches,
-    /// eyots and falls, a character to the cell.
-    ///
-    /// The silhouette printer samples two cells to the character, which is enough
-    /// for a footprint and loses a one-cell stream entirely — and how a river
-    /// <i>runs</i> is exactly the thing that needed checking when the routing was
-    /// made to meander. This is the same trick at the scale the water lives at.
-    /// </summary>
+    /// <summary>The first few islands' water at full resolution, a character to the cell.</summary>
     private void PrintWaterways()
     {
         for (int i = 0; i < Math.Min(3, Seeds); i++)
         {
-            int seed = FirstSeed + i * 6151;
+            int seed = SeedAt(i);
             IslandData d = IslandGenerator.Generate(seed, Params);
             int n = d.Size;
 
@@ -86,7 +79,6 @@ public partial class GenerationAudit
                     char c = !wet ? ',' :
                              !d.River[x, z] ? 'O' :
                              d.Navigable[x, z] ? '=' : '~';
-                    // An eyot is dry land with water on two sides of it.
                     if (!wet && Wet(d, x - 1, z) && Wet(d, x + 1, z)) c = 'o';
                     if (!wet && Wet(d, x, z - 1) && Wet(d, x, z + 1)) c = 'o';
                     if (falls.Contains(new Vector2I(x, z))) c = 'v';
@@ -98,10 +90,8 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// One top-view PNG per arrangement per seed — the audit's eyes. Land is an
-    /// elevation ramp, water its four kinds of blue, goo its violet, landings
-    /// gold, portals red; aether is near-black, and the image edge is the
-    /// bounding box. Scaled 3× nearest so a cell stays a readable square.
+    /// Two top-view PNGs per arrangement at the preset size, then the debutants and
+    /// ThousandIsles at 64² — a shape that only reads at 128 is a shape that lies.
     /// </summary>
     private void WritePortraits()
     {
@@ -110,24 +100,19 @@ public partial class GenerationAudit
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
-            var p = (IslandParams)Params.Duplicate();
-            p.Arrangement = how;
+            IslandParams p = Variant(q => q.Arrangement = how);
             for (int i = 0; i < 2; i++)
             {
-                int seed = FirstSeed + i * 6151;
+                int seed = SeedAt(i);
                 IslandData d = IslandGenerator.Generate(seed, p);
                 SavePortrait(d, $"{Portraits}/{how}_{p.Size}_{seed}.png");
                 wrote++;
             }
         }
 
-        // The probationers and the rebuilt quilt again at the smallest
-        // footprint: a shape that only reads at 128 is a shape that lies.
         foreach (IslandArrangement how in Debutants.Append(IslandArrangement.ThousandIsles))
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Arrangement = how;
-            p.Size = 64;
+            IslandParams p = Variant(q => { q.Arrangement = how; q.Size = 64; });
             IslandData d = IslandGenerator.Generate(FirstSeed, p);
             SavePortrait(d, $"{Portraits}/{how}_64_{FirstSeed}.png");
             wrote++;
@@ -135,6 +120,7 @@ public partial class GenerationAudit
         GD.Print($"portraits: {wrote} written to {Portraits}");
     }
 
+    /// <summary>Top view, 3x nearest: land an elevation ramp with beach tint and gold landings, water by kind, Gates one red (hanging) or orange (land) pixel.</summary>
     private static void SavePortrait(IslandData d, string path)
     {
         int n = d.Size;
@@ -154,15 +140,8 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
-            else if (d.WaterLevel[x, z] != IslandData.NoLand)
-            {
-                if (d.Fluid[x, z] == (byte)FluidKind.Goo) c = new Color(0.58f, 0.16f, 0.74f);
-                else if (d.Ford[x, z]) c = new Color(0.55f, 0.82f, 0.78f);
-                else if (d.Navigable[x, z]) c = new Color(0.12f, 0.42f, 0.68f);
-                else if (d.River[x, z]) c = new Color(0.3f, 0.58f, 0.8f);
-                else c = new Color(0.1f, 0.28f, 0.55f);
-            }
+            if (!d.HasLand(x, z)) c = Aether;
+            else if (d.WaterLevel[x, z] != IslandData.NoLand) c = WaterTint(d, x, z);
             else
             {
                 float t = hi > lo ? (d.SurfaceLevel(x, z) - lo) / (float)(hi - lo) : 0.5f;
@@ -187,13 +166,7 @@ public partial class GenerationAudit
         img.SavePng(path);
     }
 
-    /// <summary>
-    /// The habitat vector, the anchors and the surface mapping as pictures, for
-    /// the first few seeds at the preset. This is the common-sense test for
-    /// Stage 5b: whether the moisture follows the rivers, whether the cliffs
-    /// are cliffs and not banks, whether the snow sits on summits — none of
-    /// which a count can say.
-    /// </summary>
+    /// <summary>Habitat, anchor and surface PNGs for seeds FirstSeed .. FirstSeed + 5 (consecutive, not the sweep stride).</summary>
     private void WriteFieldMaps()
     {
         DirAccess.MakeDirRecursiveAbsolute(FieldMaps);
@@ -210,10 +183,7 @@ public partial class GenerationAudit
         GD.Print($"field maps: {wrote} written to {FieldMaps}");
     }
 
-    /// <summary>
-    /// The five habitat axes side by side: moisture, warmth, ruggedness,
-    /// exposure, rim distance. Aether is near-black in every panel.
-    /// </summary>
+    /// <summary>The five habitat axes as two-colour ramps side by side; rim distance clamps at 40 cells.</summary>
     private static void SaveHabitat(IslandData d, string path)
     {
         int n = d.Size;
@@ -221,14 +191,13 @@ public partial class GenerationAudit
         var img = Image.CreateEmpty(5 * n + 4 * gap, n, false, Image.Format.Rgb8);
         img.Fill(new Color(0.05f, 0.05f, 0.07f));
 
-        var aether = new Color(0.07f, 0.08f, 0.11f);
         void Panel(int index, Func<int, int, float> value, Color lo, Color hi)
         {
             int left = index * (n + gap);
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
                 img.SetPixel(left + x, z,
-                    d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : aether);
+                    d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : Aether);
         }
 
         Panel(0, (x, z) => d.Moisture[x, z] / 255f,
@@ -246,11 +215,7 @@ public partial class GenerationAudit
         img.SavePng(path);
     }
 
-    /// <summary>
-    /// The anchors over a dimmed height base: cyan coast, red brink, orange
-    /// foot, teal bank, sand beach, green ford, gold landing, blue quay,
-    /// magenta overhang, white summit. Rarer and more built kinds drawn last.
-    /// </summary>
+    /// <summary>The ten anchor kinds over a dimmed base, rarer and more built kinds painted last.</summary>
     private static void SaveAnchors(IslandData d, string path)
     {
         int n = d.Size;
@@ -260,7 +225,7 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
+            if (!d.HasLand(x, z)) c = Aether;
             else if (d.WaterLevel[x, z] != IslandData.NoLand)
                 c = d.Fluid[x, z] == (byte)FluidKind.Goo
                     ? new Color(0.35f, 0.10f, 0.45f)
@@ -295,7 +260,7 @@ public partial class GenerationAudit
         img.SavePng(path);
     }
 
-    /// <summary>The surface mapping, in the lab's own palette; water its blues.</summary>
+    /// <summary>The surface mapping in the lab's material palette; water by kind.</summary>
     private static void SaveSurface(IslandData d, string path)
     {
         int n = d.Size;
@@ -305,15 +270,8 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = new Color(0.07f, 0.08f, 0.11f);
-            else if (d.WaterLevel[x, z] != IslandData.NoLand)
-            {
-                if (d.Fluid[x, z] == (byte)FluidKind.Goo) c = new Color(0.58f, 0.16f, 0.74f);
-                else if (d.Ford[x, z]) c = new Color(0.55f, 0.82f, 0.78f);
-                else if (d.Navigable[x, z]) c = new Color(0.12f, 0.42f, 0.68f);
-                else if (d.River[x, z]) c = new Color(0.3f, 0.58f, 0.8f);
-                else c = new Color(0.1f, 0.28f, 0.55f);
-            }
+            if (!d.HasLand(x, z)) c = Aether;
+            else if (d.WaterLevel[x, z] != IslandData.NoLand) c = WaterTint(d, x, z);
             else c = (SurfaceMaterial)d.Material[x, z] switch
             {
                 SurfaceMaterial.Stone => new Color(0.46f, 0.46f, 0.48f),
@@ -333,15 +291,7 @@ public partial class GenerationAudit
         img.SavePng(path);
     }
 
-    /// <summary>
-    /// A close-up height map of one patch of each sculpted landform, as digits.
-    ///
-    /// The shape of a gully field, a tower field and a terrace stack is the whole
-    /// point of those landforms, and it is exactly the kind of thing that cannot
-    /// be checked from a summary statistic — "gully wall: median 5 slabs" is true
-    /// of a maze and of a single trench alike. A window of the height field says
-    /// which one it is without opening the lab.
-    /// </summary>
+    /// <summary>A digit height map (tenths of the local range) of the biggest patch of each sculpted landform on a Single island.</summary>
     private void PrintSculpts()
     {
         var wanted = new (TerrainCharacter Character, LandformType Form)[]
@@ -355,13 +305,11 @@ public partial class GenerationAudit
 
         foreach ((TerrainCharacter character, LandformType form) in wanted)
         {
-            var p = (IslandParams)Params.Duplicate();
-            p.Character = character;
-            p.Arrangement = IslandArrangement.Single;
+            IslandParams p = Variant(q => { q.Character = character; q.Arrangement = IslandArrangement.Single; });
             IslandData d = IslandGenerator.Generate(FirstSeed, p);
             int n = d.Size;
 
-            // The biggest patch of the landform in question, and its middle.
+            // The biggest patch of the landform, ties to the first found (x-major), and its middle.
             var area = new Dictionary<int, (int Cells, int SumX, int SumZ)>();
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
