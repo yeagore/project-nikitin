@@ -31,26 +31,25 @@ public static class IslandGenerator
     {
         p = BoundAltitude(p);
         IslandData? best = null;
+        int bestMissing = int.MaxValue;
 
         for (int attempt = 0; attempt < Attempts; attempt++)
         {
             int use = attempt == 0 ? seed : unchecked((int)TerrainHash(seed, 0x5E1Fu + (uint)attempt));
             IslandData d = Build(use, p);
             d.Attempts = attempt + 1;
-            d.Unmet = Unmet(d, p);
+            List<string> missing = Unmet(d, p);
+            d.Unmet = string.Join(", ", missing);
 
-            if (d.Unmet.Length == 0) return d;
+            if (missing.Count == 0) return d;
             // The best failure, not the last: short of one guarantee beats short of three.
-            if (best == null || d.Unmet.Length < best.Unmet.Length) best = d;
+            if (missing.Count < bestMissing) { best = d; bestMissing = missing.Count; }
         }
         return best!;
     }
 
-    /// <summary>
-    /// Which guarantees this island misses; empty means playable. The message
-    /// texts are data: <see cref="Generate"/> ranks failures by the joined length.
-    /// </summary>
-    private static string Unmet(IslandData d, IslandParams p)
+    /// <summary>Which guarantees this island misses; empty means playable.</summary>
+    private static List<string> Unmet(IslandData d, IslandParams p)
     {
         var missing = new List<string>();
 
@@ -100,7 +99,7 @@ public static class IslandGenerator
         int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
         if (dry > 0 && heart < dry * MinHeartlandShare) missing.Add("one island");
 
-        return string.Join(", ", missing);
+        return missing;
     }
 
     /// <summary>

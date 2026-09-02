@@ -19,14 +19,14 @@
   "mainland%": 42.6,
   "navigableCells": 2671,
   "noEntry": 0,
-  "overhangColumns": 351,
+  "overhangColumns": 379,
   "patchesUndersized": 5,
   "riverCells": 6242,
   "riverStraight%": 60.0,
   "riverUphill": 0,
   "roadsFree": 46,
-  "twoSlab%": 0.9,
-  "twoSlabOffMountain": 671,
+  "twoSlab%": 0.8,
+  "twoSlabOffMountain": 625,
   "unplayable": 0,
   "waterLeaks": 0
 }

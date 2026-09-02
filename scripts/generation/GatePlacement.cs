@@ -136,7 +136,7 @@ internal static partial class GatePlacement
             : new Vector3I(site.X + outward.X * HangingOffset, site.Level + 2,
                            site.Z + outward.Y * HangingOffset);
 
-        return new Gate(kind, role, site.Edge, centre, apron, site.Apron, StripLength);
+        return new Gate(kind, role, site.Edge, centre, apron, site.Apron);
     }
 
     /// <summary>

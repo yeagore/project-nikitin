@@ -857,7 +857,7 @@ public partial class GenerationAudit
                 }
 
                 // The strip is built, so full length and dead level are the rule, not a tolerance.
-                if (!StripIntact(v, g)) StripMissing++; else StripLengths.Add(g.Landing);
+                if (!StripIntact(v, g)) StripMissing++; else StripLengths.Add(GatePlacement.StripLength);
 
                 MeasureGateAxes(v, g, dry);
 
@@ -880,8 +880,7 @@ public partial class GenerationAudit
                   - outward * GatePlacement.HangingOffset
                 : new Vector2I(g.Center.X, g.Center.Z);
 
-            bool strip = v.Land(head.X, head.Y)
-                      && g.Landing == GatePlacement.StripLength;
+            bool strip = v.Land(head.X, head.Y);
             if (strip)
             {
                 short level = v.Top(head.X, head.Y);

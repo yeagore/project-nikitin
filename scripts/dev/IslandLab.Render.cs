@@ -260,7 +260,7 @@ public partial class IslandLab
 			// Pushed 0.53 cell downstream: 0.5 is the cliff face's own plane and z-fights.
 			float angle = Mathf.Atan2(f.Flow.X, f.Flow.Y);
 			var basis = new Basis(Vector3.Up, angle)
-				.Scaled(new Vector3(f.Width * cs, height, 1f));
+				.Scaled(new Vector3(cs, height, 1f));
 
 			var origin = new Vector3(
 				(f.Cell.X - half + f.Flow.X * 0.53f) * cs,

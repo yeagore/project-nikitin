@@ -8,8 +8,6 @@ namespace ProjectNikitin.Dev;
 
 public partial class GenerationAudit
 {
-    /// <summary>Near-black aether, the same in every picture.</summary>
-
     /// <summary>A flooded column's colour by kind: goo violet, ford pale, navigable deep, stream mid, lake dark.</summary>
     private static Color WaterTint(IslandData d, int x, int z) => DevPalette.Water(d, x, z);
 

@@ -42,11 +42,13 @@ public static partial class Traversal
 
     /// <summary>
     /// Labels every sailable column with its body of water, cutting a body at every
-    /// on-Domain fall: nothing sails up one. Does not reset <see cref="IslandData.WaterBody"/> first.
+    /// on-Domain fall: nothing sails up one.
     /// </summary>
     private static void BuildWaterBodies(IslandData d)
     {
         int n = d.Size;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) d.WaterBody[x, z] = -1;
 
         // The links a fall severs, both ways round.
         var cut = new HashSet<(int, int, int, int)>();

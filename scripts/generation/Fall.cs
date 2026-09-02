@@ -16,12 +16,8 @@ namespace ProjectNikitin.Generation;
 /// </param>
 /// <param name="Flow">Cardinal direction the water is going, as a unit step.</param>
 /// <param name="OffRim">True where the fall pours off the edge of the Domain.</param>
-/// <param name="Width">
-/// Cells across. Always 1: each cell of a navigable pair records its own sheet,
-/// and the two together are the two-cell fall. Kept as a hook.
-/// </param>
 public readonly record struct Fall(Vector2I Cell, short Top, short Bottom, Vector2I Flow,
-                                   bool OffRim, int Width = 1)
+                                   bool OffRim)
 {
     /// <summary>Slabs from the lip to where it lands.</summary>
     public int Drop => Top - Bottom;

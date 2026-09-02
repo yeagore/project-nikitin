@@ -139,9 +139,11 @@ internal static class Overhangs
         {
             int dx = k == 0 ? 1 : 0, dz = k == 0 ? 0 : 1;
 
-            for (int x = 0; x < n; x++)
-            for (int z = 0; z < n; z++)
+            // The inner index runs along the span, so a placed arch is stepped over within its own row.
+            for (int a = 0; a < n; a++)
+            for (int b = 0; b < n; b++)
             {
+                int x = k == 0 ? b : a, z = k == 0 ? a : b;
                 if (!d.HasLand(x, z) || d.Spans[x, z].Length > 1) continue;
 
                 for (int gap = 2; gap <= span; gap++)
@@ -176,10 +178,7 @@ internal static class Overhangs
                         };
                     }
 
-                    // Deliberately verbatim: bumps the outer x from inside the z loop
-                    // when spanning +X, so those columns' remaining z rows are skipped.
-                    x += dx * (gap + 1);
-                    z += dz * (gap + 1);
+                    b += gap + 1;
                     break;
                 }
             }

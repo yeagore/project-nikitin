@@ -127,7 +127,7 @@ internal static partial class Rivers
             if (!land[x, z] || water[x, z] != IslandData.NoLand) return false;
             if (keep[x, z]) return false;
             var type = (LandformType)form[x, z];
-            return type is LandformType.Plain or LandformType.Hills;
+            return type is LandformType.Plain or LandformType.Hills or LandformType.Dunes;
         }
 
         // How low a cell may go: never into standing water beside it, never within a cliff of a basin floor.
