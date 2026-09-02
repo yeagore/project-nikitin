@@ -43,9 +43,8 @@ internal static class Landforms
 
     /// <summary>
     /// Hands each region a <see cref="LandformType"/> by quota, not by dice: the character's
-    /// weights become counts, every landform it names gets at least one region, and the counts
-    /// are handed out by rank on the relief envelope with a per-region jitter — none for a
-    /// cordillera, whose band must stay contiguous.
+    /// weights become counts, every landform it names gets at least one region, and the counts go
+    /// out by rank on the relief envelope with a per-region jitter — none for a cordillera.
     /// </summary>
     internal static LandformType[] AssignTypes(int seed, IslandParams p, bool[,] land, int[,] region,
                                               int count, float[,] envelope, float[,] toCoast)
@@ -189,10 +188,9 @@ internal static class Landforms
     }
 
     /// <summary>
-    /// <see cref="RepairAdjacency"/> can delete the last region of a landform the character
-    /// promised; put one back on the largest plain that already satisfies the adjacency rules,
-    /// since nothing repairs them afterwards. Bridgeheads last: they were flattened so their
-    /// bank agrees with the far side, but the quota outranks an awkward crossing.
+    /// <see cref="RepairAdjacency"/> can delete the last region of a promised landform; put one
+    /// back on the largest plain whose neighbours already satisfy the adjacency rules, since nothing
+    /// repairs them afterwards. Bridgeheads last: flattened on purpose, but the quota outranks them.
     /// </summary>
     internal static void RestoreMissingLandforms(IslandParams p, int seed, int[,] region, int count,
                                                 HashSet<int>[] neighbours, LandformType[] type,
@@ -277,10 +275,9 @@ internal static class Landforms
     }
 
     /// <summary>
-    /// Hands each region a plateau level: neighbours that may not have a cliff between them
-    /// (and both ends of every bridge) share a rung group, each group takes one rung off its
-    /// mean envelope, then mesas are raised above and basins sunk below what they touch.
-    /// Mountains take no rung — the surface hangs them off the ground at their border.
+    /// Hands each region a plateau level: neighbours that may not have a cliff between them (and
+    /// both ends of every bridge) share a rung group, each group takes one rung off its mean
+    /// envelope, then mesas are raised above and basins sunk below what they touch.
     /// </summary>
     internal static RegionPlan[] AssignPlateaus(int seed, IslandParams p, bool[,] land, int[,] region,
                                                int count, float[,] envelope,
@@ -297,6 +294,7 @@ internal static class Landforms
         RaiseMesas(p, count, scale, env, neighbours, type, plateau);
         SinkBasins(p, count, env, neighbours, type, plateau);
 
+        // Mountains take no rung: the surface hangs them off the ground at their border.
         var plan = new RegionPlan[count];
         for (int r = 0; r < count; r++) plan[r] = new RegionPlan(type[r], plateau[r], groups.Find(r));
         return plan;
@@ -362,10 +360,9 @@ internal static class Landforms
     }
 
     /// <summary>
-    /// Raises each mesa <c>MesaHeight</c> above the highest neighbouring surface (relief
-    /// included — a rung alone would let a hill rise to meet the top), lowest envelope first
-    /// so a run of mesas steps up in turn; over an already-placed mesa only half a step, and
-    /// never more than two steps above the ground.
+    /// Raises each mesa <c>MesaHeight</c> above the highest neighbouring surface, relief included
+    /// (a rung alone would let a hill rise to meet the top), lowest envelope first so a run of
+    /// mesas steps up in turn.
     /// </summary>
     private static void RaiseMesas(IslandParams p, int count, float scale, float[] env,
                                    HashSet<int>[] neighbours, LandformType[] type, int[] plateau)
@@ -396,6 +393,7 @@ internal static class Landforms
             if (groundTop != int.MinValue)
             {
                 level = groundTop + step;
+                // Half a step over a placed mesa, and never more than two steps above the ground.
                 if (mesaTop >= level) level = mesaTop + Math.Max(2, step / 2);
                 level = Math.Min(level, groundTop + 2 * step);
             }

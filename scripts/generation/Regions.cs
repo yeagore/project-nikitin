@@ -89,8 +89,7 @@ internal static class Regions
     /// <summary>
     /// Jittered-grid Voronoi with a domain-warped lookup, split into connected components,
     /// then every component under <see cref="IslandParams.MinRegionArea"/> folded into the
-    /// neighbour it shares the most border with — the coastline slices regions into
-    /// slivers too small to read.
+    /// neighbour it shares the most border with: the coastline slices off slivers too small to read.
     /// </summary>
     internal static int[,] BuildRegions(int seed, IslandParams p, bool[,] land, out int count)
     {
