@@ -3,40 +3,51 @@ namespace ProjectNikitin.Generation;
 /// <summary>
 /// What the top of a column is made of — a provisional reading of the habitat
 /// vector, one byte per column in <see cref="IslandData.Material"/>. Not a biome.
-/// The byte is stored by value, so new members are appended and nothing is renumbered.
+/// The living ground is a three-by-three of warmth (cold, temperate, hot) against
+/// moisture (dry, balanced, wet); the rest is rock, water, sand and snow. The byte
+/// is stored by value, so new members are appended and nothing is renumbered.
 /// </summary>
 public enum SurfaceMaterial : byte
 {
-    /// <summary>Bare rock: the brink of a tall face, the broken parts of a rock landform, and the cold high ground.</summary>
+    /// <summary>Bare rock: the brink of a tall face, the broken parts of a rock landform, and the bed and shore of a goo pool.</summary>
     Stone = 0,
 
-    /// <summary>Loose broken rock: talus under a tall face, the rougher parts of a rock landform, the alpine band.</summary>
+    /// <summary>Loose broken rock: talus under a tall face, the rougher parts of a rock landform.</summary>
     Scree = 1,
 
-    /// <summary>The frozen top of what a mountain can be — see <see cref="IslandData.Warmth"/>.</summary>
+    /// <summary>Frozen ground: the extreme cold, and a mountain's top above its tundra.</summary>
     Snow = 2,
 
-    /// <summary>A beach, and the crest of a dune.</summary>
+    /// <summary>A beach, the crest of a dune, and ground in extreme heat.</summary>
     Sand = 3,
 
-    /// <summary>River margin, lake shore, and the bed under standing water.</summary>
+    /// <summary>The bed under a river or a lake, and nothing else.</summary>
     Silt = 4,
 
-    /// <summary>Well-watered ground within reach of water. What you farm.</summary>
+    /// <summary>Temperate and wet: what you farm.</summary>
     Grass = 5,
 
-    /// <summary>Drier open country away from the water: heather and rough grazing.</summary>
+    /// <summary>Cold and balanced: heather and rough grazing.</summary>
     Moorland = 6,
 
-    /// <summary>Dry, eroded ground: badlands, karst, sinkhole country — and parched interior, or warm ground baked dry.</summary>
+    /// <summary>Hot and dry, and the sculpted dry landforms: badlands, karst, sinkhole country.</summary>
     Dust = 7,
 
-    /// <summary>Watered ground between grass and moorland.</summary>
+    /// <summary>Temperate and balanced.</summary>
     Meadow = 8,
 
-    /// <summary>Cool wet ground: bog and peat, where the high country or the rim meets water.</summary>
-    Peatland = 9,
+    /// <summary>Cold and wet, occasionally: peat and standing water in the moor.</summary>
+    Bog = 9,
 
-    /// <summary>Warm wet ground: the lush flat beside a lowland river, the best land there is.</summary>
+    /// <summary>Hot and wet, and only within a few cells of a river or a lake: the lush flat beside the water.</summary>
     Floodplain = 10,
+
+    /// <summary>Temperate and dry: short grass and thin soil.</summary>
+    Steppe = 11,
+
+    /// <summary>Cold and dry, and the band a mountain crosses before its snow.</summary>
+    Tundra = 12,
+
+    /// <summary>Hot and balanced, and hot and wet away from any water.</summary>
+    Savanna = 13,
 }

@@ -43,37 +43,46 @@ internal static class DevPalette
         return new Color(0.13f, 0.30f, 0.55f, 0.80f);
     }
 
-    /// <summary>Eleven materials, kept apart on the colour wheel: moorland is heather, dust is orange, peat is dark, floodplain is emerald.</summary>
+    /// <summary>
+    /// Fourteen materials. The climate grid reads as a grid: the cold row is
+    /// blue-grey, mauve and dark; the temperate row straw, yellow-green and green;
+    /// the hot row red-brown, gold and emerald. Sand pale, snow white, silt brown.
+    /// </summary>
     public static Color Material(SurfaceMaterial m) => m switch
     {
         SurfaceMaterial.Stone => new Color(0.50f, 0.50f, 0.54f),
         SurfaceMaterial.Scree => new Color(0.76f, 0.70f, 0.64f),
         SurfaceMaterial.Snow => new Color(0.95f, 0.96f, 0.98f),
-        SurfaceMaterial.Sand => new Color(0.93f, 0.86f, 0.55f),
+        SurfaceMaterial.Sand => new Color(0.95f, 0.90f, 0.66f),
         SurfaceMaterial.Silt => new Color(0.44f, 0.32f, 0.20f),
-        SurfaceMaterial.Grass => new Color(0.28f, 0.62f, 0.22f),
-        SurfaceMaterial.Meadow => new Color(0.66f, 0.82f, 0.34f),
+        SurfaceMaterial.Tundra => new Color(0.56f, 0.62f, 0.64f),
         SurfaceMaterial.Moorland => new Color(0.62f, 0.44f, 0.64f),
-        SurfaceMaterial.Dust => new Color(0.82f, 0.58f, 0.34f),
-        SurfaceMaterial.Peatland => new Color(0.26f, 0.38f, 0.30f),
+        SurfaceMaterial.Bog => new Color(0.26f, 0.36f, 0.32f),
+        SurfaceMaterial.Steppe => new Color(0.76f, 0.68f, 0.40f),
+        SurfaceMaterial.Meadow => new Color(0.66f, 0.82f, 0.34f),
+        SurfaceMaterial.Grass => new Color(0.28f, 0.62f, 0.22f),
+        SurfaceMaterial.Dust => new Color(0.78f, 0.48f, 0.30f),
+        SurfaceMaterial.Savanna => new Color(0.90f, 0.72f, 0.22f),
         SurfaceMaterial.Floodplain => new Color(0.16f, 0.74f, 0.46f),
         _ => new Color(1f, 0f, 1f),                    // an unmapped member: make it shout
     };
 
     /// <summary>
-    /// Warmth as a colour with its contrast where the values are: ice white to
-    /// steel blue over the frozen and alpine bands, then pale yellow at the
-    /// temperate middle, deep orange at the warmest. A plain ramp put the whole
-    /// lowland in one shade.
+    /// Warmth as a colour with a stop at each band line: ice white below the snow
+    /// line, steel blue through the cold band, pale yellow at the temperate middle,
+    /// orange at the hot line, deep red at sand. A plain ramp put a whole lowland
+    /// in one shade.
     /// </summary>
     public static Color WarmthTint(byte warmth)
     {
         var stops = new (float At, Color C)[]
         {
             (0f, new Color(0.92f, 0.95f, 1.00f)),
-            (110f, new Color(0.42f, 0.55f, 0.82f)),
-            (190f, new Color(0.96f, 0.90f, 0.62f)),
-            (255f, new Color(0.85f, 0.38f, 0.10f)),
+            (35f, new Color(0.75f, 0.85f, 0.98f)),
+            (100f, new Color(0.42f, 0.55f, 0.82f)),
+            (135f, new Color(0.96f, 0.90f, 0.62f)),
+            (175f, new Color(0.92f, 0.60f, 0.20f)),
+            (255f, new Color(0.70f, 0.18f, 0.08f)),
         };
         for (int i = 1; i < stops.Length; i++)
         {

@@ -443,7 +443,7 @@ them instead of unpicking one score.
 | axis | 0 … 255 | how it is measured |
 |---|---|---|
 | `Moisture` | parched … waterside | the Domain's **background** (`IslandParams.Moisture` × 255) wobbled ±25 by a low-frequency noise into patches; the lee up to 20 damper; a rock landform and three cells round it carry noise-gated patches of drought (−60); plus what fresh water adds (goo waters nothing): 200 at the bank less a floor of 8, decaying to 1/e over 5 cells of **walk cost** and gone by 16 — a cell per cell along or down, two more per slab climbed except the free step up onto the bank, so a river waters the plain it crosses and not the mountain or the canyon wall it passes — wobbled by noise so the bands are not contour lines of the water network |
-| `Warmth` | frozen … warm lowland | the Domain's **background** (`IslandParams.Warmth` × 255) from the lowest ground up to 30% of the mountain cap (`Size × 40/128` — the `BoundAltitude` cap), then a lapse of 235 that steepens toward the cap. Anchored to the cap on purpose: the top of what a mountain *can be* is always frozen, and a flat island is warm to its highest hill. Then the modifiers: a fully windswept cell is 25 colder, the rim 20 colder fading over 16 cells inland, and wet ground is pulled 30% of the way toward the temperate middle (190) from either side — water tempers heat and cold alike. Measured last, since it reads the other four axes |
+| `Warmth` | frozen … sand | the Domain's **background** (60 + 180 × `IslandParams.Warmth`, so even the coldest knob keeps its lowland above the snow) from the lowest ground up to 30% of the mountain cap (`Size × 40/128` — the `BoundAltitude` cap), then a lapse of 235 that steepens toward the cap. Anchored to the cap on purpose: the top of what a mountain *can be* is always frozen, and a flat island is warm to its highest hill. Then the modifiers: a fully windswept cell is 15 colder, the rim 12 colder fading over 16 cells inland, and wet ground is pulled 30% of the way toward the temperate middle (135) from either side — water tempers heat and cold alike. Measured last, since it reads the other four axes |
 | `Ruggedness` | flat … broken | local relief within two cells, 32 per slab, with **water read as its bank** (a slab over its surface): a stream through a plain is flat country and a gorge is still its walls. Measured against the water surface instead, every shore read a slab rougher than the country round it |
 | `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter. The wind is rolled for every Domain, dunes or not |
 | `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |
@@ -469,32 +469,41 @@ one. A forest goes "on flat well-watered ground away
 from the coast", not at a coordinate, so generation answers the geometric
 questions once and content reads the lists.
 
-`Material` is a **provisional** mapping of the habitat vector — stone, scree,
-snow (a warmth floor only real peaks reach), sand, silt, floodplain, grass,
-meadow, moorland, dust, peatland — kept so the island reads as a place in the
-lab before the biome layer exists. Rock is where rock is: a **tall face** (five
-slabs, `TallFace`) bares stone at its brink and drops scree at its foot
-whatever the landform, and a **rock landform** (mountain, massif, karst,
-badlands, sinkholes, a canyon) shows stone at any cliff and where it is broken
-(three slabs in five cells) and scree where it is rough (two). A plateau rung
-in soft country changes nothing: the grass runs up to the edge, because a
-four-slab step is the terrain's texture, not a wasteland. The rest is the
-**moisture ladder read against the warmth**, two ladders blended between a
-cool line (180) and a warm line (205); the preset lowland (background 0.95
-less the chills) sits near the warm end of the blend. First the **riverside**:
-within eight cells of fresh water, watered ground (150) is grass on either
-ladder, a warm riverside within four cells is floodplain, and a cool one within
-three may bog into peatland where a noise field allows — occasional, not every
-cold bank. Away from the water, the cold ladder is moorland most of the way:
-dust only when parched, meadow only when wet (175), grass only when soaked
-(200). The warm ladder runs dust (under 40), moorland, meadow (75), grass
-(180), and bakes: every degree over the warm line raises what moorland and
-meadow need by one (`BakeRate`). So dry warm country is dust with a thin
-fertile strip along its rivers, dry cold country is moor with fertile rivers
-and the odd bog, wet warm country is meadow with grass and floodplains, and
-wet cold country is moor and meadow with grassy rivers and a little bog. The
-audit's `Climate` sweep prints the four corners as material shares. The biome layer is expected to replace the mapping; the vector is the
-part meant to last. The lab's `surface`, `anchors` and five habitat views paint
+`Material` is a **provisional** mapping of the habitat vector, kept so the
+island reads as a place in the lab before the biome layer exists. In order:
+
+- **Beds and shores.** A river or lake bed is silt, and nothing else is. A goo
+  pool's bed and the dry cells round it are stone. A beach is sand.
+- **Snow** below a warmth of 35: the extreme cold, and a mountain's top above
+  its tundra.
+- **Rock is where rock is.** A **tall face** (six slabs, `TallFace`) bares
+  stone at its brink and drops scree at its foot whatever the landform, and a
+  **rock landform** (mountain, massif, karst, badlands, sinkholes, a canyon)
+  shows stone at any cliff and where it is broken (four and a half slabs in
+  five cells) and scree where it is rough (three). The cold band is read
+  after the tall faces and before the rest of the rock, so a mountain climbs
+  out of its stone and scree into tundra and then snow while its tall faces
+  stay stone. A plateau rung in soft
+  country changes nothing: the ground runs up to the edge, because a four-slab
+  step is the terrain's texture, not a wasteland.
+- **Dunes** are sand; badlands, karst and sinkhole country are dust.
+- **The climate grid**, warmth against moisture. Warmth is three bands — cold
+  below 100, hot from 175, temperate between — and moisture three: dry below
+  90, wet from 170, balanced between.
+
+| | dry | balanced | wet |
+|---|---|---|---|
+| **cold** | tundra | moorland | bog where a noise field allows (about a third), moorland otherwise |
+| **temperate** | steppe | meadow | grass |
+| **hot** | dust | savanna | floodplain within four cells of a river or lake, savanna beyond |
+
+Past the ends: hot ground at a warmth of 205 or more is sand unless it is a
+floodplain, and a mountain climbs out of its band into tundra (cold rock is
+tundra whatever its moisture) and then snow.
+The preset (moisture 0.45, warmth 0.5) is temperate and balanced: meadow with
+grass along the water. The audit's `Climate` sweep prints the whole grid, and
+the two ends, as material shares. The biome layer is expected to replace the
+mapping; the vector is the part meant to last. The lab's `surface`, `anchors` and five habitat views paint
 all of it, and the audit's `FieldMaps` writes the same as PNGs.
 
 `Names.Give` names the Domain, its districts and its bodies of water, so the
@@ -584,8 +593,8 @@ at the lab.
 | `Rivers` | 0 – 1 | how wet: the bar for a channel to be a river |
 | `Lakes` | 0 – 1 | how readily standing water collects |
 | `Valleys` | 0 – 1 | how far the ground falls toward a course |
-| `Moisture` | 0 – 1 | the background moisture before the water adds any: 0.15 dry country, 0.65 wet |
-| `Warmth` | 0 – 1 | the background warmth of the lowland before the lapse and the chills: 1 the warmest, 0.7 a cold country |
+| `Moisture` | 0 – 1 | the background moisture before the water adds any: 0.15 dry country, 0.45 balanced, 0.75 wet |
+| `Warmth` | 0 – 1 | the background warmth of the lowland before the lapse and the chills: 0.15 cold country, 0.5 temperate, 0.85 hot, 1 sand; even 0 keeps its lowland above the snow |
 | `Crossings` | enum | Easy / Medium / Hard = 1 / 3 / 6 cells a bridge spans |
 | `EntryGate` / `EntryEdge` | enum | **inputs**, set by the Domain that sent you |
 | `ExitGates` / `ExitGate` | 0 – 3, enum | how many Links onward, and of what kind |

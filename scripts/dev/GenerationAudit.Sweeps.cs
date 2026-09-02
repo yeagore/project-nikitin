@@ -624,13 +624,14 @@ public partial class GenerationAudit
     /// </summary>
     private void PrintClimate()
     {
-        GD.Print($"\n=== climate corners: material shares over {SweepSeeds} seeds each ===");
-        var corners = new (string Name, float Moisture, float Warmth)[]
-        {
-            ("dry cold", 0.15f, 0.7f), ("dry warm", 0.15f, 1f),
-            ("wet cold", 0.65f, 0.7f), ("wet warm", 0.65f, 1f),
-            ("preset", Params.Moisture, Params.Warmth),
-        };
+        GD.Print($"\n=== the climate grid: material shares over {SweepSeeds} seeds each ===");
+        var corners = new List<(string Name, float Moisture, float Warmth)>();
+        foreach (var (warmName, warmth) in new[] { ("cold", 0.15f), ("temperate", 0.5f), ("hot", 0.85f) })
+        foreach (var (wetName, moisture) in new[] { ("dry", 0.15f), ("balanced", 0.45f), ("wet", 0.75f) })
+            corners.Add(($"{warmName} {wetName}", moisture, warmth));
+        corners.Add(("sand end", 0.45f, 1f));
+        corners.Add(("snow end", 0.45f, 0f));
+        corners.Add(("preset", Params.Moisture, Params.Warmth));
         foreach (var (name, moisture, warmth) in corners)
         {
             IslandParams p = Variant(q => { q.Moisture = moisture; q.Warmth = warmth; });
@@ -652,7 +653,7 @@ public partial class GenerationAudit
             var bits = new List<string>();
             foreach (var (material, count) in parts)
                 if (count > 0) bits.Add($"{material} {100.0 * count / Math.Max(1, land):0.0}%");
-            GD.Print($"  {name,-9} (moisture {moisture:0.00}, warmth {warmth:0.00}): {string.Join(", ", bits)}");
+            GD.Print($"  {name,-18} (moisture {moisture:0.00}, warmth {warmth:0.00}): {string.Join(", ", bits)}");
         }
     }
 

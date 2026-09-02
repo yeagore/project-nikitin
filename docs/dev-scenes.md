@@ -40,8 +40,9 @@ strafe, and liquid on **I** because **W** is forward.)
 
 Views: `height`, `landform`, `region`, `walk` (what connects on foot), `reach`
 (what connects once you build; red is out of reach whatever you build),
-`shelves`, `surface` (stone, scree, snow, sand, silt, floodplain, grass, meadow,
-moorland, dust, peatland; an overhang's lip is drawn as stone), `anchors` (what the content layer attaches
+`shelves`, `surface` (stone, scree, snow, sand, silt and the climate grid —
+tundra, moorland, bog; steppe, meadow, grass; dust, savanna, floodplain; an
+overhang's lip is drawn as stone), `anchors` (what the content layer attaches
 to: coast, cliff brink, cliff foot, a ledge where a cell is both, bank, river
 bed, lake bed, goo bed, overhang lip, beach, ford, Gate landing, ferry quay,
 summit) and the five habitat axes as

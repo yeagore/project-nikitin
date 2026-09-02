@@ -86,18 +86,18 @@ public partial class IslandParams : Resource
     [Export(PropertyHint.Range, "0,1,0.01")] public float Valleys { get; set; } = 0.4f;
 
     /// <summary>
-    /// The Domain's background moisture, before its water adds any: 0 is parched
-    /// everywhere off a bank, 1 is waterside everywhere. Dry country is about 0.15,
-    /// wet country about 0.65.
+    /// The Domain's background moisture, before its water adds any: dry country
+    /// about 0.15, balanced about 0.45, wet about 0.75. The water always adds its
+    /// own strip, so a dry Domain still has fertile banks.
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Moisture { get; set; } = 0.45f;
 
     /// <summary>
     /// The Domain's background warmth at its lowest ground, before the lapse and the
-    /// chills: 1 is the warmest a lowland gets, 0.7 a cold country whose peaks freeze
-    /// low and whose wet ground bogs.
+    /// chills: cold country about 0.15, temperate about 0.5, hot about 0.85, sand at
+    /// 1. Even 0 keeps its lowland above the snow.
     /// </summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Warmth { get; set; } = 0.95f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Warmth { get; set; } = 0.5f;
 
     // ---- crossings ----------------------------------------------------------
 

@@ -54,15 +54,22 @@ internal static class Habitat
     /// <summary>Curve of the lapse above the knee; over 1 so the cold gathers at the top.</summary>
     private const float LapseCurve = 1.3f;
 
+    /// <summary>
+    /// Where <see cref="IslandParams.Warmth"/> lands on the byte: 0 is a lowland of
+    /// 60 (cold, but its water still thaws), 1 is 240 (sand). The offset keeps the
+    /// whole knob liveable: the extreme cold is a slider you cannot quite reach.
+    /// </summary>
+    private const float WarmthFloor = 60f, WarmthSpan = 180f;
+
     /// <summary>Warmth a fully windswept cell loses.</summary>
-    private const float WindChill = 25f;
+    private const float WindChill = 15f;
 
     /// <summary>Warmth the rim loses, fading to nothing <see cref="RimChillReach"/> cells inland.</summary>
-    private const float RimChill = 20f;
+    private const float RimChill = 12f;
     private const int RimChillReach = 16;
 
-    /// <summary>Warmth's middle, which wet ground is pulled toward: water tempers both the heat and the cold.</summary>
-    private const float Temperate = 190f;
+    /// <summary>Warmth's middle — the temperate band's centre — which wet ground is pulled toward: water tempers both the heat and the cold.</summary>
+    private const float Temperate = 135f;
 
     /// <summary>How far waterside ground is pulled toward <see cref="Temperate"/>.</summary>
     private const float MoistTemper = 0.3f;
@@ -187,7 +194,7 @@ internal static class Habitat
         if (low == short.MaxValue) return;
 
         float cap = MountainCap(d.Size);
-        float baseline = 255f * Math.Clamp(p.Warmth, 0f, 1f);
+        float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {

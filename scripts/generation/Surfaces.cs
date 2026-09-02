@@ -17,70 +17,57 @@ internal static class Surfaces
     /// <summary>Slabs of visible face that make a cliff — the traversal's own "needs a hoist".</summary>
     private const int CliffFace = 3;
 
-    /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung is not one, a mesa wall, a mountain flank or a canyon is.</summary>
-    private const int TallFace = 5;
+    /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung or a mesa wall is not one, a mountain flank or a canyon is.</summary>
+    private const int TallFace = 6;
 
     /// <summary>Ruggedness (32 per slab) at which a rock landform shows stone off its cliffs.</summary>
-    private const int RockyStoneAt = 96;
+    private const int RockyStoneAt = 144;
 
     /// <summary>Ruggedness at which a rock landform shows scree.</summary>
-    private const int RockyScreeAt = 64;
+    private const int RockyScreeAt = 96;
 
-    /// <summary>Warmth below which ground is frozen.</summary>
-    private const int SnowAt = 64;
+    /// <summary>Ruggedness at which soft ground turns to scree: seven slabs in five cells, which only stacked rungs manage.</summary>
+    private const int BrokenAt = 224;
 
-    /// <summary>Warmth below which nothing ordinary grows — the alpine band.</summary>
-    private const int ColdAt = 110;
+    // ---- the climate grid --------------------------------------------------
+    // Warmth in three bands and moisture in three, nine living grounds between
+    // them, with sand and snow past the ends.
 
-    /// <summary>Ruggedness at which alpine ground is scree rather than stone.</summary>
-    private const int AlpineScreeAt = 64;
+    /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its tundra.</summary>
+    private const int SnowBelow = 35;
 
-    /// <summary>Moisture above which dry ground is a wet margin even off a bank.</summary>
-    private const int SiltAt = 235;
+    /// <summary>Warmth below which the ground is the cold band: tundra, moorland, bog.</summary>
+    private const int ColdBelow = 100;
 
-    /// <summary>
-    /// Warmth at and below which the ladder is the cold one; at and above
-    /// <see cref="WarmAt"/> the warm one; blended between. The preset lowland
-    /// (background 0.9 less the chills) sits in the middle of the blend.
-    /// </summary>
-    private const int CoolAt = 180;
-    private const int WarmAt = 205;
+    /// <summary>Warmth from which the ground is the hot band: dust, savanna, floodplain.</summary>
+    private const int HotFrom = 175;
 
-    /// <summary>The cold ladder: dust only when parched, moorland most of the way, meadow only when wet, grass only beside water; nothing is lush.</summary>
-    private const int ColdMoorAt = 5, ColdMeadowAt = 175, ColdGrassAt = 200;
+    /// <summary>Warmth from which hot ground is sand: the extreme heat. A floodplain still beats it.</summary>
+    private const int SandFrom = 205;
 
-    /// <summary>The warm ladder: dust wide, then moorland, meadow, grass, and floodplain beside water.</summary>
-    private const int WarmMoorAt = 40, WarmMeadowAt = 75, WarmGrassAt = 180, FloodplainAt = 165;
+    /// <summary>Moisture below which the ground is dry: dust, steppe, tundra.</summary>
+    private const int DryBelow = 90;
 
-    /// <summary>Cells from fresh water a floodplain reaches: it is the flat beside the river, not the whole wet country.</summary>
+    /// <summary>Moisture from which the ground is wet: floodplain, grass, bog.</summary>
+    private const int WetFrom = 170;
+
+    /// <summary>Cells from fresh water a hot floodplain reaches; wet hot ground further off is savanna.</summary>
     private const int FloodplainReach = 4;
 
-    /// <summary>Cells from fresh water within which watered ground is grass on either ladder: a river is fertile in any climate.</summary>
-    private const int RiversideReach = 8;
-    private const int RiversideGrassAt = 150;
-
-    /// <summary>Moisture a degree of warmth over <see cref="WarmAt"/> adds to what moorland and meadow need: warm dry ground bakes.</summary>
-    private const int BakeRate = 1;
-
-    /// <summary>Moisture above which cool ground within <see cref="PeatReach"/> of water may bog, where its noise clears <see cref="PeatBar"/>: occasional, not every cold bank.</summary>
-    private const int PeatAt = 150;
-    private const int PeatReach = 3;
-    private const float PeatBar = 0.5f;
-
-    /// <summary>Ruggedness at which soft ground turns to scree: six slabs in five cells, which only stacked rungs manage.</summary>
-    private const int BrokenAt = 200;
+    /// <summary>The noise bar cold wet ground must clear to be bog rather than moorland: occasional, not the rule.</summary>
+    private const float BogBar = 0.6f;
 
     /// <summary>Rebuilds the anchor lists in scan order and picks every column's material.</summary>
     public static void Classify(int seed, IslandData d)
     {
         int n = d.Size;
         var bog = new Noise(seed + 71_019, 0.07f, octaves: 2);
-        // Cells from fresh water (goo waters nothing), as far as the riverside reaches; -1 beyond.
+        // Cells from fresh water (goo waters nothing), as far as a floodplain reaches; -1 beyond.
         int[,] toWater = Flood.Distance(n,
             (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
                       && d.Fluid[x, z] != (byte)FluidKind.Goo,
             (_, _, nx, nz) => d.HasLand(nx, nz),
-            cap: RiversideReach);
+            cap: FloodplainReach);
 
         d.CoastCells.Clear();
         d.CliffCells.Clear();
@@ -103,7 +90,7 @@ internal static class Surfaces
                 else if (d.Fluid[x, z] == (byte)FluidKind.Water) d.LakeBedCells.Add(new Vector2I(x, z));
             }
 
-            bool coast = false, bank = false;
+            bool coast = false, bank = false, gooSide = false;
             int drop = 0, face = 0;
             for (int k = 0; k < 4; k++)
             {
@@ -117,10 +104,9 @@ internal static class Surfaces
                 drop = Math.Max(drop, eff - ne);
                 face = Math.Max(face, ne - eff);
 
-                if (dry && d.WaterLevel[nx, nz] != IslandData.NoLand
-                    && d.Fluid[nx, nz] != (byte)FluidKind.Goo
-                    && eff - d.WaterLevel[nx, nz] is >= 0 and <= 1)
-                    bank = true;
+                if (!dry || d.WaterLevel[nx, nz] == IslandData.NoLand) continue;
+                if (d.Fluid[nx, nz] == (byte)FluidKind.Goo) gooSide = true;
+                else if (eff - d.WaterLevel[nx, nz] is >= 0 and <= 1) bank = true;
             }
 
             if (coast) d.CoastCells.Add(new Vector2I(x, z));
@@ -130,7 +116,7 @@ internal static class Surfaces
                 d.BankCells.Add(new Vector2I(x, z));
 
             int near = toWater[x, z] < 0 ? int.MaxValue : toWater[x, z];
-            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, bank, near, bog);
+            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, bog);
         }
 
         FindSummits(d);
@@ -182,20 +168,25 @@ internal static class Surfaces
                 or LandformType.Badlands or LandformType.Sinkholes;
 
     /// <summary>
-    /// The material at one cell: built and wet first, then snow, then rock — a tall
-    /// face bares stone at its brink and drops scree at its foot anywhere, and a rock
-    /// landform shows stone and scree wherever it is broken — then the cold band,
-    /// the landform, the bank, and last the moisture ladder read against the warmth. A plateau rung
-    /// in soft country changes nothing: the ground runs up to the edge.
+    /// The material at one cell. Beds and beaches first; goo's bed and shore are
+    /// stone; then snow; then the tall faces — stone at the brink, scree at the
+    /// foot, whatever the landform; then the cold band, ahead of the rest of the
+    /// rock so a mountain climbs out of its stone and scree into tundra and then
+    /// snow while its tall faces stay stone; then a rock landform's cliffs and
+    /// broken ground, the dunes and the dry sculpted landforms; then the rest of the
+    /// climate grid, warmth against moisture. A plateau rung in soft country
+    /// changes nothing: the ground runs up to the edge.
     /// </summary>
-    private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face, bool bank,
-                                        int near, Noise bog)
+    private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
+                                        bool gooSide, int near, Noise bog)
     {
         if (d.Beach[x, z]) return SurfaceMaterial.Sand;
-        if (d.WaterLevel[x, z] != IslandData.NoLand) return SurfaceMaterial.Silt;
+        if (d.WaterLevel[x, z] != IslandData.NoLand)
+            return d.Fluid[x, z] == (byte)FluidKind.Goo ? SurfaceMaterial.Stone : SurfaceMaterial.Silt;
+        if (gooSide) return SurfaceMaterial.Stone;
 
         byte warmth = d.Warmth[x, z];
-        if (warmth < SnowAt) return SurfaceMaterial.Snow;
+        if (warmth < SnowBelow) return SurfaceMaterial.Snow;
 
         byte rugged = d.Ruggedness[x, z];
         var form = (LandformType)d.Landform[x, z];
@@ -204,38 +195,35 @@ internal static class Surfaces
         if (drop >= TallFace) return SurfaceMaterial.Stone;
         if (face >= TallFace) return SurfaceMaterial.Scree;        // talus under the face
 
-        if (rocky)
+        byte moist = d.Moisture[x, z];
+        bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
+
+        // The cold band before the broken rock: a mountain climbs out of its stone
+        // and scree into tundra and then snow, and only its tall faces stay stone. Cold
+        // rock is tundra whatever its moisture; cold soft ground reads the grid.
+        if (warmth < ColdBelow)
         {
-            if (drop >= CliffFace || face >= CliffFace || rugged >= RockyStoneAt)
-                return SurfaceMaterial.Stone;
-            if (rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
+            if (rocky) return SurfaceMaterial.Tundra;
+            if (wet && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
+            return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
         }
 
-        if (warmth < ColdAt)
-            return rugged >= AlpineScreeAt ? SurfaceMaterial.Scree : SurfaceMaterial.Stone;
+        if (rocky && (drop >= CliffFace || face >= CliffFace)) return SurfaceMaterial.Stone;
+        if (rocky && rugged >= RockyStoneAt) return SurfaceMaterial.Stone;
+        if (rocky && rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
+        if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
         if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Dust;
 
-        if (bank) return SurfaceMaterial.Silt;
-        if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
-
-        // The moisture ladder, read against the warmth: the cold ladder is moorland
-        // most of the way with grass only beside water and the occasional bog; the
-        // warm one runs from dust to floodplain and bakes drier the warmer it gets.
-        byte moist = d.Moisture[x, z];
-        float w = Mathf.Clamp((warmth - CoolAt) / (float)(WarmAt - CoolAt), 0f, 1f);
-        if (w > 0.5f && moist >= FloodplainAt && near <= FloodplainReach) return SurfaceMaterial.Floodplain;
-        if (w < 0.5f && moist >= PeatAt && near <= PeatReach && bog.At(x, z) > PeatBar)
-            return SurfaceMaterial.Peatland;
-        if (moist >= SiltAt) return SurfaceMaterial.Silt;
-        if (near <= RiversideReach && moist >= RiversideGrassAt) return SurfaceMaterial.Grass;
-
-        int bake = Math.Max(0, warmth - WarmAt) * BakeRate;
-        if (moist >= Mathf.Lerp(ColdGrassAt, WarmGrassAt, w)) return SurfaceMaterial.Grass;
-        if (moist >= Mathf.Lerp(ColdMeadowAt, WarmMeadowAt, w) + bake) return SurfaceMaterial.Meadow;
-        if (moist >= Mathf.Lerp(ColdMoorAt, WarmMoorAt, w) + bake) return SurfaceMaterial.Moorland;
-        return SurfaceMaterial.Dust;
+        if (warmth >= HotFrom)
+        {
+            if (wet && near <= FloodplainReach) return SurfaceMaterial.Floodplain;
+            if (warmth >= SandFrom) return SurfaceMaterial.Sand;
+            return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
+        }
+        if (wet) return SurfaceMaterial.Grass;
+        return dryGround ? SurfaceMaterial.Steppe : SurfaceMaterial.Meadow;
     }
 }
