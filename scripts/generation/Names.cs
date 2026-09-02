@@ -4,18 +4,8 @@ using static ProjectNikitin.Generation.SeedHash;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Gives the Domain and its parts names.
-///
-/// <para>Regions, districts and bodies of water are integers everywhere else in
-/// the pipeline, which is right for the generator and wrong for everyone who has
-/// to talk about the output. "The stranded piece is area 7" is a sentence nobody
-/// can check against a picture; "the stranded piece is Harrowmere" is. It costs
-/// nothing, it makes every debugging conversation shorter, and it is the first
-/// place the setting shows up in the tools.</para>
-///
-/// <para>Deterministic, like everything else: the same seed names the same
-/// island. The syllables are deliberately plain — this is scaffolding for the
-/// culture layer to replace, not an attempt at the culture layer.</para>
+/// Names the Domain, its districts and its water — deterministic per seed.
+/// Placeholder syllables for the culture layer to replace.
 /// </summary>
 internal static class Names
 {
@@ -37,11 +27,7 @@ internal static class Names
         "Tarn", "Mere", "Water", "Loch", "Pool", "Flood", "Lade", "Race",
     };
 
-    /// <summary>
-    /// Names the Domain, every walk area big enough to be a district, and every
-    /// body of water. Runs after the traversal analysis, which is what decides
-    /// how many of each there are.
-    /// </summary>
+    /// <summary>Names the Domain, each district-sized walk area (parallel to Areas) and each water body.</summary>
     public static void Give(int seed, IslandData d)
     {
         d.Name = Compose(seed, 0x4E1u);

@@ -8,51 +8,25 @@ using static ProjectNikitin.Generation.SeedHash;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Stage 4b: the two places a column carries <b>more than one span</b> — an
-/// undercut cliff, and an arch over a gap. This is the only stage that uses the
-/// span list for what it is for; everything before it leaves one solid run per
-/// column, keel to surface.
-///
-/// <para><b>It runs last, after the analysis.</b> Walkability, shelves, Gates and
-/// the roads between them are all worked out over the ground, and the lip of an
-/// overhang is not ground — it is a roof. Pathing over two-level columns is a
-/// real problem (it wants spans as nodes rather than columns, and nothing in
-/// <see cref="Traversal"/> is written that way), and it is a separate one. Adding
-/// the geometry after the fact keeps the two apart: what is here is rendered and
-/// collidable, and what walks on it is a later question.</para>
-///
-/// <para>That is also why <see cref="IslandData.SurfaceLevel"/> reads the
-/// <i>lowest</i> span's top rather than the highest. For every column that has
-/// one span the two are the same; for a column with a lip over it, the ground is
-/// underneath, which is what every rule in the pipeline means by "the
-/// surface".</para>
+/// Undercut lips and arches — the only stage that gives a column a second span.
+/// Runs after <see cref="Traversal"/>, so a lip is rendered and collidable but not
+/// walkable; <see cref="IslandData.SurfaceLevel"/> keeps reading the lowest span.
 /// </summary>
 internal static class Overhangs
 {
-    /// <summary>
-    /// How tall a face has to be before it is worth undercutting, in slabs.
-    /// Eight — the height a stair spans, so it is already a wall rather than a
-    /// step, and there is room for a lip with air under it.
-    /// </summary>
+    /// <summary>Slabs of face before it is worth undercutting (a stair's height).</summary>
     private const int MinFace = 8;
 
     /// <summary>Slabs of clear air a lip must leave under itself.</summary>
     private const int Headroom = 4;
 
-    /// <summary>Slabs of rock in a lip. Thin enough to read as an overhang.</summary>
+    /// <summary>Slabs of rock in a lip.</summary>
     private const int LipThickness = 2;
 
     /// <summary>
-    /// Whether a cliff top is solid enough behind it to hang a lip off.
-    ///
-    /// <b>This is what keeps overhangs off the thin landforms.</b> A karst tower
-    /// two cells across, a basin rim, the wall of a sinkhole: all of them are
-    /// faces of eight slabs or more, all of them qualify on height alone, and a
-    /// lip jutting off one reads as a hole punched through the wall rather than as
-    /// an undercut — the feature is not thick enough to look like it has an
-    /// underside. So the high side has to be part of a mass: two of its other
-    /// neighbours within a slab of its own top, and not a landform whose whole
-    /// shape is the wall.
+    /// Whether a cliff top is part of a mass: not a thin landform (a lip off a
+    /// two-cell tower reads as a hole) and two other neighbours within a slab of it.
+    /// Neighbours are unchecked: the mask's empty one-cell border makes that safe.
     /// </summary>
     private static bool Backed(IslandData d, int x, int z, int away)
     {
@@ -73,10 +47,9 @@ internal static class Overhangs
     }
 
     /// <summary>
-    /// Hangs lips off the tall faces and throws arches over the short gaps.
-    /// Both are bounded by <see cref="IslandParams.OverhangDensity"/>, and both
-    /// are placed on a noise field rather than per cell, so they come in runs
-    /// along a face instead of being sprinkled over the island.
+    /// Hangs lips off tall faces and throws arches over short gaps, both gated by
+    /// one noise field so they come in runs. Zero density returns before the
+    /// Overhangs list is cleared.
     /// </summary>
     public static void Carve(int seed, IslandParams p, IslandData d)
     {
@@ -85,8 +58,7 @@ internal static class Overhangs
 
         int n = d.Size;
         var where = new Noise(seed + 9091, frequency: 0.09f, octaves: 2);
-        // A high threshold at low density, so an island with the knob down has a
-        // couple of undercuts rather than a uniform thin scatter of them.
+        // High bar at low density: a few undercuts rather than a thin scatter.
         float bar = Mathf.Lerp(0.78f, 0.34f, density);
 
         Undercut(seed, p, d, n, where, bar);
@@ -99,14 +71,8 @@ internal static class Overhangs
     }
 
     /// <summary>
-    /// A lip of rock jutting out from a cliff top over the ground below it.
-    ///
-    /// In a columnar model an undercut cannot be cut sideways into the cliff
-    /// column — a column is one place, and there is nowhere for the notch to go.
-    /// It is built the other way round: the columns in front of the face get a
-    /// <i>second</i> span up at the cliff top, with air between it and their own
-    /// ground. Seen from below that is exactly an undercut face, and seen from
-    /// above it is the cliff edge jutting out.
+    /// A lip off a cliff top: the columns in front of the face get a second span
+    /// at the cliff's height, with air under it. One face per column.
     /// </summary>
     private static void Undercut(int seed, IslandParams p, IslandData d, int n,
                                  Noise where, float bar)
@@ -125,52 +91,44 @@ internal static class Overhangs
                 if (!d.HasLand(lx, lz)) continue;
                 if (high - d.SurfaceLevel(lx, lz) < MinFace) continue;
                 if (where.At(x, z) < bar) continue;
-                // The cliff top has to be part of a mass — see Backed. `k` is the
-                // way *out* over the low ground, so its opposite is the way back
-                // into the rock, which is the neighbour that may not count.
+                // k is the way out over the low ground; k^1 is the way back into the rock.
                 if (!Backed(d, x, z, k ^ 1)) continue;
 
-                // How far the lip reaches out, and how thick it is. Both wander,
-                // so a face carries a ragged eave rather than a fitted shelf.
                 int depth = 1 + (int)(FeatureHash01(seed, 0x0EA5u ^ (uint)(x * 73856093 ^ z * 19349663))
                                       * reach);
                 int thick = LipThickness
                             + (int)(FeatureHash01(seed, 0x11Fu ^ (uint)(x * 31 + z)) * 2f);
                 short bottom = (short)(high - thick + 1);
 
-                for (int step = 0; step < depth; step++)
-                {
-                    int cx = lx + Dx[k] * step, cz = lz + Dz[k] * step;
-                    if (!InBounds(n, cx, cz)) break;
-                    if (!d.HasLand(cx, cz) || d.Spans[cx, cz].Length > 1) break;
-                    // Real air under the lip, and a gap the span list can hold:
-                    // two spans in a column must not touch.
-                    if (bottom - d.SurfaceLevel(cx, cz) < Headroom) break;
-
-                    d.Spans[cx, cz] = new[]
-                    {
-                        d.Spans[cx, cz][0],
-                        new Span(bottom, high),
-                    };
-                }
+                LayLip(d, n, lx, lz, k, depth, bottom, high);
                 break;                      // one face per column is enough
             }
         }
     }
 
+    /// <summary>Lays a lip outward from (lx, lz) along k, stopping at the first column it cannot roof.</summary>
+    private static void LayLip(IslandData d, int n, int lx, int lz, int k, int depth, short bottom, short high)
+    {
+        for (int step = 0; step < depth; step++)
+        {
+            int cx = lx + Dx[k] * step, cz = lz + Dz[k] * step;
+            if (!InBounds(n, cx, cz)) break;
+            if (!d.HasLand(cx, cz) || d.Spans[cx, cz].Length > 1) break;
+            // Two spans in a column must not touch.
+            if (bottom - d.SurfaceLevel(cx, cz) < Headroom) break;
+
+            d.Spans[cx, cz] = new[]
+            {
+                d.Spans[cx, cz][0],
+                new Span(bottom, high),
+            };
+        }
+    }
+
     /// <summary>
-    /// A natural bridge: two cliff tops of about the same height with a chasm or a
-    /// channel between them, joined by a deck a few slabs thick with daylight
-    /// under it.
-    ///
-    /// <para><b>Over a gorge, not over aether.</b> An arch out into open aether
-    /// would put rock in a column the land mask says is empty — no region, no
-    /// landform, no keel — and every consumer that reads "this column has land,
-    /// therefore it has a region" would be wrong about it. Arching a canyon or a
-    /// river channel instead means every cell of the arch is a column that already
-    /// exists, and the only thing that changes is that it now carries a second
-    /// span. It is also the commoner form in the world: an arch spans the thing
-    /// that cut it.</para>
+    /// A natural bridge between two cliff tops of about the same height. Over a
+    /// gorge, never aether: every arch cell is an existing column with a region,
+    /// a landform and a keel, and only gains a second span.
     /// </summary>
     private static void Arch(int seed, IslandParams p, IslandData d, int n,
                              Noise where, float bar)
@@ -194,13 +152,10 @@ internal static class Overhangs
 
                     short here = d.SurfaceLevel(x, z), far = d.SurfaceLevel(fx, fz);
                     if (Math.Abs(here - far) > 2) break;
-                    // Both abutments have to be rock a bridge could grow out of.
                     if (!Backed(d, x, z, -1) || !Backed(d, fx, fz, -1)) break;
                     short top = Math.Min(here, far);
 
-                    // Everything under the deck has to be a gorge — ground (or
-                    // water) far enough below to leave daylight — and untouched,
-                    // so two arches never share a column.
+                    // Every column under the deck is untouched and leaves daylight.
                     bool hollow = true;
                     for (int step = 1; step <= gap && hollow; step++)
                     {
@@ -211,8 +166,6 @@ internal static class Overhangs
                     if (!hollow) continue;
                     if (where.At(x + dx * gap * 0.5f, z + dz * gap * 0.5f) < bar) continue;
 
-                    // The deck sits flush with the lower of the two ends, so the
-                    // arch reads as continuous with the rock it grows out of.
                     for (int step = 1; step <= gap; step++)
                     {
                         int mx = x + dx * step, mz = z + dz * step;
@@ -223,6 +176,8 @@ internal static class Overhangs
                         };
                     }
 
+                    // Deliberately verbatim: bumps the outer x from inside the z loop
+                    // when spanning +X, so those columns' remaining z rows are skipped.
                     x += dx * (gap + 1);
                     z += dz * (gap + 1);
                     break;

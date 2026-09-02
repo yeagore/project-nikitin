@@ -7,50 +7,34 @@ using static ProjectNikitin.Generation.Grid;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Measures the <b>growing conditions</b>, one byte per column per axis: how
-/// damp the ground is, how cold, how broken, how windswept, and how near the
-/// aether. Fills <see cref="IslandData.Moisture"/> and its four siblings.
-///
-/// <para><b>Not a biome.</b> A biome is what lives somewhere, and choosing one
-/// is the next branch's work. These are the measurable facts that choice will
-/// be a function of — kept as separate axes rather than combined into a score,
-/// so the biome layer can compose them (rain shadow = dry side of
-/// exposure, treeline = a warmth threshold, essencecoral = small rim distance)
-/// instead of unpicking someone else's blend. The provisional
-/// <see cref="SurfaceMaterial"/> mapping in <c>Surfaces</c> reads the same
-/// vectors, which is how the two stay consistent.</para>
-///
-/// <para>Everything here is derived from what the terrain already knows —
-/// heights, water, the wind the dunes lie along — plus one noise field to keep
-/// the moisture bands from being contour lines of the water network. There is
-/// no climate simulation and no weather; a Domain floats in aether, and what
-/// its air does is a design question nobody has answered. When someone does,
-/// this is the one file that turns the answer into numbers.</para>
+/// The habitat vector: five bytes per column (moisture, warmth, ruggedness,
+/// exposure, rim distance), kept as separate axes so the biome layer composes
+/// them. Derived from the finished terrain plus one noise field; no climate sim.
 /// </summary>
 internal static class Habitat
 {
-
-    /// <summary>Cells of distance over which moisture decays to 1/e of itself.</summary>
+    /// <summary>Cells over which moisture decays to 1/e.</summary>
     private const float MoistureFalloff = 6.5f;
 
-    /// <summary>How far (±) the noise wobbles a cell's effective water distance.</summary>
+    /// <summary>How far (±) noise wobbles a cell's effective water distance.</summary>
     private const float MoistureWobble = 0.3f;
 
     /// <summary>
-    /// Warmth lost per slab climbed, as a share of the full range over the
-    /// tallest mountain this footprint allows (<c>Size × 40/128</c> slabs — the
-    /// <c>BoundAltitude</c> cap). Anchoring the lapse to the cap rather than to
-    /// the island's own range is the point: the top of what a mountain <i>can
-    /// be</i> is always frozen, and a flat island is warm to its highest hill.
+    /// Warmth lost over the full mountain cap (<see cref="MountainCap"/>). Anchored
+    /// to the cap, not the island's own range, so a flat island stays warm to its top.
     /// </summary>
     private const float LapseShare = 235f;
 
-    /// <summary>How many cells upwind a cell looks for cover.</summary>
+    /// <summary>Cells upwind a cell looks for cover.</summary>
     private const int WindScan = 10;
 
-    /// <summary>Slabs of upwind rise that count as full shelter from the wind.</summary>
+    /// <summary>Slabs of upwind rise that count as full shelter.</summary>
     private const float FullCover = 8f;
 
+    /// <summary>The tallest mountain a footprint allows, in slabs.</summary>
+    internal static float MountainCap(int size) => Math.Max(8f, size * (40f / 128f));
+
+    /// <summary>Fills the five axes, in a fixed order.</summary>
     public static void Measure(int seed, IslandData d)
     {
         MeasureMoisture(seed, d);
@@ -61,11 +45,8 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// Nearness to fresh water: a breadth-first distance from every watered
-    /// column (goo waters nothing — it never mixes with water and nothing grows
-    /// on it), wobbled by a noise field so equal distance does not mean equal
-    /// moisture, then decayed exponentially. Ground the flood never reaches — a
-    /// dry islet with no water of its own — is parched.
+    /// Flood distance from watered columns (goo waters nothing), wobbled by noise,
+    /// decayed exponentially. Land the flood never reaches is parched (0).
     /// </summary>
     private static void MeasureMoisture(int seed, IslandData d)
     {
@@ -109,11 +90,7 @@ internal static class Habitat
         }
     }
 
-    /// <summary>
-    /// A fixed lapse per slab above the island's lowest visible ground, scaled so
-    /// warmth reaches its floor at the top of the tallest mountain this footprint
-    /// allows. See <see cref="LapseShare"/> for why it is absolute.
-    /// </summary>
+    /// <summary>A fixed lapse per slab above the lowest visible ground; no land leaves it all zero.</summary>
     private static void MeasureWarmth(IslandData d)
     {
         int n = d.Size;
@@ -126,7 +103,7 @@ internal static class Habitat
         }
         if (low == short.MaxValue) return;
 
-        float cap = Math.Max(8f, d.Size * (40f / 128f));
+        float cap = MountainCap(d.Size);
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
@@ -137,11 +114,7 @@ internal static class Habitat
         }
     }
 
-    /// <summary>
-    /// Local relief: the spread of the effective surface within two cells,
-    /// saturating at eight slabs. A cliff brink and its foot both read as broken
-    /// country; a plain reads as zero however high it sits.
-    /// </summary>
+    /// <summary>Spread of the effective surface within two cells, saturating at eight slabs.</summary>
     private static void MeasureRuggedness(IslandData d)
     {
         int n = d.Size;
@@ -166,13 +139,8 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// Openness to the Domain's one wind. A cell walks upwind — toward
-    /// <see cref="IslandData.WindFrom"/> — looking for ground that stands above
-    /// it; the tallest rise found is its cover, and full cover is
-    /// <see cref="FullCover"/> slabs. A cell whose upwind walk leaves the island
-    /// entirely gets the wind straight off the aether. Windward rims and summits
-    /// come out scoured, the lee of a massif comes out calm — which is the axis
-    /// the dune fields already lie along, extended to every column.
+    /// Openness to the Domain's wind: the tallest rise found walking upwind is
+    /// cover; a walk that leaves the island gets the wind off the aether.
     /// </summary>
     private static void MeasureExposure(IslandData d)
     {
