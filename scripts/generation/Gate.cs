@@ -11,36 +11,46 @@ public enum Cardinal
     West = 3,    // -X
 }
 
+/// <summary>Grid directions of a <see cref="Cardinal"/>, defined once for Gates and their placement.</summary>
+public static class Cardinals
+{
+    /// <summary>Outward normal: the way off the Domain.</summary>
+    public static Vector2I Outward(this Cardinal edge) => edge switch
+    {
+        Cardinal.North => new Vector2I(0, -1),
+        Cardinal.East => new Vector2I(1, 0),
+        Cardinal.South => new Vector2I(0, 1),
+        _ => new Vector2I(-1, 0),
+    };
+
+    /// <summary>Along the edge: outward turned a quarter.</summary>
+    public static Vector2I Across(this Cardinal edge)
+    {
+        Vector2I o = edge.Outward();
+        return new Vector2I(-o.Y, o.X);
+    }
+}
+
 /// <summary>
-/// How a Gate meets the Domain. The two are not interchangeable: a Link joins
-/// two Gates, so the far end of an <see cref="Entry"/> has to be the same kind as
-/// the Gate it came from — see <see cref="IslandParams.EntryGate"/>.
+/// How a Gate meets the Domain. A Link joins two Gates of the same kind, so the Entry's
+/// kind is an input set by the far Domain — see <see cref="IslandParams.EntryGate"/>.
 /// </summary>
 public enum GateKind
 {
     /// <summary>Choose from the seed.</summary>
     Auto = 0,
 
-    /// <summary>Stands on the ground. You walk through it.</summary>
+    /// <summary>Stands on the ground; walked through.</summary>
     Land = 1,
 
-    /// <summary>
-    /// Hangs in the aether off the rim. You fly through it, which means the
-    /// Domain has to offer somewhere to land: a strip of level ground running
-    /// inward from the coast directly opposite.
-    /// </summary>
+    /// <summary>Hangs in the aether off the rim; flown through, so the Domain owes it a landing strip running inland from the coast opposite.</summary>
     Hanging = 2,
 }
 
 /// <summary>
-/// Which edge a Gate is asked to stand on. <c>Cardinal</c> with an <c>Auto</c>,
-/// so it can be an input rather than a consequence.
-///
-/// The Entry's edge matters for the same reason its kind does: it is the *other*
-/// Domain's decision, not this one's. A Domain reached by travelling east comes
-/// out on its west edge, and nothing about the coast may move it — least of all
-/// changing the Gate's kind, which used to send it round to the far side of the
-/// island because that coast happened to score better.
+/// Which edge a Gate is asked to stand on: <see cref="Cardinal"/> plus <see cref="Auto"/>.
+/// The Entry's edge is the far Domain's decision — arriving eastward comes out on the west
+/// edge — so it is an input. Convert with <c>(Cardinal)((int)edge - 1)</c>.
 /// </summary>
 public enum GateEdge
 {
@@ -63,54 +73,31 @@ public enum GateRole
 }
 
 /// <summary>
-/// A Gate: the built structure at one end of a Link. Three cells wide, one deep
-/// and twelve slabs tall — a square portal, since a slab is a quarter of a cell.
+/// The built structure at one end of a Link: one cell wide and four slabs tall — a single
+/// block. A hanging Gate floats <c>GatePlacement.HangingOffset</c> cells off the rim, two
+/// slabs above its 1 × <c>GatePlacement.StripLength</c> landing strip; a land Gate stands
+/// on that strip's head instead.
 /// </summary>
 /// <param name="Kind">Standing on the ground, or hanging in the aether.</param>
 /// <param name="Role">Arrival or departure.</param>
 /// <param name="Facing">Which edge of the Domain it faces; at most one Gate per edge.</param>
-/// <param name="Center">Centre column of the portal, and the slab its base sits on.</param>
-/// <param name="Apron">
-/// Centre of the ground the Gate is served by: the starter-base shelf for a Land
-/// Gate, the inner end of the landing strip for a Hanging one.
-/// </param>
-/// <param name="ApronArea">Cells of level ground there. What the first settlement has to work with.</param>
-/// <param name="Landing">
-/// Cells of landing strip running inland from the coast, for a
-/// <see cref="GateKind.Hanging"/> Gate; 0 for a Land one. Usually the full
-/// <c>GatePlacement.StripLength</c>, but an Entry may settle for a shorter one:
-/// its <i>kind</i> is fixed by the Link and cannot be traded away, so when a
-/// coast will not offer a full strip, the strip is what gives.
-/// </param>
+/// <param name="Center">The portal's column and the slab its base sits on.</param>
+/// <param name="Apron">The inner end of the landing strip: the ground the Gate is served by.</param>
+/// <param name="ApronArea">Cells of the best buildable shelf near the strip's head — what the first settlement has to work with.</param>
+/// <param name="Landing">Cells of landing strip running inland from the coast; always <c>GatePlacement.StripLength</c>, for both kinds.</param>
 public readonly record struct Gate(GateKind Kind, GateRole Role, Cardinal Facing,
                                    Vector3I Center, Vector2I Apron, int ApronArea,
                                    int Landing = 0)
 {
-    /// <summary>Cells across the portal. <b>One.</b></summary>
+    /// <summary>Cells across the portal.</summary>
     public const int Width = 1;
 
-    /// <summary>
-    /// Slabs tall. <b>Four — one block</b>, since a slab is a quarter of a cell.
-    ///
-    /// It was three cells wide and twelve slabs tall, which is a triumphal arch
-    /// rather than a doorway, and it cost far more than it looked: a Gate that
-    /// wide needs three cells of level footing, three cells of clear flight path
-    /// and a strip three cells across to land on, and every one of those is a
-    /// coast that has to agree with itself over a wider span. Shrinking the portal
-    /// to a single block is what makes four hanging Gates something a Domain can
-    /// always offer rather than something a quarter of them could manage.
-    /// </summary>
+    /// <summary>Slabs tall: one block, since a slab is a quarter of a cell.</summary>
     public const int Height = 4;
 
     /// <summary>Outward normal: the way out of the Domain.</summary>
-    public Vector2I Outward => Facing switch
-    {
-        Cardinal.North => new Vector2I(0, -1),
-        Cardinal.East => new Vector2I(1, 0),
-        Cardinal.South => new Vector2I(0, 1),
-        _ => new Vector2I(-1, 0),
-    };
+    public Vector2I Outward => Facing.Outward();
 
-    /// <summary>Along the portal's face: the direction its three cells run.</summary>
-    public Vector2I Across => new(-Outward.Y, Outward.X);
+    /// <summary>Along the portal's face.</summary>
+    public Vector2I Across => Facing.Across();
 }
