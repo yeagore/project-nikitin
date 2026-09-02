@@ -1,11 +1,8 @@
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// One contiguous vertical run of solid blocks in a terrain column,
-/// <see cref="Bottom"/>..<see cref="Top"/> inclusive (block levels on the Y axis).
-/// A column holds these bottom-up, disjoint and non-touching; the air gap
-/// between two spans is an overhang / arch underside.
-/// See docs/island-generation.md §2.
+/// One contiguous run of solid slabs in a column, <see cref="Bottom"/>..<see cref="Top"/> inclusive
+/// (slab indices). A column's spans are bottom-up, disjoint and non-touching; the gap between two is an overhang.
 /// </summary>
 public readonly record struct Span(short Bottom, short Top)
 {

@@ -1,18 +1,9 @@
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// How a Domain's land is laid out in its footprint — one mass, or several.
-///
-/// This replaces the old <c>Fragmentation</c> float, which asked one number to
-/// mean both "how broken up" and "how many pieces" and produced neither
-/// reliably. Named arrangements are what a biome or a world-tree position would
-/// actually want to specify, and each one can then be built deliberately rather
-/// than hoped for out of a noise threshold.
-///
-/// <b>Every arrangement is linkable.</b> Whatever the layout, the pieces are
-/// nudged together until land faces land across at most
-/// <see cref="IslandParams.Crossings"/> cells somewhere — so an archipelago is
-/// an island you have to *build* your way across, not a set of separate worlds.
+/// How a Domain's land is laid out in its footprint — one mass, or several. Every arrangement
+/// is linkable: the pieces are nudged together until land faces land across at most
+/// <see cref="IslandParams.Crossings"/> cells somewhere. Values are serialised; never renumber.
 /// </summary>
 public enum IslandArrangement
 {
@@ -34,16 +25,10 @@ public enum IslandArrangement
     /// <summary>Five to eight small islands, none dominant.</summary>
     Archipelago = 5,
 
-    /// <summary>
-    /// A ring of islets round an open lagoon, parted by straits. Was called
-    /// <c>Atoll</c>; the name moved to the layout that actually looks like one.
-    /// </summary>
+    /// <summary>A ring of islets round an open lagoon, parted by straits.</summary>
     BrokenRing = 6,
 
-    /// <summary>
-    /// The same ring unbroken: one landmass you can walk all the way round,
-    /// enclosing its lagoon.
-    /// </summary>
+    /// <summary>The same ring unbroken: one landmass you can walk all the way round.</summary>
     Ring = 7,
 
     /// <summary>Part of a ring — a crescent of land round an open bay.</summary>
@@ -52,13 +37,10 @@ public enum IslandArrangement
     /// <summary>The crescent, parted into islets.</summary>
     BrokenArc = 9,
 
-    /// <summary>
-    /// Beads on a string: a ring of rounded islets that all but touch, cape to
-    /// cape, with a step of water between each pair.
-    /// </summary>
+    /// <summary>Beads on a string: a ring of rounded islets that all but touch, a step of water between each pair.</summary>
     Atoll = 10,
 
-    /// <summary>Many small islands — not literally a thousand, but too many to name.</summary>
+    /// <summary>Many small islands, quilted over the whole footprint.</summary>
     ThousandIsles = 11,
 
     /// <summary>One landmass with four arms, on the cardinal axes.</summary>
@@ -67,10 +49,7 @@ public enum IslandArrangement
     /// <summary>A winding chain, doubling back on itself: a snake of land.</summary>
     Fractal = 13,
 
-    /// <summary>
-    /// One landmass cracked into four to six pieces, the straits between them
-    /// narrow enough to read as fractures rather than as sea.
-    /// </summary>
+    /// <summary>One landmass cracked into four to six pieces by straits narrow enough to read as fractures.</summary>
     Shards = 14,
 
     /// <summary>A bar with one arm off the middle of it: three arms, not four.</summary>
@@ -79,9 +58,7 @@ public enum IslandArrangement
     /// <summary>Two arms meeting at a right angle — a corner of land round a bay.</summary>
     LShape = 16,
 
-    // The broken forms. Same layouts, but the seam where two blobs meet is carved
-    // into a strait, so the arms become a line of islands off a central one. A
-    // broken cross is the shape you cross by building; a whole one you walk.
+    // The broken forms: the same layouts with the seam between two blobs carved into a strait.
 
     /// <summary>The cross, its arms parted from the hub and from each other.</summary>
     BrokenCross = 17,
@@ -95,27 +72,13 @@ public enum IslandArrangement
     /// <summary>The snake, parted into a chain of stepping stones.</summary>
     BrokenFractal = 20,
 
-    /// <summary>
-    /// A rosette: a ring of lobes overlapping a full hub, so the coast comes out
-    /// as a run of deep round bays with headlands between them. It was meant to be
-    /// a spiral and came out a flower; the flower was better, so it kept the
-    /// shape and lost the name.
-    /// </summary>
+    /// <summary>A ring of lobes overlapping a full hub: deep round bays with headlands between them.</summary>
     Rosette = 21,
 
-    /// <summary>
-    /// A hub with five or six arms — the cross taken further, so no two arms face
-    /// each other and the bays between them are wedges.
-    /// </summary>
+    /// <summary>A hub with five or six arms, so no two arms face each other.</summary>
     Star = 22,
 
-    // 23 was Spiral — a thin arm wound inward over two and a half turns. On paper
-    // it was the one layout whose middle is a long walk round or a short crossing
-    // over; on the island it needed a coil so thick and so tightly linked to stay
-    // one landmass that what came out was Rosette with more steps. Removed rather
-    // than tuned: two names for one shape is worse than one shape.
-
-    // --- the geometric set, 2026-09-01 -------------------------------------
+    // 23 was Spiral (removed); keep the gap — values are serialised.
 
     /// <summary>One blocky landmass filling a square, axis-aligned.</summary>
     Square = 24,
@@ -132,11 +95,7 @@ public enum IslandArrangement
     /// <summary>Two roughly symmetric halves parted by one axis-aligned strait.</summary>
     Halves = 28,
 
-    /// <summary>
-    /// Two interlocked commas chasing each other round one disc — the yin-yang.
-    /// The first arrangement built from <b>grouped</b> lobes: each comma is a
-    /// chain that fuses, and only the S between the two is carved.
-    /// </summary>
+    /// <summary>The yin-yang: two grouped comma chains that each fuse, with only the S between them carved.</summary>
     Harmony = 29,
 
     /// <summary>Two broad heads joined by a narrow walkable neck of land.</summary>

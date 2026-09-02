@@ -3,29 +3,16 @@ using Godot;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Tunable inputs to <see cref="IslandGenerator"/>. A <c>[GlobalClass]</c>
-/// resource so it can be authored in the inspector, or saved as a <c>.tres</c>
-/// preset (see <c>resources/island_default.tres</c>). Heights are in <b>slabs</b>
-/// (see <see cref="Terrain.SlabHeight"/>) — see docs/island-generation.md §3.
-///
-/// Every field here is a knob a Domain's biome / archetype is expected to set.
-/// Things that define the terrain <i>grammar</i> rather than an island's looks
-/// are deliberately <b>not</b> here: the free-step size, the minimum patch area
-/// (derived from <see cref="RegionScale"/>), and the keel taper are constants,
-/// because a biome that changed them would change what a cliff <i>means</i>.
+/// Tunable inputs to <see cref="IslandGenerator"/>: a <c>[GlobalClass]</c> resource, so a preset
+/// (<c>resources/island_default.tres</c>) binds by property name. Heights are in slabs.
+/// Grammar constants (the free step, the keel taper) are deliberately not knobs.
 /// </summary>
 [GlobalClass]
 public partial class IslandParams : Resource
 {
     // ---- footprint ----------------------------------------------------------
 
-    /// <summary>
-    /// The footprints a Domain may have — the roster the lab picks from and the
-    /// audit's <c>Sizes</c> sweep verifies. Two ladders under consideration
-    /// (64 / 96 / 128 and 48 / 72 / 96), overlaid until Maxim picks one; a
-    /// Domain's <b>altitude</b> is bounded by the same number in slabs, so the
-    /// bounding cube is a real shape and not a metaphor.
-    /// </summary>
+    /// <summary>The footprints a Domain may have; altitude is bounded by the same number in slabs.</summary>
     public static readonly int[] SupportedSizes = { 48, 64, 72, 96, 128 };
 
     /// <summary>Footprint edge length in cells.</summary>
@@ -37,231 +24,104 @@ public partial class IslandParams : Resource
     /// <summary>Fraction of the bounding disc that becomes land.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Coverage { get; set; } = 0.62f;
 
-    /// <summary>
-    /// How far the silhouette departs from a circle: 0 is a disc, 1 is a strongly
-    /// elongated, deeply lobed coastline with bays and peninsulas.
-    /// </summary>
+    /// <summary>How far the silhouette departs from a circle: 0 a disc, 1 elongated and deeply lobed.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Irregularity { get; set; } = 0.55f;
 
-    /// <summary>
-    /// How the land is laid out: one mass, twins, an atoll, and so on.
-    /// <c>Auto</c> picks one per seed.
-    ///
-    /// This replaces the old <c>Fragmentation</c> float, which asked one number
-    /// to mean both "how broken up" and "into how many pieces" and delivered
-    /// neither reliably. Whatever the arrangement, the pieces are guaranteed
-    /// linkable by bridge — see <see cref="IslandArrangement"/>.
-    /// </summary>
+    /// <summary>How the land is laid out; <c>Auto</c> picks one per seed. Every arrangement is linkable by bridge.</summary>
     [Export] public IslandArrangement Arrangement { get; set; } = IslandArrangement.Auto;
 
-    /// <summary>
-    /// Whether <c>Auto</c> may roll the newer layouts — <c>Ring</c>, <c>Arc</c>,
-    /// <c>BrokenArc</c>, <c>Atoll</c>, <c>ThousandIsles</c>, <c>Cross</c>,
-    /// <c>Fractal</c>, <c>Shards</c>. Off leaves the six the pipeline was
-    /// originally audited on.
-    ///
-    /// <b>It gates the dice, not the code.</b> Naming one of the newer layouts in
-    /// <see cref="Arrangement"/> still builds it, so this is a way to take a batch
-    /// of new shapes out of general circulation while keeping them a keypress away
-    /// in the lab.
-    /// </summary>
+    /// <summary>Whether <c>Auto</c> may roll the newer layouts. Gates Auto's dice only; naming a shape still builds it.</summary>
     [Export] public bool NewArrangements { get; set; } = true;
 
-    /// <summary>
-    /// Whether <c>Auto</c> may roll the characters built on the sculpted
-    /// landforms — <c>Badlands</c>, <c>Karst</c>, <c>Ziggurat</c>, <c>Dunes</c>.
-    /// Off leaves the four the pipeline was originally audited on.
-    ///
-    /// As with <see cref="NewArrangements"/>, it gates the dice and not the code:
-    /// naming one in <see cref="Character"/> still builds it.
-    /// </summary>
+    /// <summary>Whether <c>Auto</c> may roll the sculpted characters (Badlands, Karst, Massif, Dunes). Gates Auto's dice only; naming one still builds it.</summary>
     [Export] public bool NewLandforms { get; set; } = true;
 
     // ---- what the island is made of -----------------------------------------
 
-    /// <summary>
-    /// Which landforms the island is built from. <c>Auto</c> picks one per seed.
-    /// Where the high ground sits follows from this — see <see cref="ReliefStyle"/>.
-    /// </summary>
+    /// <summary>Which landforms the island is built from; <c>Auto</c> picks one per seed. The <see cref="ReliefStyle"/> follows from it.</summary>
     [Export] public TerrainCharacter Character { get; set; } = TerrainCharacter.Auto;
 
     /// <summary>
-    /// How the character's landforms are shared out, from <b>low</b> (0 — mostly
-    /// plains, and basins where the character has them) to <b>high</b> (1 — as
-    /// much mountain / mesa / hill as the character allows). 0.5 is the
-    /// character's own balance.
-    ///
-    /// Proportions are a <i>quota</i>, not a per-region dice roll: every landform
-    /// a character names is guaranteed to appear, so a <c>Highland</c> can no
-    /// longer come out with no mountains, or with mountains and no hills.
+    /// How the character's landforms are shared out, 0 mostly plains … 1 as much high ground as
+    /// the character allows. A quota, not a dice roll: every landform a character names appears.
     /// </summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float LandformMix { get; set; } = 0.5f;
 
     /// <summary>Overall vertical exaggeration of every landform's relief.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Relief { get; set; } = 0.5f;
 
-    /// <summary>
-    /// What hills do: 0 is barely-there swells, 1 is mounds — steep-sided humps
-    /// that still step one slab at a time, so they stay walkable everywhere. Also
-    /// drives how jagged the shared surface noise is, since a rolling down and a
-    /// field of mounds do not differ only in height.
-    /// </summary>
+    /// <summary>What hills do: 0 barely-there swells, 1 steep mounds, still one slab at a time. Also drives how jagged the surface noise is.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Hilliness { get; set; } = 0.5f;
 
-    /// <summary>
-    /// Typical width of one landform region, in cells. Small values give a busy
-    /// patchwork; large ones give a few broad provinces. The smallest patch
-    /// allowed follows from this (see <see cref="MinRegionArea"/>).
-    /// </summary>
+    /// <summary>Typical width of one landform region, in cells. <see cref="MinRegionArea"/> follows from it.</summary>
     [Export(PropertyHint.Range, "6,40,1")] public int RegionScale { get; set; } = 16;
 
-    /// <summary>
-    /// Smallest region the island may contain, in cells — derived, not authored.
-    /// A patch under this is merged into the neighbour it shares the most border
-    /// with, so the island reads as a blanket of legible patches rather than a
-    /// scatter of slivers. It is a fixed share of a full region's area because
-    /// the two are not independent: what counts as a sliver depends entirely on
-    /// how big a patch is meant to be.
-    /// </summary>
+    /// <summary>Smallest region allowed, in cells — derived: max(12, 0.215 × RegionScale²). Smaller patches are merged into a neighbour.</summary>
     public int MinRegionArea => Mathf.Max(12, Mathf.RoundToInt(RegionScale * RegionScale * 0.215f));
 
     // ---- elevation ----------------------------------------------------------
 
-    /// <summary>
-    /// Height of one step on the plateau ladder, in <b>slabs</b>. Regions sit on
-    /// multiples of this, so every border between two levels is an unambiguous
-    /// cliff. Keep it ≥ 3: at 2 it reads as an accident rather than a decision.
-    /// </summary>
+    /// <summary>Height of one step on the plateau ladder, in slabs. Keep it ≥ 3, so every ladder border is an unambiguous cliff.</summary>
     [Export(PropertyHint.Range, "3,16,1")] public int CliffHeight { get; set; } = 4;
 
-    /// <summary>
-    /// Number of rungs on the plateau ladder above the coastal level. Few rungs
-    /// means neighbouring regions usually share one, so cliffs stay occasional
-    /// and plains run together into broad ones.
-    /// </summary>
+    /// <summary>Rungs on the plateau ladder above the coastal level. Few rungs keep cliffs occasional.</summary>
     [Export(PropertyHint.Range, "1,8,1")] public int PlateauLevels { get; set; } = 2;
 
-    /// <summary>
-    /// Rise of a mountain from its foot to its summit, in <b>slabs</b>, taken
-    /// literally: the summit stands this far above the ground the foothills meet.
-    /// </summary>
+    /// <summary>Rise of a mountain from its foot to its summit, in slabs.</summary>
     [Export(PropertyHint.Range, "8,160,1")] public int MountainHeight { get; set; } = 40;
 
-    /// <summary>
-    /// How far a mesa's flat top stands above the ground around it, in
-    /// <b>slabs</b>, taken literally. A mesa is a step up, not a peak — and a
-    /// chain of stepped mesas is capped at twice this above the plain it stands
-    /// on, so a tableland cannot compound itself into a tower.
-    /// </summary>
+    /// <summary>How far a mesa's top stands above the ground around it, in slabs. A chain of stepped mesas is capped at twice this.</summary>
     [Export(PropertyHint.Range, "3,24,1")] public int MesaHeight { get; set; } = 5;
 
-    /// <summary>
-    /// How far a basin's flat floor sits below the ground around it, in
-    /// <b>slabs</b>. The mesa rule inverted, and capped the same way.
-    /// </summary>
+    /// <summary>How far a basin's floor sits below the ground around it, in slabs. The mesa rule inverted, capped the same way.</summary>
     [Export(PropertyHint.Range, "3,24,1")] public int BasinDepth { get; set; } = 5;
 
-    /// <summary>
-    /// How wet the Domain is: 0 leaves it dry, 1 gives it a full drainage network.
-    /// It sets how much catchment a channel needs before it counts as a river, so
-    /// a wetter island has more of them and they start higher up.
-    /// </summary>
+    /// <summary>How wet the Domain is: sets the catchment a channel needs before it counts as a river.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
 
-    /// <summary>
-    /// How readily standing water collects: 0 is a Domain with no lakes at all, 1
-    /// puts one in every flat patch that could hold it. Separate from
-    /// <see cref="Rivers"/> because a wet Domain and a lake-strewn one are not the
-    /// same place — moorland is all lakes and no rivers, and a mountain Domain is
-    /// the other way round.
-    /// </summary>
+    /// <summary>How readily standing water collects: 0 no lakes, 1 one in every flat patch that could hold it.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Lakes { get; set; } = 0.5f;
 
-    /// <summary>
-    /// How far the ground falls toward a watercourse before it reaches it: 0
-    /// leaves every river an incision in flat ground, 1 gives it five cells of
-    /// valley either side. Kept modest by default — a valley is what makes a river
-    /// read as the lowest place around, and at full strength it starts eating the
-    /// landform patchwork the whole scheme is built on.
-    /// </summary>
+    /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Valleys { get; set; } = 0.4f;
 
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>
-    /// How far one bridge may reach, and so how hard the Domain is to build your
-    /// way across: <c>Easy</c> spans a single cell, <c>Medium</c> three,
-    /// <c>Hard</c> six.
-    ///
-    /// It is not only an analysis setting — the arrangement's landmasses are
-    /// nudged together until each faces the next across at most this many cells,
-    /// so an <c>Easy</c> Domain is an archipelago you can almost step between and
-    /// a <c>Hard</c> one leaves real straits. A deck is level and has to be walked
-    /// onto at both ends, so the two banks of every crossing are levelled whatever
-    /// the span (see <see cref="Crossing"/>).
+    /// Cells one bridge may span: <c>Easy</c> one, <c>Medium</c> three, <c>Hard</c> six. Also
+    /// nudges the arrangement's landmasses together until each faces the next within this span.
     /// </summary>
     [Export] public BridgeEase Crossings { get; set; } = BridgeEase.Medium;
 
     // ---- Gates --------------------------------------------------------------
 
-    /// <summary>
-    /// What kind of Gate the player arrives through. <b>An input, not a
-    /// preference:</b> a Link joins two Gates, so the far end has to match the one
-    /// they left — land to land, hanging to hanging. The Domain that sends them
-    /// sets this, and this Domain is generated around it. <c>Auto</c> is for a
-    /// Home Domain, which has nothing to match.
-    /// </summary>
+    /// <summary>The kind of Gate the player arrives through. An input: it must match the sending Domain's Gate. <c>Auto</c> is for a Home Domain.</summary>
     [Export] public GateKind EntryGate { get; set; } = GateKind.Auto;
 
-    /// <summary>
-    /// Which edge the player arrives on. <b>An input for the same reason
-    /// <see cref="EntryGate"/> is:</b> a Domain reached by travelling east comes
-    /// out on its west edge, and that is the sending Domain's business. Pinning it
-    /// also means changing the Gate's <i>kind</i> no longer moves it to the far
-    /// side of the island because that coast happened to score better.
-    ///
-    /// <c>Auto</c> tries each edge in a seed-chosen order, which is what a Home
-    /// Domain wants. Where the named edge cannot host the Gate at all, the others
-    /// are still tried — a Domain with no way in would be worse than one whose way
-    /// in faces the wrong way.
-    /// </summary>
+    /// <summary>The edge the player arrives on. An input for the same reason; <c>Auto</c> tries each edge, and the others are still tried if the named one cannot host a Gate.</summary>
     [Export] public GateEdge EntryEdge { get; set; } = GateEdge.Auto;
 
     /// <summary>Links onward, 1 to 3. 0 picks a count from the seed.</summary>
     [Export(PropertyHint.Range, "0,3,1")] public int ExitGates { get; set; } = 0;
 
-    /// <summary>
-    /// What kind the Exits are. <c>Auto</c> hangs them unless a coast will not
-    /// have it, which is the norm; naming <c>Land</c> or <c>Hanging</c> makes every
-    /// Exit that kind where the coast allows it. Unlike the Entry this is not an
-    /// input from elsewhere — it is this Domain telling the ones it links to what
-    /// they will be arriving through.
-    /// </summary>
+    /// <summary>What kind the Exits are. <c>Auto</c> hangs them unless a coast will not have it; a named kind applies where the coast allows.</summary>
     [Export] public GateKind ExitGate { get; set; } = GateKind.Auto;
 
     // ---- underside / keel ---------------------------------------------------
-    // The island hangs in aether as a spinning top: a thin lip at the coastline
-    // thickening inland to a deep keel under the interior.
+    // A thin lip at the coastline thickening inland to a deep keel.
 
-    /// <summary>Column depth at the coastline, in <b>slabs</b>. The thin outer lip.</summary>
+    /// <summary>Column depth at the coastline, in slabs.</summary>
     [Export(PropertyHint.Range, "1,32,1")] public int EdgeThickness { get; set; } = 3;
 
-    /// <summary>Extra depth under the deepest interior, in <b>slabs</b>.</summary>
+    /// <summary>Extra depth under the deepest interior, in slabs.</summary>
     [Export(PropertyHint.Range, "4,256,1")] public int KeelDepth { get; set; } = 34;
 
     /// <summary>How craggy the underside is. Scales with depth, so the lip stays clean.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float KeelRoughness { get; set; } = 0.45f;
 
-    // ---- overhangs and arches (Stage 4b) ------------------------------------
+    // ---- overhangs and arches -----------------------------------------------
 
-    /// <summary>
-    /// How often a tall cliff face is undercut, and a short gap arched over.
-    /// 0 leaves every column a single solid run, keel to surface.
-    ///
-    /// Both features are added <b>after</b> the traversal analysis, so they are
-    /// rendered and collidable but not yet walkable — pathing over a two-level
-    /// column wants spans as nodes rather than columns, which is its own problem.
-    /// </summary>
+    /// <summary>How often a tall face is undercut and a short gap arched over. Added after the traversal analysis, so rendered and collidable but not walkable.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float OverhangDensity { get; set; } = 0.35f;
 
     /// <summary>How far a lip reaches out from the face it hangs off, in cells.</summary>

@@ -1,13 +1,8 @@
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Where a Domain's high ground lies, before any landform is chosen. It decides
-/// nothing about elevation directly — it biases which landform each region gets,
-/// so a <see cref="Ridge"/> island grows its mountains along a spine.
-///
-/// <b>Internal.</b> Not an <c>IslandParams</c> field: the style follows from the
-/// <see cref="TerrainCharacter"/>, which picks from the subset that suits it.
-/// Exposing both was two knobs for one decision.
+/// Where a Domain's high ground lies: biases which landform each region gets.
+/// Internal; chosen per <see cref="TerrainCharacter"/> in <c>IslandGenerator.StyleFor</c>.
 /// </summary>
 public enum ReliefStyle
 {

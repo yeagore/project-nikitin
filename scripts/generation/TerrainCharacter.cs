@@ -1,14 +1,9 @@
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// What an island is made of. Real terrain does not mix every landform at once —
-/// you get plains, or plains and hills, or plains and hills and mountains — so
-/// each character names one plausible combination and plains are the constant
-/// that runs through all of them.
-///
-/// This is the only landform knob. Where the high ground sits is picked
-/// internally per character (see <see cref="ReliefStyle"/>), because it is a
-/// consequence of the character rather than a separate choice.
+/// Which landforms an island is built from; plains run through all of them. The only landform
+/// knob — the <see cref="ReliefStyle"/> is chosen per character. Numeric values and order are
+/// load-bearing: Auto's dice index them and the .tres stores them as ints.
 /// </summary>
 public enum TerrainCharacter
 {
@@ -27,10 +22,7 @@ public enum TerrainCharacter
     /// <summary>Plains, hills, and mountains over one part of the island.</summary>
     Highlands = 4,
 
-    // ---- characters built on the sculpted landforms -------------------------
-    // Gated out of Auto's pool by IslandParams.NewLandforms; still selectable by
-    // name, so a shape can be taken out of circulation without being taken out
-    // of the game.
+    // ---- characters built on the sculpted landforms (IslandParams.NewLandforms gates Auto's dice) ----
 
     /// <summary>Plains, mesas, and eroded badlands cut between them.</summary>
     Badlands = 5,

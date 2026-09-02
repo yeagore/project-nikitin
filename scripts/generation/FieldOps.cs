@@ -15,11 +15,7 @@ public static class FieldOps
         return t * t * (3f - 2f * t);
     }
 
-    /// <summary>
-    /// The value v such that a fraction q of the samples is ≤ v: one sort, over an explicit sample set —
-    /// used to measure coverage against the candidate area rather than the whole
-    /// grid, most of which is empty aether.
-    /// </summary>
+    /// <summary>The value v such that a fraction q of the samples is ≤ v. Copies before sorting.</summary>
     public static float Quantile(List<float> samples, float q)
         => samples.Count == 0 ? 0f : Quantile(samples.ToArray(), q);
 
@@ -47,22 +43,9 @@ public static class FieldOps
     }
 
     /// <summary>
-    /// Makes a field of <b>drops</b> — how far each cell is about to be lowered —
-    /// safe to apply to finished terrain, by forcing it to change by at most one
-    /// between neighbours.
-    ///
-    /// <para>Any pass that lowers some cells and not others puts a step at the
-    /// edge of the set it lowered, and that step is exactly the depth of the drop.
-    /// Lowering by bands does not help: a cell excluded for its own reasons — a
-    /// mesa rim, a bridgehead, a channel — sits at drop 0 beside a neighbour at
-    /// drop 3, and there is the cliff. (Measured, when beaches and valleys were
-    /// first written this way: two-slab steps went from 0.5% of the island to
-    /// 6.2%.)</para>
-    ///
-    /// <para>Clamping each cell to one more than its lowest neighbour makes the
-    /// drop field 1-Lipschitz, so the deepest part of a valley or a beach keeps
-    /// its depth and the edge tapers out a slab at a time — which is the free
-    /// step, and is also what a valley side looks like.</para>
+    /// Clamps each cell of a drop field to its lowest land neighbour + 1, making it 1-Lipschitz
+    /// so a lowering pass tapers out one slab per cell instead of leaving a step at its edge.
+    /// In-place Gauss-Seidel sweep, direction alternating per pass, capped at 32 passes.
     /// </summary>
     public static void Taper(int[,] drop, bool[,] land)
     {
@@ -96,11 +79,7 @@ public static class FieldOps
         }
     }
 
-    /// <summary>
-    /// In-place 3×3 box blur over the cells flagged in <paramref name="mask"/>,
-    /// repeated <paramref name="passes"/> times. Used to take the integer steps
-    /// out of a distance transform before anything reads it as a height.
-    /// </summary>
+    /// <summary>In-place 3×3 box blur over the cells flagged in <paramref name="mask"/>, repeated <paramref name="passes"/> times (Jacobi).</summary>
     public static void Blur(float[,] field, bool[,] mask, int passes)
     {
         int n = field.GetLength(0);
