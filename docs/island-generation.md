@@ -330,7 +330,11 @@ analysis reads.
 Pure analysis. It changes nothing; it is how we find out whether the island is
 playable.
 
-- **`Walk`** — what connects on foot: neighbours within the free step. Water is
+- **`Walk`** — what connects on foot: neighbours within the free step, by
+  **king's moves** — a corner is cut unless both cardinal cells beside the
+  diagonal are land standing more than a free step off (`DiagonalOpen`); water
+  or aether beside it does not close it, so two landmasses touching at a corner
+  are one on foot. Works stay cardinal: nothing is built diagonally. Water is
   not ground; a stream is crossed at a ford. `Areas` lists the walk areas
   largest first, and `Mainland` is the largest.
 - **`Reach`** — what connects once you build, with three kinds of works.
@@ -480,10 +484,8 @@ island reads as a place in the lab before the biome layer exists. In order:
   stone at its brink and drops scree at its foot whatever the landform, and a
   **rock landform** (mountain, massif, karst, badlands, sinkholes, a canyon)
   shows stone at any cliff and where it is broken (four and a half slabs in
-  five cells) and scree where it is rough (three). The cold band is read
-  after the tall faces and before the rest of the rock, so a mountain climbs
-  out of its stone and scree into tundra and then snow while its tall faces
-  stay stone. A plateau rung in soft
+  five cells) and scree where it is rough (three), so a mountain is stone and
+  scree up to its snow. A plateau rung in soft
   country changes nothing: the ground runs up to the edge, because a four-slab
   step is the terrain's texture, not a wasteland.
 - **Dunes** are sand; badlands, karst and sinkhole country are dust.
@@ -498,8 +500,7 @@ island reads as a place in the lab before the biome layer exists. In order:
 | **hot** | dust | savanna | floodplain within four cells of a river or lake, savanna beyond |
 
 Past the ends: hot ground at a warmth of 205 or more is sand unless it is a
-floodplain, and a mountain climbs out of its band into tundra (cold rock is
-tundra whatever its moisture) and then snow.
+floodplain, and a mountain's top is snow whatever the climate.
 The preset (moisture 0.45, warmth 0.5) is temperate and balanced: meadow with
 grass along the water. The audit's `Climate` sweep prints the whole grid, and
 the two ends, as material shares. The biome layer is expected to replace the

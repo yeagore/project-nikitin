@@ -15,7 +15,7 @@ public enum SurfaceMaterial : byte
     /// <summary>Loose broken rock: talus under a tall face, the rougher parts of a rock landform.</summary>
     Scree = 1,
 
-    /// <summary>Frozen ground: the extreme cold, and a mountain's top above its tundra.</summary>
+    /// <summary>Frozen ground: the extreme cold, and a mountain's top above its stone.</summary>
     Snow = 2,
 
     /// <summary>A beach, the crest of a dune, and ground in extreme heat.</summary>
@@ -45,7 +45,7 @@ public enum SurfaceMaterial : byte
     /// <summary>Temperate and dry: short grass and thin soil.</summary>
     Steppe = 11,
 
-    /// <summary>Cold and dry, and the band a mountain crosses before its snow.</summary>
+    /// <summary>Cold and dry.</summary>
     Tundra = 12,
 
     /// <summary>Hot and balanced, and hot and wet away from any water.</summary>

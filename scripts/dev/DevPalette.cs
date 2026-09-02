@@ -50,12 +50,12 @@ internal static class DevPalette
     /// </summary>
     public static Color Material(SurfaceMaterial m) => m switch
     {
-        SurfaceMaterial.Stone => new Color(0.50f, 0.50f, 0.54f),
-        SurfaceMaterial.Scree => new Color(0.76f, 0.70f, 0.64f),
+        SurfaceMaterial.Stone => new Color(0.40f, 0.40f, 0.46f),      // dark cool grey
+        SurfaceMaterial.Scree => new Color(0.80f, 0.68f, 0.54f),      // warm beige
         SurfaceMaterial.Snow => new Color(0.95f, 0.96f, 0.98f),
         SurfaceMaterial.Sand => new Color(0.95f, 0.90f, 0.66f),
         SurfaceMaterial.Silt => new Color(0.44f, 0.32f, 0.20f),
-        SurfaceMaterial.Tundra => new Color(0.56f, 0.62f, 0.64f),
+        SurfaceMaterial.Tundra => new Color(0.58f, 0.80f, 0.74f),     // pale mint, nothing like rock
         SurfaceMaterial.Moorland => new Color(0.62f, 0.44f, 0.64f),
         SurfaceMaterial.Bog => new Color(0.26f, 0.36f, 0.32f),
         SurfaceMaterial.Steppe => new Color(0.76f, 0.68f, 0.40f),

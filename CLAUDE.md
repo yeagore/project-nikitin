@@ -62,6 +62,8 @@ machine prints decimals with a comma.
 - **Traversal:** a one-slab step (0.25 u) is free; a face of two or more slabs
   is an obstacle needing infrastructure. Terrain generated under a one-slab
   slope limit is walkable by construction; every cliff is one some rule put there.
+  Walking is by king's moves: a corner is cut unless both cardinal cells beside
+  the diagonal are cliffs. Works, anchors and water stay cardinal.
 - **Five supported footprints: 48², 64², 72², 96², 128²** (128² is the stress
   target). Altitude is bounded by the same number in slabs, so the bounding
   cube is a real shape, and the landmass takes 55–85% of the grid's extent.

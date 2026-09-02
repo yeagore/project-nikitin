@@ -66,7 +66,7 @@ public partial class IslandLab
 					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
 
 			case View.Walk:
-				return "[b]walk[/b]   what you can cross on foot   "
+				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are cliffs   "
 					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
 					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
 

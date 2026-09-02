@@ -7,7 +7,7 @@ namespace ProjectNikitin.Generation;
 
 public static partial class Traversal
 {
-    /// <summary>Floods <see cref="IslandData.Walk"/> under the free-step rule and fills <see cref="IslandData.Areas"/>, largest first.</summary>
+    /// <summary>Floods <see cref="IslandData.Walk"/> under the free-step rule, king's moves included (<see cref="DiagonalOpen"/>), and fills <see cref="IslandData.Areas"/>, largest first.</summary>
     private static void BuildWalkAreas(IslandData d)
     {
         int n = d.Size;
@@ -42,11 +42,13 @@ public static partial class Traversal
                 min = new Vector2I(Math.Min(min.X, x), Math.Min(min.Y, z));
                 max = new Vector2I(Math.Max(max.X, x), Math.Max(max.Y, z));
 
-                for (int k = 0; k < 4; k++)
+                for (int k = 0; k < 8; k++)
                 {
-                    int nx = x + Dx[k], nz = z + Dz[k];
+                    int nx = x + Dx8[k], nz = z + Dz8[k];
                     if (!Walkable(d, nx, nz) || d.Walk[nx, nz] != -1) continue;
                     if (Math.Abs(CrossLevel(d, nx, nz) - top) > 1) continue;
+                    // The odd entries of the eight-neighbourhood are the diagonals.
+                    if ((k & 1) == 1 && !DiagonalOpen(d, x, z, Dx8[k], Dz8[k])) continue;
                     d.Walk[nx, nz] = id;
                     queue.Enqueue((nx, nz));
                 }
@@ -123,6 +125,17 @@ public static partial class Traversal
                         label[nx, nz] = id;
                         queue.Enqueue((nx, nz));
                     }
+                }
+
+                // The diagonals are walked, never built across: a free step or nothing.
+                for (int k = 1; k < 8; k += 2)
+                {
+                    int nx = x + Dx8[k], nz = z + Dz8[k];
+                    if (!Walkable(d, nx, nz) || label[nx, nz] != -1) continue;
+                    if (Math.Abs(CrossLevel(d, nx, nz) - top) > 1) continue;
+                    if (!DiagonalOpen(d, x, z, Dx8[k], Dz8[k])) continue;
+                    label[nx, nz] = id;
+                    queue.Enqueue((nx, nz));
                 }
 
                 if (!d.Ferry[x, z]) continue;

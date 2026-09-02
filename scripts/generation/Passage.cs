@@ -34,6 +34,9 @@ internal static class Passages
     /// <summary>One cell of wading in cells of walking: enough that a road crosses a stream rather than following its bed.</summary>
     private const long WadeLength = 8;
 
+    /// <summary>A cardinal step and a diagonal one, in the packed length: 2 and 3, near enough √2 to keep a road from zigzagging.</summary>
+    private const long Straight = 2, Slant = 3;
+
     /// <summary>Stairs that make a flight...</summary>
     private const int FlightStairs = 5;
 
@@ -140,10 +143,10 @@ internal static class Passages
             if (key > here) continue;                        // a stale entry
             short top = Traversal.CrossLevel(d, c.X, c.Y);
 
-            void Offer(Vector2I to, int price, WorksKind kind)
+            void Offer(Vector2I to, int price, WorksKind kind, long length = Straight)
             {
                 // Wading builds nothing and costs WadeLength cells, so a road crosses a stream, not runs down it.
-                long step = d.River[to.X, to.Y] ? 1 + WadeLength : 1;
+                long step = d.River[to.X, to.Y] ? length + WadeLength * Straight : length;
                 long next = here + (long)price * WorksWeight + step;
                 if (next >= cost[to.X, to.Y]) return;
                 cost[to.X, to.Y] = next;
@@ -175,6 +178,16 @@ internal static class Passages
                     else if (!reserved[c.X, c.Y] && !reserved[nx, nz])
                         Offer(to, 1, WorksKind.Stair);
                 }
+            }
+
+            // King's moves: a free step across a corner, never a work.
+            for (int k = 1; k < 8; k += 2)
+            {
+                int nx = c.X + Dx8[k], nz = c.Y + Dz8[k];
+                if (!Traversal.Walkable(d, nx, nz)) continue;
+                if (Mathf.Abs(Traversal.CrossLevel(d, nx, nz) - top) > 1) continue;
+                if (!Traversal.DiagonalOpen(d, c.X, c.Y, Dx8[k], Dz8[k])) continue;
+                Offer(new Vector2I(nx, nz), 0, WorksKind.Stair, Slant);
             }
 
             if (!d.Ferry[c.X, c.Y]) continue;

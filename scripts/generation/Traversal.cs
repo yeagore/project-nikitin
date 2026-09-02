@@ -66,6 +66,25 @@ public static partial class Traversal
     }
 
     /// <summary>
+    /// Whether a king's-move step from (x, z) along the diagonal (dx, dz) is open:
+    /// walking cuts corners, except between two cliffs — when both cardinal cells
+    /// beside the diagonal are land standing more than a free step off this one,
+    /// there is no corner to cut. Water and aether beside it do not close it: two
+    /// landmasses touching at a corner are one on foot. Works stay cardinal.
+    /// </summary>
+    public static bool DiagonalOpen(IslandData d, int x, int z, int dx, int dz)
+    {
+        short here = CrossLevel(d, x, z);
+        return !(Cliff(d, x + dx, z, here) && Cliff(d, x, z + dz, here));
+    }
+
+    private static bool Cliff(IslandData d, int x, int z, short from)
+    {
+        if (!InBounds(d.Size, x, z) || !d.HasLand(x, z)) return false;
+        return Math.Abs(d.EffectiveLevel(x, z) - from) > 1;
+    }
+
+    /// <summary>
     /// The level a column is crossed at: a stream's water surface, else the ground.
     /// Measuring a stream's bed would read a two-slab step at every bank.
     /// </summary>

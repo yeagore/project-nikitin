@@ -169,13 +169,12 @@ internal static class Surfaces
 
     /// <summary>
     /// The material at one cell. Beds and beaches first; goo's bed and shore are
-    /// stone; then snow; then the tall faces — stone at the brink, scree at the
-    /// foot, whatever the landform; then the cold band, ahead of the rest of the
-    /// rock so a mountain climbs out of its stone and scree into tundra and then
-    /// snow while its tall faces stay stone; then a rock landform's cliffs and
-    /// broken ground, the dunes and the dry sculpted landforms; then the rest of the
-    /// climate grid, warmth against moisture. A plateau rung in soft country
-    /// changes nothing: the ground runs up to the edge.
+    /// stone; then snow; then rock — a tall face bares stone at its brink and drops
+    /// scree at its foot whatever the landform, and a rock landform shows stone and
+    /// scree wherever it is broken, so a mountain is stone up to its snow; then the
+    /// dunes and the dry sculpted landforms; then the climate grid, warmth against
+    /// moisture. A plateau rung in soft country changes nothing: the ground runs
+    /// up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
                                         bool gooSide, int near, Noise bog)
@@ -195,27 +194,25 @@ internal static class Surfaces
         if (drop >= TallFace) return SurfaceMaterial.Stone;
         if (face >= TallFace) return SurfaceMaterial.Scree;        // talus under the face
 
-        byte moist = d.Moisture[x, z];
-        bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
-
-        // The cold band before the broken rock: a mountain climbs out of its stone
-        // and scree into tundra and then snow, and only its tall faces stay stone. Cold
-        // rock is tundra whatever its moisture; cold soft ground reads the grid.
-        if (warmth < ColdBelow)
-        {
-            if (rocky) return SurfaceMaterial.Tundra;
-            if (wet && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
-            return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
-        }
-
-        if (rocky && (drop >= CliffFace || face >= CliffFace)) return SurfaceMaterial.Stone;
-        if (rocky && rugged >= RockyStoneAt) return SurfaceMaterial.Stone;
+        if (rocky && (drop >= CliffFace || face >= CliffFace || rugged >= RockyStoneAt))
+            return SurfaceMaterial.Stone;
         if (rocky && rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
         if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Dust;
+
+        // The climate grid. A mountain is stone and scree up to its snow; the cold
+        // band is for the ground that is not rock.
+        byte moist = d.Moisture[x, z];
+        bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
+
+        if (warmth < ColdBelow)
+        {
+            if (wet && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
+            return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
+        }
 
         if (warmth >= HotFrom)
         {
