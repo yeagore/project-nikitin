@@ -10,9 +10,8 @@ namespace ProjectNikitin.Generation;
 internal static class Roster
 {
     /// <summary>
-    /// The high-ground shape that suits a character. Plains want a gentle tilt or
-    /// a broad flat; a Highland wants a spine or a pair of masses to hang its
-    /// mountains on.
+    /// The high-ground shape that suits a character: plains want a tilt or a broad
+    /// flat, a highland a spine or a pair of masses to hang its mountains on.
     /// </summary>
     private static ReliefStyle StyleFor(int seed, TerrainCharacter character)
     {
@@ -23,8 +22,7 @@ internal static class Roster
                 { ReliefStyle.Plateau, ReliefStyle.CentralPeak, ReliefStyle.Tilted },
             TerrainCharacter.Downs => new[]
                 { ReliefStyle.OffsetPeak, ReliefStyle.TwinPeaks, ReliefStyle.Tilted },
-            // Badlands and dunes are country, not relief: they want a broad even
-            // ground to spread over rather than a peak to climb.
+            // Badlands and dunes are country, not relief: broad even ground, not a peak.
             TerrainCharacter.Badlands => new[] { ReliefStyle.Plateau, ReliefStyle.Tilted },
             TerrainCharacter.Dunes => new[] { ReliefStyle.Tilted, ReliefStyle.Plateau },
             TerrainCharacter.Karst => new[]
@@ -34,18 +32,14 @@ internal static class Roster
         return pool[(int)(TerrainHash(seed, 0x5EED) % (uint)pool.Length)];
     }
 
+    /// <summary>The relief style for this island's character, with <c>Auto</c> resolved.</summary>
     internal static ReliefStyle ResolveStyle(int seed, IslandParams p)
         => StyleFor(seed, ResolveCharacter(seed, p));
 
     /// <summary>
-    /// The layouts <c>Auto</c> may roll, and how often. Weighted toward a single
-    /// landmass: an archipelago is the interesting case, not the common one.
-    ///
-    /// The first six are the set the generator was built and audited on; the rest
-    /// are the newer shapes, and <see cref="IslandParams.NewArrangements"/> takes
-    /// them out of the pool in one move without taking them out of the code — a
-    /// layout you can no longer roll is still a layout you can ask for by name in
-    /// the lab.
+    /// The layouts <c>Auto</c> may roll, and how often; weighted toward a single
+    /// landmass. The first <see cref="ClassicArrangements"/> are the pool without
+    /// <see cref="IslandParams.NewArrangements"/>. Order is load-bearing.
     /// </summary>
     private static readonly (IslandArrangement How, float Weight)[] ArrangementPool =
     {
@@ -85,14 +79,12 @@ internal static class Roster
     /// <summary>How many of <see cref="ArrangementPool"/> are the audited originals.</summary>
     private const int ClassicArrangements = 6;
 
+    /// <summary>How many characters, from 1, are the four the pipeline was first audited on.</summary>
+    private const int ClassicCharacters = 4;
+
     /// <summary>
-    /// What <see cref="IslandParams.NewArrangements"/> and
-    /// <see cref="IslandParams.NewLandforms"/> actually change, in numbers.
-    ///
-    /// Both flags gate <c>Auto</c>'s dice and nothing else, which is exactly why
-    /// they read in the lab as a checkbox that does nothing: with an arrangement
-    /// and a character named by hand there is no dice roll left to gate. These
-    /// exist so the lab can say so — see <c>IslandLab.PoolNote</c>.
+    /// How many layouts <c>Auto</c> can roll with <see cref="IslandParams.NewArrangements"/>
+    /// on or off. The flag gates the dice and nothing else, which the lab's pool note says.
     /// </summary>
     public static int AutoArrangements(bool newer)
         => newer ? ArrangementPool.Length : ClassicArrangements;
@@ -113,6 +105,7 @@ internal static class Roster
     public static bool IsNewerShape(TerrainCharacter c)
         => c != TerrainCharacter.Auto && (int)c > ClassicCharacters;
 
+    /// <summary>The island's arrangement, with <c>Auto</c> a weighted pick over the pool.</summary>
     internal static IslandArrangement ResolveArrangement(int seed, IslandParams p)
     {
         if (p.Arrangement != IslandArrangement.Auto) return p.Arrangement;
@@ -130,14 +123,9 @@ internal static class Roster
         return IslandArrangement.Single;
     }
 
-    /// <summary>How many characters are the four the pipeline was first audited on.</summary>
-    private const int ClassicCharacters = 4;
-
     /// <summary>
-    /// Which character an island is, with <c>Auto</c> resolved.
-    /// <see cref="IslandParams.NewLandforms"/> keeps the sculpted ones out of the
-    /// dice without keeping them out of the game — asking for one by name still
-    /// builds it.
+    /// The island's character, with <c>Auto</c> resolved. <see cref="IslandParams.NewLandforms"/>
+    /// keeps the sculpted characters out of the dice, not out of the game.
     /// </summary>
     internal static TerrainCharacter ResolveCharacter(int seed, IslandParams p)
     {
@@ -147,5 +135,4 @@ internal static class Roster
             : ClassicCharacters;
         return (TerrainCharacter)(1 + (int)(TerrainHash(seed, 0xC7A2) % (uint)upto));
     }
-
 }

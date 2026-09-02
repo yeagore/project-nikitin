@@ -6,17 +6,13 @@ using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
-/// <summary>Stage 4: the underside.</summary>
+/// <summary>The underside: a thin lip at the coastline descending inland to a deep keel.</summary>
 internal static class Keel
 {
     /// <summary>
-    /// Hangs the underside below the surface as a spinning top: a thin lip at the
-    /// coastline descending inland to a deep keel.
-    ///
-    /// The underside is an <b>absolute</b> level, not a thickness subtracted from
-    /// the surface — offsetting the surface would mirror its relief downwards and
-    /// re-create a concave bottom under any high ground. A minimum-thickness clamp
-    /// keeps every column solid.
+    /// Hangs the underside below the surface as an absolute level, not a thickness
+    /// subtracted from the surface (that would mirror the relief downward); a
+    /// minimum-thickness clamp keeps every column solid.
     /// </summary>
     internal static short[,] BuildKeel(int seed, IslandParams p, bool[,] land, short[,] surface,
                                       float[,] toCoast)
@@ -27,11 +23,8 @@ internal static class Keel
         var warpX = new Noise(seed + 811, frequency: 0.028f, octaves: 3);
         var warpZ = new Noise(seed + 822, frequency: 0.028f, octaves: 3);
 
-        // Displacing where the distance field is *sampled* bends its contours;
-        // adding noise to the depth afterwards only ripples a shape that is still
-        // a surface of revolution. Measured on a test island, warping roughly
-        // quadruples the spread of keel depth within a radial band while leaving
-        // the rim-to-centre trend untouched.
+        // Warping where the distance field is sampled bends its contours; noise added
+        // to the depth afterwards only ripples a surface of revolution.
         float warpAmp = Footprint.AutoRadius(p) * (0.25f + 0.45f * Math.Clamp(p.KeelRoughness, 0f, 1f));
 
         float maxCoast = 1f;
@@ -41,10 +34,7 @@ internal static class Keel
 
         float scale = Math.Clamp(maxCoast / MathF.Max(3f, Footprint.AutoRadius(p) * 0.75f), 0.25f, 1f);
         float edge = MathF.Max(1f, p.EdgeThickness);
-        // The taper is a constant, not a knob: it shapes a surface the player
-        // essentially never stands on, and every value in its old range read as
-        // the same spinning top from above.
-        const float taper = 0.85f;
+        const float taper = 0.85f;   // a constant, not a knob: the player never stands on it
 
         var keel = new short[n, n];
         for (int x = 0; x < n; x++)
@@ -70,10 +60,9 @@ internal static class Keel
     }
 
     /// <summary>
-    /// Distance in cells from each land cell to the nearest non-land cell, as a
-    /// smooth float field. A chamfer (3,4) transform approximates the Euclidean
-    /// metric — plain 4-neighbour BFS is Manhattan, whose contours are diamonds —
-    /// and a blur removes the integer steps.
+    /// Distance in cells from each land cell to the nearest non-land cell as a
+    /// smooth field: a chamfer (3,4) transform approximates the Euclidean metric
+    /// (4-neighbour BFS would give diamonds), and a blur removes the integer steps.
     /// </summary>
     internal static float[,] DistanceToCoast(bool[,] land)
     {
@@ -115,6 +104,7 @@ internal static class Keel
         return f;
     }
 
+    /// <summary>The saturating chamfer step: a neighbour's distance plus its cost, or the maximum off-grid.</summary>
     private static int Probe(int[,] d, int n, int x, int z, int cost)
     {
         if (!InBounds(n, x, z)) return int.MaxValue;
