@@ -159,7 +159,7 @@ public partial class IslandLab
 						col.Add(FieldColor(d.Moisture[x, z], DevPalette.MoistureRamp));
 						break;
 					case View.Warmth:
-						col.Add(FieldColor(d.Warmth[x, z], DevPalette.WarmthRamp));
+						col.Add(DevPalette.WarmthTint(d.Warmth[x, z]));
 						break;
 					case View.Rugged:
 						col.Add(FieldColor(d.Ruggedness[x, z], DevPalette.RuggedRamp));

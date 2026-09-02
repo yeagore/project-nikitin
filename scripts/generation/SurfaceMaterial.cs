@@ -3,6 +3,7 @@ namespace ProjectNikitin.Generation;
 /// <summary>
 /// What the top of a column is made of — a provisional reading of the habitat
 /// vector, one byte per column in <see cref="IslandData.Material"/>. Not a biome.
+/// The byte is stored by value, so new members are appended and nothing is renumbered.
 /// </summary>
 public enum SurfaceMaterial : byte
 {
@@ -21,15 +22,21 @@ public enum SurfaceMaterial : byte
     /// <summary>River margin, lake shore, and the bed under standing water.</summary>
     Silt = 4,
 
-    /// <summary>Well-watered low ground, within a few cells of water. What you farm.</summary>
+    /// <summary>Well-watered ground within reach of water. What you farm.</summary>
     Grass = 5,
 
-    /// <summary>Drier open country away from the water.</summary>
-    Heath = 6,
+    /// <summary>Drier open country away from the water: heather and rough grazing.</summary>
+    Moorland = 6,
 
-    /// <summary>Dry, eroded ground: badlands, karst, sinkhole country — and parched interior.</summary>
+    /// <summary>Dry, eroded ground: badlands, karst, sinkhole country — and parched interior, or warm ground baked dry.</summary>
     Dust = 7,
 
-    /// <summary>Watered ground between grass and heath. Appended last: the byte is stored by value.</summary>
+    /// <summary>Watered ground between grass and moorland.</summary>
     Meadow = 8,
+
+    /// <summary>Cool wet ground: bog and peat, where the high country or the rim meets water.</summary>
+    Peatland = 9,
+
+    /// <summary>Warm wet ground: the lush flat beside a lowland river, the best land there is.</summary>
+    Floodplain = 10,
 }

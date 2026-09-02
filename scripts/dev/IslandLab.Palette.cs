@@ -109,9 +109,15 @@ public partial class IslandLab
 					+ "waters the plain it crosses and not the mountain it passes";
 
 			case View.Warmth:
-				return $"[b]warmth[/b]   {Ramp(DevPalette.WarmthRamp)}  frozen … warm: one climate up to a "
-					+ "third of the tallest a mountain can be at this size, then the lapse; windswept "
-					+ "ground, the rim and dry country colder, wet ground tempered";
+			{
+				var stops = new List<string>();
+				foreach (byte w in new byte[] { 0, 64, 110, 150, 190, 205, 220, 235, 255 })
+					stops.Add(Swatch(DevPalette.WarmthTint(w)));
+				return $"[b]warmth[/b]   {string.Join("", stops)}  frozen … alpine (blue) … temperate "
+					+ "(yellow) … warm (orange): one climate up to a third of the tallest a mountain "
+					+ "can be at this size, then the lapse; windswept ground, the rim and dry country "
+					+ "colder, wet ground tempered";
+			}
 
 			case View.Rugged:
 				return $"[b]rugged[/b]   {Ramp(DevPalette.RuggedRamp)}  flat … broken: local relief within "

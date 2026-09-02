@@ -192,7 +192,7 @@ that shears rims apart will shout; see the open gaps.
 
 `Surfaces.Pick` once had a ternary with one answer, two moisture bands
 returning the same material, and an unreached cell given exactly the threshold
-value, and between them Heath was 0.0% of every island ever generated. Nothing
+value, and between them Heath (now moorland) was 0.0% of every island ever generated. Nothing
 broke a guarantee. What found it was printing a share per category with `NEVER`
 beside the empty ones, which the audit does for every enum the generator
 assigns. A branch that never fires looks exactly like a branch that works.
@@ -302,8 +302,8 @@ diffed automatically.
 
 | | |
 |---|---|
-| surface | stone 9.0%, scree 4.1%, snow 0.8%, sand 6.4%, silt 7.8%, grass 5.6%, heath 24.7%, dust 21.3%, meadow 20.4%; nothing `NEVER`. Before rock was tied to rock landforms and tall faces it was stone 10.6%, scree 8.0% |
-| habitat, per-island means | moisture 26–125, warmth 197–222 (the lapse only bites at the top now), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
+| surface | stone 9.7%, scree 4.7%, snow 0.7%, sand 6.4%, silt 7.8%, floodplain 4.2%, grass 9.3%, meadow 21.6%, moorland 19.3%, dust 15.7%, peatland 0.8%; nothing `NEVER`. Before rock was tied to rock landforms and tall faces it was stone 10.6%, scree 8.0%; before the ladder read the warmth and moisture reached 16 cells, grass was 5.6% and moorland 24.7% |
+| habitat, per-island means | moisture 37–152, warmth 197–221 (the lapse only bites at the top now), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |
 | Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |

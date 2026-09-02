@@ -191,7 +191,10 @@ public partial class GenerationAudit
         }
 
         Panel(0, (x, z) => d.Moisture[x, z] / 255f, DevPalette.MoistureRamp.Lo, DevPalette.MoistureRamp.Hi);
-        Panel(1, (x, z) => d.Warmth[x, z] / 255f, DevPalette.WarmthRamp.Lo, DevPalette.WarmthRamp.Hi);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            img.SetPixel(n + gap + x, z,
+                d.HasLand(x, z) ? DevPalette.WarmthTint(d.Warmth[x, z]) : DevPalette.Aether);
         Panel(2, (x, z) => d.Ruggedness[x, z] / 255f, DevPalette.RuggedRamp.Lo, DevPalette.RuggedRamp.Hi);
         Panel(3, (x, z) => d.Exposure[x, z] / 255f, DevPalette.ExposureRamp.Lo, DevPalette.ExposureRamp.Hi);
         Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f), DevPalette.RimRamp.Lo, DevPalette.RimRamp.Hi);

@@ -470,15 +470,19 @@ from the coast", not at a coordinate, so generation answers the geometric
 questions once and content reads the lists.
 
 `Material` is a **provisional** mapping of the habitat vector — stone, scree,
-snow (a warmth floor only real peaks reach), sand, silt, grass, meadow, heath,
-dust — kept so the island reads as a place in the lab before the biome layer
-exists. Rock is where rock is: a **tall face** (six slabs, `TallFace`) bares
-stone at its brink and drops scree at its foot whatever the landform, and a
-**rock landform** (mountain, massif, karst, badlands, sinkholes, a canyon)
-shows stone at any cliff and where it is broken (four slabs in five cells) and
-scree where it is rough (three). A plateau rung or a mesa wall in soft country
-changes nothing: the grass runs up to the edge, because a four-slab step is
-the terrain's texture, not a wasteland. The biome layer is expected to replace the mapping; the vector is the
+snow (a warmth floor only real peaks reach), sand, silt, floodplain, grass,
+meadow, moorland, dust, peatland — kept so the island reads as a place in the
+lab before the biome layer exists. Rock is where rock is: a **tall face** (five
+slabs, `TallFace`) bares stone at its brink and drops scree at its foot
+whatever the landform, and a **rock landform** (mountain, massif, karst,
+badlands, sinkholes, a canyon) shows stone at any cliff and where it is broken
+(three slabs in five cells) and scree where it is rough (two). A plateau rung
+in soft country changes nothing: the grass runs up to the edge, because a
+four-slab step is the terrain's texture, not a wasteland. The rest is the
+**moisture ladder read against the warmth**: warm and wet ground is
+floodplain, cool and wet ground is peatland, and warm dry ground bakes — every
+degree of warmth over the warm line raises what grass and meadow need by one
+(`BakeRate`). Below that, grass, meadow, moorland, dust. The biome layer is expected to replace the mapping; the vector is the
 part meant to last. The lab's `surface`, `anchors` and five habitat views paint
 all of it, and the audit's `FieldMaps` writes the same as PNGs.
 

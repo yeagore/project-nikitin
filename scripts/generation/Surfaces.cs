@@ -17,14 +17,14 @@ internal static class Surfaces
     /// <summary>Slabs of visible face that make a cliff — the traversal's own "needs a hoist".</summary>
     private const int CliffFace = 3;
 
-    /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung or a mesa wall is not one, a mountain flank or a canyon is.</summary>
-    private const int TallFace = 6;
+    /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung is not one, a mesa wall, a mountain flank or a canyon is.</summary>
+    private const int TallFace = 5;
 
     /// <summary>Ruggedness (32 per slab) at which a rock landform shows stone off its cliffs.</summary>
-    private const int RockyStoneAt = 128;
+    private const int RockyStoneAt = 96;
 
     /// <summary>Ruggedness at which a rock landform shows scree.</summary>
-    private const int RockyScreeAt = 96;
+    private const int RockyScreeAt = 64;
 
     /// <summary>Warmth below which ground is frozen.</summary>
     private const int SnowAt = 64;
@@ -36,19 +36,34 @@ internal static class Surfaces
     private const int AlpineScreeAt = 64;
 
     /// <summary>Moisture above which dry ground is a wet margin even off a bank.</summary>
-    private const int SiltAt = 205;
+    private const int SiltAt = 220;
+
+    /// <summary>Moisture above which warm ground is floodplain.</summary>
+    private const int FloodplainAt = 170;
+
+    /// <summary>Moisture above which cool ground is peatland.</summary>
+    private const int PeatAt = 130;
+
+    /// <summary>Warmth above which wet ground is lush and dry ground bakes.</summary>
+    private const int WarmAt = 208;
+
+    /// <summary>Warmth below which wet ground is bog rather than grass.</summary>
+    private const int CoolAt = 206;
+
+    /// <summary>Moisture a degree of warmth over <see cref="WarmAt"/> adds to what grass and meadow need: warm dry ground bakes.</summary>
+    private const int BakeRate = 1;
 
     /// <summary>Moisture above which ground is grass.</summary>
-    private const int GrassAt = 140;
+    private const int GrassAt = 125;
 
     /// <summary>Moisture above which ground is meadow.</summary>
-    private const int MeadowAt = 60;
+    private const int MeadowAt = 55;
 
-    /// <summary>Moisture above which ground is heath; below it, parched dust.</summary>
-    private const int HeathAt = 10;
+    /// <summary>Moisture above which ground is moorland; below it, parched dust.</summary>
+    private const int MoorAt = 12;
 
-    /// <summary>Ruggedness at which soft ground turns to scree: seven slabs in five cells, which only stacked rungs manage.</summary>
-    private const int BrokenAt = 224;
+    /// <summary>Ruggedness at which soft ground turns to scree: six slabs in five cells, which only stacked rungs manage.</summary>
+    private const int BrokenAt = 200;
 
     /// <summary>Rebuilds the anchor lists in scan order and picks every column's material.</summary>
     public static void Classify(IslandData d)
@@ -157,8 +172,8 @@ internal static class Surfaces
     /// The material at one cell: built and wet first, then snow, then rock — a tall
     /// face bares stone at its brink and drops scree at its foot anywhere, and a rock
     /// landform shows stone and scree wherever it is broken — then the cold band,
-    /// the landform, the bank, and last the moisture ladder. A plateau rung or a mesa
-    /// wall in soft country changes nothing: the ground runs up to the edge.
+    /// the landform, the bank, and last the moisture ladder read against the warmth. A plateau rung
+    /// in soft country changes nothing: the ground runs up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face, bool bank)
     {
@@ -192,11 +207,17 @@ internal static class Surfaces
         if (bank) return SurfaceMaterial.Silt;
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
+        // The moisture ladder, read against the warmth: warm and wet is lush, cool
+        // and wet is bog, warm and dry bakes.
         byte moist = d.Moisture[x, z];
+        if (moist >= FloodplainAt && warmth >= WarmAt) return SurfaceMaterial.Floodplain;
+        if (moist >= PeatAt && warmth < CoolAt) return SurfaceMaterial.Peatland;
         if (moist >= SiltAt) return SurfaceMaterial.Silt;
-        if (moist >= GrassAt) return SurfaceMaterial.Grass;
-        if (moist >= MeadowAt) return SurfaceMaterial.Meadow;
-        if (moist >= HeathAt) return SurfaceMaterial.Heath;
+
+        int bake = Math.Max(0, warmth - WarmAt) * BakeRate;
+        if (moist >= GrassAt + bake) return SurfaceMaterial.Grass;
+        if (moist >= MeadowAt + bake) return SurfaceMaterial.Meadow;
+        if (moist >= MoorAt) return SurfaceMaterial.Moorland;
         return SurfaceMaterial.Dust;
     }
 }

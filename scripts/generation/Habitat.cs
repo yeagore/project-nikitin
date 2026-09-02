@@ -14,13 +14,13 @@ namespace ProjectNikitin.Generation;
 internal static class Habitat
 {
     /// <summary>Cells of level walk over which moisture decays to 1/e.</summary>
-    private const float MoistureFalloff = 11f;
+    private const float MoistureFalloff = 16f;
 
     /// <summary>Cells of walk one slab of climb costs the water: it spreads along and down, not up.</summary>
     private const int ClimbCost = 2;
 
-    /// <summary>Walk cost beyond which a cell is parched anyway (e^-7 of full), so the flood stops.</summary>
-    private const int MoistureReach = 80;
+    /// <summary>Walk cost beyond which a cell is parched anyway (under e^-6 of full), so the flood stops.</summary>
+    private const int MoistureReach = 100;
 
     /// <summary>How far (±) noise wobbles a cell's effective water distance.</summary>
     private const float MoistureWobble = 0.3f;
