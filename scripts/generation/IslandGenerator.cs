@@ -414,8 +414,8 @@ public static class IslandGenerator
         }
 
         Passages.Find(data);
-        Habitat.Measure(seed, data);
-        Surfaces.Classify(data);
+        Habitat.Measure(seed, p, data);
+        Surfaces.Classify(seed, data);
         Names.Give(seed, data);
         Overhangs.Carve(seed, p, data);
     }

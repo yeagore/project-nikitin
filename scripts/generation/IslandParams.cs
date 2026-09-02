@@ -85,6 +85,20 @@ public partial class IslandParams : Resource
     /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side.</summary>
     [Export(PropertyHint.Range, "0,1,0.01")] public float Valleys { get; set; } = 0.4f;
 
+    /// <summary>
+    /// The Domain's background moisture, before its water adds any: 0 is parched
+    /// everywhere off a bank, 1 is waterside everywhere. Dry country is about 0.15,
+    /// wet country about 0.65.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Moisture { get; set; } = 0.45f;
+
+    /// <summary>
+    /// The Domain's background warmth at its lowest ground, before the lapse and the
+    /// chills: 1 is the warmest a lowland gets, 0.7 a cold country whose peaks freeze
+    /// low and whose wet ground bogs.
+    /// </summary>
+    [Export(PropertyHint.Range, "0,1,0.01")] public float Warmth { get; set; } = 0.95f;
+
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>

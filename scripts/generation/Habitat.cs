@@ -13,17 +13,34 @@ namespace ProjectNikitin.Generation;
 /// </summary>
 internal static class Habitat
 {
-    /// <summary>Cells of level walk over which moisture decays to 1/e.</summary>
-    private const float MoistureFalloff = 16f;
+    /// <summary>Cells of level walk over which the water's share of moisture decays to 1/e.</summary>
+    private const float MoistureFalloff = 5f;
 
     /// <summary>Cells of walk one slab of climb costs the water: it spreads along and down, not up.</summary>
     private const int ClimbCost = 2;
 
-    /// <summary>Walk cost beyond which a cell is parched anyway (under e^-6 of full), so the flood stops.</summary>
-    private const int MoistureReach = 100;
+    /// <summary>Walk cost beyond which the water adds nothing worth counting (under e^-7 of its share), so the flood stops.</summary>
+    private const int MoistureReach = 60;
 
     /// <summary>How far (±) noise wobbles a cell's effective water distance.</summary>
     private const float MoistureWobble = 0.3f;
+
+    /// <summary>Moisture fresh water adds at its bank, over the Domain's background (<see cref="IslandParams.Moisture"/>).</summary>
+    private const float WaterMoisture = 200f;
+
+    /// <summary>Taken off the water's share so it ends instead of trailing: nothing past sixteen cells of level walk.</summary>
+    private const float WaterFloor = 8f;
+
+    /// <summary>Moisture (±) the background wobbles by, so a climate is patchy rather than one flat value.</summary>
+    private const float BackgroundWobble = 25f;
+
+    /// <summary>Moisture a fully sheltered cell gains: the lee holds its damp.</summary>
+    private const float LeeMoisture = 20f;
+
+    /// <summary>Moisture a dry patch loses, on a rock landform or within <see cref="RockFringe"/> cells of one, where its noise clears <see cref="RockDroughtBar"/>.</summary>
+    private const float RockDrought = 60f;
+    private const float RockDroughtBar = 0.58f;
+    private const int RockFringe = 3;
 
     /// <summary>
     /// Warmth lost at the full mountain cap (<see cref="MountainCap"/>). Anchored
@@ -59,23 +76,28 @@ internal static class Habitat
     /// <summary>The tallest mountain a footprint allows, in slabs.</summary>
     internal static float MountainCap(int size) => Math.Max(8f, size * (40f / 128f));
 
-    /// <summary>Fills the five axes, in a fixed order: warmth last, since it reads the other four.</summary>
-    public static void Measure(int seed, IslandData d)
+    /// <summary>
+    /// Fills the five axes, in a fixed order: the shape axes first, then moisture
+    /// (which reads the lee), then warmth (which reads everything).
+    /// </summary>
+    public static void Measure(int seed, IslandParams p, IslandData d)
     {
-        MeasureMoisture(seed, d);
         MeasureRuggedness(d);
         MeasureExposure(d);
         MeasureRimDistance(d);
-        MeasureWarmth(d);
+        MeasureMoisture(seed, p, d);
+        MeasureWarmth(p, d);
     }
 
     /// <summary>
-    /// Walk cost from watered columns (goo waters nothing): a cell per cell along or
-    /// down, <see cref="ClimbCost"/> more per slab up, so a river waters the plain
-    /// it crosses and not the mountain or the canyon wall it passes. Wobbled by
-    /// noise, decayed exponentially. Land the flood never reaches is parched (0).
+    /// The Domain's background moisture, wobbled by noise into patches, plus what
+    /// its fresh water adds: a walk cost from watered columns (goo waters nothing),
+    /// a cell per cell along or down and <see cref="ClimbCost"/> more per slab up,
+    /// so a river waters the plain it crosses and not the mountain or the canyon
+    /// wall it passes, decayed over <see cref="MoistureFalloff"/> cells. The lee
+    /// holds a little damp; a rock landform and its fringe carry patches of drought.
     /// </summary>
-    private static void MeasureMoisture(int seed, IslandData d)
+    private static void MeasureMoisture(int seed, IslandParams p, IslandData d)
     {
         int n = d.Size;
         var cost = new int[n, n];
@@ -105,7 +127,8 @@ internal static class Habitat
                 {
                     int nx = at.X + Dx[k], nz = at.Y + Dz[k];
                     if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
-                    int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here);
+                    // The step up out of the water onto its bank is the free one.
+                    int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here - (c == 0 ? 1 : 0));
                     int next = c + 1 + climb * ClimbCost;
                     if (next > MoistureReach) continue;
                     if (cost[nx, nz] >= 0 && cost[nx, nz] <= next) continue;
@@ -115,27 +138,43 @@ internal static class Habitat
             }
         }
 
+        // Rock and its fringe: where the drought patches may fall.
+        int[,] toRock = Flood.Distance(n,
+            (x, z) => d.HasLand(x, z) && (Surfaces.Rocky((LandformType)d.Landform[x, z]) || d.Canyon[x, z]),
+            (_, _, nx, nz) => d.HasLand(nx, nz),
+            cap: RockFringe);
+
         var wobble = new Noise(seed + 71_003, 0.05f, octaves: 3);
+        var background = new Noise(seed + 71_007, 0.03f, octaves: 2);
+        var drought = new Noise(seed + 71_011, 0.06f, octaves: 2);
+        float baseline = 255f * Math.Clamp(p.Moisture, 0f, 1f);
+
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
-            if (cost[x, z] < 0) { d.Moisture[x, z] = 0; continue; }
 
-            float sway = 1f + MoistureWobble * (wobble.At(x, z) * 2f - 1f);
-            float cells = cost[x, z] * sway;
-            d.Moisture[x, z] = (byte)Mathf.Clamp(
-                Mathf.RoundToInt(255f * MathF.Exp(-cells / MoistureFalloff)), 0, 255);
+            float moisture = baseline + BackgroundWobble * (background.At(x, z) * 2f - 1f);
+            moisture += LeeMoisture * (1f - d.Exposure[x, z] / 255f);
+            if (cost[x, z] >= 0)
+            {
+                float sway = 1f + MoistureWobble * (wobble.At(x, z) * 2f - 1f);
+                moisture += Math.Max(0f, WaterMoisture * MathF.Exp(-cost[x, z] * sway / MoistureFalloff) - WaterFloor);
+            }
+            if (toRock[x, z] >= 0 && drought.At(x, z) > RockDroughtBar) moisture -= RockDrought;
+
+            d.Moisture[x, z] = (byte)Mathf.Clamp(Mathf.RoundToInt(moisture), 0, 255);
         }
     }
 
     /// <summary>
-    /// Warmth: one climate from the lowest ground up to <see cref="LapseKnee"/> of
-    /// the mountain cap, then a lapse that steepens toward the cap; the wind, the
-    /// rim and dry ground each make it colder — wet ground is pulled toward
-    /// <see cref="Temperate"/> from either side. No land leaves it all zero.
+    /// Warmth: the Domain's background (<see cref="IslandParams.Warmth"/>) from the
+    /// lowest ground up to <see cref="LapseKnee"/> of the mountain cap, then a lapse
+    /// that steepens toward the cap; the wind, the rim and dry ground each make it
+    /// colder — wet ground is pulled toward <see cref="Temperate"/> from either
+    /// side. No land leaves it all zero.
     /// </summary>
-    private static void MeasureWarmth(IslandData d)
+    private static void MeasureWarmth(IslandParams p, IslandData d)
     {
         int n = d.Size;
         short low = short.MaxValue;
@@ -148,13 +187,14 @@ internal static class Habitat
         if (low == short.MaxValue) return;
 
         float cap = MountainCap(d.Size);
+        float baseline = 255f * Math.Clamp(p.Warmth, 0f, 1f);
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
             float rise = d.EffectiveLevel(x, z) - low;
             float t = Mathf.Clamp((rise / cap - LapseKnee) / (1f - LapseKnee), 0f, 1f);
-            float warmth = 255f - LapseShare * MathF.Pow(t, LapseCurve);
+            float warmth = baseline - LapseShare * MathF.Pow(t, LapseCurve);
 
             warmth -= WindChill * d.Exposure[x, z] / 255f;
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);

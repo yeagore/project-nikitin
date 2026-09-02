@@ -104,9 +104,11 @@ public partial class IslandLab
 			}
 
 			case View.Moisture:
-				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: walk from "
-					+ "fresh water (goo waters nothing), two cells more per slab climbed, so a river "
-					+ "waters the plain it crosses and not the mountain it passes";
+				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: the "
+					+ "Domain's background moisture in patches, the lee a little damper, rock and its "
+					+ "fringe with patches of drought, plus what fresh water adds along a walk from it "
+					+ "(two cells more per slab climbed, so a river waters the plain it crosses and "
+					+ "not the mountain it passes)";
 
 			case View.Warmth:
 			{

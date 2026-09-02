@@ -20,7 +20,7 @@ public partial class IslandLab
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
 	private OptionButton _exitKind = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
-	private HSlider _lakes = null!, _valleys = null!;
+	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _poolNote = null!;
@@ -123,6 +123,14 @@ public partial class IslandLab
 			() => Params.CliffHeight, v => Params.CliffHeight = v);
 		_patch = Spin(rows, "Region scale, cells", 6, 40,
 			() => Params.RegionScale, v => Params.RegionScale = v);
+
+		Heading(rows, "climate");
+		_moisture = Slide(rows, "Background moisture", 0f, 1f, 0.05f,
+			() => Params.Moisture, v => Params.Moisture = v);
+		_moisture.TooltipText = "What the ground has before its water adds any: 0.15 is dry country, 0.65 wet.";
+		_warmth = Slide(rows, "Background warmth", 0f, 1f, 0.05f,
+			() => Params.Warmth, v => Params.Warmth = v);
+		_warmth.TooltipText = "The lowland before the lapse and the chills: 1 is the warmest, 0.7 a cold country.";
 
 		Heading(rows, "gates and crossings");
 		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
@@ -244,6 +252,8 @@ public partial class IslandLab
 		_wet.Value = Params.Rivers;
 		_lakes.Value = Params.Lakes;
 		_valleys.Value = Params.Valleys;
+		_moisture.Value = Params.Moisture;
+		_warmth.Value = Params.Warmth;
 		_size.Selected = _size.GetItemIndex(Params.Size);
 		_rungs.Value = Params.PlateauLevels;
 		_cliff.Value = Params.CliffHeight;

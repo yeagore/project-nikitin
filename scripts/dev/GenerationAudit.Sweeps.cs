@@ -618,6 +618,44 @@ public partial class GenerationAudit
         PrintValleysSweep(steps);
     }
 
+    /// <summary>
+    /// The four climate corners and the preset, as material shares: what the
+    /// ladder makes of dry cold, dry warm, wet cold and wet warm country.
+    /// </summary>
+    private void PrintClimate()
+    {
+        GD.Print($"\n=== climate corners: material shares over {SweepSeeds} seeds each ===");
+        var corners = new (string Name, float Moisture, float Warmth)[]
+        {
+            ("dry cold", 0.15f, 0.7f), ("dry warm", 0.15f, 1f),
+            ("wet cold", 0.65f, 0.7f), ("wet warm", 0.65f, 1f),
+            ("preset", Params.Moisture, Params.Warmth),
+        };
+        foreach (var (name, moisture, warmth) in corners)
+        {
+            IslandParams p = Variant(q => { q.Moisture = moisture; q.Warmth = warmth; });
+            var cells = new long[Enum.GetValues<SurfaceMaterial>().Length];
+            long land = 0;
+            foreach (IslandData d in Sweep(p, SweepSeeds))
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    cells[d.Material[x, z]]++;
+                    land++;
+                }
+
+            var parts = new List<(string Name, long Cells)>();
+            foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
+                parts.Add((m.ToString().ToLowerInvariant(), cells[(int)m]));
+            parts.Sort((a, b) => b.Cells.CompareTo(a.Cells));
+            var bits = new List<string>();
+            foreach (var (material, count) in parts)
+                if (count > 0) bits.Add($"{material} {100.0 * count / Math.Max(1, land):0.0}%");
+            GD.Print($"  {name,-9} (moisture {moisture:0.00}, warmth {warmth:0.00}): {string.Join(", ", bits)}");
+        }
+    }
+
     /// <summary>Lakes 0..1: water-only lake cells, bodies as distinct regions, the biggest.</summary>
     private void PrintLakesSweep(float[] steps)
     {

@@ -92,7 +92,8 @@ accept the current numbers as the new reference.
 The opt-in sweeps are `[Export]` flags on `GenerationAudit` (each documented on
 its property): silhouettes and waterways as ASCII, close-ups of the sculpted
 landforms, every arrangement × character, every Gate request, the four-hanging-
-Gates matrix, the knob sweeps (how you check a slider does anything), land share
+Gates matrix, the knob sweeps (how you check a slider does anything), the
+material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all five sizes, the newest shapes at every
 footprint, where re-rolls cluster, and PNG portraits and field maps written to a
 directory. Every flag can be given on the command line after `--`:
@@ -109,10 +110,10 @@ Appearance still needs a human at the editor, or **F2** in the lab.
 godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-Hashes every field of `IslandData` for 440 islands — 60 default seeds, every
+Hashes every field of `IslandData` for 448 islands — 60 default seeds, every
 arrangement × character at 64², all five sizes, every Gate request, every bridge
 ease, both ends of every knob — and diffs the hashes against
 `docs/checksum-baseline.txt`. A change meant to leave generation alone must
-report `0 of 440 islands moved`; a change meant to alter it re-baselines with
+report `0 of 448 islands moved`; a change meant to alter it re-baselines with
 `-- accept` on the command line and says so in its commit. This is the
 bit-for-bit gate; the audit is the readable one.

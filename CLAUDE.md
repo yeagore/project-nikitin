@@ -41,7 +41,7 @@ three of them: the island lab (F6 in the editor), the audit, and the checksum.
 The two commands that matter after touching the generator:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 440 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 448 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 ```
 
@@ -119,7 +119,7 @@ Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 440 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 448 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against

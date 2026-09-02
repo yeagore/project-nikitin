@@ -290,8 +290,8 @@ test: numbers are expected to move when the generator changes, and the point is
 to see them move and decide whether you meant it.
 
 **The checksum** (`docs/checksum-baseline.txt`) hashes every field of
-`IslandData` for 440 islands across the parameter matrix. It is the bit-for-bit
-gate: a change meant to leave generation alone reports `0 of 440 islands moved`;
+`IslandData` for 448 islands across the parameter matrix. It is the bit-for-bit
+gate: a change meant to leave generation alone reports `0 of 448 islands moved`;
 a change meant to alter it re-baselines with `-- accept` and says so in its
 commit. `docs/dev-scenes.md` has both scenes in detail.
 
@@ -302,8 +302,9 @@ diffed automatically.
 
 | | |
 |---|---|
-| surface | stone 9.7%, scree 4.7%, snow 0.7%, sand 6.4%, silt 7.8%, floodplain 4.2%, grass 9.3%, meadow 21.6%, moorland 19.3%, dust 15.7%, peatland 0.8%; nothing `NEVER`. Before rock was tied to rock landforms and tall faces it was stone 10.6%, scree 8.0%; before the ladder read the warmth and moisture reached 16 cells, grass was 5.6% and moorland 24.7% |
-| habitat, per-island means | moisture 37–152, warmth 197–221 (the lapse only bites at the top now), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
+| surface, at the preset (moisture 0.45, warmth 0.95) | stone 9.6%, scree 4.7%, snow 0.8%, sand 6.4%, silt 7.8%, floodplain 7.3%, grass 5.5%, meadow 53.4%, moorland 3.8%, dust 0.6%, peatland 0.1%; nothing `NEVER`. The preset is a temperate, middling-wet country; the climate corners below are what the knobs do. Before rock was tied to rock landforms and tall faces it was stone 10.6%, scree 8.0% |
+| habitat, per-island means | moisture 122–173, warmth 186–209 (the lapse only bites at the top now), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
+| climate corners (`Climate`, 8 seeds each) | dry cold: moorland 67%, grass 1%, peatland 1%. Dry warm: dust 42%, moorland 16%, meadow 9%, grass 1%, floodplain 1%. Wet cold: moorland 35%, grass 14%, meadow 12%, peatland 3%. Wet warm: meadow 41%, grass 17%, floodplain 10%. Sand, silt, stone, scree and snow make up the rest of each |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |
 | Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |

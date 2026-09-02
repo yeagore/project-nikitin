@@ -59,6 +59,9 @@ public partial class GenerationAudit : Node
     /// <summary>Sweep Lakes, Rivers, Crossings and Valleys with everything else held, so a knob that does nothing shows.</summary>
     [Export] public bool Knobs { get; set; } = false;
 
+    /// <summary>Material shares at the four climate corners (dry/wet x cold/warm) and the preset: the rebalancing check.</summary>
+    [Export] public bool Climate { get; set; } = false;
+
     /// <summary>Seeds per setting in the GateRequests, Knobs, Bulk, Sizes, Debut and Strain sweeps.</summary>
     [Export] public int SweepSeeds { get; set; } = 12;
 
@@ -134,6 +137,7 @@ public partial class GenerationAudit : Node
                 case nameof(GateRequests): GateRequests = true; break;
                 case nameof(GateMatrix): GateMatrix = true; break;
                 case nameof(Knobs): Knobs = true; break;
+                case nameof(Climate): Climate = true; break;
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
@@ -156,6 +160,7 @@ public partial class GenerationAudit : Node
         if (GateRequests) PrintGateRequests();
         if (GateMatrix) PrintGateMatrix();
         if (Knobs) PrintKnobs();
+        if (Climate) PrintClimate();
         if (Bulk) PrintBulk();
         if (Sizes) PrintSizes();
         if (Debut) PrintDebut();

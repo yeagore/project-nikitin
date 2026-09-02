@@ -294,6 +294,8 @@ public partial class IslandLab : Node3D
 			h.Add(Params.EdgeThickness);
 			h.Add(Params.KeelDepth);
 			h.Add(Params.KeelRoughness);
+			h.Add(Params.Moisture);
+			h.Add(Params.Warmth);
 		}
 		return h.ToHashCode();
 	}
