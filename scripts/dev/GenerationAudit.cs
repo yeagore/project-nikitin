@@ -6,13 +6,10 @@ using ProjectNikitin.Generation;
 namespace ProjectNikitin.Dev;
 
 /// <summary>
-/// Measures the real generator over many seeds and prints the guarantees of
-/// docs/island-generation.md as numbers; headless, since it only reads <see cref="IslandData"/>:
-/// <c>godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn</c>.
-/// Every export can also be set after <c>--</c> on the command line — a bare name turns a
-/// flag on, <c>Portraits=&lt;dir&gt;</c> / <c>FieldMaps=&lt;dir&gt;</c> set the paths and
-/// <c>Seeds=&lt;n&gt;</c> (FirstSeed, FeasibilitySeeds, SweepSeeds) the ints, so
-/// <c>-- Knobs Portraits=C:/x</c> works.
+/// Measures the real generator over many seeds and prints docs/island-generation.md's
+/// guarantees as numbers; headless, since it only reads <see cref="IslandData"/>.
+/// Exports can be set after <c>--</c> on the command line — a bare name turns a flag on,
+/// <c>Name=value</c> sets a path or an int: <c>-- Knobs Seeds=12 Portraits=C:/x</c>.
 /// </summary>
 public partial class GenerationAudit : Node
 {

@@ -190,13 +190,9 @@ public partial class GenerationAudit
                                               List<int> Detours);
 
     /// <summary>
-    /// Whether the island's walled river reaches can be bridged, by the reach flood's own
-    /// rule (<see cref="Traversal.Walkable"/> ends, <see cref="Traversal.DeckFits"/> over the
-    /// gap, rise within <see cref="Traversal.MaxBridgeRise"/>). A gorge cell is a river cell
-    /// with dry ground 3+ slabs above its water on both sides of one axis; a reach is a
-    /// 4-connected run of 3+ of them; sealed means no legal deck crosses any of its cells;
-    /// Skew (misaligned) means a deck fit somewhere along it and only the rims' disagreement
-    /// refused it.
+    /// Can the walled river reaches be bridged, by the reach flood's own deck rule? A gorge
+    /// cell has dry ground 3+ slabs over its water on both sides of one axis; a reach is 3+ of
+    /// them 4-connected; sealed = no legal deck on any cell; Skew = a deck fit and only the rims refused.
     /// </summary>
     private static GorgeStats AnalyseGorges(IslandData d)
     {
