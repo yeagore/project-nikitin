@@ -16,7 +16,7 @@ public partial class IslandParams : Resource
     public static readonly int[] SupportedSizes = { 48, 64, 72, 96, 128 };
 
     /// <summary>Footprint edge length in cells.</summary>
-    [Export(PropertyHint.Range, "16,128,1")] public int Size { get; set; } = 96;
+    [Export(PropertyHint.Range, "48,128,1")] public int Size { get; set; } = 96;
 
     /// <summary>Land-mask radius in cells. 0 = auto (Size * 0.45).</summary>
     [Export(PropertyHint.Range, "0,128,1")] public float Radius { get; set; } = 0f;

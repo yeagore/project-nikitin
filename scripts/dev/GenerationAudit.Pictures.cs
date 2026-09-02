@@ -9,17 +9,9 @@ namespace ProjectNikitin.Dev;
 public partial class GenerationAudit
 {
     /// <summary>Near-black aether, the same in every picture.</summary>
-    private static readonly Color Aether = new(0.07f, 0.08f, 0.11f);
 
     /// <summary>A flooded column's colour by kind: goo violet, ford pale, navigable deep, stream mid, lake dark.</summary>
-    private static Color WaterTint(IslandData d, int x, int z)
-    {
-        if (d.Fluid[x, z] == (byte)FluidKind.Goo) return new Color(0.58f, 0.16f, 0.74f);
-        if (d.Ford[x, z]) return new Color(0.55f, 0.82f, 0.78f);
-        if (d.Navigable[x, z]) return new Color(0.12f, 0.42f, 0.68f);
-        if (d.River[x, z]) return new Color(0.3f, 0.58f, 0.8f);
-        return new Color(0.1f, 0.28f, 0.55f);
-    }
+    private static Color WaterTint(IslandData d, int x, int z) => DevPalette.Water(d, x, z);
 
     /// <summary>Land / water ASCII of one island per arrangement, n/64 cells to the character so 128² fits a terminal.</summary>
     private void PrintSilhouettes()
@@ -140,7 +132,7 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = Aether;
+            if (!d.HasLand(x, z)) c = DevPalette.Aether;
             else if (d.WaterLevel[x, z] != IslandData.NoLand) c = WaterTint(d, x, z);
             else
             {
@@ -197,7 +189,7 @@ public partial class GenerationAudit
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
                 img.SetPixel(left + x, z,
-                    d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : Aether);
+                    d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : DevPalette.Aether);
         }
 
         Panel(0, (x, z) => d.Moisture[x, z] / 255f,
@@ -225,12 +217,10 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = Aether;
+            if (!d.HasLand(x, z)) c = DevPalette.Aether;
             else if (d.WaterLevel[x, z] != IslandData.NoLand)
-                c = d.Fluid[x, z] == (byte)FluidKind.Goo
-                    ? new Color(0.35f, 0.10f, 0.45f)
-                    : new Color(0.10f, 0.20f, 0.34f);
-            else c = new Color(0.20f, 0.20f, 0.21f);
+                c = d.Fluid[x, z] == (byte)FluidKind.Goo ? DevPalette.AnchorGoo : DevPalette.AnchorWater;
+            else c = DevPalette.Anchor(0);
             img.SetPixel(x, z, c);
         }
 
@@ -245,16 +235,16 @@ public partial class GenerationAudit
                 if (mask[x, z]) img.SetPixel(x, z, c);
         }
 
-        Mark(d.CoastCells, new Color(0.30f, 0.82f, 0.88f));
-        Mark(d.CliffFootCells, new Color(0.90f, 0.55f, 0.20f));
-        Mark(d.CliffCells, new Color(0.88f, 0.28f, 0.24f));
-        Mark(d.BankCells, new Color(0.30f, 0.75f, 0.55f));
-        MarkMask(d.Beach, new Color(0.90f, 0.82f, 0.55f));
-        MarkMask(d.Ford, new Color(0.55f, 0.92f, 0.45f));
-        MarkMask(d.Landings, new Color(0.98f, 0.86f, 0.25f));
-        MarkMask(d.Ferry, new Color(0.35f, 0.55f, 0.95f));
-        Mark(d.Overhangs, new Color(0.88f, 0.35f, 0.85f));
-        Mark(d.Summits, new Color(1f, 1f, 1f));
+        Mark(d.CoastCells, DevPalette.Anchor(DevPalette.Coast));
+        Mark(d.CliffFootCells, DevPalette.Anchor(DevPalette.CliffFoot));
+        Mark(d.CliffCells, DevPalette.Anchor(DevPalette.Brink));
+        Mark(d.BankCells, DevPalette.Anchor(DevPalette.Bank));
+        MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
+        MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));
+        MarkMask(d.Landings, DevPalette.Anchor(DevPalette.Landing));
+        MarkMask(d.Ferry, DevPalette.Anchor(DevPalette.Quay));
+        Mark(d.Overhangs, DevPalette.Anchor(DevPalette.Overhang));
+        Mark(d.Summits, DevPalette.Anchor(DevPalette.Summit));
 
         img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);
@@ -270,20 +260,9 @@ public partial class GenerationAudit
         for (int z = 0; z < n; z++)
         {
             Color c;
-            if (!d.HasLand(x, z)) c = Aether;
+            if (!d.HasLand(x, z)) c = DevPalette.Aether;
             else if (d.WaterLevel[x, z] != IslandData.NoLand) c = WaterTint(d, x, z);
-            else c = (SurfaceMaterial)d.Material[x, z] switch
-            {
-                SurfaceMaterial.Stone => new Color(0.46f, 0.46f, 0.48f),
-                SurfaceMaterial.Scree => new Color(0.62f, 0.60f, 0.55f),
-                SurfaceMaterial.Snow => new Color(0.92f, 0.94f, 0.96f),
-                SurfaceMaterial.Sand => new Color(0.85f, 0.78f, 0.55f),
-                SurfaceMaterial.Silt => new Color(0.52f, 0.44f, 0.32f),
-                SurfaceMaterial.Grass => new Color(0.36f, 0.56f, 0.26f),
-                SurfaceMaterial.Meadow => new Color(0.50f, 0.64f, 0.30f),
-                SurfaceMaterial.Heath => new Color(0.52f, 0.52f, 0.32f),
-                _ => new Color(0.68f, 0.58f, 0.42f),
-            };
+            else c = DevPalette.Material((SurfaceMaterial)d.Material[x, z]);
             img.SetPixel(x, z, c);
         }
 

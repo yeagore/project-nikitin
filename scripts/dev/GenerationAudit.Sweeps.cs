@@ -722,7 +722,7 @@ public partial class GenerationAudit
                     if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
                     dry++;
                     if (d.Mainland >= 0 && d.Walk[x, z] == d.Mainland) walk++;
-                    for (int k = 0; k < 2; k++)
+                    for (int k = 0; k < 4; k += 2)     // +X and +Z once each: every pair counted once
                     {
                         int nx = x + Dx[k], nz = z + Dz[k];
                         if (!d.HasLand(nx, nz)) continue;

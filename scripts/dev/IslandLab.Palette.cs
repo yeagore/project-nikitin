@@ -134,39 +134,15 @@ public partial class IslandLab
 	private static Color AnchorColor(IslandData d, int x, int z, byte[,]? grid)
 	{
 		if (grid == null) return Unremarkable;
-		if (d.WaterLevel[x, z] != IslandData.NoLand) return new Color(0.16f, 0.24f, 0.38f);
-
-		return grid[x, z] switch
-		{
-			1 => new Color(0.30f, 0.82f, 0.88f),      // coast
-			2 => new Color(0.88f, 0.28f, 0.24f),      // cliff brink
-			3 => new Color(0.88f, 0.35f, 0.85f),      // overhang / arch
-			4 => new Color(0.90f, 0.82f, 0.55f),      // beach
-			5 => new Color(0.55f, 0.92f, 0.45f),      // ford
-			6 => new Color(0.98f, 0.86f, 0.25f),      // gate landing
-			7 => new Color(0.35f, 0.55f, 0.95f),      // ferry quay
-			8 => new Color(0.90f, 0.55f, 0.20f),      // cliff foot
-			9 => new Color(0.30f, 0.75f, 0.55f),      // bank
-			10 => new Color(1f, 1f, 1f),              // summit
-			_ => new Color(0.26f, 0.26f, 0.27f),      // unremarkable ground
-		};
+		if (d.WaterLevel[x, z] != IslandData.NoLand)
+			return d.Fluid[x, z] == (byte)FluidKind.Goo ? DevPalette.AnchorGoo : DevPalette.AnchorWater;
+		return DevPalette.Anchor(grid[x, z]);
 	}
 
 	/// <summary>A habitat axis as a two-colour ramp.</summary>
 	private static Color FieldColor(byte v, Color lo, Color hi) => lo.Lerp(hi, v / 255f);
 
-	private static Color MaterialColor(SurfaceMaterial m) => m switch
-	{
-		SurfaceMaterial.Stone => new Color(0.46f, 0.46f, 0.48f),
-		SurfaceMaterial.Scree => new Color(0.62f, 0.60f, 0.55f),
-		SurfaceMaterial.Snow => new Color(0.92f, 0.94f, 0.96f),
-		SurfaceMaterial.Sand => new Color(0.85f, 0.78f, 0.55f),
-		SurfaceMaterial.Silt => new Color(0.52f, 0.44f, 0.32f),
-		SurfaceMaterial.Grass => new Color(0.36f, 0.56f, 0.26f),
-		SurfaceMaterial.Meadow => new Color(0.50f, 0.64f, 0.30f),
-		SurfaceMaterial.Heath => new Color(0.52f, 0.52f, 0.32f),
-		_ => new Color(0.68f, 0.58f, 0.42f),          // Dust
-	};
+	private static Color MaterialColor(SurfaceMaterial m) => DevPalette.Material(m);
 
 	/// <summary>Walk areas: only districts get a hue; everything smaller is one grey, the broken mass it is.</summary>
 	private static Color WalkColor(IslandData d, int id)
@@ -207,13 +183,7 @@ public partial class IslandLab
 	}
 
 	/// <summary>Ford, navigable reach, stream and standing water are four colours.</summary>
-	private static Color WaterColor(IslandData d, int x, int z)
-	{
-		if (d.Ford[x, z]) return new Color(0.55f, 0.80f, 0.72f, 0.55f);      // pale, shallow
-		if (d.Navigable[x, z]) return new Color(0.10f, 0.45f, 0.60f, 0.85f); // deep, workable
-		if (d.River[x, z]) return new Color(0.35f, 0.66f, 0.80f, 0.70f);     // a stream
-		return new Color(0.13f, 0.30f, 0.55f, 0.80f);                        // standing water
-	}
+	private static Color WaterColor(IslandData d, int x, int z) => DevPalette.Water(d, x, z);
 
 	private static bool OnRegionBorder(IslandData d, int x, int z)
 	{
