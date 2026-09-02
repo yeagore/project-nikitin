@@ -147,7 +147,9 @@ are occasional; at 5 the island is a flight of terraces.
 **The Domain has a wind:** one grain for the whole island, snapped to one of
 the eight compass points, so every dune field lies the same way and the
 direction can be named. `IslandData.DuneGrain` carries it, `WindFrom` and
-`DuneRun` say it in letters, and `Habitat` reads it for exposure.
+`DuneRun` say it in letters (north is −Z, as the lab's compass has it), and
+`Habitat` reads it for exposure. It is rolled for every Domain, whether or not
+any dunes come out to show it.
 
 **The four sculpted landforms carry cliffs *inside* a patch**, which relief
 under a slope limit cannot express. They are cut into a surface the limiter has
@@ -439,8 +441,8 @@ them instead of unpicking one score.
 |---|---|---|
 | `Moisture` | parched … waterside | breadth-first distance from fresh water (goo waters nothing), wobbled by noise so the bands are not contour lines of the water network, decayed to 1/e at ~6.5 cells |
 | `Warmth` | frozen … warm lowland | a **fixed lapse per slab** above the island's lowest ground, anchored to the tallest a mountain can stand at this footprint (`Size × 40/128` — the `BoundAltitude` cap). Absolute on purpose: the top of what a mountain *can be* is always frozen, and a flat island is warm to its highest hill |
-| `Ruggedness` | flat … broken | local relief of the effective surface within two cells |
-| `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter |
+| `Ruggedness` | flat … broken | local relief within two cells, 32 per slab, with **water read as its bank** (a slab over its surface): a stream through a plain is flat country and a gorge is still its walls. Measured against the water surface instead, every shore read a slab rougher than the country round it |
+| `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter. The wind is rolled for every Domain, dunes or not |
 | `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |
 
 **Every geometric question is asked of the effective surface**
@@ -452,10 +454,15 @@ like* — measured against the bare ground, the bank of a navigable river is a
 `CliffCells` (**brinks**: dry cells three or more slabs over a neighbour's
 effective surface — a gorge rim qualifies, a bank does not); `CliffFootCells`
 (the ground under those faces); `BankCells` (the walkable wet margin, at most
-one slab over the water); `Summits` (the highest dry cells of genuinely high
+one slab over the water); `RiverBedCells` and `LakeBedCells` (the flooded
+columns, split by whether a watercourse runs over them; a goo puddle is neither,
+`Fluid` says where it is); `Summits` (the highest dry cells of genuinely high
 country — at least half the mountain cap above the lowest ground, so a flat
 island honestly has none — spaced apart); and `Overhangs`; alongside `Beach`,
-`Ford`, `Landings` and `Ferry`. A forest goes "on flat well-watered ground away
+`Ford`, `Landings` and `Ferry`. The lists overlap freely — a bench on a
+mountainside is a brink over one neighbour and a foot under another, and a
+brink can be a bank or a summit — and only the lab's flattened view has to pick
+one. A forest goes "on flat well-watered ground away
 from the coast", not at a coordinate, so generation answers the geometric
 questions once and content reads the lists.
 

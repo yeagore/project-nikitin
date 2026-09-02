@@ -12,8 +12,10 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 [sub_resource type="Environment" id="Environment_lab"]
 background_mode = 2
 sky = SubResource("Sky_lab")
-ambient_light_source = 3
-tonemap_mode = 2
+ambient_light_source = 1
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.3
+tonemap_mode = 0
 
 [node name="IslandLab" type="Node3D"]
 script = ExtResource("1_lab")
@@ -26,7 +28,7 @@ Params = ExtResource("2_params")
 environment = SubResource("Environment_lab")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.8192, 0, 0.5736, 0.4056, 0.7071, -0.5792, -0.4056, 0.7071, 0.5792, 0, 0, 0)
+light_energy = 0.75
 shadow_enabled = true
 
 [node name="CameraRig" type="Node3D" parent="."]

@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
 
 namespace ProjectNikitin.Dev;
 
-/// <summary>The views and their colours.</summary>
+/// <summary>The views, their colours, and the legend that shows those colours.</summary>
 public partial class IslandLab
 {
 	private enum View
@@ -26,39 +27,105 @@ public partial class IslandLab
 
 	private static readonly int ViewCount = Enum.GetValues<View>().Length;
 
-	/// <summary>What each view is answering, in one line, next to the picture.</summary>
-	private static string ViewLegend(View view) => view switch
+	/// <summary>A colour swatch marker, laid out by <see cref="ShowLegend"/>: the legend shows the colour, not a word for it.</summary>
+	private static string Swatch(Color c) => $"{{#{c.ToHtml(false)}}}";
+
+	/// <summary>A swatch followed by what it means.</summary>
+	private static string Keyed(Color c, string meaning) => $"{Swatch(c)} {meaning}";
+
+	/// <summary>Five swatches from one end of a ramp to the other.</summary>
+	private static string Ramp(Color lo, Color hi)
 	{
-		View.Height => "height    low ground dark, high ground pale",
-		View.Landform => "landform  green plain / dark hills / grey mountain / "
-					   + "brown mesa / blue basin / tan badlands / pale karst / "
-					   + "mauve massif / sand dunes / olive sinkholes; yellow = pass",
-		View.Region => "region    one hue per patch, borders darkened",
-		View.Walk => "walk      what you can cross on foot: green mainland, "
-				   + "a hue per other district, grey = broken ground",
-		View.Reach => "reach     what you can cross once built: green heartland, "
-					+ "red = out of reach whatever you build",
-		View.Shelves => "shelves   ground you could settle on; dim brown = level but "
-					  + "too small or too narrow",
-		View.Surface => "surface   what the ground is made of: grey stone / pale scree / "
-					  + "white snow / sand / brown silt / dark green grass (by water) / "
-					  + "light green meadow / olive heath / tan dust",
-		View.Anchors => "anchors   what the content layer attaches to: cyan coast / "
-		   + "red cliff brink / orange cliff foot / teal bank / magenta overhang / "
-		   + "sand beach / green ford / yellow gate landing / blue ferry quay / "
-		   + "white summit. Unmarked ground is dimmed",
-		View.Moisture => "moisture  nearness to fresh water (goo waters nothing): "
-		   + "blue waterside, tan parched. What the biome layer will grow things by",
-		View.Warmth => "warmth    the altitude lapse, absolute: orange warm lowland, "
-		   + "pale frozen. Anchored to the tallest a mountain can be at this size — "
-		   + "a flat island is warm all over",
-		View.Rugged => "rugged    local relief within two cells: dark flat, pale broken. "
-		   + "Measured on the visible surface, so a river is its water, not its bed",
-		View.Exposure => "exposure  openness to the wind (from "
-		   + "the dune-field direction): pale windswept, dark green lee",
-		_ => "rim       cells of land between here and the aether: violet rim, "
-		   + "dark interior. Essencecoral country is the violet end",
-	};
+		var bits = new List<string>();
+		for (int i = 0; i <= 4; i++) bits.Add(Swatch(lo.Lerp(hi, i / 4f)));
+		return string.Join("", bits);
+	}
+
+	private static string Ramp((Color Lo, Color Hi) ramp) => Ramp(ramp.Lo, ramp.Hi);
+
+	/// <summary>What each view is answering, with its actual colours, next to the picture.</summary>
+	private static string ViewLegend(View view)
+	{
+		switch (view)
+		{
+			case View.Height:
+				return $"[b]height[/b]   {Ramp(HeightLow, HeightMid)}{Ramp(HeightMid, HeightHigh)}"
+					+ "  low ground dark, high ground pale";
+
+			case View.Landform:
+			{
+				var bits = new List<string>();
+				foreach (LandformType t in Enum.GetValues<LandformType>())
+					bits.Add(Keyed(LandformColor(t), t.ToString().ToLowerInvariant()));
+				bits.Add(Keyed(LandformColor(LandformType.Plain).Lerp(PassTint, 0.55f), "pass (tinted)"));
+				return "[b]landform[/b]   " + string.Join("   ", bits);
+			}
+
+			case View.Region:
+				return "[b]region[/b]   one hue per patch, borders darkened   "
+					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
+
+			case View.Walk:
+				return "[b]walk[/b]   what you can cross on foot   "
+					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
+					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
+
+			case View.Reach:
+				return "[b]reach[/b]   what you can cross once built   "
+					+ Keyed(MainlandTint, "heartland") + "   "
+					+ Ramp(ReachColor(0f), ReachColor(1f)) + " out of reach whatever you build, "
+					+ "warmer the smaller   " + Keyed(WaterTint, "water");
+
+			case View.Shelves:
+				return "[b]shelves[/b]   ground you could settle on: a hue per buildable shelf   "
+					+ Keyed(ShelfTooSmall, "level but too small or too narrow") + "   "
+					+ Keyed(Unremarkable, "not level") + "   " + Keyed(WaterTint, "water");
+
+			case View.Surface:
+			{
+				var bits = new List<string>();
+				foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
+					bits.Add(Keyed(MaterialColor(m), m.ToString().ToLowerInvariant()));
+				return "[b]surface[/b]   what the ground is made of   " + string.Join("   ", bits)
+					+ "   (an overhang's lip is drawn as stone)";
+			}
+
+			case View.Anchors:
+			{
+				var bits = new List<string>();
+				foreach (int kind in DevPalette.LegendOrder)
+					bits.Add(Keyed(DevPalette.Anchor(kind), DevPalette.AnchorName(kind)));
+				bits.Add(Keyed(DevPalette.Anchor(0), "unremarkable ground"));
+				return "[b]anchors[/b]   what the content layer attaches to. The lists overlap; "
+					+ "here the built and rarer kinds win, and a cell that is both brink and foot "
+					+ "is a ledge   " + string.Join("   ", bits)
+					+ "   Only the lip of an overhang is magenta: the ground under it is its own kind. "
+					+ "Beds show with liquid off (I).";
+			}
+
+			case View.Moisture:
+				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: "
+					+ "nearness to fresh water (goo waters nothing). What the biome layer will grow things by";
+
+			case View.Warmth:
+				return $"[b]warmth[/b]   {Ramp(DevPalette.WarmthRamp)}  frozen … warm lowland: the altitude "
+					+ "lapse, absolute. Anchored to the tallest a mountain can be at this size — "
+					+ "a flat island is warm all over";
+
+			case View.Rugged:
+				return $"[b]rugged[/b]   {Ramp(DevPalette.RuggedRamp)}  flat … broken: local relief within "
+					+ "two cells. Water is read as its bank, a slab over its surface, so a stream through "
+					+ "a plain is flat country and a gorge is still its walls";
+
+			case View.Exposure:
+				return $"[b]exposure[/b]   {Ramp(DevPalette.ExposureRamp)}  lee … windswept: openness to "
+					+ "the Domain's one wind (compass overlay, X, shows it), dunes or not";
+
+			default:
+				return $"[b]rim[/b]   {Ramp(DevPalette.RimRamp)}  rim … interior: cells of land between "
+					+ "here and the aether. Essencecoral country is the violet end";
+		}
+	}
 
 	private static Color LandformColor(LandformType type) => type switch
 	{
@@ -88,6 +155,13 @@ public partial class IslandLab
 	private static readonly Color Unremarkable = new(0.34f, 0.34f, 0.36f);
 	private static readonly Color WaterTint = new(0.16f, 0.34f, 0.52f);
 	private static readonly Color PassTint = new(0.92f, 0.85f, 0.42f);
+	private static readonly Color MainlandTint = new(0.42f, 0.62f, 0.28f);
+	private static readonly Color ShelfTooSmall = new(0.40f, 0.36f, 0.30f);
+
+	/// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
+	private static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
+	private static readonly Color HeightMid = new(0.30f, 0.42f, 0.18f);
+	private static readonly Color HeightHigh = new(0.66f, 0.72f, 0.52f);
 
 	private static readonly Color DeckTint = new(0.95f, 0.72f, 0.30f);
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);
@@ -102,45 +176,53 @@ public partial class IslandLab
 	private static readonly Color CrossingTint = new(0.30f, 0.95f, 0.85f);
 
 	private static readonly Color FordTint = new(0.85f, 0.95f, 0.60f);
+	private static readonly Color WindTint = new(0.98f, 0.62f, 0.30f);
 
 	/// <summary>
-	/// The feature anchors flattened onto the footprint. Later kinds win where a cell
-	/// is several things at once, so a landing on a beach reads as a landing.
+	/// The feature anchors flattened onto the footprint, ground span only. Later
+	/// kinds win where a cell is several things at once, so a landing on a beach
+	/// reads as a landing and a ford reads over the bed it crosses. Overhangs are
+	/// not here: a lip is coloured per span in <see cref="AnchorColor"/>.
 	/// </summary>
 	private static byte[,] AnchorGrid(IslandData d)
 	{
 		int n = d.Size;
 		var grid = new byte[n, n];
 
-		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = 1;
-		foreach (Vector2I c in d.CliffFootCells) grid[c.X, c.Y] = 8;
-		foreach (Vector2I c in d.CliffCells) grid[c.X, c.Y] = 2;
-		foreach (Vector2I c in d.BankCells) grid[c.X, c.Y] = 9;
-		foreach (Vector2I c in d.Overhangs) grid[c.X, c.Y] = 3;
+		foreach (Vector2I c in d.RiverBedCells) grid[c.X, c.Y] = DevPalette.RiverBed;
+		foreach (Vector2I c in d.LakeBedCells) grid[c.X, c.Y] = DevPalette.LakeBed;
+		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = DevPalette.Coast;
+		foreach (Vector2I c in d.CliffFootCells) grid[c.X, c.Y] = DevPalette.CliffFoot;
+		// A bench on a mountainside is a brink over one neighbour and a foot under another.
+		foreach (Vector2I c in d.CliffCells)
+			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.CliffFoot ? DevPalette.Ledge : DevPalette.Brink);
+		foreach (Vector2I c in d.BankCells) grid[c.X, c.Y] = DevPalette.Bank;
 
 		for (int x = 0; x < n; x++)
 		for (int z = 0; z < n; z++)
 		{
-			if (d.Beach[x, z]) grid[x, z] = 4;
-			if (d.Ford[x, z]) grid[x, z] = 5;
-			if (d.Landings[x, z]) grid[x, z] = 6;
-			if (d.Ferry[x, z]) grid[x, z] = 7;
+			if (d.WaterLevel[x, z] != IslandData.NoLand && d.Fluid[x, z] == (byte)FluidKind.Goo)
+				grid[x, z] = DevPalette.GooBed;
+			if (d.Beach[x, z]) grid[x, z] = DevPalette.Beach;
+			if (d.Ford[x, z]) grid[x, z] = DevPalette.Ford;
+			if (d.Landings[x, z]) grid[x, z] = DevPalette.Landing;
+			if (d.Ferry[x, z]) grid[x, z] = DevPalette.Quay;
 		}
 
-		foreach (Vector2I c in d.Summits) grid[c.X, c.Y] = 10;
+		foreach (Vector2I c in d.Summits) grid[c.X, c.Y] = DevPalette.Summit;
 		return grid;
 	}
 
-	private static Color AnchorColor(IslandData d, int x, int z, byte[,]? grid)
+	/// <summary>The ground span by its anchor kind; any span above it is a lip, whatever lies under it.</summary>
+	private static Color AnchorColor(int x, int z, int span, byte[,]? grid)
 	{
 		if (grid == null) return Unremarkable;
-		if (d.WaterLevel[x, z] != IslandData.NoLand)
-			return d.Fluid[x, z] == (byte)FluidKind.Goo ? DevPalette.AnchorGoo : DevPalette.AnchorWater;
+		if (span > 0) return DevPalette.Anchor(DevPalette.Overhang);
 		return DevPalette.Anchor(grid[x, z]);
 	}
 
 	/// <summary>A habitat axis as a two-colour ramp.</summary>
-	private static Color FieldColor(byte v, Color lo, Color hi) => lo.Lerp(hi, v / 255f);
+	private static Color FieldColor(byte v, (Color Lo, Color Hi) ramp) => ramp.Lo.Lerp(ramp.Hi, v / 255f);
 
 	private static Color MaterialColor(SurfaceMaterial m) => DevPalette.Material(m);
 
@@ -150,7 +232,7 @@ public partial class IslandLab
 		if (id == Traversal.Water) return WaterTint;
 		if (id < 0 || id >= d.Areas.Count) return Unremarkable;
 		if (!d.Areas[id].IsDistrict) return Unremarkable;
-		if (id == d.Mainland) return new Color(0.42f, 0.62f, 0.28f);
+		if (id == d.Mainland) return MainlandTint;
 
 		float hue = (0.08f + id * 0.61803399f) % 1f;
 		return Color.FromHsv(hue, 0.62f, 0.88f);
@@ -161,22 +243,23 @@ public partial class IslandLab
 	{
 		if (id == Traversal.Water) return WaterTint;
 		if (id < 0 || id >= d.Reaches.Count) return Unremarkable;
-		if (id == d.Heartland) return new Color(0.42f, 0.62f, 0.28f);
-
-		float t = Mathf.Clamp(d.Reaches[id].Area / 120f, 0f, 1f);
-		return new Color(0.86f, 0.22f + 0.26f * t, 0.18f);
+		if (id == d.Heartland) return MainlandTint;
+		return ReachColor(Mathf.Clamp(d.Reaches[id].Area / 120f, 0f, 1f));
 	}
+
+	/// <summary>The out-of-reach red at a size, 0 the smallest and warmest.</summary>
+	private static Color ReachColor(float t) => new(0.86f, 0.22f + 0.26f * t, 0.18f);
 
 	/// <summary>Shelves: a buildable one gets a hue; level-but-too-small ground is dimmed.</summary>
 	private static Color ShelfColor(IslandData d, int x, int z)
 	{
-		if (d.WaterLevel[x, z] != IslandData.NoLand) return new Color(0.16f, 0.34f, 0.52f);
+		if (d.WaterLevel[x, z] != IslandData.NoLand) return WaterTint;
 
 		int id = d.ShelfId[x, z];
 		if (id < 0 || id >= d.Shelves.Count) return Unremarkable;
 
 		Shelf shelf = d.Shelves[id];
-		if (!shelf.Buildable) return new Color(0.40f, 0.36f, 0.30f);
+		if (!shelf.Buildable) return ShelfTooSmall;
 
 		float hue = (0.30f + id * 0.61803399f) % 1f;
 		return Color.FromHsv(hue, 0.55f, 0.95f);

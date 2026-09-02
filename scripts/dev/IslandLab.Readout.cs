@@ -75,7 +75,7 @@ public partial class IslandLab
 			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");
 	}
 
-	/// <summary>Material shares and anchor counts; the wind only where dunes exist to show it.</summary>
+	/// <summary>Material shares and anchor counts; the wind always, since exposure reads it whether or not there are dunes.</summary>
 	private static string GroundSummary(IslandData d)
 	{
 		int n = d.Size;
@@ -100,10 +100,11 @@ public partial class IslandLab
 		var parts = new List<string>();
 		foreach (var (name, cells) in bits) parts.Add($"{name} {100 * cells / land}%");
 
-		string wind = dunes > 0 ? $"   wind from {d.WindFrom}, dunes run {d.DuneRun}" : "";
+		string wind = $"   wind from {d.WindFrom}" + (dunes > 0 ? $", dunes run {d.DuneRun}" : "");
 		return $"ground: {string.Join(", ", parts)}{wind}"
 			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} brink, "
 			+ $"{d.CliffFootCells.Count} foot, {d.BankCells.Count} bank, "
+			+ $"{d.RiverBedCells.Count} river bed, {d.LakeBedCells.Count} lake bed, "
 			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "
 			+ $"{CellCount(d.Beach)} beach, {CellCount(d.Ford)} ford, "
 			+ $"{CellCount(d.Landings)} gate landing, {d.Berths.Count} quay";

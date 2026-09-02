@@ -32,6 +32,7 @@ public partial class IslandLab : Node3D
 	private PlaneMesh _gooQuad = null!;
 	private PlaneMesh _fallQuad = null!;
 	private readonly List<Label3D> _compass = new();
+	private Label3D _windLabel = null!;
 	private int _lastSignature;
 	private IslandData? _data;
 
@@ -47,6 +48,7 @@ public partial class IslandLab : Node3D
 	private bool _showRoutes;
 	private bool _showFords;
 	private bool _showCompass = true;
+	private bool _showLiquid = true;
 	private bool _showPanel = true;
 
 	public override void _Ready()
@@ -54,11 +56,21 @@ public partial class IslandLab : Node3D
 		_terrain = GetNode<MultiMeshInstance3D>("Terrain");
 		_rig = GetNode<CameraRig>("CameraRig");
 		_unitBox = new BoxMesh { Size = Vector3.One };
+		// Matte and unspecular, so a face's colour is its vertex colour times the light.
 		_unitBox.Material = new StandardMaterial3D
 		{
 			VertexColorUseAsAlbedo = true,
 			Roughness = 1f,
+			Metallic = 0f,
+			SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
 		};
+
+		// A steep white sun over a neutral 0.3 ambient (set on the scene's Environment,
+		// with linear tonemapping): a top face reads at about the legend's colour and
+		// the shaded sides still separate. Oriented here: a rotated basis in the .tscn
+		// is the transpose gotcha.
+		var sun = GetNode<DirectionalLight3D>("Sun");
+		sun.LookAt(sun.GlobalPosition + new Vector3(0.35f, -0.85f, 0.45f), Vector3.Up);
 
 		// Water is one flat quad per cell, not a box: alpha-blended boxes draw their
 		// shared faces twice and that doubled alpha is a dark grid line on every edge.
@@ -155,6 +167,8 @@ public partial class IslandLab : Node3D
 			// O, not D: the rig polls D every frame for strafe.
 			case Key.O: _showFords = !_showFords; Redraw(); break;
 			case Key.X: _showCompass = !_showCompass; Redraw(); break;
+			// I, not W: the rig polls W every frame for forward.
+			case Key.I: _showLiquid = !_showLiquid; Redraw(); break;
 			case Key.F2: Capture(); break;
 		}
 		Sync();
@@ -313,6 +327,8 @@ public partial class IslandLab : Node3D
 		RenderFalls(_data);
 		RenderGates(_data);
 		RenderOverlays(_data);
+		// Liquid off shows the beds; the columns are drawn already.
+		_water.Visible = _goo.Visible = _falls.Visible = _showLiquid;
 		UpdateText(_data, lakes);
 		return lakes;
 	}
@@ -337,7 +353,7 @@ public partial class IslandLab : Node3D
 			+ GateSummary(d) + "\n"
 			+ RoadSummary(d);
 
-		_legend.Text = ViewLegend(_view);
+		ShowLegend(ViewLegend(_view));
 		Sync();
 	}
 }

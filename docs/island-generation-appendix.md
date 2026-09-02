@@ -297,14 +297,15 @@ commit. `docs/dev-scenes.md` has both scenes in detail.
 
 ### What the baseline does not carry
 
-Measured on the accepted run of 2026-09-01 (60 seeds, 128²); nothing here is
+Measured on the accepted run of 2026-09-02 (60 seeds, 128²); nothing here is
 diffed automatically.
 
 | | |
 |---|---|
-| surface | stone 10.5%, scree 8.0%, snow 1.0%, sand 21.3%, silt 7.4%, grass 5.1%, heath 16.8%, dust 18.3%, meadow 11.7%; nothing `NEVER` |
-| habitat, per-island means | moisture 19–125, warmth 177–241, rugged 42–161, exposure 170–243, rim distance 1–13 cells |
-| anchors | 34.5k coast (84% beached), 20.6k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 8.6k bank, 127 summits, 351 overhang, 363 ford, 546 Gate landing, 0 quay |
+| surface | stone 10.5%, scree 7.8%, snow 1.0%, sand 21.3%, silt 7.4%, grass 5.3%, heath 16.8%, dust 18.3%, meadow 11.7%; nothing `NEVER` |
+| habitat, per-island means | moisture 19–125, warmth 174–241, rugged 32–160, exposure 170–243, rim distance 1–13 cells |
+| rugged by cells from fresh water | bank 93, then 101 · 104 · 104 · 103 · 100, seven cells and further 87. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
+| anchors | 34.5k coast (84% beached), 20.6k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 8.5k bank, 6.2k river bed, 6.6k lake bed, 125 summits, 396 overhang, 363 ford, 543 Gate landing, 7 quay |
 | Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |
 | roads | one per Exit; median one work; roughly a third can simply be walked |
 | requests | `GateRequests` and `GateMatrix` report every edge, kind and count delivered on every seed, and four hanging Gates on every arrangement × character |

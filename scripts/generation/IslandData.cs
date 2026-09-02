@@ -183,6 +183,12 @@ public sealed class IslandData
     /// <summary>Columns with more than one span: an undercut cliff or a cell of an arch.</summary>
     public List<Vector2I> Overhangs { get; } = new();
 
+    /// <summary>River beds: the flooded columns carrying a watercourse, stream or navigable reach.</summary>
+    public List<Vector2I> RiverBedCells { get; } = new();
+
+    /// <summary>Lake beds: the flooded columns under standing water. Goo puddles are neither; <see cref="Fluid"/> says where they are.</summary>
+    public List<Vector2I> LakeBedCells { get; } = new();
+
     // ---- naming ----
 
     /// <summary>What this Domain is called.</summary>
@@ -195,13 +201,15 @@ public sealed class IslandData
     public List<string> WaterNames { get; } = new();
 
     /// <summary>
-    /// The one wind direction of the Domain, as a compass index: 0 = east, counting
-    /// anticlockwise in eighths of a turn. Dune ridges run across it.
+    /// The one wind direction of the Domain, as a compass index in <see cref="Grid.Dx8"/>
+    /// order: 0 = east (+X), 2 = south (+Z), 4 = west, 6 = north (−Z). The wind blows
+    /// along it; dune ridges run across it. Rolled for every Domain, dunes or not.
     /// </summary>
     public int DuneGrain { get; internal set; }
 
+    /// <summary>Compass letters in <see cref="DuneGrain"/> order. North is −Z, as the lab's compass has it.</summary>
     private static readonly string[] Compass =
-        { "E", "NE", "N", "NW", "W", "SW", "S", "SE" };
+        { "E", "SE", "S", "SW", "W", "NW", "N", "NE" };
 
     /// <summary>Where the wind blows from, in compass letters — opposite the grain.</summary>
     public string WindFrom => Compass[(DuneGrain + 4) & 7];

@@ -172,7 +172,7 @@ public partial class GenerationChecksum : Node
             if (spans != null) foreach (Span s in spans) { h.Add(s.Bottom); h.Add(s.Top); }
         }
         foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells, d.BankCells,
-                                     d.Summits, d.Passes, d.Overhangs })
+                                     d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells })
         {
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);

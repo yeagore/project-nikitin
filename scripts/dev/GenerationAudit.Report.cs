@@ -124,7 +124,8 @@ public partial class GenerationAudit
         GD.Print($"anchors: {t.CoastAnchors} coast, {t.CliffAnchors} cliff brink, "
             + $"{t.CliffFootAnchors} cliff foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
             + $"{t.OverhangCells} overhang, {t.BeachCells} beach, {t.FordCells} ford, "
-            + $"{t.LandingCells} gate landing, {t.Berths} quay");
+            + $"{t.LandingCells} gate landing, {t.Berths} quay, "
+            + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed");
         GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {t.BrinksBesideWater}");
         GD.Print($"  islands with no beach at all: {t.IslandsWithoutBeach} of {Seeds}");
         // Against the coast ring, not the beach's own cells: a beach is two deep, so that ratio reads 151%.
@@ -142,6 +143,17 @@ public partial class GenerationAudit
         Report("  rugged   (0 flat - 255 broken)", t.RuggedMeans, "");
         Report("  exposure (0 lee - 255 windswept)", t.ExposureMeans, "");
         Report("  rim distance", t.RimMeans, "cells");
+        {
+            var bins = new List<string>();
+            for (int i = 0; i < Tally.RuggedBins; i++)
+            {
+                string label = i == Tally.RuggedBins - 1 ? $"{i + 1}+" : $"{i + 1}";
+                bins.Add($"{label}: " + (t.LandByWater[i] > 0
+                    ? $"{t.RuggedByWater[i] / (double)t.LandByWater[i]:0}" : "-"));
+            }
+            GD.Print("  rugged by cells from fresh water (dry land; 1 is the bank)   "
+                + string.Join("   ", bins));
+        }
         GD.Print("");
     }
 

@@ -77,10 +77,11 @@ public partial class GenerationAudit
         public int ReachCells => RiverStraight + RiverBends;
 
         // ---- ferries, surfaces, anchors, habitat
+        public const int RuggedBins = 7;
         public int Berths, WaterBodies, IslandsWithBerth, BadQuay, BerthSites;
         public readonly long[] MaterialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
         public long CoastAnchors, CliffAnchors, BeachCells, FordCells, LandingCells;
-        public long CliffFootAnchors, BankAnchors, SummitAnchors;
+        public long CliffFootAnchors, BankAnchors, SummitAnchors, RiverBedAnchors, LakeBedAnchors;
         public long BrinksBesideWater, BeachedCoast;
         public int IslandsWithoutBeach;
         public readonly List<int> MoistureMeans = new();
@@ -89,6 +90,10 @@ public partial class GenerationAudit
         public readonly List<int> ExposureMeans = new();
         public readonly List<int> RimMeans = new();
         public readonly List<int> QuayRise = new();
+
+        /// <summary>Ruggedness summed over dry land by cells from fresh water: 0 is the bank, the last bin is everything further.</summary>
+        public readonly long[] RuggedByWater = new long[RuggedBins];
+        public readonly long[] LandByWater = new long[RuggedBins];
 
         // ---- roads
         public int ExitsWithoutRoad, RoadsFree, RoadJumps, RoughIslands, Flights;
@@ -655,6 +660,8 @@ public partial class GenerationAudit
             CliffFootAnchors += d.CliffFootCells.Count;
             BankAnchors += d.BankCells.Count;
             SummitAnchors += d.Summits.Count;
+            RiverBedAnchors += d.RiverBedCells.Count;
+            LakeBedAnchors += d.LakeBedCells.Count;
             foreach (Vector2I c in d.CoastCells) if (d.Beach[c.X, c.Y]) BeachedCoast++;
 
             // Brinks that are gorge rims: dry ground three slabs over the water itself.
@@ -690,6 +697,21 @@ public partial class GenerationAudit
             }
             BeachCells += beachHere;
             if (beachHere == 0) IslandsWithoutBeach++;
+
+            // Ruggedness against distance from fresh water: a bank that reads broken is the water, not the country.
+            int[,] toWater = Flood.Distance(n,
+                (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                          && d.Fluid[x, z] != (byte)FluidKind.Goo,
+                (_, _, nx, nz) => d.HasLand(nx, nz),
+                cap: RuggedBins);
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
+                int bin = toWater[x, z] < 0 ? RuggedBins - 1 : Math.Min(RuggedBins - 1, toWater[x, z] - 1);
+                RuggedByWater[bin] += d.Ruggedness[x, z];
+                LandByWater[bin]++;
+            }
             if (landHere > 0)
             {
                 MoistureMeans.Add((int)(moistSum / landHere));

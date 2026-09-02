@@ -14,7 +14,7 @@ public partial class IslandLab
 	private const int PanelWidth = 330;
 
 	private Label _status = null!;
-	private Label _legend = null!;
+	private RichTextLabel _legend = null!;
 	private PanelContainer _panel = null!;
 	private OptionButton _viewPick = null!, _arrangePick = null!, _characterPick = null!;
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
@@ -26,6 +26,7 @@ public partial class IslandLab
 	private Label _poolNote = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
 	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
+	private CheckBox _liquidBox = null!;
 	private bool _syncing;
 
 	private void BuildOverlayUi()
@@ -146,8 +147,11 @@ public partial class IslandLab
 			() => _showRoutes, on => { _showRoutes = on; Redraw(); });
 		_fordBox = Check(rows, "Fords  (O)",
 			() => _showFords, on => { _showFords = on; Redraw(); });
-		_compassBox = Check(rows, "Compass and gate vectors  (X)",
+		_compassBox = Check(rows, "Compass, wind and gate vectors  (X)",
 			() => _showCompass, on => { _showCompass = on; Redraw(); });
+		_liquidBox = Check(rows, "Liquid: water, goo, falls  (I)",
+			() => _showLiquid, on => { _showLiquid = on; Redraw(); });
+		_liquidBox.TooltipText = "Off shows the beds under the water: the columns are always drawn.";
 
 		Heading(rows, "camera");
 		var keys = new Label
@@ -170,7 +174,7 @@ public partial class IslandLab
 		columns.AddChild(right);
 
 		// Both plates at the top: the editor's chrome hides the bottom of the embedded game.
-		_legend = Panelled(right, Control.SizeFlags.ShrinkEnd, new Color(0.82f, 0.92f, 1f));
+		_legend = PanelledRich(right, new Color(0.82f, 0.92f, 1f));
 		_status = Panelled(right, Control.SizeFlags.ExpandFill, new Color(1f, 0.93f, 0.72f));
 		right.AddChild(new Control
 		{
@@ -178,14 +182,44 @@ public partial class IslandLab
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		});
 
-		_legend.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		_legend.CustomMinimumSize = new Vector2(420, 0);
-		_legend.HorizontalAlignment = HorizontalAlignment.Right;
 		_status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		_legend.Text = ViewLegend(_view);
+		ShowLegend(ViewLegend(_view));
 		_status.Text = "";
 		Sync();
 	}
+
+	/// <summary>
+	/// Lays the legend out: BBCode text, and an inline image tinted to the colour
+	/// wherever the markup says <c>{#rrggbb}</c>. An image, unlike a run of
+	/// background-coloured spaces, survives being at a line wrap.
+	/// </summary>
+	private void ShowLegend(string markup)
+	{
+		if (_swatch == null)
+		{
+			var white = Image.CreateEmpty(4, 4, false, Image.Format.Rgba8);
+			white.Fill(Colors.White);
+			_swatch = ImageTexture.CreateFromImage(white);
+		}
+
+		_legend.Clear();
+		int at = 0;
+		while (at < markup.Length)
+		{
+			int open = markup.IndexOf("{#", at, StringComparison.Ordinal);
+			int close = open < 0 ? -1 : markup.IndexOf('}', open);
+			if (open < 0 || close < 0)
+			{
+				_legend.AppendText(markup[at..]);
+				break;
+			}
+			if (open > at) _legend.AppendText(markup[at..open]);
+			_legend.AddImage(_swatch, 14, 14, Color.FromHtml(markup[(open + 1)..close]));
+			at = close + 1;
+		}
+	}
+
+	private ImageTexture? _swatch;
 
 	/// <summary>
 	/// Pulls every widget back into line with what it displays. The <see cref="_syncing"/>
@@ -224,6 +258,7 @@ public partial class IslandLab
 		_roadBox.ButtonPressed = _showRoutes;
 		_compassBox.ButtonPressed = _showCompass;
 		_fordBox.ButtonPressed = _showFords;
+		_liquidBox.ButtonPressed = _showLiquid;
 
 		_syncing = false;
 	}
@@ -343,6 +378,33 @@ public partial class IslandLab
 		CornerRadiusBottomLeft = 5,
 		CornerRadiusBottomRight = 5,
 	};
+
+	/// <summary>The legend: BBCode on a dark plate, so its colour swatches are the view's own colours.</summary>
+	private static RichTextLabel PanelledRich(Container into, Color tint)
+	{
+		var panel = new PanelContainer
+		{
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			SizeFlagsVertical = Control.SizeFlags.ShrinkEnd,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		panel.AddThemeStyleboxOverride("panel", Plate());
+		into.AddChild(panel);
+
+		var label = new RichTextLabel
+		{
+			BbcodeEnabled = true,
+			FitContent = true,
+			ScrollActive = false,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(420, 0),
+		};
+		label.AddThemeColorOverride("default_color", tint);
+		panel.AddChild(label);
+		return label;
+	}
 
 	/// <summary>One label on a dark plate, so text stays readable over pale terrain.</summary>
 	private static Label Panelled(Container into, Control.SizeFlags flags, Color tint)

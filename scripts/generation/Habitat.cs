@@ -114,7 +114,11 @@ internal static class Habitat
         }
     }
 
-    /// <summary>Spread of the effective surface within two cells, saturating at eight slabs.</summary>
+    /// <summary>
+    /// Spread of the surface within two cells, saturating at eight slabs. Water is
+    /// read as its bank (<see cref="BankLevel"/>): a stream through a plain is flat
+    /// country, and a gorge is still its walls.
+    /// </summary>
     private static void MeasureRuggedness(IslandData d)
     {
         int n = d.Size;
@@ -128,7 +132,7 @@ internal static class Habitat
             {
                 int nx = x + ox, nz = z + oz;
                 if (!InBounds(n, nx, nz)) continue;
-                short eff = d.EffectiveLevel(nx, nz);
+                short eff = BankLevel(d, nx, nz);
                 if (eff == IslandData.NoLand) continue;
                 if (eff < lo) lo = eff;
                 if (eff > hi) hi = eff;
@@ -139,8 +143,21 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// Openness to the Domain's wind: the tallest rise found walking upwind is
-    /// cover; a walk that leaves the island gets the wind off the aether.
+    /// The level ruggedness sees: the ground, or a slab over standing fluid — the
+    /// bank a free step leads down from, since every lake sits a slab under its
+    /// shore and every stream a slab under its bank.
+    /// </summary>
+    private static short BankLevel(IslandData d, int x, int z)
+    {
+        if (!d.HasLand(x, z)) return IslandData.NoLand;
+        short water = d.WaterLevel[x, z];
+        return water != IslandData.NoLand ? (short)(water + 1) : d.SurfaceLevel(x, z);
+    }
+
+    /// <summary>
+    /// Openness to the Domain's wind — rolled for every Domain, dunes or not: the
+    /// tallest rise found walking upwind is cover; a walk that leaves the island
+    /// gets the wind off the aether.
     /// </summary>
     private static void MeasureExposure(IslandData d)
     {

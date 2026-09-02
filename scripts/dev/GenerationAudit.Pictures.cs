@@ -190,22 +190,17 @@ public partial class GenerationAudit
                     d.HasLand(x, z) ? lo.Lerp(hi, value(x, z)) : DevPalette.Aether);
         }
 
-        Panel(0, (x, z) => d.Moisture[x, z] / 255f,
-              new Color(0.55f, 0.45f, 0.30f), new Color(0.10f, 0.52f, 0.62f));
-        Panel(1, (x, z) => d.Warmth[x, z] / 255f,
-              new Color(0.88f, 0.92f, 1.00f), new Color(0.85f, 0.48f, 0.18f));
-        Panel(2, (x, z) => d.Ruggedness[x, z] / 255f,
-              new Color(0.10f, 0.11f, 0.13f), new Color(0.95f, 0.88f, 0.70f));
-        Panel(3, (x, z) => d.Exposure[x, z] / 255f,
-              new Color(0.14f, 0.30f, 0.20f), new Color(0.92f, 0.93f, 0.85f));
-        Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f),
-              new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f));
+        Panel(0, (x, z) => d.Moisture[x, z] / 255f, DevPalette.MoistureRamp.Lo, DevPalette.MoistureRamp.Hi);
+        Panel(1, (x, z) => d.Warmth[x, z] / 255f, DevPalette.WarmthRamp.Lo, DevPalette.WarmthRamp.Hi);
+        Panel(2, (x, z) => d.Ruggedness[x, z] / 255f, DevPalette.RuggedRamp.Lo, DevPalette.RuggedRamp.Hi);
+        Panel(3, (x, z) => d.Exposure[x, z] / 255f, DevPalette.ExposureRamp.Lo, DevPalette.ExposureRamp.Hi);
+        Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f), DevPalette.RimRamp.Lo, DevPalette.RimRamp.Hi);
 
         img.Resize((5 * n + 4 * gap) * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);
     }
 
-    /// <summary>The ten anchor kinds over a dimmed base, rarer and more built kinds painted last.</summary>
+    /// <summary>The anchor kinds over a dimmed base, rarer and more built kinds painted last; top-down, so an overhang is its lip.</summary>
     private static void SaveAnchors(IslandData d, string path)
     {
         int n = d.Size;
@@ -216,8 +211,8 @@ public partial class GenerationAudit
         {
             Color c;
             if (!d.HasLand(x, z)) c = DevPalette.Aether;
-            else if (d.WaterLevel[x, z] != IslandData.NoLand)
-                c = d.Fluid[x, z] == (byte)FluidKind.Goo ? DevPalette.AnchorGoo : DevPalette.AnchorWater;
+            else if (d.WaterLevel[x, z] != IslandData.NoLand && d.Fluid[x, z] == (byte)FluidKind.Goo)
+                c = DevPalette.Anchor(DevPalette.GooBed);
             else c = DevPalette.Anchor(0);
             img.SetPixel(x, z, c);
         }
@@ -233,9 +228,13 @@ public partial class GenerationAudit
                 if (mask[x, z]) img.SetPixel(x, z, c);
         }
 
+        Mark(d.RiverBedCells, DevPalette.Anchor(DevPalette.RiverBed));
+        Mark(d.LakeBedCells, DevPalette.Anchor(DevPalette.LakeBed));
         Mark(d.CoastCells, DevPalette.Anchor(DevPalette.Coast));
         Mark(d.CliffFootCells, DevPalette.Anchor(DevPalette.CliffFoot));
-        Mark(d.CliffCells, DevPalette.Anchor(DevPalette.Brink));
+        var feet = new HashSet<Vector2I>(d.CliffFootCells);
+        foreach (Vector2I p in d.CliffCells)
+            img.SetPixel(p.X, p.Y, DevPalette.Anchor(feet.Contains(p) ? DevPalette.Ledge : DevPalette.Brink));
         Mark(d.BankCells, DevPalette.Anchor(DevPalette.Bank));
         MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
         MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));

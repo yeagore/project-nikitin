@@ -7,8 +7,8 @@ using static ProjectNikitin.Generation.Grid;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Collects the feature anchors (coast, cliff brinks and feet, banks, summits) and
-/// the provisional <see cref="SurfaceMaterial"/>. Everything is measured against
+/// Collects the feature anchors (coast, cliff brinks and feet, banks, beds, summits)
+/// and the provisional <see cref="SurfaceMaterial"/>. Everything is measured against
 /// <see cref="IslandData.EffectiveLevel"/> — the water surface where a column is
 /// flooded — otherwise every river bank reads as a cliff over its own bed.
 /// </summary>
@@ -50,6 +50,8 @@ internal static class Surfaces
         d.CliffCells.Clear();
         d.CliffFootCells.Clear();
         d.BankCells.Clear();
+        d.RiverBedCells.Clear();
+        d.LakeBedCells.Clear();
         d.Summits.Clear();
 
         for (int x = 0; x < n; x++)
@@ -58,6 +60,12 @@ internal static class Surfaces
             if (!d.HasLand(x, z)) continue;
             short eff = d.EffectiveLevel(x, z);
             bool dry = d.WaterLevel[x, z] == IslandData.NoLand;
+
+            if (!dry)
+            {
+                if (d.River[x, z]) d.RiverBedCells.Add(new Vector2I(x, z));
+                else if (d.Fluid[x, z] == (byte)FluidKind.Water) d.LakeBedCells.Add(new Vector2I(x, z));
+            }
 
             bool coast = false, bank = false;
             int drop = 0, face = 0;

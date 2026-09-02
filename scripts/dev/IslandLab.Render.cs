@@ -107,10 +107,6 @@ public partial class IslandLab
 		// Built once, not searched per column.
 		byte[,]? anchor = _view == View.Anchors ? AnchorGrid(d) : null;
 
-		var low = new Color(0.24f, 0.20f, 0.13f);   // deep / dirt
-		var mid = new Color(0.30f, 0.42f, 0.18f);   // grass
-		var high = new Color(0.66f, 0.72f, 0.52f);  // highlands
-
 		var bbMin = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
 		var bbMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
@@ -120,8 +116,10 @@ public partial class IslandLab
 			Span[] spans = d.Spans[x, z];
 			if (spans == null) continue;
 
-			foreach (Span s in spans)
+			// Span 0 is the ground; anything above it is a lip, coloured as one where the view cares.
+			for (int i = 0; i < spans.Length; i++)
 			{
+				Span s = spans[i];
 				float hWorld = s.Height * sh;
 				float yCenter = (s.Bottom + s.Top + 1) * 0.5f * sh;
 				var origin = new Vector3((x - half) * cs, yCenter, (z - half) * cs);
@@ -151,34 +149,32 @@ public partial class IslandLab
 						col.Add(ShelfColor(d, x, z));
 						break;
 					case View.Surface:
-						col.Add(MaterialColor((SurfaceMaterial)d.Material[x, z]));
+						// Material is the ground's; a lip is a rock roof.
+						col.Add(MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]));
 						break;
 					case View.Anchors:
-						col.Add(AnchorColor(d, x, z, anchor));
+						col.Add(AnchorColor(x, z, i, anchor));
 						break;
 					case View.Moisture:
-						col.Add(FieldColor(d.Moisture[x, z],
-							new Color(0.55f, 0.45f, 0.30f), new Color(0.10f, 0.52f, 0.62f)));
+						col.Add(FieldColor(d.Moisture[x, z], DevPalette.MoistureRamp));
 						break;
 					case View.Warmth:
-						col.Add(FieldColor(d.Warmth[x, z],
-							new Color(0.88f, 0.92f, 1.00f), new Color(0.85f, 0.48f, 0.18f)));
+						col.Add(FieldColor(d.Warmth[x, z], DevPalette.WarmthRamp));
 						break;
 					case View.Rugged:
-						col.Add(FieldColor(d.Ruggedness[x, z],
-							new Color(0.10f, 0.11f, 0.13f), new Color(0.95f, 0.88f, 0.70f)));
+						col.Add(FieldColor(d.Ruggedness[x, z], DevPalette.RuggedRamp));
 						break;
 					case View.Exposure:
-						col.Add(FieldColor(d.Exposure[x, z],
-							new Color(0.14f, 0.30f, 0.20f), new Color(0.92f, 0.93f, 0.85f)));
+						col.Add(FieldColor(d.Exposure[x, z], DevPalette.ExposureRamp));
 						break;
 					case View.Rim:
-						col.Add(FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6),
-							new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f)));
+						col.Add(FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp));
 						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
-						col.Add(t < 0.5f ? low.Lerp(mid, t * 2f) : mid.Lerp(high, (t - 0.5f) * 2f));
+						col.Add(t < 0.5f
+							? HeightLow.Lerp(HeightMid, t * 2f)
+							: HeightMid.Lerp(HeightHigh, (t - 0.5f) * 2f));
 						break;
 				}
 
@@ -380,12 +376,43 @@ public partial class IslandLab
 		if (_showCompass)
 		{
 			DrawGateVectors(d, m);
+			DrawWind(d, m);
 			DrawDuneGrain(d, m.Add);
 			DrawBounds(d, m);
 		}
 
 		_marks.Multimesh = BuildMultiMesh(_markBox, m.Xf, m.Col);
 		PlaceCompass(d);
+	}
+
+	/// <summary>
+	/// The Domain's one wind, whether or not it has dunes to show it on: a tapering
+	/// run of arrows standing off the upwind edge, pointing the way it blows, above
+	/// the tallest ground so a mountain cannot hide it.
+	/// </summary>
+	private static void DrawWind(IslandData d, MarkList m)
+	{
+		const float sh = Terrain.SlabHeight;
+		const float cs = Terrain.CellSize;
+		int n = d.Size;
+
+		short top = 0;
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+			if (d.HasLand(x, z)) top = Math.Max(top, d.Spans[x, z][^1].Top);
+		float y = (top + 1) * sh + 2f * cs;
+
+		Vector2 dir = d.DuneVector;
+		float half = n * 0.5f;
+		const int run = 8;
+		for (int step = 0; step <= run; step++)
+		{
+			// From nine cells off the rim to one: widest upwind, a point downwind.
+			float off = half + 9f - step;
+			float px = half - dir.X * off, pz = half - dir.Y * off;
+			float w = Mathf.Lerp(0.9f, 0.2f, step / (float)run);
+			m.Add(px, y, pz, new Vector3(cs * w, sh * 0.8f, cs * w), WindTint);
+		}
 	}
 
 	/// <summary>Each bridge deck, bank to bank, and its two banks.</summary>
@@ -569,7 +596,7 @@ public partial class IslandLab
 		int n = d.Size;
 		const float sh = Terrain.SlabHeight;
 		const float cs = Terrain.CellSize;
-		var wind = new Color(0.98f, 0.62f, 0.30f);
+		Color wind = WindTint;
 
 		var sumX = new Dictionary<int, long>();
 		var sumZ = new Dictionary<int, long>();
@@ -612,24 +639,28 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>N / E / S / W billboards, standing off the four edges of the footprint.</summary>
+	/// <summary>N / E / S / W billboards, standing off the four edges of the footprint, and the wind's label.</summary>
 	private void BuildCompass()
 	{
 		var letters = new[] { "N", "E", "S", "W" };
 		foreach (string text in letters)
+			_compass.Add(Billboard(text, 128, new Color(1f, 0.95f, 0.8f, 0.85f)));
+		_windLabel = Billboard("", 72, new Color(WindTint, 0.95f));
+	}
+
+	private Label3D Billboard(string text, int fontSize, Color tint)
+	{
+		var label = new Label3D
 		{
-			var label = new Label3D
-			{
-				Text = text,
-				FontSize = 128,
-				Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-				NoDepthTest = true,
-				Modulate = new Color(1f, 0.95f, 0.8f, 0.85f),
-				PixelSize = 0.006f,
-			};
-			AddChild(label);
-			_compass.Add(label);
-		}
+			Text = text,
+			FontSize = fontSize,
+			Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+			NoDepthTest = true,
+			Modulate = tint,
+			PixelSize = 0.006f,
+		};
+		AddChild(label);
+		return label;
 	}
 
 	private void PlaceCompass(IslandData d)
@@ -649,5 +680,17 @@ public partial class IslandLab
 			_compass[i].Position = at[i] + Vector3.Up * 3f;
 			_compass[i].Visible = _showCompass;
 		}
+
+		// The wind's name at the upwind end of its arrows, over the arrows' own height.
+		short top = 0;
+		for (int x = 0; x < d.Size; x++)
+		for (int z = 0; z < d.Size; z++)
+			if (d.HasLand(x, z)) top = Math.Max(top, d.Spans[x, z][^1].Top);
+		Vector2 dir = d.DuneVector;
+		float off = half + 11f;
+		_windLabel.Text = $"wind from {d.WindFrom}";
+		_windLabel.Position = new Vector3(-dir.X * off,
+			(top + 1) * Terrain.SlabHeight + 2f * Terrain.CellSize + 1f, -dir.Y * off);
+		_windLabel.Visible = _showCompass;
 	}
 }
