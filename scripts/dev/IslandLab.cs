@@ -198,8 +198,10 @@ public partial class IslandLab : Node3D
 	private void CycleArrangement()
 	{
 		Params ??= new IslandParams();
-		int count = Enum.GetValues<IslandArrangement>().Length;
-		Params.Arrangement = (IslandArrangement)(((int)Params.Arrangement + 1) % count);
+		// By the values, not the ints: the enum has gaps where shapes were removed.
+		IslandArrangement[] all = Enum.GetValues<IslandArrangement>();
+		int at = Array.IndexOf(all, Params.Arrangement);
+		Params.Arrangement = all[(at + 1) % all.Length];
 		GD.Print($"[IslandLab] Arrangement = {Params.Arrangement}");
 	}
 

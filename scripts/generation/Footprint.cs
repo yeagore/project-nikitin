@@ -67,6 +67,10 @@ internal static class Footprint
             Group = from.Group;
         }
 
+        /// <summary>The same lobe as a member of <paramref name="group"/>.</summary>
+        public Lobe InGroup(int group)
+            => new(Cx, Cz, Radius, Aspect, MathF.Atan2(Sin, Cos), Rings, Wander, group);
+
         /// <summary>
         /// Normalised distance to the wandering edge; <paramref name="rEff"/> is the
         /// radius it was normalised by, in cells, which turns a seam back into a width.
@@ -96,8 +100,14 @@ internal static class Footprint
     {
         public readonly Lobe[] Lobes;
 
-        /// <summary>Radius of water cleared in the middle, or 0 for none.</summary>
+        /// <summary>Radius of water cleared round <see cref="LagoonX"/>, <see cref="LagoonZ"/>, or 0 for none.</summary>
         public readonly float Lagoon;
+
+        /// <summary>Where the lagoon is cleared: the centre for a ring, off it for a block's hole.</summary>
+        public readonly float LagoonX, LagoonZ;
+
+        /// <summary>A pinch carved whatever the lobes say, or null for none.</summary>
+        public readonly Waist? Waist;
 
         /// <summary>Whether the seam between two blobs is carved into a strait.</summary>
         public readonly bool Straits;
@@ -112,14 +122,58 @@ internal static class Footprint
         /// </summary>
         public readonly float Solid;
 
-        public Layout(Lobe[] lobes, float lagoon, bool straits, float straitWide = 0f,
-                      float solid = 0f)
+        public Layout(Lobe[] lobes, float lagoon, float lagoonX, float lagoonZ, Waist? waist,
+                      bool straits, float straitWide = 0f, float solid = 0f)
         {
             Lobes = lobes;
             Lagoon = lagoon;
+            LagoonX = lagoonX;
+            LagoonZ = lagoonZ;
+            Waist = waist;
             Straits = straits;
             StraitWide = straitWide;
             Solid = solid;
+        }
+    }
+
+    /// <summary>
+    /// A neck cut to a width: two bays cleared either side of an axis, each a wedge that
+    /// is <see cref="HalfWidth"/> from the axis at the middle and flares to
+    /// <see cref="HalfWidth"/> + <see cref="Flare"/> at <see cref="HalfLength"/> along
+    /// it. Carved outright, so the neck is a neck however the heads bulge.
+    /// </summary>
+    private readonly struct Waist
+    {
+        public readonly float Cx, Cz, Cos, Sin, HalfLength, HalfWidth, Flare;
+
+        public Waist(float cx, float cz, float angle, float halfLength, float halfWidth, float flare)
+        {
+            Cx = cx;
+            Cz = cz;
+            Cos = MathF.Cos(angle);
+            Sin = MathF.Sin(angle);
+            HalfLength = halfLength;
+            HalfWidth = halfWidth;
+            Flare = flare;
+        }
+
+        /// <summary>The same waist scaled about a centre, as the fit pass scales the lobes.</summary>
+        public Waist Scaled(float cx, float cz, float scale)
+            => new(cx + (Cx - cx) * scale, cz + (Cz - cz) * scale, MathF.Atan2(Sin, Cos),
+                   HalfLength * scale, HalfWidth * scale, Flare * scale);
+
+        /// <summary>Whether a cell is in one of the two bays; the neck's edge wanders on <paramref name="wobble"/>.</summary>
+        public bool Cuts(float x, float z, Noise wobble)
+        {
+            float dx = x - Cx, dz = z - Cz;
+            float signedAlong = dx * Cos + dz * Sin;
+            float along = MathF.Abs(signedAlong);
+            float across = MathF.Abs(-dx * Sin + dz * Cos);
+            if (along >= HalfLength) return false;
+            float t = along / HalfLength;
+            float edge = HalfWidth * (0.75f + 0.5f * wobble.At(signedAlong * 0.13f + 31f, 17f))
+                         + Flare * t * t;
+            return across > edge;
         }
     }
 
@@ -133,7 +187,8 @@ internal static class Footprint
     /// <summary>
     /// The trait table. Shapes (Ring, Cross, Fractal, the blocks) fuse their seams and
     /// count as one mass; scatters cut them. Harmony's commas overlap so deeply that a
-    /// default-width strait heals shut, hence its 5.4.
+    /// default-width strait heals shut, hence its 5.4; Caldera's moat is wide for the
+    /// same reason and so that it reads as a moat.
     /// </summary>
     private static ArrangementTraits Traits(IslandArrangement how) => how switch
     {
@@ -155,7 +210,7 @@ internal static class Footprint
         IslandArrangement.BrokenT => new(true, 0f, 0f, 3),
         IslandArrangement.BrokenL => new(true, 0f, 0f, 2),
         IslandArrangement.Fractal => new(false, 0f, 0.86f, 1),
-        IslandArrangement.BrokenFractal => new(true, 0f, 0.86f, 4),
+        IslandArrangement.Caldera => new(true, 4.2f, 0f, 2),
         IslandArrangement.Rosette => new(false, 0f, 0f, 1),
         IslandArrangement.Star => new(false, 0f, 0f, 1),
         IslandArrangement.Shards => new(true, 1.9f, 0f, 4),
@@ -165,7 +220,7 @@ internal static class Footprint
         IslandArrangement.Quarters => new(true, 0f, 0f, 4),
         IslandArrangement.Halves => new(true, 0f, 0f, 2),
         IslandArrangement.Harmony => new(true, 5.4f, 0.82f, 2),
-        IslandArrangement.Isthmus => new(false, 0f, 0.8f, 1),
+        IslandArrangement.Isthmus => new(false, 0f, 0.84f, 1),
         IslandArrangement.Reef => new(true, 0f, 0.8f, 3),
         _ => new(true, 0f, 0f, 1),
     };
@@ -202,7 +257,8 @@ internal static class Footprint
         private readonly IslandParams p;
         private readonly float irr, radius, cx, cz, spread, wander;
         private readonly List<Lobe> made = new();
-        private float lagoon;
+        private float lagoon, lagoonX, lagoonZ;
+        private Waist? waist;
 
         public LobePlacer(int seed, IslandParams p, IslandArrangement how, float radius,
                           float cx, float cz, float spread)
@@ -213,6 +269,8 @@ internal static class Footprint
             this.cx = cx;
             this.cz = cz;
             this.spread = spread;
+            lagoonX = cx;
+            lagoonZ = cz;
             irr = Math.Clamp(p.Irregularity, 0f, 1f);
             wander = how == IslandArrangement.Single ? 0.55f : 0.5f;
         }
@@ -231,6 +289,7 @@ internal static class Footprint
                 case IslandArrangement.BrokenArc:
                 case IslandArrangement.Atoll:
                 case IslandArrangement.Shards:
+                case IslandArrangement.Caldera:
                     PlaceRings(how);
                     break;
 
@@ -245,7 +304,6 @@ internal static class Footprint
                     break;
 
                 case IslandArrangement.Fractal:
-                case IslandArrangement.BrokenFractal:
                 case IslandArrangement.Rosette:
                 case IslandArrangement.NShape:
                 case IslandArrangement.Harmony:
@@ -271,7 +329,8 @@ internal static class Footprint
             }
 
             ArrangementTraits t = Traits(how);
-            return new Layout(made.ToArray(), lagoon, t.Straits, t.StraitWide, t.Solid);
+            return new Layout(made.ToArray(), lagoon, lagoonX, lagoonZ, waist,
+                              t.Straits, t.StraitWide, t.Solid);
         }
 
         private float Aspect(uint salt) => Mathf.Lerp(1f, Stretch, irr * Hash01(seed, salt));
@@ -416,17 +475,37 @@ internal static class Footprint
                     break;
                 }
 
-                // A crescent round an open bay: two thirds of the circle or so.
+                // A crescent round an open bay: two thirds of the circle or so. The lobes
+                // are fat and only mildly tangential, so the crescent is as thick as a
+                // cross's arm rather than a thread.
                 case IslandArrangement.Arc:
                 case IslandArrangement.BrokenArc:
                 {
                     bool whole = how == IslandArrangement.Arc;
-                    float ring = radius * 0.74f * spread;
-                    float blob = radius * (whole ? 0.34f : 0.33f);
+                    float ring = radius * 0.70f * spread;
+                    float blob = radius * (whole ? 0.38f : 0.36f);
                     float arc = Mathf.Tau * (0.52f + 0.18f * Hash01(seed, 0x5200u));
-                    int count = (whole ? 7 : 5) + (int)(Hash01(seed, 0x5201u) * 3f);
-                    Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 2.1f, arc);
-                    lagoon = MathF.Max(4f, ring - blob * (whole ? 0.75f : 0.55f));
+                    // The whole arc keeps more lobes than it looks to need: fat lobes
+                    // spaced by their length still part when the jitter and the
+                    // coverage crop both go against a seam.
+                    int count = (whole ? 8 : 4) + (int)(Hash01(seed, 0x5201u) * 3f);
+                    Sweep(count, ring, blob, whole ? 0.07f : 0.12f, 0x5202u, 1.45f, arc);
+                    lagoon = MathF.Max(4f, ring - blob * (whole ? 0.72f : 0.60f));
+                    break;
+                }
+
+                // A ring of land round an island, the moat between them the only way in.
+                case IslandArrangement.Caldera:
+                {
+                    float ring = radius * 0.76f * spread;
+                    float blob = radius * 0.32f;
+                    int count = 10 + (int)(Hash01(seed, 0x5400u) * 4f);
+                    Ring(count, ring, blob, 0.07f, 0x5401u, 1.9f);
+                    for (int i = 0; i < made.Count; i++) made[i] = made[i].InGroup(1);
+                    Add(cx + (Hash01(seed, 0x5402u) - 0.5f) * radius * 0.16f,
+                        cz + (Hash01(seed, 0x5403u) - 0.5f) * radius * 0.16f,
+                        radius * (0.36f + 0.12f * Hash01(seed, 0x5404u)), 0x5405u, 1f, 0f,
+                        group: 2);
                     break;
                 }
 
@@ -489,7 +568,6 @@ internal static class Footprint
                 // A snake: each blob a stride on from the last, the heading turning by up
                 // to a right angle and bouncing off the edge of the footprint.
                 case IslandArrangement.Fractal:
-                case IslandArrangement.BrokenFractal:
                 {
                     float blob = radius * 0.27f;
                     float heading = Angle(0x8000u);
@@ -535,9 +613,11 @@ internal static class Footprint
                     break;
 
                 // The letter: two uprights and the diagonal joining top-left to bottom-right.
+                // Strokes as fat as a cross's arm, spaced by length so the diagonal, the
+                // longest, is not the thinnest.
                 case IslandArrangement.NShape:
                 {
-                    float w = radius * 0.52f, h = radius * 0.60f;
+                    float w = radius * 0.58f, h = radius * 0.62f;
                     var strokes = new (float Ax, float Az, float Bx, float Bz)[]
                     {
                         (-w, h, -w, -h),      // left upright (north is -z: top is -h)
@@ -548,12 +628,14 @@ internal static class Footprint
                     foreach (var (ax, az, bx, bz) in strokes)
                     {
                         float ang = MathF.Atan2(bz - az, bx - ax);
-                        for (int t = 0; t < 4; t++)
+                        float len = MathF.Sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az));
+                        int links = Math.Max(4, (int)MathF.Round(len / (radius * 0.30f)) + 1);
+                        for (int t = 0; t < links; t++)
                         {
-                            float f = t / 3f;
+                            float f = t / (float)(links - 1);
                             Add(cx + Mathf.Lerp(ax, bx, f), cz + Mathf.Lerp(az, bz, f),
-                                radius * 0.185f, 0xB200u ^ (uint)(++i * 2654435761u),
-                                1.8f, ang + Mathf.Pi * 0.5f);
+                                radius * 0.25f, 0xB200u ^ (uint)(++i * 2654435761u),
+                                1.55f, ang + Mathf.Pi * 0.5f);
                         }
                     }
                     break;
@@ -582,21 +664,40 @@ internal static class Footprint
                     break;
                 }
 
-                // Two broad heads and the neck between them.
+                // Two broad heads and the neck between them. The heads lie broadside to
+                // the axis and are staggered across it, so the layout fills its box and
+                // the fit pass has no cause to blow it up; the neck is carved by a waist
+                // whatever the heads do, since heads that bulge into each other were
+                // the way an isthmus turned into a Single.
                 case IslandArrangement.Isthmus:
                 {
                     float a = (int)(Hash01(seed, 0xB600u) * 4f) * Mathf.Tau / 4f
                               + (Hash01(seed, 0xB601u) - 0.5f) * 0.5f;
-                    float apart = radius * 0.58f * spread;
-                    float hx = MathF.Cos(a) * apart, hz = MathF.Sin(a) * apart;
-                    Add(cx + hx, cz + hz, radius * 0.42f, 0xB602u);
-                    Add(cx - hx, cz - hz, radius * 0.40f, 0xB603u);
+                    float apart = radius * 0.60f * spread;
+                    float stagger = radius * (0.04f + 0.18f * Hash01(seed, 0xB605u))
+                                    * (Hash01(seed, 0xB606u) < 0.5f ? 1f : -1f);
+                    float ax = MathF.Cos(a), az = MathF.Sin(a);       // along the neck
+                    float px = -az, pz = ax;                            // across it
+                    float h1x = cx + ax * apart + px * stagger, h1z = cz + az * apart + pz * stagger;
+                    float h2x = cx - ax * apart - px * stagger, h2z = cz - az * apart - pz * stagger;
+                    Add(h1x, h1z, radius * 0.44f, 0xB602u, 1.25f, a);
+                    Add(h2x, h2z, radius * 0.41f, 0xB603u, 1.25f, a);
+                    // Where the heads actually landed: Add keeps a centre off the wall.
+                    (h1x, h1z) = (made[^2].Cx, made[^2].Cz);
+                    (h2x, h2z) = (made[^1].Cx, made[^1].Cz);
+
+                    // The neck runs head to head, which the stagger tilts off the axis.
+                    float neck = MathF.Atan2(h1z - h2z, h1x - h2x);
                     for (int t = 1; t <= 2; t++)
                     {
-                        float f = t / 3f - 0.5f;
-                        Add(cx + hx * f * 2f, cz + hz * f * 2f, radius * 0.16f,
-                            0xB604u ^ (uint)(t * 2654435761u), 1.7f, a + Mathf.Pi * 0.5f);
+                        float f = t / 3f;
+                        Add(Mathf.Lerp(h2x, h1x, f), Mathf.Lerp(h2z, h1z, f), radius * 0.20f,
+                            0xB604u ^ (uint)(t * 2654435761u), 1.6f, neck + Mathf.Pi * 0.5f);
                     }
+                    waist = new Waist((h1x + h2x) * 0.5f, (h1z + h2z) * 0.5f, neck,
+                                      halfLength: radius * 0.24f,
+                                      halfWidth: MathF.Max(2.5f, radius * (0.08f + 0.05f * Hash01(seed, 0xB607u))),
+                                      flare: radius * 0.50f);
                     break;
                 }
 
@@ -641,6 +742,7 @@ internal static class Footprint
                     for (int k = 0; k < 4; k++)
                         Add(cx + Dx[k] * d, cz + Dz[k] * d, radius * 0.33f,
                             0xB002u ^ (uint)((k + 1) * 2654435761u), 1f, 0f);
+                    Hole(0xB0F0u);
                     break;
                 }
 
@@ -660,21 +762,23 @@ internal static class Footprint
                             cz + MathF.Sin(e) * radius * 0.31f, radius * 0.32f,
                             0xB102u ^ (uint)((i + 1) * 2654435761u), 1f, 0f);
                     }
+                    Hole(0xB1F0u);
                     break;
                 }
 
-                // Four near-equal parts, one per quadrant, parted by a cross of straits.
+                // One mass sliced twice: four lobes overlapping deeply, one per quadrant,
+                // so only the cross of straits between them says it is not a Single.
                 case IslandArrangement.Quarters:
                 {
-                    float d = radius * 0.42f * spread;
+                    float d = radius * 0.30f * spread;
                     int i = 0;
                     foreach (float sx in new[] { -1f, 1f })
                     foreach (float sz in new[] { -1f, 1f })
                     {
                         uint s = 0xB300u ^ (uint)(++i * 2654435761u);
                         Add(cx + sx * d, cz + sz * d,
-                            radius * 0.40f * (0.92f + 0.16f * Hash01(seed, s)), s,
-                            1f + 0.25f * Hash01(seed, s ^ 0x7u), 0f);
+                            radius * 0.58f * (0.94f + 0.12f * Hash01(seed, s)), s,
+                            1f + 0.15f * Hash01(seed, s ^ 0x7u), 0f);
                     }
                     break;
                 }
@@ -692,6 +796,21 @@ internal static class Footprint
                     break;
                 }
             }
+        }
+
+        /// <summary>
+        /// A block's hole, some of the time: a lagoon of a rolled size, a little off
+        /// the centre, cleared outright as a ring's is. Cleared, not bitten, so the
+        /// hole is aether through the Domain and not a lake.
+        /// </summary>
+        private void Hole(uint salt)
+        {
+            if (Hash01(seed, salt) >= 0.45f) return;
+            lagoon = radius * (0.10f + 0.22f * Hash01(seed, salt ^ 0x3u));
+            float a = Angle(salt ^ 0x5u);
+            float off = radius * 0.16f * Hash01(seed, salt ^ 0x9u);
+            lagoonX = cx + MathF.Cos(a) * off;
+            lagoonZ = cz + MathF.Sin(a) * off;
         }
 
         /// <summary>
@@ -798,11 +917,16 @@ internal static class Footprint
         Layout layout = PlaceLobes(seed, p, how, radius, cx, cz, spread);
         Lobe[] lobes = layout.Lobes;
         float lagoon = layout.Lagoon;
+        float lagoonX = layout.LagoonX, lagoonZ = layout.LagoonZ;
+        Waist? waist = layout.Waist;
 
         if (MathF.Abs(scale - 1f) > 0.001f)
         {
             ScaleLobes(lobes, n, cx, cz, scale);
             lagoon *= scale;
+            lagoonX = cx + (lagoonX - cx) * scale;
+            lagoonZ = cz + (lagoonZ - cz) * scale;
+            waist = waist?.Scaled(cx, cz, scale);
         }
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
@@ -866,10 +990,13 @@ internal static class Footprint
             // a ring fills in as often as not.
             if (lagoon > 0f)
             {
-                float lx = x - cx, lz = z - cz;
+                float lx = x - lagoonX, lz = z - lagoonZ;
                 float wob = 0.86f + 0.28f * wobble.At(lx * 0.09f, lz * 0.09f);
                 if (lx * lx + lz * lz < lagoon * lagoon * wob) cut[x, z] = true;
             }
+
+            // So is a waist: the bays either side of a neck are aether by decree.
+            if (waist is Waist w && w.Cuts(x, z, wobble)) cut[x, z] = true;
 
             float fall = 1f - FieldOps.SmoothStep(0.40f, 1f, d);
             float body = 0.35f + 0.65f * shape.At(x, z);

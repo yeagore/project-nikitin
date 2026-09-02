@@ -103,11 +103,28 @@ landforms, every arrangement × character, every Gate request, the four-hanging-
 Gates matrix, the knob sweeps (how you check a slider does anything), the
 material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all five sizes, the newest shapes at every
-footprint, where re-rolls cluster, and PNG portraits, field maps and the climate
-grid written to a directory. Every flag can be given on the command line after `--`:
+footprint, where re-rolls cluster, and PNG portraits, field maps, the gallery and
+the climate grid written to a directory. Every flag can be given on the command
+line after `--`:
 
 ```
 godot --path . --headless scenes/dev/generation_audit.tscn -- Knobs Sizes Portraits=C:/tmp/portraits
+```
+
+### The gallery — `Gallery`
+
+`Gallery=<dir>` writes one contact sheet per arrangement: `GallerySeeds` (16)
+consecutive seeds from `FirstSeed` at `GallerySize`² (96), four to a row, each
+tile the portrait view captioned with its seed and how many landmasses it came
+out as, and prints the landmass histogram per shape. `Portraits` draws two
+islands per shape, which says what a shape *can* be; the gallery says what it
+usually is, which is the question when a shape "often" merges or parts.
+`GalleryShapes=Isthmus,Quarters` restricts it to the shapes you are working on;
+run it at 48 and 128 as well, since a shape that only reads at 96 is a shape
+that lies.
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 Gallery=C:/tmp/gallery GalleryShapes=Isthmus,Caldera GallerySize=64
 ```
 
 Appearance still needs a human at the editor, or **F2** in the lab.

@@ -74,24 +74,28 @@ noise field, so no coastline is a circle. Where two lobes meet, the seam is
 either left alone (they fuse) or **carved into a strait** — that one flag is the
 whole difference between `Ring` and `BrokenRing`. A strait may pinch to a single
 cell but never close. Lobes in a **group** fuse with each other whatever the
-layout, and only the seams between groups are cut.
+layout, and only the seams between groups are cut. Two **clearings** override
+the lobes outright: a **lagoon** (a disc of aether, at the centre of a ring or
+off it for a block's hole) and a **waist** (two flaring bays either side of an
+axis, which cut a neck to a width however the heads bulge).
 
 | layouts | shape |
 |---|---|
 | `Single`, `Satellites` | one landmass; with two to four islets round it. The only two that take **bites** |
 | `Twins`, `Triplets`, `Archipelago` | two, three, or five to eight comparable landmasses |
 | `Shards` | one landmass cracked into four to six pieces by straits narrow enough to read as fractures |
-| `Ring` / `BrokenRing`, `Arc` / `BrokenArc` | a ring or a crescent of lobes round a lagoon or a bay, seams fused / carved |
+| `Ring` / `BrokenRing`, `Arc` / `BrokenArc` | a ring or a crescent of lobes round a lagoon or a bay, seams fused / carved; the crescent's lobes are fat and only mildly tangential, so it is as thick as a cross's arm |
+| `Caldera` | a ring of land round an inner island, grouped apart, the moat between them (a wide strait) the only way in |
 | `Atoll` | beads on a string: rounded islets that all but touch, a step of water between each pair |
 | `Cross`, `TShape`, `LShape`, `Star`; `BrokenCross`, `BrokenT`, `BrokenL` | a wide hub with thick arms, **axis-aligned**, so an arm points at an edge and therefore at a Gate; the broken forms part the arms |
-| `Fractal` / `BrokenFractal` | a chain of overlapping lobes that turns as it goes; parted, a run of stepping stones |
+| `Fractal` | a chain of overlapping lobes that turns as it goes |
 | `Rosette` | a ring of lobes over a full hub: a run of deep round bays with headlands between |
 | `ThousandIsles` | a **quilt**: a jittered 4×4 to 6×6 grid of lobes by footprint, a few holes, every seam a strait — the only spread the linker leaves where it was |
-| `Square`, `Rhomb` | blocky fused grids of lobes, axis-aligned and stood on a corner |
-| `NShape` | the letter itself: two uprights and the diagonal joining them |
-| `Quarters`, `Halves` | four and two roughly symmetric parts split by straight straits |
+| `Square`, `Rhomb` | blocky fused grids of lobes, axis-aligned and stood on a corner; a little under half the time with a hole of a rolled size, a little off the centre |
+| `NShape` | the letter itself: two uprights and the diagonal joining them, the strokes as fat as a cross's arm |
+| `Quarters`, `Halves` | one mass sliced twice or once: lobes overlapping deeply, parted only by the straight straits between them |
 | `Harmony` | the yin-yang: two grouped chains whose own seams fuse while the S between them is carved |
-| `Isthmus` | two broad heads joined by a narrow walkable neck |
+| `Isthmus` | two broad heads, broadside to the axis and staggered across it, joined by a neck the waist cuts to a width |
 | `Reef` | a main island sheltered behind a long thin barrier chain |
 
 Then the mask is finished. On `Single` and `Satellites` **bites** are taken out

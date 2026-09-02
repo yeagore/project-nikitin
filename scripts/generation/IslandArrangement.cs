@@ -69,8 +69,7 @@ public enum IslandArrangement
     /// <summary>The L, parted.</summary>
     BrokenL = 19,
 
-    /// <summary>The snake, parted into a chain of stepping stones.</summary>
-    BrokenFractal = 20,
+    // 20 was BrokenFractal (removed: a cluster of stepping stones played like Shards); keep the gap.
 
     /// <summary>A ring of lobes overlapping a full hub: deep round bays with headlands between them.</summary>
     Rosette = 21,
@@ -103,4 +102,7 @@ public enum IslandArrangement
 
     /// <summary>A main island sheltered behind a long thin barrier chain of islets.</summary>
     Reef = 31,
+
+    /// <summary>A ring of land round an inner island, the moat between them the only way in.</summary>
+    Caldera = 32,
 }

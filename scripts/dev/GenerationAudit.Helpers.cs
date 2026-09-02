@@ -411,7 +411,7 @@ public partial class GenerationAudit
         IslandArrangement.BrokenCross => 4,
         IslandArrangement.BrokenT => 3,
         IslandArrangement.BrokenL => 2,
-        IslandArrangement.BrokenFractal => 4,
+        IslandArrangement.Caldera => 2,
         IslandArrangement.Quarters => 4,
         IslandArrangement.Halves => 2,
         IslandArrangement.Harmony => 2,
@@ -424,6 +424,6 @@ public partial class GenerationAudit
     {
         IslandArrangement.Square, IslandArrangement.Rhomb, IslandArrangement.NShape,
         IslandArrangement.Quarters, IslandArrangement.Halves, IslandArrangement.Harmony,
-        IslandArrangement.Isthmus, IslandArrangement.Reef,
+        IslandArrangement.Isthmus, IslandArrangement.Reef, IslandArrangement.Caldera,
     };
 }

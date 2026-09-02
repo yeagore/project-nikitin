@@ -35,6 +35,22 @@ public partial class GenerationAudit : Node
     /// <summary>Directory for habitat, anchor and surface PNGs of the first few seeds, or empty for none.</summary>
     [Export] public string FieldMaps { get; set; } = "";
 
+    /// <summary>
+    /// Directory for a contact sheet per arrangement — GallerySeeds top views at
+    /// GallerySize², each labelled with its seed and landmass count — or empty for
+    /// none. Two portraits say what a shape can be; sixteen say what it usually is.
+    /// </summary>
+    [Export] public string Gallery { get; set; } = "";
+
+    /// <summary>Comma-separated arrangements the gallery draws, or empty for all of them.</summary>
+    [Export] public string GalleryShapes { get; set; } = "";
+
+    /// <summary>Tiles per gallery sheet, consecutive seeds from FirstSeed.</summary>
+    [Export] public int GallerySeeds { get; set; } = 16;
+
+    /// <summary>Footprint of the gallery tiles; 96 reads at a glance and still shows a strait.</summary>
+    [Export] public int GallerySize { get; set; } = 96;
+
     /// <summary>The probation workup: each of the newest arrangements at every footprint and against every character.</summary>
     [Export] public bool Debut { get; set; } = false;
 
@@ -156,6 +172,10 @@ public partial class GenerationAudit : Node
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
+                case nameof(Gallery): Gallery = value; break;
+                case nameof(GalleryShapes): GalleryShapes = value; break;
+                case nameof(GallerySeeds): GallerySeeds = int.Parse(value); break;
+                case nameof(GallerySize): GallerySize = int.Parse(value); break;
                 case nameof(Seeds): Seeds = int.Parse(value); break;
                 case nameof(FirstSeed): FirstSeed = int.Parse(value); break;
                 case nameof(FeasibilitySeeds): FeasibilitySeeds = int.Parse(value); break;
@@ -183,6 +203,7 @@ public partial class GenerationAudit : Node
         if (Strain) PrintStrain();
         if (Portraits.Length > 0) WritePortraits();
         if (FieldMaps.Length > 0) WriteFieldMaps();
+        if (Gallery.Length > 0) WriteGallery();
         if (ClimateGrid.Length > 0) WriteClimateGrid();
     }
 

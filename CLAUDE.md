@@ -46,7 +46,9 @@ godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # th
 ```
 
 Run both under a timeout (headless Godot does not always exit), and note this
-machine prints decimals with a comma.
+machine prints decimals with a comma. To *look* at a shape headless, the audit's
+`Gallery=<dir> GalleryShapes=Isthmus,Quarters` writes a contact sheet of sixteen
+seeds per arrangement, captioned with the landmass count.
 
 ---
 

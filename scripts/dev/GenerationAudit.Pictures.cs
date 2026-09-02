@@ -110,8 +110,70 @@ public partial class GenerationAudit
         GD.Print($"portraits: {wrote} written to {Portraits}");
     }
 
+    /// <summary>
+    /// One sheet per arrangement: GallerySeeds consecutive seeds at GallerySize², four
+    /// to a row, each tile captioned with its seed and how many landmasses it came out
+    /// as. Prints the landmass histogram per shape, so "often merges" is a number.
+    /// </summary>
+    private void WriteGallery()
+    {
+        DirAccess.MakeDirRecursiveAbsolute(Gallery);
+        IEnumerable<IslandArrangement> shapes = GalleryShapes.Length == 0
+            ? Enum.GetValues<IslandArrangement>().Where(h => h != IslandArrangement.Auto)
+            : GalleryShapes.Split(',').Select(s => Enum.Parse<IslandArrangement>(s.Trim(), true));
+
+        const int columns = 4, scale = 2, gap = 6;
+        int n = GallerySize;
+        int tile = n * scale;
+        int font = tile >= 160 ? 2 : 1;      // a 48² tile is too narrow for the big caption
+        int caption = TinyFont.Height(font) + 4;
+        int rows = (GallerySeeds + columns - 1) / columns;
+        int titleH = TinyFont.Height(3) + 8;
+        int width = gap + columns * (tile + gap);
+        int height = titleH + gap + rows * (tile + caption + gap);
+
+        foreach (IslandArrangement how in shapes)
+        {
+            IslandParams p = Variant(q => { q.Arrangement = how; q.Size = n; });
+            var sheet = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
+            sheet.Fill(new Color(0.12f, 0.12f, 0.14f));
+            TinyFont.Draw(sheet, $"{how} {n}", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
+
+            var histogram = new SortedDictionary<int, int>();
+            for (int i = 0; i < GallerySeeds; i++)
+            {
+                int seed = FirstSeed + i;
+                IslandData d = IslandGenerator.Generate(seed, p);
+                int masses = LabelLandmasses(d, n, new int[n, n]);
+                histogram.TryGetValue(masses, out int had);
+                histogram[masses] = had + 1;
+
+                Image img = Portrait(d);
+                img.Resize(tile, tile, Image.Interpolation.Nearest);
+                int px = gap + (i % columns) * (tile + gap);
+                int pz = titleH + gap + (i / columns) * (tile + caption + gap);
+                sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, pz));
+                TinyFont.Draw(sheet, $"{seed}  {masses} mass{(masses == 1 ? "" : "es")}",
+                              px, pz + tile + 2, font, new Color(0.85f, 0.85f, 0.8f));
+            }
+
+            sheet.SavePng($"{Gallery}/{how}_{n}.png");
+            string counts = string.Join(", ", histogram.Select(kv => $"{kv.Value} x {kv.Key}"));
+            GD.Print($"gallery: {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}");
+        }
+    }
+
     /// <summary>Top view, 3x nearest: land an elevation ramp with beach tint and gold landings, water by kind, Gates one red (hanging) or orange (land) pixel.</summary>
     private static void SavePortrait(IslandData d, string path)
+    {
+        Image img = Portrait(d);
+        int n = d.Size;
+        img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
+        img.SavePng(path);
+    }
+
+    /// <summary>The portrait at one pixel a cell, before any scaling.</summary>
+    private static Image Portrait(IslandData d)
     {
         int n = d.Size;
         var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
@@ -151,9 +213,7 @@ public partial class GenerationAudit
             int gz = Math.Clamp(g.Center.Z, 0, n - 1);
             img.SetPixel(gx, gz, tint);
         }
-
-        img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
-        img.SavePng(path);
+        return img;
     }
 
     /// <summary>Habitat, anchor and surface PNGs for seeds FirstSeed .. FirstSeed + 5 (consecutive, not the sweep stride).</summary>

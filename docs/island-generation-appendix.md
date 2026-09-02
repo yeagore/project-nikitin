@@ -171,6 +171,23 @@ cell as before. The strait is measured between pieces (nearest distance per
 group), not between nearest lobes: deep in an overlap both nearest lobes belong
 to one comma, and no width can fix a cut drawn in the wrong place.
 
+### A neck is carved, not placed
+
+`Isthmus` was two heads with two thin lobes between them, and half its seeds
+were a `Single` with a dent. The fit pass was the culprit: a long thin layout
+covers a third of the grid, so it was scaled up by the cap, and `ScaleLobes`
+grows every radius while `ClampIntoFootprint` holds the centres inside the
+wall — so the heads grew into each other and swallowed the neck. Two fixes,
+both kept. The heads lie broadside to the axis and are staggered across it, so
+the layout fills its box and the fit pass has no cause to blow it up. And the
+neck is a **waist**, a clearing like the lagoon: two bays either side of the
+head-to-head line, each a wedge that is the neck's half-width at the middle
+and flares toward the heads, cut whatever the lobes say. The neck is a neck on
+every seed at every footprint now (`Gallery` shows sixteen at a time). A
+block's hole is the same override the other way round: `Square` and `Rhomb`
+sometimes clear a lagoon of a rolled size, a little off the centre, so the hole
+is aether through the Domain and not a lake.
+
 ### Bites eat coastline, never a satellite
 
 Only `Single` and `Satellites` take bites, and the guards protect the total, so
@@ -260,6 +277,9 @@ way in.
 | **A pad bigger than the Domain** | Clamping a lobe's centre to `[r + 3, n − 1 − r − 3]` is an empty range once a lobe is wider than half the map, and `Math.Clamp` throws. The pad is capped at half the footprint. |
 | **Arches over open aether** | Rock in a column the mask says is empty breaks every "has land ⇒ has a region" assumption. Arches span gorges and channels. |
 | **`Spiral`** | Kept as one landmass it was a `Rosette` with more steps, at twice the generation time. |
+| **`BrokenFractal`** | The snake parted into stepping stones played exactly like `Shards`: a cluster of like-sized pieces across narrow straits. Replaced by `Caldera`, which plays like nothing else — an inner island every approach to which crosses the moat. The enum keeps the gap at 20. |
+| **Four small islands for `Quarters`** | Four lobes placed to nearly touch, then cropped to coverage each, were four islets in an empty field. `Halves` had it right: lobes overlapping deeply, so only the strait says the mass is parted. `Quarters` is now that, sliced twice. |
+| **Thin strokes for the arcs and the N** | Lobes stretched 1.8–2.1 along the stroke were threads next to the cross's arms. The stretch is 1.45–1.55 now and the lobes fatter, with more of them along the whole arc, since fat lobes spaced by their length still part where the jitter and the coverage crop both go against a seam. |
 | **A Domain-wide `FluidKind`** | `Water` / `Lava` / `Essence` as one dropdown was two `if` statements with nothing visible behind them. The fluid came back per column, as `IslandData.Fluid`, with `Goo` the first thing that behaves differently. |
 | **Dropping the Gate edge band outright** | Removing "stay near your own edge" at the relaxed rung put most of the Domain behind the player as they arrived. The band widens and never disappears. |
 | **A four-cell floor under Gate separation** | Not a relaxation of "keep your distance" but a repeal of it. The floor is a third of the footprint. |
@@ -316,16 +336,16 @@ diffed automatically.
 ### Feasibility
 
 `Feasibility` runs every arrangement against every character. `ThousandIsles`
-and `BrokenFractal` are the hard ones (the most attempts; a piece the linker
-cannot always nudge into range); everything else runs at one attempt with most
-of the island reachable.
+is the hard one (the most attempts; a piece the linker cannot always nudge into
+range; `BrokenFractal` was the other until it was removed); everything else
+runs at one attempt with most of the island reachable.
 
 ### Open gaps
 
 | | |
 |---|---|
 | two-slab steps at a riverbank or valley side | `twoSlabOffMountain` in the baseline: all where the ground the pass would have to cut is a landform, a bridgehead or standing water. The alternative is eating the landform. |
-| a landmass adrift on the two most broken layouts | `BrokenFractal` and `ThousandIsles`. The guarantees still hold; it is one islet of thirty. |
+| a landmass adrift on the most broken layout | `ThousandIsles`. The guarantees still hold; it is one islet of thirty. |
 | basins on a `Highlands` island | About nine islands in ten, not all: adjacency cannot always place one beside a massif. Accepted. |
 | undersized patches on `ThousandIsles` and `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. Accepted. |
 | overhangs are not walkable | By design; span-as-node traversal is its own problem (§E). |

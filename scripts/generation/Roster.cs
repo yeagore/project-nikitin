@@ -60,7 +60,7 @@ internal static class Roster
         (IslandArrangement.BrokenCross, 3f),
         (IslandArrangement.BrokenT, 3f),
         (IslandArrangement.BrokenL, 3f),
-        (IslandArrangement.BrokenFractal, 3f),
+        (IslandArrangement.Caldera, 3f),
         (IslandArrangement.Rosette, 3f),
         (IslandArrangement.Star, 3f),
         (IslandArrangement.Square, 3f),
