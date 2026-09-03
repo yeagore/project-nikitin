@@ -96,9 +96,12 @@ public partial class IslandLab
 
 		Heading(rows, "what the island is");
 		_viewPick = Choice<View>(rows, "View  (C)", () => _view,
-			v => { _view = v; Rebuild(); });
+			v => { _view = v; Rebuild(); },
+			"Which field the island is coloured by. The legend on the right names the colours.");
 		// A dropdown over the supported footprints only: the pipeline is audited at exactly these.
-		rows.AddChild(Caption("Size, cells"));
+		rows.AddChild(Caption("Size, cells",
+			"Footprint edge, in cells; altitude is bounded by the same number of slabs. "
+			+ "These five are the audited footprints."));
 		_size = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		foreach (int s in IslandParams.SupportedSizes)
 			_size.AddItem($"{s} × {s}  ({s} slabs tall)", s);
@@ -106,17 +109,20 @@ public partial class IslandLab
 		_size.ItemSelected += _ => { if (!_syncing) Params.Size = _size.GetSelectedId(); };
 		rows.AddChild(_size);
 		_arrangePick = Choice<IslandArrangement>(rows, "Arrangement  (G)",
-			() => Params.Arrangement, v => Params.Arrangement = v);
+			() => Params.Arrangement, v => Params.Arrangement = v,
+			"How the land is laid out. Auto picks one per seed; every arrangement is "
+			+ "linkable by bridge.");
 		_characterPick = Choice<TerrainCharacter>(rows, "Character  (V)",
-			() => Params.Character, v => Params.Character = v);
+			() => Params.Character, v => Params.Character = v,
+			"Which landforms the island is built from. Auto picks one per seed, and the "
+			+ "relief style follows from it.");
 
 		_newShapes = Check(rows, "Auto may roll the newer shapes  (U)",
 			() => Params.NewArrangements && Params.NewLandforms,
-			on => { Params.NewArrangements = on; Params.NewLandforms = on; });
-		_newShapes.TooltipText =
+			on => { Params.NewArrangements = on; Params.NewLandforms = on; },
 			"Gates the dice, not the code. It widens the pool Auto draws from; "
 			+ "naming an arrangement or a character by hand still builds it, and "
-			+ "with both named this does nothing at all.";
+			+ "with both named this does nothing at all.");
 
 		_poolNote = Caption("");
 		_poolNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -126,64 +132,99 @@ public partial class IslandLab
 
 		Heading(rows, "relief");
 		_hilliness = Slide(rows, "Hilliness  (H)", 0f, 1f, 0.05f,
-			() => Params.Hilliness, v => Params.Hilliness = v);
+			() => Params.Hilliness, v => Params.Hilliness = v,
+			"What hills do: 0 low swells, 1 steep mounds, in one-slab steps either way. "
+			+ "Also sets how jagged the surface noise is.");
 		_mix = Slide(rows, "Landform mix  (M)", 0f, 1f, 0.05f,
-			() => Params.LandformMix, v => Params.LandformMix = v);
+			() => Params.LandformMix, v => Params.LandformMix = v,
+			"The quota of high ground: 0 mostly plains, 1 as much as the character allows. "
+			+ "Every landform the character names appears at any setting.");
 		_relief = Slide(rows, "Relief", 0f, 1f, 0.05f,
-			() => Params.Relief, v => Params.Relief = v);
+			() => Params.Relief, v => Params.Relief = v,
+			"Vertical exaggeration of every landform's relief.");
 		_wet = Slide(rows, "Rivers", 0f, 1f, 0.05f,
-			() => Params.Rivers, v => Params.Rivers = v);
+			() => Params.Rivers, v => Params.Rivers = v,
+			"How wet the Domain is: the catchment a channel needs before it counts as a river.");
 		_lakes = Slide(rows, "Lakes", 0f, 1f, 0.05f,
-			() => Params.Lakes, v => Params.Lakes = v);
+			() => Params.Lakes, v => Params.Lakes = v,
+			"How readily standing water collects: 0 no lakes, 1 one in every flat patch "
+			+ "that could hold one.");
 		_valleys = Slide(rows, "Valleys", 0f, 1f, 0.05f,
-			() => Params.Valleys, v => Params.Valleys = v);
+			() => Params.Valleys, v => Params.Valleys = v,
+			"How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells "
+			+ "of valley either side.");
 		_rungs = Spin(rows, "Plateau rungs  (L)", 1, 8,
-			() => Params.PlateauLevels, v => Params.PlateauLevels = v);
+			() => Params.PlateauLevels, v => Params.PlateauLevels = v,
+			"Rungs on the plateau ladder above the coastal level: how terraced the island is.");
 		_cliff = Spin(rows, "Cliff height, slabs", 3, 16,
-			() => Params.CliffHeight, v => Params.CliffHeight = v);
+			() => Params.CliffHeight, v => Params.CliffHeight = v,
+			"One rung of the plateau ladder, in slabs. Three or more, so every ladder "
+			+ "border is an unambiguous cliff.");
 		_patch = Spin(rows, "Region scale, cells", 6, 40,
-			() => Params.RegionScale, v => Params.RegionScale = v);
+			() => Params.RegionScale, v => Params.RegionScale = v,
+			"Typical width of one landform region. The smallest region allowed follows "
+			+ "from it: max(12, 0.215 × scale²) cells.");
 
 		Heading(rows, "climate");
 		_moisture = Slide(rows, "Background moisture", 0f, 1f, 0.05f,
-			() => Params.Moisture, v => Params.Moisture = v);
-		_moisture.TooltipText = "What the ground has before its water adds any: 0.15 is dry "
-			+ "country, 0.45 balanced, 0.75 wet. The water always adds its own strip, so even "
-			+ "a dry Domain has fertile banks.";
+			() => Params.Moisture, v => Params.Moisture = v,
+			"What the ground has before its water adds any: 0.15 is dry country, 0.45 "
+			+ "balanced, 0.75 wet. The water always adds its own strip, so even a dry "
+			+ "Domain has fertile banks.");
 		_warmth = Slide(rows, "Background warmth", 0f, 1f, 0.05f,
-			() => Params.Warmth, v => Params.Warmth = v);
-		_warmth.TooltipText = "The lowland before the lapse and the chills: 0.15 is cold "
-			+ "country, 0.5 temperate, 0.85 hot, 1 sand. Even 0 keeps its lowland above the "
-			+ "snow — the cold on the map is the lapse over a mountain, not this knob.";
+			() => Params.Warmth, v => Params.Warmth = v,
+			"The lowland before the lapse and the chills: 0.15 is cold country, 0.5 "
+			+ "temperate, 0.85 hot, 1 sand. Even 0 keeps its lowland above the snow — the "
+			+ "cold on the map is the lapse over a mountain, not this knob.");
 
 		Heading(rows, "gates and crossings");
 		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
-			() => Params.EntryGate, v => Params.EntryGate = v);
+			() => Params.EntryGate, v => Params.EntryGate = v,
+			"The Gate you arrive through. An input, set by the Domain that sent you; "
+			+ "Auto is for a Home Domain.");
 		_entryEdge = Choice<GateEdge>(rows, "Entry edge",
-			() => Params.EntryEdge, v => Params.EntryEdge = v);
+			() => Params.EntryEdge, v => Params.EntryEdge = v,
+			"The edge you arrive on, an input for the same reason. Auto tries every edge; "
+			+ "a named edge falls back to the others if its coast cannot host a Gate.");
 		_exits = Spin(rows, "Exit gates  (0 = per seed)", 0, 3,
-			() => Params.ExitGates, v => Params.ExitGates = v);
+			() => Params.ExitGates, v => Params.ExitGates = v,
+			"Links onward, one per edge. 0 takes the count from the seed.");
 		_exitKind = Choice<GateKind>(rows, "Exit gates are",
-			() => Params.ExitGate, v => Params.ExitGate = v);
+			() => Params.ExitGate, v => Params.ExitGate = v,
+			"What kind the Exits are. Auto hangs them unless a coast will not have it; "
+			+ "a named kind applies where the coast allows.");
 		_crossings = Choice<BridgeEase>(rows, "Crossings  (Y)",
-			() => Params.Crossings, v => Params.Crossings = v);
+			() => Params.Crossings, v => Params.Crossings = v,
+			"Cells one bridge may span: Easy 1, Medium 3, Hard 6. Also how far apart the "
+			+ "linker leaves the landmasses and what counts as reachable, so an Easy Domain "
+			+ "has no navigable rivers.");
 
 		Heading(rows, "overlays");
 		_bridgeBox = Check(rows, "Bridge sites  (B)",
-			() => _showBridges, on => { _showBridges = on; Redraw(); });
+			() => _showBridges, on => { _showBridges = on; Redraw(); },
+			"Every crossing site the analysis found: the deck bank to bank, and a marker "
+			+ "on each bank.");
 		_stripBox = Check(rows, "Gate landings  (J)",
-			() => _showLandings, on => { _showLandings = on; Redraw(); });
+			() => _showLandings, on => { _showLandings = on; Redraw(); },
+			"The 1 × 3 strip running inland from each Gate, levelled for it.");
 		_ferryBox = Check(rows, "Ferry berths  (K)",
-			() => _showFerries, on => { _showFerries = on; Redraw(); });
+			() => _showFerries, on => { _showFerries = on; Redraw(); },
+			"Each berth as a pair: the quay on land, the hull on the water in front of it.");
 		_roadBox = Check(rows, "Roads between gates  (P)",
-			() => _showRoutes, on => { _showRoutes = on; Redraw(); });
+			() => _showRoutes, on => { _showRoutes = on; Redraw(); },
+			"The least-works road from the Entry to each Exit: pale yellow walk, red stair, "
+			+ "gold bridge, cyan ferry.");
 		_fordBox = Check(rows, "Fords  (O)",
-			() => _showFords, on => { _showFords = on; Redraw(); });
+			() => _showFords, on => { _showFords = on; Redraw(); },
+			"Stream cells crossable on foot: one at the head of each course and one every "
+			+ "11 cells along it. A stream is an obstacle everywhere else.");
 		_compassBox = Check(rows, "Compass, wind and gate vectors  (X)",
-			() => _showCompass, on => { _showCompass = on; Redraw(); });
+			() => _showCompass, on => { _showCompass = on; Redraw(); },
+			"N/E/S/W, each Gate's landward vector, the wind and the grain of any dune field, "
+			+ "and two boxes: the Domain's cube and one tight round the landmass.");
 		_liquidBox = Check(rows, "Liquid: water, goo, falls  (I)",
-			() => _showLiquid, on => { _showLiquid = on; Redraw(); });
-		_liquidBox.TooltipText = "Off shows the beds under the water: the columns are always drawn.";
+			() => _showLiquid, on => { _showLiquid = on; Redraw(); },
+			"Off shows the beds under the water: the columns are always drawn.");
 
 		Heading(rows, "camera");
 		var keys = new Label
@@ -342,10 +383,11 @@ public partial class IslandLab
 	}
 
 	/// <summary>A labelled dropdown over an enum, with <c>Auto</c> first where there is one.</summary>
-	private OptionButton Choice<T>(Container into, string text, Func<T> read, Action<T> write)
+	private OptionButton Choice<T>(Container into, string text, Func<T> read, Action<T> write,
+								   string? tip = null)
 		where T : struct, Enum
 	{
-		into.AddChild(Caption(text));
+		into.AddChild(Caption(text, tip));
 		var pick = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		foreach (T value in Enum.GetValues<T>())
 			pick.AddItem(Spaced(value.ToString()!), Convert.ToInt32(value));
@@ -357,14 +399,15 @@ public partial class IslandLab
 		};
 		// Capped so thirty arrangements scroll instead of running off the screen.
 		pick.GetPopup().MaxSize = new Vector2I(480, 440);
+		pick.TooltipText = tip ?? "";
 		into.AddChild(pick);
 		return pick;
 	}
 
 	private HSlider Slide(Container into, string text, float min, float max, float step,
-						  Func<float> read, Action<float> write)
+						  Func<float> read, Action<float> write, string? tip = null)
 	{
-		Label caption = Caption($"{text}   {read():0.00}");
+		Label caption = Caption($"{text}   {read():0.00}", tip);
 		into.AddChild(caption);
 
 		var slider = new HSlider
@@ -375,6 +418,7 @@ public partial class IslandLab
 			Value = read(),
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			CustomMinimumSize = new Vector2(0, 18),
+			TooltipText = tip ?? "",
 		};
 		slider.ValueChanged += v =>
 		{
@@ -386,33 +430,51 @@ public partial class IslandLab
 	}
 
 	private SpinBox Spin(Container into, string text, int min, int max,
-						 Func<int> read, Action<int> write)
+						 Func<int> read, Action<int> write, string? tip = null)
 	{
 		var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-		Label caption = Caption(text);
+		Label caption = Caption(text, tip);
 		caption.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		row.AddChild(caption);
 
-		var spin = new SpinBox { MinValue = min, MaxValue = max, Step = 1, Value = read() };
+		var spin = new SpinBox
+		{
+			MinValue = min,
+			MaxValue = max,
+			Step = 1,
+			Value = read(),
+			TooltipText = tip ?? "",
+		};
 		spin.ValueChanged += v => { if (!_syncing) write((int)v); };
 		row.AddChild(spin);
 		into.AddChild(row);
 		return spin;
 	}
 
-	private CheckBox Check(Container into, string text, Func<bool> read, Action<bool> write)
+	private CheckBox Check(Container into, string text, Func<bool> read, Action<bool> write,
+						   string? tip = null)
 	{
-		var box = new CheckBox { Text = text, ButtonPressed = read() };
+		var box = new CheckBox { Text = text, ButtonPressed = read(), TooltipText = tip ?? "" };
 		box.Toggled += on => { if (!_syncing) write(on); };
 		into.AddChild(box);
 		return box;
 	}
 
-	private static Label Caption(string text)
+	/// <summary>
+	/// A knob's name. A caption with a tooltip is set to <c>Pass</c>, not the Label
+	/// default of <c>Ignore</c>: a tooltip needs the mouse, and <c>Pass</c> still lets
+	/// the wheel through to the scroll container behind it.
+	/// </summary>
+	private static Label Caption(string text, string? tip = null)
 	{
 		var label = new Label { Text = text };
 		label.AddThemeColorOverride("font_color", new Color(0.85f, 0.87f, 0.9f));
 		label.AddThemeFontSizeOverride("font_size", 13);
+		if (tip != null)
+		{
+			label.TooltipText = tip;
+			label.MouseFilter = Control.MouseFilterEnum.Pass;
+		}
 		return label;
 	}
 
