@@ -147,10 +147,14 @@ public partial class IslandLab
 		Heading(rows, "climate");
 		_moisture = Slide(rows, "Background moisture", 0f, 1f, 0.05f,
 			() => Params.Moisture, v => Params.Moisture = v);
-		_moisture.TooltipText = "What the ground has before its water adds any: 0.15 is dry country, 0.65 wet.";
+		_moisture.TooltipText = "What the ground has before its water adds any: 0.15 is dry "
+			+ "country, 0.45 balanced, 0.75 wet. The water always adds its own strip, so even "
+			+ "a dry Domain has fertile banks.";
 		_warmth = Slide(rows, "Background warmth", 0f, 1f, 0.05f,
 			() => Params.Warmth, v => Params.Warmth = v);
-		_warmth.TooltipText = "The lowland before the lapse and the chills: 1 is the warmest, 0.7 a cold country.";
+		_warmth.TooltipText = "The lowland before the lapse and the chills: 0.15 is cold "
+			+ "country, 0.5 temperate, 0.85 hot, 1 sand. Even 0 keeps its lowland above the "
+			+ "snow — the cold on the map is the lapse over a mountain, not this knob.";
 
 		Heading(rows, "gates and crossings");
 		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
@@ -186,7 +190,7 @@ public partial class IslandLab
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate and tilt\n"
 				 + "arrows tilt   wheel zoom   Shift faster\n"
-				 + "Tab hides this panel",
+				 + "Tab or F1 hides this panel   F2 saves a screenshot",
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
 		};
 		keys.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.78f));
