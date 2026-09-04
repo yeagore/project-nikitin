@@ -25,10 +25,13 @@ public static class IslandGenerator
     /// <summary>
     /// Generates the Domain, re-rolling one that comes out unplayable. Still a
     /// pure function of (seed, params): a rejected island is rebuilt from a seed
-    /// derived from the one asked for.
+    /// derived from the one asked for. Any knob left at <see cref="IslandParams.Auto"/>
+    /// is rolled from the seed asked for, once, before the attempts; the values used
+    /// are the island's <see cref="IslandData.Settings"/>.
     /// </summary>
     public static IslandData Generate(int seed, IslandParams p)
     {
+        p = Roster.ResolveKnobs(seed, p);
         p = BoundAltitude(p);
         IslandData? best = null;
         int bestMissing = int.MaxValue;
@@ -139,6 +142,7 @@ public static class IslandGenerator
             N = p.Size;
             Data = new IslandData(N)
             {
+                Settings = p,
                 Style = Roster.ResolveStyle(seed, p),
                 Character = Roster.ResolveCharacter(seed, p),
             };

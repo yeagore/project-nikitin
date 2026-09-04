@@ -37,6 +37,12 @@ public partial class IslandParams : Resource
     [Export] public bool NewLandforms { get; set; } = true;
 
     // ---- what the island is made of -----------------------------------------
+    // The 0–1 knobs below accept Auto (any value under 0): the generator then rolls
+    // the knob from the seed, over its whole range, so consecutive seeds differ in
+    // climate and water and not only in shape. The lab shows what was rolled.
+
+    /// <summary>The value that makes a 0–1 knob roll per seed. Any negative value reads as this.</summary>
+    public const float Auto = -1f;
 
     /// <summary>Which landforms the island is built from; <c>Auto</c> picks one per seed. The <see cref="ReliefStyle"/> follows from it.</summary>
     [Export] public TerrainCharacter Character { get; set; } = TerrainCharacter.Auto;
@@ -44,14 +50,15 @@ public partial class IslandParams : Resource
     /// <summary>
     /// How the character's landforms are shared out, 0 mostly plains … 1 as much high ground as
     /// the character allows. A quota, not a dice roll: every landform a character names appears.
+    /// Auto rolls the quota per seed.
     /// </summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float LandformMix { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float LandformMix { get; set; } = Auto;
 
-    /// <summary>Overall vertical exaggeration of every landform's relief.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Relief { get; set; } = 0.5f;
+    /// <summary>Overall vertical exaggeration of every landform's relief. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Relief { get; set; } = Auto;
 
-    /// <summary>What hills do: 0 barely-there swells, 1 steep mounds, still one slab at a time. Also drives how jagged the surface noise is.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Hilliness { get; set; } = 0.5f;
+    /// <summary>What hills do: 0 barely-there swells, 1 steep mounds, still one slab at a time. Also drives how jagged the surface noise is. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Hilliness { get; set; } = Auto;
 
     /// <summary>Typical width of one landform region, in cells. <see cref="MinRegionArea"/> follows from it.</summary>
     [Export(PropertyHint.Range, "6,40,1")] public int RegionScale { get; set; } = 16;
@@ -76,28 +83,29 @@ public partial class IslandParams : Resource
     /// <summary>How far a basin's floor sits below the ground around it, in slabs. The mesa rule inverted, capped the same way.</summary>
     [Export(PropertyHint.Range, "3,24,1")] public int BasinDepth { get; set; } = 5;
 
-    /// <summary>How wet the Domain is: sets the catchment a channel needs before it counts as a river.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Rivers { get; set; } = 0.5f;
+    /// <summary>How wet the Domain is: sets the catchment a channel needs before it counts as a river. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Rivers { get; set; } = Auto;
 
-    /// <summary>How readily standing water collects: 0 no lakes, 1 one in every flat patch that could hold it.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Lakes { get; set; } = 0.5f;
+    /// <summary>How readily standing water collects: 0 no lakes, 1 one in every flat patch that could hold it. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Lakes { get; set; } = Auto;
 
-    /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Valleys { get; set; } = 0.4f;
+    /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Valleys { get; set; } = Auto;
 
     /// <summary>
     /// The Domain's background moisture, before its water adds any: dry country
     /// about 0.15, balanced about 0.45, wet about 0.75. The water always adds its
-    /// own strip, so a dry Domain still has fertile banks.
+    /// own strip, so a dry Domain still has fertile banks. Auto rolls it per seed.
     /// </summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Moisture { get; set; } = 0.45f;
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Moisture { get; set; } = Auto;
 
     /// <summary>
-    /// The Domain's background warmth at its lowest ground, before the lapse and the
-    /// chills: cold country about 0.15, temperate about 0.5, hot about 0.85, sand at
-    /// 1. Even 0 keeps its lowland above the snow.
+    /// The Domain's background warmth on open lowland: cold country under about
+    /// 0.22, temperate about 0.5, hot from about 0.65, sand at 1. Even 0 keeps its
+    /// lowland above the snow; the snow on the map is a mountain's upper part, at
+    /// every footprint. Auto rolls it per seed.
     /// </summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float Warmth { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Warmth { get; set; } = Auto;
 
     // ---- crossings ----------------------------------------------------------
 
@@ -135,8 +143,8 @@ public partial class IslandParams : Resource
 
     // ---- overhangs and arches -----------------------------------------------
 
-    /// <summary>How often a tall face is undercut and a short gap arched over. Added after the traversal analysis, so rendered and collidable but not walkable.</summary>
-    [Export(PropertyHint.Range, "0,1,0.01")] public float OverhangDensity { get; set; } = 0.35f;
+    /// <summary>How often a tall face is undercut and a short gap arched over. Added after the traversal analysis, so rendered and collidable but not walkable. Auto rolls it per seed.</summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float OverhangDensity { get; set; } = Auto;
 
     /// <summary>How far a lip reaches out from the face it hangs off, in cells.</summary>
     [Export(PropertyHint.Range, "1,8,1")] public int OverhangDepth { get; set; } = 2;

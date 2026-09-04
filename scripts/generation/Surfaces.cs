@@ -36,14 +36,18 @@ internal static class Surfaces
     /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its tundra.</summary>
     private const int SnowBelow = 35;
 
+    // The bands are placed on the knob: warmth is 60 + 180 × the knob on open
+    // lowland, so cold is a knob under about 0.3, hot one over about 0.7, and sand
+    // the last twentieth.
+
     /// <summary>Warmth below which the ground is the cold band: tundra, moorland, bog.</summary>
-    private const int ColdBelow = 100;
+    private const int ColdBelow = 115;
 
     /// <summary>Warmth from which the ground is the hot band: dust, savanna, floodplain.</summary>
-    private const int HotFrom = 175;
+    private const int HotFrom = 185;
 
     /// <summary>Warmth from which hot ground is sand: the extreme heat. A floodplain still beats it.</summary>
-    private const int SandFrom = 205;
+    private const int SandFrom = 220;
 
     /// <summary>Moisture below which the ground is dry: dust, steppe, tundra.</summary>
     private const int DryBelow = 90;
@@ -56,10 +60,11 @@ internal static class Surfaces
 
     /// <summary>
     /// Warmth from which a wet riverside is floodplain: the hot line less what the
-    /// water's tempering takes off a bank, so the bank and the strip behind it read
-    /// the same and a floodplain never starts a cell away from its river.
+    /// water's tempering takes off a bank (135 + 0.7 × (185 − 135)), so the bank and
+    /// the strip behind it read the same and a floodplain never starts a cell away
+    /// from its river.
     /// </summary>
-    private const int FloodplainFrom = 158;
+    private const int FloodplainFrom = 170;
 
     /// <summary>The noise bar cold wet ground must clear to be bog rather than moorland: occasional, not the rule.</summary>
     private const float BogBar = 0.6f;
@@ -195,18 +200,17 @@ internal static class Surfaces
                 or LandformType.Badlands or LandformType.Sinkholes;
 
     /// <summary>
-    /// The material at one cell. Beds and beaches first; goo's bed and shore are
-    /// stone; then snow; then rock — a tall face bares stone at its brink and drops
-    /// scree at its foot whatever the landform, and a rock landform shows stone and
-    /// scree wherever it is broken, so a mountain is stone up to its snow; then the
-    /// dunes and the dry sculpted landforms; then the climate grid, warmth against
-    /// moisture. A plateau rung in soft country changes nothing: the ground runs
-    /// up to the edge.
+    /// The material at one cell. Beds first; goo's bed and shore are stone; then
+    /// snow; then rock — a tall face bares stone at its brink and drops scree at its
+    /// foot whatever the landform, and a rock landform shows stone and scree
+    /// wherever it is broken, so a mountain is stone up to its snow; then the dunes
+    /// and the sculpted rock; then the climate grid, warmth against moisture. A
+    /// beach is ground like any other — nothing washes it — and a plateau rung in
+    /// soft country changes nothing: the ground runs up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
                                         bool gooSide, int near, Noise bog)
     {
-        if (d.Beach[x, z]) return SurfaceMaterial.Sand;
         if (d.WaterLevel[x, z] != IslandData.NoLand)
             return d.Fluid[x, z] == (byte)FluidKind.Goo ? SurfaceMaterial.Stone : SurfaceMaterial.Silt;
         if (gooSide) return SurfaceMaterial.Stone;
@@ -227,8 +231,9 @@ internal static class Surfaces
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
         if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
+        // Broken rock, not a desert: dust here put a hot-band ground in cold country.
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
-            return SurfaceMaterial.Dust;
+            return SurfaceMaterial.Scree;
 
         // The climate grid. A mountain is stone and scree up to its snow; the cold
         // band is for the ground that is not rock.

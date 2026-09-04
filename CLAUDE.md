@@ -21,7 +21,7 @@ invent, and offer to log the answer in the Notion Decision Log.
 | Engine | Godot **4.7**, Forward+ renderer, Direct3D 12, **Jolt** physics |
 | Scripting | **C#** (Godot .NET). `Project Nikitin.csproj` uses `Godot.NET.Sdk/4.7.2`, `net8.0`, nullable enabled, root namespace `ProjectNikitin`. Needs the .NET ("Mono") build of the editor. |
 | Main scene | `res://scenes/main/main.tscn` |
-| Platform | Windows. Shell is PowerShell; a Bash tool is also available. |
+| Platform | Two machines: a Mac (zsh; Godot at `/Applications/Godot_mono.app`) and a Windows box (PowerShell; Godot on `D:`). The checksum reproduces bit-for-bit across both. |
 
 `.godot/` is generated and git-ignored; never edit or commit it. `*.uid`
 sidecars are tracked.
@@ -29,10 +29,11 @@ sidecars are tracked.
 ### Building & running
 
 The C# side builds standalone with `dotnet build "Project Nikitin.csproj"`; do
-this after editing any `.cs`. Godot lives on the D: drive, off `PATH`:
+this after editing any `.cs`. Godot is off `PATH` on both machines:
 
 ```
-D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe
+/Applications/Godot_mono.app/Contents/MacOS/Godot                          # macOS
+D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   # Windows
 ```
 
 It runs headless, so the dev scenes can be executed from a shell and their
@@ -45,8 +46,10 @@ godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 448 isl
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 ```
 
-Run both under a timeout (headless Godot does not always exit), and note this
-machine prints decimals with a comma. To *look* at a shape headless, the audit's
+Run both under a timeout (headless Godot does not always exit; macOS has no
+`timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`), and note the
+Windows machine prints decimals with a comma. The headless runs are separate
+processes and can run at once. To *look* at a shape headless, the audit's
 `Gallery=<dir> GalleryShapes=Isthmus,Quarters` writes a contact sheet of sixteen
 seeds per arrangement, captioned with the landmass count.
 
@@ -116,11 +119,18 @@ under `scripts/generation/`, in the order they run:
 | Traversal | `Traversal` | Read-back: walk areas, reach areas (once built), water bodies, ferry berths, shelves. |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The five-byte habitat vector, the feature anchors and a provisional material per column, names. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The five-byte habitat vector (warmth's lapse is per mountain, from its own foot; no plateau is ever cold), the feature anchors and a provisional material per column, names. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
+
+**Auto knobs.** The nine 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, overhang density) accept
+`IslandParams.Auto` (any negative value); `Roster.ResolveKnobs` then rolls
+them from the seed before anything runs, and the values used are
+`IslandData.Settings`. The preset leaves all nine on Auto, so the audit's
+default seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
 `IslandData` for 448 islands against `docs/checksum-baseline.txt`: a change

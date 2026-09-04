@@ -46,30 +46,40 @@ internal static class Habitat
     private const float LapseShare = 255f;
 
     /// <summary>
-    /// Slabs of ordinary relief allowed above the plateau ceiling before the cold
-    /// starts: the hills' swell and a mesa's own crown. The ceiling itself is what
-    /// the plateau ladder and a chain of mesas can stack, read off the parameters, so
-    /// no plateau is ever cold and only what stands above every plateau — a
-    /// mountain's upper part — is.
+    /// Share of the mountain cap a mountain must rise above its own foot before the
+    /// cold starts. Measured from the foot, not from the island's lowest ground or
+    /// the parameters: no rung, mesa or massif is ever cold at any footprint, and a
+    /// mountain's upper part is, whatever it stands on and however small the Domain.
     /// </summary>
-    private const float PlateauAllowance = 4f;
+    private const float ColdFrom = 0.4f;
 
-    /// <summary>Share of the mountain cap above the ceiling over which the lapse runs to its full loss.</summary>
+    /// <summary>
+    /// Share of the mountain cap over which the lapse then runs to its full loss, so
+    /// a mountain of the full cap is snow at its top in any climate and one of half
+    /// the cap is merely cold.
+    /// </summary>
     private const float LapseReach = 0.6f;
 
     /// <summary>
     /// Where <see cref="IslandParams.Warmth"/> lands on the byte: 0 is a lowland of
     /// 60 (cold, but its water still thaws), 1 is 240 (sand). The offset keeps the
     /// whole knob liveable: the extreme cold is a slider you cannot quite reach.
+    /// The label is the open lowland: the chills below are small, and the lee
+    /// warms rather than the wind cooling, so an island's mean warmth reads at
+    /// its knob.
     /// </summary>
     private const float WarmthFloor = 60f, WarmthSpan = 180f;
 
-    /// <summary>Warmth a fully windswept cell loses.</summary>
-    private const float WindChill = 15f;
+    /// <summary>Warmth a fully sheltered cell gains: the lee is milder than the open ground.</summary>
+    private const float LeeWarmth = 10f;
 
-    /// <summary>Warmth the rim loses, fading to nothing <see cref="RimChillReach"/> cells inland.</summary>
-    private const float RimChill = 12f;
-    private const int RimChillReach = 16;
+    /// <summary>
+    /// Warmth the rim loses, fading to nothing <see cref="RimChillReach"/> cells
+    /// inland: a colder strand along the aether, not a colder Domain. Rim distance
+    /// is a median five cells even at 128², so a long fade never faded anywhere.
+    /// </summary>
+    private const float RimChill = 6f;
+    private const int RimChillReach = 4;
 
     /// <summary>Warmth's middle — the temperate band's centre — which wet ground is pulled toward: water tempers both the heat and the cold.</summary>
     private const float Temperate = 135f;
@@ -179,37 +189,55 @@ internal static class Habitat
 
     /// <summary>
     /// Warmth: the Domain's background (<see cref="IslandParams.Warmth"/>) over the
-    /// whole island up to the **plateau ceiling** — the lowest ground plus what the
-    /// plateau ladder and a chain of mesas can stack, plus <see cref="PlateauAllowance"/>
-    /// — then a lapse over <see cref="LapseReach"/> of the mountain cap, so only what
-    /// stands above every plateau, a mountain's upper part, is cold, and its top is
-    /// snow. Then the wind, the rim and dry ground each make it colder, and wet
-    /// ground is pulled toward <see cref="Temperate"/> from either side. No land
-    /// leaves it all zero.
+    /// whole island, then a lapse on mountains alone, measured from each mountain's
+    /// own foot (<see cref="Relief.MountainFoot"/> read off the finished surface):
+    /// nothing up to <see cref="ColdFrom"/> of the mountain cap above the foot,
+    /// then the full loss over <see cref="LapseReach"/> more, so a mountain's upper
+    /// part is cold and its top is snow at every footprint and whatever it stands
+    /// on, and no plateau, mesa or massif is ever cold. Then the lee is a little
+    /// warmer, the rim a little colder, and wet ground is pulled toward
+    /// <see cref="Temperate"/> from either side. No land leaves it all zero.
     /// </summary>
     private static void MeasureWarmth(IslandParams p, IslandData d)
     {
         int n = d.Size;
-        short low = short.MaxValue;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
-        {
-            short eff = d.EffectiveLevel(x, z);
-            if (eff != IslandData.NoLand && eff < low) low = eff;
-        }
-        if (low == short.MaxValue) return;
-
-        float ceiling = low + p.PlateauLevels * p.CliffHeight + 2 * p.MesaHeight + PlateauAllowance;
-        float reach = Math.Max(1f, MountainCap(d.Size) * LapseReach);
-        float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
+        var land = new bool[n, n];
+        var eff = new short[n, n];
+        var isMountain = new bool[n, n];
+        var regionLow = new Dictionary<int, float>();
+        bool any = false;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
-            float t = Mathf.Clamp((d.EffectiveLevel(x, z) - ceiling) / reach, 0f, 1f);
-            float warmth = baseline - LapseShare * t;
+            any = true;
+            land[x, z] = true;
+            eff[x, z] = d.EffectiveLevel(x, z);
+            isMountain[x, z] = (LandformType)d.Landform[x, z] == LandformType.Mountain;
+            int r = d.Region[x, z];
+            if (!regionLow.TryGetValue(r, out float low) || eff[x, z] < low) regionLow[r] = eff[x, z];
+        }
+        if (!any) return;
 
-            warmth -= WindChill * d.Exposure[x, z] / 255f;
+        // A mountain that meets only the aether starts from its own lowest ground.
+        float[,] foot = Relief.MountainFoot(land, eff, isMountain, (x, z) => regionLow[d.Region[x, z]]);
+
+        float cap = MountainCap(d.Size);
+        float coldFrom = cap * ColdFrom;
+        float reach = Math.Max(1f, cap * LapseReach);
+        float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z]) continue;
+            float warmth = baseline;
+            if (isMountain[x, z])
+            {
+                float t = Mathf.Clamp((eff[x, z] - foot[x, z] - coldFrom) / reach, 0f, 1f);
+                warmth -= LapseShare * t;
+            }
+
+            warmth += LeeWarmth * (1f - d.Exposure[x, z] / 255f);
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);
             warmth = Temperate + (warmth - Temperate) * (1f - MoistTemper * d.Moisture[x, z] / 255f);
 

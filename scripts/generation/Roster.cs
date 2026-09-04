@@ -121,6 +121,34 @@ internal static class Roster
     }
 
     /// <summary>
+    /// The 0–1 knobs left at <see cref="IslandParams.Auto"/>, each rolled from the
+    /// seed over its whole range under its own salt. Returns the same instance when
+    /// nothing is Auto, a copy otherwise; the copy is what the island reports as
+    /// its <see cref="IslandData.Settings"/>. Order is load-bearing for nothing —
+    /// each roll is its own hash — but the salts are: change one and every island
+    /// with that knob on Auto moves.
+    /// </summary>
+    internal static IslandParams ResolveKnobs(int seed, IslandParams p)
+    {
+        if (p.LandformMix >= 0f && p.Relief >= 0f && p.Hilliness >= 0f && p.Rivers >= 0f
+            && p.Lakes >= 0f && p.Valleys >= 0f && p.Moisture >= 0f && p.Warmth >= 0f
+            && p.OverhangDensity >= 0f)
+            return p;
+
+        var r = (IslandParams)p.Duplicate();
+        if (p.LandformMix < 0f) r.LandformMix = Hash01(seed, 0x4B01u);
+        if (p.Relief < 0f) r.Relief = Hash01(seed, 0x4B02u);
+        if (p.Hilliness < 0f) r.Hilliness = Hash01(seed, 0x4B03u);
+        if (p.Rivers < 0f) r.Rivers = Hash01(seed, 0x4B04u);
+        if (p.Lakes < 0f) r.Lakes = Hash01(seed, 0x4B05u);
+        if (p.Valleys < 0f) r.Valleys = Hash01(seed, 0x4B06u);
+        if (p.Moisture < 0f) r.Moisture = Hash01(seed, 0x4B07u);
+        if (p.Warmth < 0f) r.Warmth = Hash01(seed, 0x4B08u);
+        if (p.OverhangDensity < 0f) r.OverhangDensity = Hash01(seed, 0x4B09u);
+        return r;
+    }
+
+    /// <summary>
     /// The island's character, with <c>Auto</c> resolved. <see cref="IslandParams.NewLandforms"/>
     /// keeps the sculpted characters out of the dice, not out of the game.
     /// </summary>

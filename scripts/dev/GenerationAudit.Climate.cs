@@ -144,20 +144,27 @@ public partial class GenerationAudit
         // The header lines are written before the width is fixed: a line wider than the
         // grid would otherwise be clipped at the edge with nothing to say it had been.
         IslandData sample = tiles[0, 0];
-        string subtitle = $"{sample.Name.ToUpperInvariant()} - SEED {seed} - {n} DOMAIN - "
+        string subtitle = $"SEED {seed}, {n}X{n}, "
             + $"{sample.Arrangement.ToString().ToUpperInvariant()}, "
-            + $"{sample.Character.ToString().ToUpperInvariant()} - SURFACE VIEW";
-        const string SameNote =
-            "THE SAME TERRAIN IN ALL 25: MOISTURE AND WARMTH ARE READ BY THE HABITAT "
-            + "STAGE ALONE";
+            + $"{sample.Character.ToString().ToUpperInvariant()}. SURFACE VIEW.";
+        string SameNote = $"SAME TERRAIN IN ALL {steps * steps} TILES. ONLY MOISTURE AND WARMTH CHANGE.";
         string middleLabel = Label(ClimateSteps[steps / 2]);
-        string fieldNote = "HEIGHT, EXPOSURE AND RIM HOLD ACROSS ALL 25 - WARMTH AND "
-            + $"MOISTURE ARE THE {middleLabel} / {middleLabel} TILE";
+        string fieldNote = $"HEIGHT, EXPOSURE, RIM: SAME IN ALL {steps * steps}. "
+            + $"WARMTH, MOISTURE: FROM THE {middleLabel} / {middleLabel} TILE.";
 
+        (string Head, (string Name, Color C)[] Rows)[] legend = LegendColumns();
         int textW = 0;
         foreach (string line in new[] { subtitle, SameNote, fieldNote })
             textW = Math.Max(textW, TinyFont.Width(line, 2));
-        int width = Math.Max(Gutter + gridW, Gutter + textW) + Pad + 8;
+        int legendW = 0;
+        foreach (var column in legend)
+        {
+            legendW = Math.Max(legendW, TinyFont.Width(column.Head, 2) + Gap);
+            foreach (var (name, _) in column.Rows)
+                legendW = Math.Max(legendW, 26 + TinyFont.Width(name, 2) + Gap);
+        }
+        legendW = Math.Max(legendW, (gridW + Gap) / legend.Length) * legend.Length;
+        int width = Math.Max(Math.Max(Gutter + gridW, Gutter + textW), Gutter + legendW) + Pad + 8;
 
         int titleY = Pad;
         int subY = titleY + TinyFont.Height(3) + 9;
@@ -175,9 +182,10 @@ public partial class GenerationAudit
         const int BarHeight = 12;
         int barTop = panelTop + tile + 8;
         int barLabelY = barTop + BarHeight + 7;
-        int stripBottom = barLabelY + TinyFont.Height(2);
+        // A narrow tile puts the bar's two labels on two lines rather than over each other.
+        int barLines = FieldLabelsFit(tile) ? 1 : 2;
+        int stripBottom = barLabelY + barLines * (TinyFont.Height(2) + 4);
 
-        (string Head, (string Name, Color C)[] Rows)[] legend = LegendColumns();
         int legendRows = 0;
         foreach (var column in legend) legendRows = Math.Max(legendRows, column.Rows.Length);
         int ruleY = stripBottom + 22;
@@ -188,12 +196,12 @@ public partial class GenerationAudit
         var img = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
         img.Fill(Page);
 
-        TinyFont.Draw(img, "THE CLIMATE GRID", Gutter, titleY, 3, Ink);
+        TinyFont.Draw(img, "CLIMATE GRID", Gutter, titleY, 3, Ink);
         TinyFont.Draw(img, subtitle, Gutter, subY, 2, Dim);
         TinyFont.Draw(img, SameNote, Gutter, noteY, 2, Dim);
 
         // The warmth axis, across.
-        TinyFont.DrawCentered(img, "BACKGROUND WARMTH >", Gutter + gridW / 2, axisY, 2, Ink);
+        TinyFont.DrawCentered(img, "WARMTH >", Gutter + gridW / 2, axisY, 2, Ink);
         for (int col = 0; col < steps; col++)
         {
             int left = Gutter + col * (tile + Gap);
@@ -227,9 +235,17 @@ public partial class GenerationAudit
             stripHeadY, stripNoteY, panelTitleY, panelTop, barTop, BarHeight, barLabelY);
 
         HLine(img, Gutter, ruleY, gridW, Rule);
-        TinyFont.Draw(img, "WHAT THE COLOURS MEAN", Gutter, legendTitleY, 2, Ink);
+        TinyFont.Draw(img, "LEGEND", Gutter, legendTitleY, 2, Ink);
 
+        // Columns at least as wide as their widest entry, so a 48-cell grid does not
+        // run one column's names into the next.
         int columnW = (gridW + Gap) / legend.Length;
+        foreach (var column in legend)
+        {
+            columnW = Math.Max(columnW, TinyFont.Width(column.Head, 2) + Gap);
+            foreach (var (name, _) in column.Rows)
+                columnW = Math.Max(columnW, 26 + TinyFont.Width(name, 2) + Gap);
+        }
         for (int i = 0; i < legend.Length; i++)
         {
             int left = Gutter + i * columnW;
@@ -276,26 +292,27 @@ public partial class GenerationAudit
                           Func<float, Color> Bar, string Low, string High)[]
         {
             ("HEIGHT", terrain, (d, x, z) => DevPalette.Height((d.SurfaceLevel(x, z) - lo) / span),
-                DevPalette.Height, "LOWEST", "HIGHEST"),
+                DevPalette.Height, FieldLabels[0].Low, FieldLabels[0].High),
             ("WARMTH", middle, (d, x, z) => DevPalette.WarmthTint(d.Warmth[x, z]),
-                t => DevPalette.WarmthTint((byte)(t * 255f)), "FROZEN", "BAKING"),
+                t => DevPalette.WarmthTint((byte)(t * 255f)), FieldLabels[1].Low, FieldLabels[1].High),
             ("MOISTURE", middle, (d, x, z) => Ramp(d.Moisture[x, z], DevPalette.MoistureRamp),
                 t => DevPalette.MoistureRamp.Lo.Lerp(DevPalette.MoistureRamp.Hi, t),
-                "PARCHED", "WATERSIDE"),
+                FieldLabels[2].Low, FieldLabels[2].High),
             ("EXPOSURE", terrain, (d, x, z) => Ramp(d.Exposure[x, z], DevPalette.ExposureRamp),
                 t => DevPalette.ExposureRamp.Lo.Lerp(DevPalette.ExposureRamp.Hi, t),
-                "LEE", "WINDSWEPT"),
+                FieldLabels[3].Low, FieldLabels[3].High),
             ("RIM", terrain,
                 (d, x, z) => Ramp((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp),
-                t => DevPalette.RimRamp.Lo.Lerp(DevPalette.RimRamp.Hi, t), "RIM", "INTERIOR"),
+                t => DevPalette.RimRamp.Lo.Lerp(DevPalette.RimRamp.Hi, t),
+                FieldLabels[4].Low, FieldLabels[4].High),
         };
 
-        TinyFont.Draw(img, "THE FIELDS THE SURFACE IS READ FROM", gutter, headY, 2, Ink);
+        TinyFont.Draw(img, "INPUT FIELDS", gutter, headY, 2, Ink);
         TinyFont.Draw(img, note, gutter, noteY, 2, Dim);
 
-        // The ramp's ends are inset, so one panel's "HIGHEST" does not read into the
-        // next panel's "FROZEN" across a ten-pixel gap.
-        const int Inset = 8;
+        // The ramp's ends are inset, so one panel's "HIGH" does not read into the
+        // next panel's "COLD" across a ten-pixel gap.
+        bool oneLine = FieldLabelsFit(tile);
 
         for (int i = 0; i < panels.Length; i++)
         {
@@ -313,9 +330,28 @@ public partial class GenerationAudit
                 Fill(img, left + px, barTop, 1, barHeight, bar(px / (float)(tile - 1)));
             Frame(img, left, barTop, tile, barHeight, Rule);
 
-            TinyFont.Draw(img, low, left + Inset, barLabelY, 2, Dim);
-            TinyFont.DrawRight(img, high, left + tile - Inset, barLabelY, 2, Dim);
+            TinyFont.Draw(img, low, left + FieldInset, barLabelY, 2, Dim);
+            TinyFont.DrawRight(img, high, left + tile - FieldInset,
+                oneLine ? barLabelY : barLabelY + TinyFont.Height(2) + 4, 2, Dim);
         }
+    }
+
+    /// <summary>The two ends of each field panel's ramp, in the panels' order.</summary>
+    private static readonly (string Low, string High)[] FieldLabels =
+    {
+        ("LOW", "HIGH"), ("COLD", "HOT"), ("DRY", "WET"), ("LEE", "OPEN"), ("EDGE", "INLAND"),
+    };
+
+    /// <summary>Pixels the ramp labels stand in from each end of a panel.</summary>
+    private const int FieldInset = 8;
+
+    /// <summary>Whether every panel's two ramp labels fit side by side under a tile this wide.</summary>
+    private static bool FieldLabelsFit(int tile)
+    {
+        foreach (var (low, high) in FieldLabels)
+            if (2 * FieldInset + TinyFont.Width(low, 2) + 12 + TinyFont.Width(high, 2) > tile)
+                return false;
+        return true;
     }
 
     /// <summary>A habitat byte on a two-colour ramp, the way the lab draws its field views.</summary>
@@ -353,7 +389,7 @@ public partial class GenerationAudit
                 Of("SAVANNA (MID)", SurfaceMaterial.Savanna),
                 Of("FLOODPLAIN (WET)", SurfaceMaterial.Floodplain),
             }),
-            ("ROCK AND BARE", new[]
+            ("BARE", new[]
             {
                 Of("STONE", SurfaceMaterial.Stone),
                 Of("SCREE", SurfaceMaterial.Scree),
@@ -361,7 +397,7 @@ public partial class GenerationAudit
                 Of("SAND", SurfaceMaterial.Sand),
                 Of("SILT (BED)", SurfaceMaterial.Silt),
             }),
-            ("WATER AND VOID", new[]
+            ("WATER", new[]
             {
                 ("LAKE", DevPalette.LakeTint),
                 ("STREAM", DevPalette.StreamTint),
