@@ -406,9 +406,17 @@ internal static class Footprint
         /// A wide hub with thick arms at the given fractions of a turn. Axis-aligned,
         /// always: an arm points at an edge, and so at a Gate.
         /// </summary>
-        private void Arms(float[] spokes, uint salt)
+        private void Arms(float[] spokes, uint salt, float hubBack = float.NaN)
         {
-            Add(cx, cz, radius * 0.45f, salt, 1f, 0f);
+            // hubBack, in turns, is the direction the hub is set back in, by an eighth
+            // of the radius; NaN leaves it on the centre.
+            float hx = cx, hz = cz;
+            if (!float.IsNaN(hubBack))
+            {
+                hx += MathF.Cos(hubBack * Mathf.Tau) * radius * 0.125f;
+                hz += MathF.Sin(hubBack * Mathf.Tau) * radius * 0.125f;
+            }
+            Add(hx, hz, radius * 0.45f, salt, 1f, 0f);
             float reach = radius * 0.58f * spread;
 
             for (int i = 0; i < spokes.Length; i++)
@@ -567,9 +575,12 @@ internal static class Footprint
                     Arms(new[] { 0f, 0.25f, 0.75f }, 0x7100u);
                     break;
 
+                // The hub sits back toward the outer corner: centred, its round edge
+                // poked into the bay between the two arms as a spur, which on the
+                // broken form stood clear of both straits as a third petal.
                 case IslandArrangement.LShape:
                 case IslandArrangement.BrokenL:
-                    Arms(new[] { 0f, 0.25f }, 0x7200u);
+                    Arms(new[] { 0f, 0.25f }, 0x7200u, hubBack: 0.625f);
                     break;
 
                 // Five or six, so no two face each other and every bay is a wedge.

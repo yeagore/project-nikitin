@@ -31,11 +31,15 @@ public partial class IslandLab
 	private LineEdit _seedField = null!;
 	private bool _syncing;
 
-	/// <summary>The sliders with an Auto stop, and how to read what the seed rolled for each.</summary>
-	private readonly List<(HSlider Slider, Label Caption, string Text, Func<IslandParams, float> Rolled)> _autoKnobs = new();
+	/// <summary>
+	/// The 0–1 knobs: each a slider, its caption, its Auto box, and how to read
+	/// what the seed rolled for it off a built island's settings.
+	/// </summary>
+	private readonly List<(HSlider Slider, Label Caption, CheckBox Auto, string Text,
+	                       Func<float> Read, Action<float> Write, Func<IslandParams, float> Rolled)> _knobs = new();
 
-	/// <summary>Where an Auto-capable slider parks for Auto: one step under zero.</summary>
-	private const float AutoStop = -0.05f;
+	/// <summary>The island last built, whose settings say what Auto rolled.</summary>
+	private IslandData? _rolledFrom;
 
 	private void BuildOverlayUi()
 	{
@@ -108,7 +112,7 @@ public partial class IslandLab
 		// A dropdown over the supported footprints only: the pipeline is audited at exactly these.
 		rows.AddChild(Caption("Size, cells",
 			"Footprint edge, in cells; altitude is bounded by the same number of slabs. "
-			+ "These five are the audited footprints."));
+			+ "These three are the audited footprints."));
 		_size = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		foreach (int s in IslandParams.SupportedSizes)
 			_size.AddItem($"{s} × {s}  ({s} slabs tall)", s);
@@ -183,6 +187,7 @@ public partial class IslandLab
 			"The open lowland: under about 0.3 is cold country, 0.5 temperate, over about "
 			+ "0.7 hot, the last twentieth sand. Even 0 keeps its lowland above the snow — "
 			+ "the snow on the map is a mountain's upper part, at every footprint.");
+		AddButton(rows, "All knobs to auto", AllKnobsAuto);
 
 		Heading(rows, "gates and crossings");
 		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
@@ -343,14 +348,7 @@ public partial class IslandLab
 		_crossings.Selected = _crossings.GetItemIndex((int)Params.Crossings);
 		_exitKind.Selected = _exitKind.GetItemIndex((int)Params.ExitGate);
 
-		_hilliness.Value = Stop(Params.Hilliness);
-		_mix.Value = Stop(Params.LandformMix);
-		_relief.Value = Stop(Params.Relief);
-		_wet.Value = Stop(Params.Rivers);
-		_lakes.Value = Stop(Params.Lakes);
-		_valleys.Value = Stop(Params.Valleys);
-		_moisture.Value = Stop(Params.Moisture);
-		_warmth.Value = Stop(Params.Warmth);
+		SyncKnobs();
 		_size.Selected = _size.GetItemIndex(Params.Size);
 		_rungs.Value = Params.PlateauLevels;
 		_cliff.Value = Params.CliffHeight;
@@ -412,51 +410,100 @@ public partial class IslandLab
 	}
 
 	/// <summary>
-	/// A 0–1 knob with an Auto stop one step left of zero: parked there, the seed
-	/// rolls the knob and the caption shows what it rolled once the island is built.
-	/// <paramref name="rolled"/> reads that value off the island's settings.
+	/// A 0–1 knob with an Auto box beside it. Ticked, the seed rolls the knob, the
+	/// slider is greyed and, once the island is built, sits at what the seed rolled
+	/// (<paramref name="rolled"/> reads that off the island's settings). Unticking it
+	/// freezes the knob at the value the slider shows, so a rolled setting can be
+	/// kept and nudged. Dragging a greyed slider does nothing; untick first.
 	/// </summary>
 	private HSlider Slide(Container into, string text, float min, float max, float step,
 						  Func<float> read, Action<float> write, Func<IslandParams, float> rolled,
 						  string? tip = null)
 	{
-		tip = (tip ?? "") + " All the way left is Auto: the seed rolls it.";
+		tip = (tip ?? "") + " Ticked auto, the seed rolls it and the slider shows the roll "
+			+ "once the island is built; untick to keep that value and set it yourself.";
+		var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		Label caption = Caption(KnobCaption(text, read()), tip);
-		into.AddChild(caption);
+		caption.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		row.AddChild(caption);
+		var auto = new CheckBox
+		{
+			Text = "auto",
+			ButtonPressed = read() < 0f,
+			TooltipText = tip,
+			FocusMode = Control.FocusModeEnum.None,
+		};
+		row.AddChild(auto);
+		into.AddChild(row);
 
+		float shown = read() < 0f ? 0.5f : read();
 		var slider = new HSlider
 		{
-			MinValue = AutoStop,
+			MinValue = min,
 			MaxValue = max,
 			Step = step,
-			Value = Stop(read()),
+			Value = shown,
+			Editable = read() >= 0f,
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			CustomMinimumSize = new Vector2(0, 18),
 			TooltipText = tip,
 		};
 		slider.ValueChanged += v =>
 		{
-			caption.Text = KnobCaption(text, (float)v);
-			if (!_syncing) write(v < 0 ? IslandParams.Auto : (float)v);
+			if (!auto.ButtonPressed) caption.Text = KnobCaption(text, (float)v);
+			if (!_syncing && !auto.ButtonPressed) write((float)v);
+		};
+		auto.Toggled += on =>
+		{
+			slider.Editable = !on;
+			if (_syncing) return;
+			write(on ? IslandParams.Auto : (float)slider.Value);
+			caption.Text = on ? KnobCaption(text, IslandParams.Auto) : KnobCaption(text, (float)slider.Value);
 		};
 		into.AddChild(slider);
-		_autoKnobs.Add((slider, caption, text, rolled));
+		_knobs.Add((slider, caption, auto, text, read, write, rolled));
 		return slider;
 	}
-
-	/// <summary>Where a knob's value sits on its slider: Auto parks at the stop.</summary>
-	private static float Stop(float v) => v < 0f ? AutoStop : v;
 
 	private static string KnobCaption(string text, float v)
 		=> v < 0f ? $"{text}   auto" : $"{text}   {v:0.00}";
 
-	/// <summary>After a build: each Auto knob's caption says what the seed rolled.</summary>
+	/// <summary>
+	/// Puts every knob's controls where its parameter is: the Auto box from the sign,
+	/// the slider at the value, or at what the seed rolled for an Auto knob once an
+	/// island has been built, so the slider's position is true to the island shown.
+	/// </summary>
+	private void SyncKnobs()
+	{
+		IslandParams? rolled = _rolledFrom?.Settings;
+		foreach (var (slider, caption, auto, text, read, _, roll) in _knobs)
+		{
+			float v = read();
+			bool isAuto = v < 0f;
+			auto.ButtonPressed = isAuto;
+			slider.Editable = !isAuto;
+			if (!isAuto) slider.Value = v;
+			else if (rolled != null) slider.Value = roll(rolled);
+			caption.Text = isAuto && rolled != null
+				? $"{text}   auto -> {roll(rolled):0.00}"
+				: KnobCaption(text, v);
+		}
+	}
+
+	/// <summary>After a build: the Auto knobs' sliders and captions take what the seed rolled.</summary>
 	private void ShowRolled(IslandData d)
 	{
-		if (d.Settings == null) return;
-		foreach (var (slider, caption, text, rolled) in _autoKnobs)
-			if (slider.Value < 0)
-				caption.Text = $"{text}   auto -> {rolled(d.Settings):0.00}";
+		_rolledFrom = d;
+		_syncing = true;
+		SyncKnobs();
+		_syncing = false;
+	}
+
+	/// <summary>Every 0–1 knob back to Auto, as the preset has them.</summary>
+	private void AllKnobsAuto()
+	{
+		foreach (var knob in _knobs) knob.Write(IslandParams.Auto);
+		Sync();
 	}
 
 	private SpinBox Spin(Container into, string text, int min, int max,

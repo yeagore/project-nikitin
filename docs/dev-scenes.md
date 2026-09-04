@@ -49,10 +49,14 @@ Camera: **WASD** pan, **Q/E** or middle-drag yaw, middle-drag or **Up/Down**
 tilt, wheel zoom, **Shift** faster. (Fords are on **O** because **D** is the
 strafe, and liquid on **I** because **W** is forward.)
 
-A slider parked all the way left says **auto**: the seed rolls that knob, and
-after the build the caption shows what it rolled (`Warmth   auto -> 0.71`); the
-readout's `settings:` line lists all nine, a star on each rolled one. **H** and
-**M** step their knob through auto, 0, 0.25 … 1.
+Each 0–1 knob has an **auto** box beside it. Ticked, the seed rolls that knob:
+the slider is greyed, and once the island is built it sits at what the seed
+rolled and the caption says so (`Warmth   auto -> 0.71`), so the slider's
+position is always true to the island shown. Untick the box to keep that value
+and set it yourself; tick it again to hand the knob back to the seed, or press
+**All knobs to auto** for all eight at once. The readout's `settings:` line
+lists all nine, a star on each rolled one. **H** and **M** step their knob
+through auto, 0, 0.25 … 1.
 
 **N** rolls a seed; the **Seed** field under the buttons takes one you already
 have — a seed named in an audit run, a commit or a screenshot — and **Enter** or
