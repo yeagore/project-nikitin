@@ -8,7 +8,7 @@ the lab and audit manuals, the repository layout and the glossary are in
 `CLAUDE.md`. History is in git.
 
 Status (2026-09-02): every stage below is implemented in `scripts/generation/`,
-five footprints — 48², 64², 72², 96², 128² — are supported and audited, and the
+three footprints — 64², 96², 128² — are supported and audited, and the
 chunked mesher is the next piece of work.
 
 ---
@@ -89,7 +89,7 @@ axis, which cut a neck to a width however the heads bulge).
 | `Atoll` | beads on a string: rounded islets that all but touch, a step of water between each pair |
 | `Cross`, `TShape`, `LShape`, `Star`; `BrokenCross`, `BrokenT`, `BrokenL` | a wide hub with thick arms, **axis-aligned**, so an arm points at an edge and therefore at a Gate; the broken forms part the arms |
 | `Fractal` | a chain of overlapping lobes that turns as it goes |
-| `Rosette` | a ring of lobes over a full hub: a run of deep round bays with headlands between |
+| `Rosette` | a spray of narrow petals from a small heart, a few of them parted from it — the thin, busy cousin of `Star`, and by intent two to five pieces |
 | `ThousandIsles` | a **quilt**: a jittered 4×4 to 6×6 grid of lobes by footprint, a few holes, every seam a strait — the only spread the linker leaves where it was |
 | `Square`, `Rhomb` | blocky fused grids of lobes, axis-aligned and stood on a corner; a little under half the time with a hole of a rolled size, a little off the centre |
 | `NShape` | the letter itself: two uprights and the diagonal joining them, the strokes as fat as a cross's arm |
@@ -572,8 +572,8 @@ Its opt-in sweeps are the `[Export]` properties of `GenerationAudit.cs`, each
 documented there, and can be given on the command line after `--`
 (`godot --headless scenes/dev/generation_audit.tscn -- Knobs Portraits=<dir>`).
 `scenes/dev/generation_checksum.tscn` (`GenerationChecksum.cs`) hashes every
-field of `IslandData` for 448 islands — the 60 default seeds; every
-arrangement × character at 64²; all five sizes; every Gate request; every
+field of `IslandData` for 442 islands — the 60 default seeds; every
+arrangement × character at 64²; all three sizes; every Gate request; every
 `BridgeEase`; both ends of every knob — and diffs against
 `docs/checksum-baseline.txt` (`-- accept` rewrites it). Two runs that print the
 same lines built the same islands bit for bit: it is the regression gate for
@@ -589,7 +589,7 @@ at the lab.
 
 | param | range | drives |
 |---|---|---|
-| `Size` | 48 / 64 / 72 / 96 / 128 | footprint edge, in cells. Audited at these five (`SupportedSizes`); any 16–128 is accepted, unaudited |
+| `Size` | 64 / 96 / 128 | footprint edge, in cells. Audited at these three (`SupportedSizes`); any 16–128 is accepted, unaudited |
 | `Radius` | 0 = auto | land-mask radius |
 | `Coverage` | 0 – 1 | share of each lobe's disc that becomes land |
 | `Irregularity` | 0 – 1 | disc ↔ deeply lobed coastline |

@@ -42,7 +42,7 @@ three of them: the island lab (F6 in the editor), the audit, and the checksum.
 The two commands that matter after touching the generator:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 448 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 442 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 ```
 
@@ -69,8 +69,10 @@ seeds per arrangement, captioned with the landmass count.
   slope limit is walkable by construction; every cliff is one some rule put there.
   Walking is by king's moves: a corner is cut unless both cardinal cells beside
   the diagonal are cliffs. Works, anchors and water stay cardinal.
-- **Five supported footprints: 48², 64², 72², 96², 128²** (128² is the stress
-  target). Altitude is bounded by the same number in slabs, so the bounding
+- **Three supported footprints: 64², 96², 128²** (128² is the stress target;
+  48² and 72² were dropped on 2026-09-05, 48² because the footprint constants
+  measured in cells wreck the split shapes there, 72² with the ladder it sat
+  on). Altitude is bounded by the same number in slabs, so the bounding
   cube is a real shape, and the landmass takes 55–85% of the grid's extent.
   30–40 Domains per game; up to four side Links per Domain, one Gate per edge.
 - **Terrain is stored per column**, not as a voxel array: each `(x, z)` holds a
@@ -133,7 +135,7 @@ them from the seed before anything runs, and the values used are
 default seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 448 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 442 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against
@@ -258,7 +260,7 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 Consult the relevant page before non-trivial design work. When a decision gets
 made in a session, offer to add it to the Decision Log and to close the matching
 Open Question. Two decisions are made but not yet logged there: the slab's 1:4
-ratio, and the five supported footprints (the Ecumene page still says 16³–64³).
+ratio, and the three supported footprints (the Ecumene page still says 16³–64³).
 
 ---
 
@@ -268,7 +270,7 @@ ratio, and the five supported footprints (the Ecumene page still says 16³–64�
   is at `yeagore/project-nikitin`.
 - **Render an island**, branch `island-generation`, PR
   [#2](https://github.com/yeagore/project-nikitin/pull/2). Every generation
-  stage is done and audited at all five footprints. What is next, in rough
+  stage is done and audited at all three footprints. What is next, in rough
   order, is in `docs/island-generation.md` §6: the chunked span-aware mesher and
   colliders (the only thing that will answer the performance question), settlement
   placement, the biome layer above `Material`, and span-aware pathing.
@@ -286,5 +288,5 @@ Flagged so they are not silently hard-coded:
 3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
    `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
    bounds, an InputMap.
-4. **Domain size ladder.** Two candidate ladders (64/96/128 and 48/72/96) are
-   overlaid in the five supported footprints until Maxim picks one.
+4. ~~**Domain size ladder.**~~ Decided 2026-09-05: 64 / 96 / 128. Not yet in
+   the Notion Decision Log.

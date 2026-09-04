@@ -26,7 +26,7 @@ public partial class GenerationAudit : Node
     /// <summary>Land per arrangement over SweepSeeds seeds each, thinnest first; Auto rolls give some shapes one island in sixty.</summary>
     [Export] public bool Bulk { get; set; } = false;
 
-    /// <summary>The guarantee set at every supported footprint — 48, 64, 72, 96, 128 — over SweepSeeds seeds each.</summary>
+    /// <summary>The guarantee set at every supported footprint — 64, 96, 128 — over SweepSeeds seeds each.</summary>
     [Export] public bool Sizes { get; set; } = false;
 
     /// <summary>Directory for a top-view PNG of two islands per arrangement, or empty for none: how a shape gets looked at headless.</summary>
@@ -61,7 +61,7 @@ public partial class GenerationAudit : Node
     /// <summary>The probation workup: each of the newest arrangements at every footprint and against every character.</summary>
     [Export] public bool Debut { get; set; } = false;
 
-    /// <summary>Every arrangement at 48² / 64² / 128², hardest-pressed first — the shortlist for a future size gate.</summary>
+    /// <summary>Every arrangement at 64² / 96² / 128², hardest-pressed first — the shortlist for a future size gate.</summary>
     [Export] public bool Strain { get; set; } = false;
 
     /// <summary>A digit height map of one patch each of badlands, karst, massif, dunes and sinkholes.</summary>
@@ -88,8 +88,8 @@ public partial class GenerationAudit : Node
     /// <summary>Directory for the moisture x warmth collage - 25 surface views of one seed - or empty for none.</summary>
     [Export] public string ClimateGrid { get; set; } = "";
 
-    /// <summary>Footprint the ClimateGrid collage and its scout use; 72 reads at a glance where 128 does not.</summary>
-    [Export] public int ClimateGridSize { get; set; } = 72;
+    /// <summary>Footprint the ClimateGrid collage and its scout use; 64 reads at a glance where 128 does not.</summary>
+    [Export] public int ClimateGridSize { get; set; } = 64;
 
     /// <summary>Score this many consecutive seeds from FirstSeed for the collage, or 0 for none.</summary>
     [Export] public int ClimateScout { get; set; } = 0;

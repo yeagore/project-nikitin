@@ -13,10 +13,10 @@ public partial class IslandParams : Resource
     // ---- footprint ----------------------------------------------------------
 
     /// <summary>The footprints a Domain may have; altitude is bounded by the same number in slabs.</summary>
-    public static readonly int[] SupportedSizes = { 48, 64, 72, 96, 128 };
+    public static readonly int[] SupportedSizes = { 64, 96, 128 };
 
     /// <summary>Footprint edge length in cells.</summary>
-    [Export(PropertyHint.Range, "48,128,1")] public int Size { get; set; } = 96;
+    [Export(PropertyHint.Range, "64,128,1")] public int Size { get; set; } = 96;
 
     /// <summary>Land-mask radius in cells. 0 = auto (Size * 0.45).</summary>
     [Export(PropertyHint.Range, "0,128,1")] public float Radius { get; set; } = 0f;

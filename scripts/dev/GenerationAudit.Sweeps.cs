@@ -335,25 +335,25 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// Every arrangement at 48² / 64² / 128², hardest-pressed first: att is the mean attempts,
+    /// Every arrangement at 64² / 96² / 128², hardest-pressed first: att is the mean attempts,
     /// short the islands under the masses the shape names, unmet the seeds that shipped broken.
     /// </summary>
     private void PrintStrain()
     {
         GD.Print($"\n=== strain at the small footprints ({SweepSeeds} seeds each; "
             + "att = attempts, short = islands under the masses the shape names) ===");
-        GD.Print($"  {"arrangement",-14} {"48:att",7} {"unmet",6} {"short",6} "
-            + $"{"64:att",7} {"unmet",6} {"short",6} {"128:att",8} {"unmet",6} {"short",6}");
+        GD.Print($"  {"arrangement",-14} {"64:att",7} {"unmet",6} {"short",6} "
+            + $"{"96:att",7} {"unmet",6} {"short",6} {"128:att",8} {"unmet",6} {"short",6}");
 
-        var rows = new List<(string Name, float Att48, string Cells)>();
+        var rows = new List<(string Name, float Att64, string Cells)>();
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
             int wanted = MassesTheShapeNames(how);
             var bits = new List<string>();
-            float att48 = 0;
+            float att64 = 0;
 
-            foreach (int size in new[] { 48, 64, 128 })
+            foreach (int size in new[] { 64, 96, 128 })
             {
                 IslandParams p = Variant(q => { q.Arrangement = how; q.Size = size; });
 
@@ -367,13 +367,13 @@ public partial class GenerationAudit
                     if (masses < wanted) shortfall++;
                 }
                 float att = attempts / SweepSeeds;
-                if (size == 48) att48 = att;
+                if (size == 64) att64 = att;
                 bits.Add($"{att,7:0.00} {unmet,6} {shortfall,6}");
             }
-            rows.Add((how.ToString(), att48, string.Join(" ", bits)));
+            rows.Add((how.ToString(), att64, string.Join(" ", bits)));
         }
 
-        rows.Sort((a, b) => b.Att48.CompareTo(a.Att48));
+        rows.Sort((a, b) => b.Att64.CompareTo(a.Att64));
         foreach (var r in rows) GD.Print($"  {r.Name,-14} {r.Cells}");
     }
 

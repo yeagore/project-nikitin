@@ -606,7 +606,9 @@ internal static class Footprint
                     break;
                 }
 
-                // A fat coil of one turn and a bit: the lobes overlap into a ring of round bays.
+                // A coil of one turn and a bit. Meant as a ring of round bays over a full hub, it
+                // comes out as a spray of narrow petals from a small heart, some parted from it,
+                // and that is what it is now for: the thin, busy cousin of Star.
                 case IslandArrangement.Rosette:
                     Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
                          links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));

@@ -121,9 +121,9 @@ its property): silhouettes and waterways as ASCII, close-ups of the sculpted
 landforms, every arrangement × character, every Gate request, the four-hanging-
 Gates matrix, the knob sweeps (how you check a slider does anything), the
 material shares at the four climate corners (`Climate`), land share
-per arrangement, the guarantee set at all five sizes (`Sizes`, with the share of
+per arrangement, the guarantee set at all three sizes (`Sizes`, with the share of
 snow and how many mountainous islands carry any — the snow line has to exist at
-48² as well as 128²), the newest shapes at every
+64² as well as 128²), the newest shapes at every
 footprint, where re-rolls cluster, and PNG portraits, field maps, the gallery and
 the climate grid written to a directory. Every flag can be given on the command
 line after `--`:
@@ -141,7 +141,7 @@ out as, and prints the landmass histogram per shape. `Portraits` draws two
 islands per shape, which says what a shape *can* be; the gallery says what it
 usually is, which is the question when a shape "often" merges or parts.
 `GalleryShapes=Isthmus,Quarters` restricts it to the shapes you are working on;
-run it at 48 and 128 as well, since a shape that only reads at 96 is a shape
+run it at 64 and 128 as well, since a shape that only reads at 96 is a shape
 that lies. A caption too wide for its tile goes on two lines rather than into
 the next tile.
 
@@ -175,7 +175,7 @@ with its own ramp, which is the context for why a tile looks as it does: the sno
 line is the lapse crossing the height panel, the green threads are the fresh-water
 moisture strip. Height, exposure and rim hold across all twenty-five, so they are
 drawn once and the run prints the cell counts that prove it; warmth and moisture
-are the middle tile. `ClimateGridSize` picks the footprint (72 by default; 128
+are the middle tile. `ClimateGridSize` picks the footprint (64 by default; 128
 does not read at a glance) and `FirstSeed` picks the seed. It also prints the
 material shares of each of the twenty-five, and drops the tiles beside the sheet.
 
@@ -199,10 +199,10 @@ a 5 × 7 bitmap alphabet straight into the `Image`.
 godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-Hashes every field of `IslandData` for 448 islands — 60 default seeds, every
-arrangement × character at 64², all five sizes, every Gate request, every bridge
+Hashes every field of `IslandData` for 442 islands — 60 default seeds, every
+arrangement × character at 64², all three sizes, every Gate request, every bridge
 ease, both ends of every knob — and diffs the hashes against
 `docs/checksum-baseline.txt`. A change meant to leave generation alone must
-report `0 of 448 islands moved`; a change meant to alter it re-baselines with
+report `0 of 442 islands moved`; a change meant to alter it re-baselines with
 `-- accept` on the command line and says so in its commit. This is the
 bit-for-bit gate; the audit is the readable one.

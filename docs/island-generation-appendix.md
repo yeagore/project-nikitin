@@ -155,11 +155,16 @@ Half the layouts crouched in the middle of their Domain, and measuring the raw
 mask missed it, because `LinkLandmasses` drags every unbridgeable stray inward
 after the mask is drawn and shrinks every scattered layout. So the fit pass
 wraps the whole mask stage, bites, islet filter and linker, and rebuilds scaled
-up until the landmass covers 55–85% of the grid. Five footprints are supported
-and audited (`Sizes`); 48² is the strained one, carrying constants tuned for
-more room, and the multi-piece ring and split family is what re-rolls there
-(`Strain` names them). The intended size gate is `ArrangementPool` filtered by
-`Size`, once the ladder is chosen.
+up until the landmass covers 55–85% of the grid. Three footprints are supported
+and audited (`Sizes`): 64², 96², 128². There were five until 2026-09-05; 48² was
+dropped after a gallery of every shape at every size showed the split family
+(Halves, Quarters, Twins, Harmony) wrecked there and Reef losing its barrier.
+The layouts were clean; the damage was the fit pass, whose lobe clamp
+(`ClampIntoFootprint`, a pad of the radius plus three cells) squeezes the
+scaled-up lobes together until the strait cut eats the land, plus the widths
+measured in cells (straits, the islet floor, the shape noise) that take a far
+bigger bite of a small island. 72² went with the ladder it belonged to. The
+intended size gate is `ArrangementPool` filtered by `Size`.
 
 ### Grouped lobes, and the seam between pieces
 
@@ -232,7 +237,7 @@ at 96², so below 96² no mountain could reach its own snow line, and a knob
 about mesa height moved the snow on a Domain with no mesas. Reading the foot
 off the terrain (`Relief.MountainFoot` again, on the finished surface) makes the
 snow line a property of the mountain: the `Sizes` sweep now counts it, and every
-mountainous island carries snow at all five footprints. `FieldMaps` writes the
+mountainous island carries snow at every footprint. `FieldMaps` writes the
 axes as PNGs so all of it can be looked at headless.
 
 ### The chills were the label
@@ -363,8 +368,8 @@ test: numbers are expected to move when the generator changes, and the point is
 to see them move and decide whether you meant it.
 
 **The checksum** (`docs/checksum-baseline.txt`) hashes every field of
-`IslandData` for 448 islands across the parameter matrix. It is the bit-for-bit
-gate: a change meant to leave generation alone reports `0 of 448 islands moved`;
+`IslandData` for 442 islands across the parameter matrix. It is the bit-for-bit
+gate: a change meant to leave generation alone reports `0 of 442 islands moved`;
 a change meant to alter it re-baselines with `-- accept` and says so in its
 commit. `docs/dev-scenes.md` has both scenes in detail.
 
