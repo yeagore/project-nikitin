@@ -51,6 +51,13 @@ public partial class GenerationAudit : Node
     /// <summary>Footprint of the gallery tiles; 96 reads at a glance and still shows a strait.</summary>
     [Export] public int GallerySize { get; set; } = 96;
 
+    /// <summary>
+    /// With the gallery, also write each shape's raw footprint masks (BuildMask alone:
+    /// before the bites, the linker and the fit pass) as a second sheet, so a shape
+    /// that comes out wrong can be blamed on the layout or on what came after.
+    /// </summary>
+    [Export] public bool GalleryMasks { get; set; } = false;
+
     /// <summary>The probation workup: each of the newest arrangements at every footprint and against every character.</summary>
     [Export] public bool Debut { get; set; } = false;
 
@@ -176,6 +183,7 @@ public partial class GenerationAudit : Node
                 case nameof(GalleryShapes): GalleryShapes = value; break;
                 case nameof(GallerySeeds): GallerySeeds = int.Parse(value); break;
                 case nameof(GallerySize): GallerySize = int.Parse(value); break;
+                case nameof(GalleryMasks): GalleryMasks = true; break;
                 case nameof(Seeds): Seeds = int.Parse(value); break;
                 case nameof(FirstSeed): FirstSeed = int.Parse(value); break;
                 case nameof(FeasibilitySeeds): FeasibilitySeeds = int.Parse(value); break;

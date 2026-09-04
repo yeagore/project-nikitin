@@ -140,6 +140,10 @@ public partial class GenerationAudit
             TinyFont.Draw(sheet, $"{how} {n}", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
 
             var histogram = new SortedDictionary<int, int>();
+            var flagged = new List<string>();
+            int attempts = 0, unmet = 0;
+            long landCells = 0;
+            float extent = 0;
             for (int i = 0; i < GallerySeeds; i++)
             {
                 int seed = FirstSeed + i;
@@ -147,6 +151,13 @@ public partial class GenerationAudit
                 int masses = LabelLandmasses(d, n, new int[n, n]);
                 histogram.TryGetValue(masses, out int had);
                 histogram[masses] = had + 1;
+
+                attempts += d.Attempts;
+                if (d.Unmet.Length > 0) unmet++;
+                if (d.Attempts > 1 || d.Unmet.Length > 0)
+                    flagged.Add($"{seed}:{d.Attempts}{(d.Unmet.Length > 0 ? " unmet " + d.Unmet : "")}");
+                landCells += LandCount(d);
+                extent += ExtentPercent(d);
 
                 Image img = Portrait(d);
                 img.Resize(tile, tile, Image.Interpolation.Nearest);
@@ -158,9 +169,76 @@ public partial class GenerationAudit
             }
 
             sheet.SavePng($"{Gallery}/{how}_{n}.png");
+            if (GalleryMasks) WriteMaskSheet(how, p, width, height, tile, font, caption, titleH);
             string counts = string.Join(", ", histogram.Select(kv => $"{kv.Value} x {kv.Key}"));
-            GD.Print($"gallery: {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}");
+            float landShare = 100f * landCells / (GallerySeeds * (float)n * n);
+            GD.Print($"gallery: {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}"
+                + $" | attempts {attempts / (float)GallerySeeds:0.00} unmet {unmet}"
+                + $" land% {landShare:0.0} extent% {extent / GallerySeeds:0.0}"
+                + (flagged.Count > 0 ? " | rerolled/unmet: " + string.Join(", ", flagged) : ""));
         }
+    }
+
+    /// <summary>
+    /// The gallery's twin: the same seeds' raw footprint masks, land white on aether,
+    /// captioned with the landmass count and the extent share of the mask alone.
+    /// </summary>
+    private void WriteMaskSheet(IslandArrangement how, IslandParams p, int width, int height,
+                                int tile, int font, int caption, int titleH)
+    {
+        const int columns = 4, gap = 6;
+        int n = p.Size;
+        var sheet = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
+        sheet.Fill(new Color(0.12f, 0.12f, 0.14f));
+        TinyFont.Draw(sheet, $"{how} {n} MASK", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
+
+        for (int i = 0; i < GallerySeeds; i++)
+        {
+            int seed = FirstSeed + i;
+            bool[,] mask = Footprint.BuildMask(seed, p, how);
+            int masses = Label(n, (x, z) => mask[x, z], new int[n, n]);
+            float extent = 100f * Footprint.ExtentShare(mask);
+
+            var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                img.SetPixel(x, z, mask[x, z] ? new Color(0.8f, 0.8f, 0.72f) : DevPalette.Aether);
+            img.Resize(tile, tile, Image.Interpolation.Nearest);
+            int px = gap + (i % columns) * (tile + gap);
+            int pz = titleH + gap + (i / columns) * (tile + caption + gap);
+            sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, pz));
+            TinyFont.Draw(sheet, $"{seed} {masses}m {extent:0}%", px, pz + tile + 2, font,
+                          new Color(0.85f, 0.85f, 0.8f));
+        }
+        sheet.SavePng($"{Gallery}/{how}_{n}_mask.png");
+    }
+
+    /// <summary>Land columns, wet or dry.</summary>
+    private static long LandCount(IslandData d)
+    {
+        int n = d.Size;
+        long land = 0;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.HasLand(x, z)) land++;
+        return land;
+    }
+
+    /// <summary>The landmass's bounding box as a percentage of the grid (the footprint wants 55-85).</summary>
+    private static float ExtentPercent(IslandData d)
+    {
+        int n = d.Size;
+        int xLo = n, xHi = -1, zLo = n, zHi = -1;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!d.HasLand(x, z)) continue;
+            if (x < xLo) xLo = x;
+            if (x > xHi) xHi = x;
+            if (z < zLo) zLo = z;
+            if (z > zHi) zHi = z;
+        }
+        return xHi < 0 ? 0 : 100f * (xHi - xLo + 1) * (zHi - zLo + 1) / (n * (float)n);
     }
 
     /// <summary>Top view, 3x nearest: land an elevation ramp with beach tint and gold landings, water by kind, Gates one red (hanging) or orange (land) pixel.</summary>

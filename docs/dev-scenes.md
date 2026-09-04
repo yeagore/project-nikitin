@@ -127,6 +127,15 @@ that lies.
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 Gallery=C:/tmp/gallery GalleryShapes=Isthmus,Caldera GallerySize=64
 ```
 
+The summary line per shape also carries the mean re-roll count, how many seeds
+missed a guarantee (`unmet`), the mean land and extent shares, and the seeds that
+re-rolled or came out unmet, so a shape that reads oddly can be tied to a seed.
+`GalleryMasks` writes a second sheet per shape, `<Shape>_<n>_mask.png`: the same
+seeds' raw footprint masks from `BuildMask` alone, before the bites, the linker
+and the fit pass, captioned with the mask's landmass count and extent share.
+When a shape comes out wrong, the pair says whether the layout or what came after
+is to blame; the extent number says whether the fit pass had to blow it up.
+
 Appearance still needs a human at the editor, or **F2** in the lab.
 
 ### The climate grid — `ClimateGrid`
