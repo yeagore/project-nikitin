@@ -110,7 +110,10 @@ arrangement, the pieces are linkable, and `FindBridgeSites` records the pairs.
 landmass's bounding rectangle must cover **55–85% of the grid's extent**,
 measured on what ships — after the bites, the islet filter and the linker,
 whose stray-dragging shrinks every scattered layout. A layout outside the band
-is rebuilt scaled about the centre, radii and all, up to three times.
+is rebuilt scaled about the centre, radii and all, up to three times. A scaled
+lobe is kept inside the grid by its own reach on each axis (the ellipse's
+extent, or the radius if that is less, plus three cells); at placement the pad
+is the plain radius plus three, which every layout was tuned against.
 
 `Roster` resolves `Auto` for the arrangement, the character and the relief
 style. The arrangement pool is weighted toward a single landmass, and

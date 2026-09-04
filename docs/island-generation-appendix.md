@@ -166,6 +166,28 @@ measured in cells (straits, the islet floor, the shape noise) that take a far
 bigger bite of a small island. 72² went with the ladder it belonged to. The
 intended size gate is `ArrangementPool` filtered by `Size`.
 
+### The fit pass clamps a scaled lobe by its own reach
+
+The split family (Halves, Quarters, Twins, Harmony) lays out at a third to a
+half of the grid, so the fit pass always scales it up, and `ScaleLobes` used to
+clamp every scaled centre by the radius plus three cells on both axes. For a
+lobe stretched across the axis it is offset along, that pad is its long axis,
+so at 64² the two halves of a Halves were pinned nearly on top of each other;
+two lobes on top of each other have no seam for the strait to follow, and the
+cut shredded both into slivers (ten of sixteen seeds at 64² came out in three
+to five pieces, and 48² was worse). The fit pass now pads by the ellipse's
+reach on each axis, or the radius if that is less. Two things were tried and
+dropped on the way. Using the same pad at placement re-laid every arm shape,
+because the arm layouts lean on the circular pad for where their arms sit
+(BrokenT collapsed at 64², BrokenL came out in eight pieces). And a pad that
+could be *stricter* than the old one on a lobe's long axis pinned a scaled arm
+onto its hub, with the same shredding: hence "or the radius, whichever is
+less". Trimming a lobe's radius instead of moving it was tried too, and
+shredded BrokenL and Twins outright. After the fix Halves, Quarters and Twins
+are their named count of pieces in sixteen of sixteen seeds at every
+footprint; 75 of 442 checksum islands moved, nearly all Twins, Satellites and
+the default seeds that go through the scaling.
+
 ### Grouped lobes, and the seam between pieces
 
 A comma of `Harmony` is a chain of lobes that must fuse while the S between the

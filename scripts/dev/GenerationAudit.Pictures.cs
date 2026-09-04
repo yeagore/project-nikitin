@@ -206,12 +206,19 @@ public partial class GenerationAudit
         sheet.Fill(new Color(0.12f, 0.12f, 0.14f));
         TinyFont.Draw(sheet, $"{how} {n} MASK", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
 
+        var histogram = new SortedDictionary<int, int>();
+        float extentSum = 0, extentLo = float.MaxValue, extentHi = 0;
         for (int i = 0; i < GallerySeeds; i++)
         {
             int seed = FirstSeed + i;
             bool[,] mask = Footprint.BuildMask(seed, p, how);
             int masses = Label(n, (x, z) => mask[x, z], new int[n, n]);
             float extent = 100f * Footprint.ExtentShare(mask);
+            histogram.TryGetValue(masses, out int had);
+            histogram[masses] = had + 1;
+            extentSum += extent;
+            extentLo = MathF.Min(extentLo, extent);
+            extentHi = MathF.Max(extentHi, extent);
 
             var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
             for (int x = 0; x < n; x++)
@@ -225,6 +232,10 @@ public partial class GenerationAudit
                           new Color(0.85f, 0.85f, 0.8f));
         }
         sheet.SavePng($"{Gallery}/{how}_{n}_mask.png");
+        string counts = string.Join(", ", histogram.Select(kv => $"{kv.Value} x {kv.Key}"));
+        GD.Print($"masks:   {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}"
+            + $" | extent% mean {extentSum / GallerySeeds:0.0} range {extentLo:0}-{extentHi:0}"
+            + " (the fit band wants 55-85)");
     }
 
     /// <summary>Land columns, wet or dry.</summary>

@@ -230,13 +230,37 @@ internal static class Footprint
 
     /// <summary>
     /// Keeps a lobe's centre a margin inside the grid so a later nudge cannot push it
-    /// into the wall. The pad is capped at half the footprint: past that Math.Clamp's
-    /// minimum would exceed its maximum and throw.
+    /// into the wall: the radius plus three cells, whatever the lobe's shape. The pad
+    /// is capped at half the footprint: past that Math.Clamp's minimum would exceed
+    /// its maximum and throw. This is the pad every layout was tuned against, so it
+    /// stays the pad at placement; the fit pass has its own (below).
     /// </summary>
     private static (float x, float z) ClampIntoFootprint(int n, float x, float z, float r)
     {
         float pad = Math.Min(r + 3f, (n - 1) * 0.5f);
         return (Math.Clamp(x, pad, n - 1 - pad), Math.Clamp(z, pad, n - 1 - pad));
+    }
+
+    /// <summary>
+    /// The fit pass's clamp: on each axis the pad is the lobe's own reach — an ellipse
+    /// of <paramref name="r"/> / aspect along its axis and <paramref name="r"/> × aspect
+    /// across, turned by (<paramref name="cos"/>, <paramref name="sin"/>) — or the
+    /// radius, whichever is less, plus three cells. Padding a stretched lobe by its
+    /// long axis on both axes pinned every scaled-up split layout to the centre, and
+    /// two lobes pinned together have no seam for the strait to follow, so the cut
+    /// shredded both (Halves at 64² was the worst of it). Never stricter than the
+    /// placement pad, because padding an arm by its long axis pinned it onto its hub
+    /// instead, and BrokenL came out in eight pieces.
+    /// </summary>
+    private static (float x, float z) ClampIntoFootprint(int n, float x, float z, float r,
+                                                         float aspect, float cos, float sin)
+    {
+        float along = r / aspect, across = r * aspect;
+        float ex = MathF.Sqrt(along * along * cos * cos + across * across * sin * sin);
+        float ez = MathF.Sqrt(along * along * sin * sin + across * across * cos * cos);
+        float half = (n - 1) * 0.5f;
+        float padX = Math.Min(Math.Min(ex, r) + 3f, half), padZ = Math.Min(Math.Min(ez, r) + 3f, half);
+        return (Math.Clamp(x, padX, n - 1 - padX), Math.Clamp(z, padZ, n - 1 - padZ));
     }
 
     /// <summary>
@@ -892,13 +916,15 @@ internal static class Footprint
     }
 
     /// <summary>The fit pass's move: every lobe grows or shrinks about the centre, radii included, so the shape keeps its proportions.</summary>
+
     private static void ScaleLobes(Lobe[] lobes, int n, float cx, float cz, float scale)
     {
         for (int i = 0; i < lobes.Length; i++)
         {
             Lobe l = lobes[i];
             float r = l.Radius * scale;
-            var (x, z) = ClampIntoFootprint(n, cx + (l.Cx - cx) * scale, cz + (l.Cz - cz) * scale, r);
+            var (x, z) = ClampIntoFootprint(n, cx + (l.Cx - cx) * scale, cz + (l.Cz - cz) * scale, r,
+                                            l.Aspect, l.Cos, l.Sin);
             lobes[i] = new Lobe(l, x, z, r);
         }
     }
