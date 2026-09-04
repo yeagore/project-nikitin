@@ -748,12 +748,16 @@ public partial class GenerationAudit
                 foreach (Works w in road.Built)
                     if (w.Kind == WorksKind.Ferry) sailed.Add((w.From, w.To));
 
+                // A road walks by king's moves, so a one-cell diagonal is a step; works
+                // stay cardinal, so anything longer must be straight and within a bridge.
                 for (int hop = 1; hop < road.Path.Count; hop++)
                 {
                     Vector2I a = road.Path[hop - 1], b = road.Path[hop];
                     if (sailed.Contains((a, b))) continue;
-                    int gap = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
-                    if (gap > d.BridgeSpan + 1 || (a.X != b.X && a.Y != b.Y)) RoadJumps++;
+                    int dx = Math.Abs(a.X - b.X), dz = Math.Abs(a.Y - b.Y);
+                    int reach = Math.Max(dx, dz);
+                    bool diagonal = dx != 0 && dz != 0;
+                    if (diagonal ? reach > 1 : reach > d.BridgeSpan + 1) RoadJumps++;
                 }
             }
         }
@@ -971,9 +975,35 @@ public partial class GenerationAudit
                 CrossingSpans.Add(c.Span);
                 int a = Traversal.CrossLevel(d, c.A.X, c.A.Y);
                 int b = Traversal.CrossLevel(d, c.B.X, c.B.Y);
-                if (Math.Abs(a - b) > Traversal.MaxBridgeRise) DeckSteep++;
-                if (Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1) DeckOffBank++;
+                bool steep = Math.Abs(a - b) > Traversal.MaxBridgeRise;
+                bool offBank = Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1;
+                if (steep) DeckSteep++;
+                if (offBank) DeckOffBank++;
+                // Named as it happens: a "want 0" with no seed behind it cannot be looked at.
+                if (steep || offBank)
+                    GD.Print($"  seed {v.Seed}: crossing {c.A}-{c.B} banks {a}/{b}, deck {c.Deck}"
+                        + $"{(steep ? " (steep)" : "")}{(offBank ? " (deck off bank)" : "")}"
+                        + $"; landing strip under {(d.Landings[c.A.X, c.A.Y] ? "A" : "")}"
+                        + $"{(d.Landings[c.B.X, c.B.Y] ? "B" : "")}, water under "
+                        + $"{(d.WaterLevel[c.A.X, c.A.Y] != IslandData.NoLand ? "A" : "")}"
+                        + $"{(d.WaterLevel[c.B.X, c.B.Y] != IslandData.NoLand ? "B" : "")}, beach under "
+                        + $"{(d.Beach[c.A.X, c.A.Y] ? "A" : "")}{(d.Beach[c.B.X, c.B.Y] ? "B" : "")}"
+                        + $"; landform {v.Form(c.A.X, c.A.Y)}/{v.Form(c.B.X, c.B.Y)}"
+                        + $", water within a cell of {(WaterNear(d, c.A) ? "A" : "")}{(WaterNear(d, c.B) ? "B" : "")}"
+                        + $", canyon/pass {d.Canyon[c.A.X, c.A.Y]}{d.Pass[c.A.X, c.A.Y]}/{d.Canyon[c.B.X, c.B.Y]}{d.Pass[c.B.X, c.B.Y]}");
             }
+        }
+
+        /// <summary>Whether standing water lies under a cell or any of its eight neighbours.</summary>
+        private static bool WaterNear(IslandData d, Vector2I c)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                int x = c.X + dx, z = c.Y + dz;
+                if (InBounds(d.Size, x, z) && d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand) return true;
+            }
+            return false;
         }
 
         /// <summary>The re-roll verdict; a seed that gave up is printed as it happens, before the summary.</summary>

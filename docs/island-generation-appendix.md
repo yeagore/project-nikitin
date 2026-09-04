@@ -214,15 +214,58 @@ broke a guarantee. What found it was printing a share per category with `NEVER`
 beside the empty ones, which the audit does for every enum the generator
 assigns. A branch that never fires looks exactly like a branch that works.
 
-### The effective surface, and the fixed lapse
+### The effective surface, and the lapse per mountain
 
 Anchors and habitat describe what a place looks like, so every geometric
 question is asked of `EffectiveLevel`, the water where a column is flooded:
-against the bed, every bank of a navigable river was a "cliff". Warmth uses a
-fixed lapse per slab anchored to the tallest a mountain can stand at the
-footprint, because normalising per island put snow on the top fifth of every
-island, a flat one's highest hill included. `FieldMaps` writes the axes as PNGs
-so both can be looked at headless.
+against the bed, every bank of a navigable river was a "cliff". Warmth's lapse
+is measured on mountain cells alone, from each mountain's own foot, in shares
+of the mountain cap at the footprint: nothing for the first 40%, the full loss
+over the next 60%. Three models came before it. Normalising per island put snow
+on the top fifth of every island, a flat one's highest hill included. A fixed
+lapse from the cube's top fifth cleared the plateaus but reached no mountaintop
+at temperate settings, because the keel pushes a centred island down. A ceiling
+read off `PlateauLevels × CliffHeight + 2 × MesaHeight + 4` over the lowest
+ground was right at 128² and nowhere else: the ceiling is 22 slabs at the
+preset whatever the footprint, while the mountain cap is 15 slabs at 48² and 30
+at 96², so below 96² no mountain could reach its own snow line, and a knob
+about mesa height moved the snow on a Domain with no mesas. Reading the foot
+off the terrain (`Relief.MountainFoot` again, on the finished surface) makes the
+snow line a property of the mountain: the `Sizes` sweep now counts it, and every
+mountainous island carries snow at all five footprints. `FieldMaps` writes the
+axes as PNGs so all of it can be looked at headless.
+
+### The chills were the label
+
+Warmth was 60 + 180 × the knob, then lost up to 15 to the wind and 12 to the
+rim "fading over sixteen cells". Measured over sixty islands at 128², rim
+distance is a median five cells and at most thirteen, and exposure a median
+220 of 255, so neither modifier ever faded: they were a permanent 20-point
+cooling, the per-island mean read 118–133 against a label of 150, and at
+warmth 0 on dry open coast 60 − 15 − 12 = 33 was under the snow line of 35 —
+the coldest setting froze the coast and not the peaks, the opposite of the
+knob's own doc. Now the label is the open lowland: the lee gains up to 10, the
+rim loses 6 over four cells, and the mean reads 153 at the knob's middle. The
+grid's bands moved up to meet it (cold below 115, hot from 185, sand from 220,
+floodplain from 170), which is why a knob of 0.85 is still hot country and not
+a desert.
+
+### Beaches are ground, and the sculpted rock is scree
+
+A beach was sand, which on a cold Domain drew a yellow strand round tundra;
+nothing washes a beach, so it is now whatever the climate grid says a slab
+lower, and the anchor is unchanged. Badlands, karst and sinkholes were dust
+before the grid was consulted, so a cold karst Domain was 10% dust beside 53%
+tundra; they are scree, a rock, until the biome layer decides otherwise.
+
+### The knobs roll
+
+The nine 0–1 knobs sat at the preset for every seed, so sixty audited islands
+were sixty shapes of one climate. `IslandParams.Auto` (any negative) makes
+`Roster.ResolveKnobs` roll the knob from the seed over its whole range, the
+preset leaves all nine on it, and the audit's default seeds now sample the
+knob space — which is how the Dunes bridgehead turned up (below). A sweep
+pins the knob it sweeps, and the checksum's knob cases pin theirs.
 
 ### A beach is one slab
 
@@ -262,6 +305,16 @@ way in.
 ---
 
 ## C. Tried and removed
+
+- **A road check that could not pass.** The audit flagged any road hop that was
+  diagonal, but roads walk by king's moves, so every legal corner cut was
+  counted and "a step on a road longer than one bridge" stood at 4110. The
+  check is now: a diagonal hop must be one cell, a straight one within a
+  bridge; it reads 0.
+- **A bridgehead on dunes.** `Bridgeheads.FlattenPad` lowered only Plain and
+  Hills ground, and a Dunes region is neither, so a crossing with one end on
+  dunes was never levelled; the first rolled-knob audit found one at 7 slabs
+  against 4. Dunes are one-slab ground like hills and are flattened the same.
 
 | | |
 |---|---|
@@ -317,15 +370,20 @@ commit. `docs/dev-scenes.md` has both scenes in detail.
 
 ### What the baseline does not carry
 
-Measured on the accepted run of 2026-09-02 (60 seeds, 128²); nothing here is
-diffed automatically.
+Measured on the accepted run of 2026-09-05 (60 seeds, 128², the nine knobs
+rolled per seed); nothing here is diffed automatically. Older rows that
+measured a fixed preset are kept where they still say something.
 
 | | |
 |---|---|
 | surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
 | the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
 | walking by king's moves | against four-way walking on the same islands: land on the mainland 40.8% → 42.8%, heartland 94.9% → 95.0%, roads that can simply be walked 45 → 50 of 121. Cutting corners joins a few scraps to their districts and lets a few roads round a cliff; nothing large moves |
-| habitat, per-island means | moisture 122–173, warmth 118–133 (the temperate band), rugged 27–154, exposure 171–247, rim distance 1–13 cells |
+| habitat, per-island means | moisture 32–254 (median 183), warmth 75–225 (median 153: the knob's middle reads at its label; it was 118–133 with the chills), rugged 25–213, exposure 134–245, rim distance 1–13 cells |
+| surface, the sixty rolled seeds | grass 23.8%, meadow 10.5%, savanna 6.4%, moorland 9.4%, tundra 7.0%, steppe 4.1%, dust 8.3%, floodplain 2.3%, bog 2.1%, stone 9.5%, scree 5.8%, sand 5.1%, silt 5.0%, snow 0.8%: every row of the grid present, because every seed is its own climate |
+| snow at every footprint (`Sizes`, 12 seeds each) | share of land under snow 0.8 / 0.7 / 0.5 / 0.4 / 1.0% at 48 / 64 / 72 / 96 / 128², and every island with a mountain carries some at every size (3 of 3, 3 of 3, 4 of 4, 3 of 3, 4 of 4). Under the parameter ceiling it was 128² only |
+| the climate grid, re-tuned (`Climate`, 12 seeds each) | cold dry: tundra 62%, moorland 14%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 56%, bog 22%. Temperate dry: steppe 62%, meadow 11%. Temperate balanced: meadow 62%, grass 15%. Temperate wet: grass 76%. Hot dry: dust 62%, savanna 11%, floodplain 5%. Hot balanced: savanna 66%, floodplain 11%. Hot wet: savanna 66%, floodplain 11%. Sand end: sand 63%, floodplain 11%, savanna 7%. Snow end: moorland 72%, bog 4%, snow 1.6%. Stone, scree and silt hold at 9 / 4 / 5.5% in all eleven |
+| road hops no work explains | 0 of 121 roads; the old diagonal-counting check read 4110 |
 | the climate grid (`Climate`, 6 seeds each) | cold dry: tundra 64%, moorland 13%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 55%, bog 21%. Temperate dry: steppe 59%, meadow 10%, grass 4% (along the water). Temperate balanced: meadow 59%, grass 13%. Temperate wet: grass 72%. Hot dry: dust 58%, savanna 10%, floodplain 4% (along the water). Hot balanced: savanna 62%, floodplain 10%. Hot wet: savanna 55%, floodplain 11%, grass 8% (the tempered riverside). The sand end (warmth 1): sand 43%, savanna 27%, floodplain 10%. Every floodplain touches its water: the tempered bank used to turn to grass with the floodplain starting a cell behind it, until the floodplain got its own warmth line and stranded patches were wiped. The snow end (warmth 0): moorland 72%, snow 5% — the lowland stays liveable. Rock, silt, beaches and snow make up the rest of each |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |

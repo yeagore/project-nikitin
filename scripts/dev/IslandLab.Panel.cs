@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
 
@@ -29,6 +30,12 @@ public partial class IslandLab
 	private CheckBox _liquidBox = null!;
 	private LineEdit _seedField = null!;
 	private bool _syncing;
+
+	/// <summary>The sliders with an Auto stop, and how to read what the seed rolled for each.</summary>
+	private readonly List<(HSlider Slider, Label Caption, string Text, Func<IslandParams, float> Rolled)> _autoKnobs = new();
+
+	/// <summary>Where an Auto-capable slider parks for Auto: one step under zero.</summary>
+	private const float AutoStop = -0.05f;
 
 	private void BuildOverlayUi()
 	{
@@ -132,25 +139,25 @@ public partial class IslandLab
 
 		Heading(rows, "relief");
 		_hilliness = Slide(rows, "Hilliness  (H)", 0f, 1f, 0.05f,
-			() => Params.Hilliness, v => Params.Hilliness = v,
+			() => Params.Hilliness, v => Params.Hilliness = v, q => q.Hilliness,
 			"What hills do: 0 low swells, 1 steep mounds, in one-slab steps either way. "
 			+ "Also sets how jagged the surface noise is.");
 		_mix = Slide(rows, "Landform mix  (M)", 0f, 1f, 0.05f,
-			() => Params.LandformMix, v => Params.LandformMix = v,
+			() => Params.LandformMix, v => Params.LandformMix = v, q => q.LandformMix,
 			"The quota of high ground: 0 mostly plains, 1 as much as the character allows. "
 			+ "Every landform the character names appears at any setting.");
 		_relief = Slide(rows, "Relief", 0f, 1f, 0.05f,
-			() => Params.Relief, v => Params.Relief = v,
+			() => Params.Relief, v => Params.Relief = v, q => q.Relief,
 			"Vertical exaggeration of every landform's relief.");
 		_wet = Slide(rows, "Rivers", 0f, 1f, 0.05f,
-			() => Params.Rivers, v => Params.Rivers = v,
+			() => Params.Rivers, v => Params.Rivers = v, q => q.Rivers,
 			"How wet the Domain is: the catchment a channel needs before it counts as a river.");
 		_lakes = Slide(rows, "Lakes", 0f, 1f, 0.05f,
-			() => Params.Lakes, v => Params.Lakes = v,
+			() => Params.Lakes, v => Params.Lakes = v, q => q.Lakes,
 			"How readily standing water collects: 0 no lakes, 1 one in every flat patch "
 			+ "that could hold one.");
 		_valleys = Slide(rows, "Valleys", 0f, 1f, 0.05f,
-			() => Params.Valleys, v => Params.Valleys = v,
+			() => Params.Valleys, v => Params.Valleys = v, q => q.Valleys,
 			"How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells "
 			+ "of valley either side.");
 		_rungs = Spin(rows, "Plateau rungs  (L)", 1, 8,
@@ -167,15 +174,15 @@ public partial class IslandLab
 
 		Heading(rows, "climate");
 		_moisture = Slide(rows, "Background moisture", 0f, 1f, 0.05f,
-			() => Params.Moisture, v => Params.Moisture = v,
+			() => Params.Moisture, v => Params.Moisture = v, q => q.Moisture,
 			"What the ground has before its water adds any: 0.15 is dry country, 0.45 "
 			+ "balanced, 0.75 wet. The water always adds its own strip, so even a dry "
 			+ "Domain has fertile banks.");
 		_warmth = Slide(rows, "Background warmth", 0f, 1f, 0.05f,
-			() => Params.Warmth, v => Params.Warmth = v,
-			"The lowland before the lapse and the chills: 0.15 is cold country, 0.5 "
-			+ "temperate, 0.85 hot, 1 sand. Even 0 keeps its lowland above the snow — the "
-			+ "cold on the map is the lapse over a mountain, not this knob.");
+			() => Params.Warmth, v => Params.Warmth = v, q => q.Warmth,
+			"The open lowland: under about 0.3 is cold country, 0.5 temperate, over about "
+			+ "0.7 hot, the last twentieth sand. Even 0 keeps its lowland above the snow — "
+			+ "the snow on the map is a mountain's upper part, at every footprint.");
 
 		Heading(rows, "gates and crossings");
 		_entryKind = Choice<GateKind>(rows, "Entry gate  (T)",
@@ -336,14 +343,14 @@ public partial class IslandLab
 		_crossings.Selected = _crossings.GetItemIndex((int)Params.Crossings);
 		_exitKind.Selected = _exitKind.GetItemIndex((int)Params.ExitGate);
 
-		_hilliness.Value = Params.Hilliness;
-		_mix.Value = Params.LandformMix;
-		_relief.Value = Params.Relief;
-		_wet.Value = Params.Rivers;
-		_lakes.Value = Params.Lakes;
-		_valleys.Value = Params.Valleys;
-		_moisture.Value = Params.Moisture;
-		_warmth.Value = Params.Warmth;
+		_hilliness.Value = Stop(Params.Hilliness);
+		_mix.Value = Stop(Params.LandformMix);
+		_relief.Value = Stop(Params.Relief);
+		_wet.Value = Stop(Params.Rivers);
+		_lakes.Value = Stop(Params.Lakes);
+		_valleys.Value = Stop(Params.Valleys);
+		_moisture.Value = Stop(Params.Moisture);
+		_warmth.Value = Stop(Params.Warmth);
 		_size.Selected = _size.GetItemIndex(Params.Size);
 		_rungs.Value = Params.PlateauLevels;
 		_cliff.Value = Params.CliffHeight;
@@ -404,29 +411,52 @@ public partial class IslandLab
 		return pick;
 	}
 
+	/// <summary>
+	/// A 0–1 knob with an Auto stop one step left of zero: parked there, the seed
+	/// rolls the knob and the caption shows what it rolled once the island is built.
+	/// <paramref name="rolled"/> reads that value off the island's settings.
+	/// </summary>
 	private HSlider Slide(Container into, string text, float min, float max, float step,
-						  Func<float> read, Action<float> write, string? tip = null)
+						  Func<float> read, Action<float> write, Func<IslandParams, float> rolled,
+						  string? tip = null)
 	{
-		Label caption = Caption($"{text}   {read():0.00}", tip);
+		tip = (tip ?? "") + " All the way left is Auto: the seed rolls it.";
+		Label caption = Caption(KnobCaption(text, read()), tip);
 		into.AddChild(caption);
 
 		var slider = new HSlider
 		{
-			MinValue = min,
+			MinValue = AutoStop,
 			MaxValue = max,
 			Step = step,
-			Value = read(),
+			Value = Stop(read()),
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			CustomMinimumSize = new Vector2(0, 18),
-			TooltipText = tip ?? "",
+			TooltipText = tip,
 		};
 		slider.ValueChanged += v =>
 		{
-			caption.Text = $"{text}   {v:0.00}";
-			if (!_syncing) write((float)v);
+			caption.Text = KnobCaption(text, (float)v);
+			if (!_syncing) write(v < 0 ? IslandParams.Auto : (float)v);
 		};
 		into.AddChild(slider);
+		_autoKnobs.Add((slider, caption, text, rolled));
 		return slider;
+	}
+
+	/// <summary>Where a knob's value sits on its slider: Auto parks at the stop.</summary>
+	private static float Stop(float v) => v < 0f ? AutoStop : v;
+
+	private static string KnobCaption(string text, float v)
+		=> v < 0f ? $"{text}   auto" : $"{text}   {v:0.00}";
+
+	/// <summary>After a build: each Auto knob's caption says what the seed rolled.</summary>
+	private void ShowRolled(IslandData d)
+	{
+		if (d.Settings == null) return;
+		foreach (var (slider, caption, text, rolled) in _autoKnobs)
+			if (slider.Value < 0)
+				caption.Text = $"{text}   auto -> {rolled(d.Settings):0.00}";
 	}
 
 	private SpinBox Spin(Container into, string text, int min, int max,

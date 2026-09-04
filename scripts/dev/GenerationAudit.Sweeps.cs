@@ -520,9 +520,11 @@ public partial class GenerationAudit
     private void PrintSizes()
     {
         GD.Print($"\n=== the guarantee set at every footprint ({SweepSeeds} seeds each) ===");
+        // snow% and snowy: the share of land under snow, and how many islands with a
+        // mountain carry any — the lapse is meant to reach the snow at every footprint.
         GD.Print($"  {"size",4} {"attempts",8} {"unmet",6} {"main%",6} {"heart%",7} "
             + $"{"gateFault",10} {"outBox",7} {"rimMiss",8} {"waterFault",11} "
-            + $"{"sealed",7} {"altMax",7} {"altOver",8} {"ms",6}");
+            + $"{"sealed",7} {"altMax",7} {"altOver",8} {"snow%",6} {"snowy",9} {"ms",6}");
 
         foreach (int size in IslandParams.SupportedSizes)
         {
@@ -532,6 +534,8 @@ public partial class GenerationAudit
             int unmet = 0, gateFault = 0, outBox = 0, rimMiss = 0, waterFault = 0;
             int sealedGorges = 0, altMax = 0, altOver = 0;
             double mainShare = 0, heartShare = 0;
+            long snowCells = 0, allLand = 0;
+            int mountainous = 0, snowy = 0;
             ulong t0 = Time.GetTicksMsec();
 
             foreach (IslandData d in Sweep(p, SweepSeeds))
@@ -540,12 +544,15 @@ public partial class GenerationAudit
                 attempts += d.Attempts;
                 if (d.Unmet.Length > 0) unmet++;
 
-                long land = 0, main = 0, heart = 0;
-                bool hasRiver = false, reachedRim = false;
+                long land = 0, main = 0, heart = 0, snowHere = 0;
+                bool hasRiver = false, reachedRim = false, hasMountain = false;
                 for (int x = 0; x < n; x++)
                 for (int z = 0; z < n; z++)
                 {
                     if (!d.HasLand(x, z)) continue;
+                    allLand++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Snow) snowHere++;
+                    if ((LandformType)d.Landform[x, z] == LandformType.Mountain) hasMountain = true;
                     short w = d.WaterLevel[x, z];
                     if (w == IslandData.NoLand)
                     {
@@ -570,6 +577,9 @@ public partial class GenerationAudit
                     }
                 }
                 if (hasRiver && !reachedRim) rimMiss++;
+                snowCells += snowHere;
+                if (hasMountain) mountainous++;
+                if (hasMountain && snowHere > 0) snowy++;
                 if (land > 0)
                 {
                     mainShare += 100.0 * main / land;
@@ -595,10 +605,12 @@ public partial class GenerationAudit
             }
 
             float ms = (Time.GetTicksMsec() - t0) / (float)SweepSeeds;
+            string snowyOf = $"{snowy} of {mountainous}";
             GD.Print($"  {size,4} {attempts / SweepSeeds,8:0.00} {unmet,6} "
                 + $"{mainShare / SweepSeeds,6:0.0} {heartShare / SweepSeeds,7:0.0} "
                 + $"{gateFault,10} {outBox,7} {rimMiss,8} {waterFault,11} "
-                + $"{sealedGorges,7} {altMax,7} {altOver,8} {ms,6:0}");
+                + $"{sealedGorges,7} {altMax,7} {altOver,8} "
+                + $"{100.0 * snowCells / Math.Max(1, allLand),6:0.0} {snowyOf,9} {ms,6:0}");
         }
     }
 
@@ -631,7 +643,9 @@ public partial class GenerationAudit
             corners.Add(($"{warmName} {wetName}", moisture, warmth));
         corners.Add(("sand end", 0.45f, 1f));
         corners.Add(("snow end", 0.45f, 0f));
-        corners.Add(("preset", Params.Moisture, Params.Warmth));
+        if (Params.Moisture >= 0f && Params.Warmth >= 0f)
+            corners.Add(("preset", Params.Moisture, Params.Warmth));
+        else GD.Print("  (the preset rolls moisture and warmth per seed, so it has no corner of its own)");
         foreach (var (name, moisture, warmth) in corners)
         {
             IslandParams p = Variant(q => { q.Moisture = moisture; q.Warmth = warmth; });

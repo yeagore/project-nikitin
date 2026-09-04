@@ -19,6 +19,13 @@ public sealed class IslandData
     public int Size { get; }
 
     /// <summary>
+    /// The parameters the island was actually built with: every knob left at
+    /// <see cref="IslandParams.Auto"/> resolved to the value the seed rolled, and the
+    /// altitude bounds applied. What the lab reports where the preset said Auto.
+    /// </summary>
+    public IslandParams Settings { get; init; } = null!;
+
+    /// <summary>
     /// <c>[x, z]</c> → the column's spans, bottom-up, disjoint and non-touching, so
     /// <c>Spans[x, z][0]</c> is the lowest. <c>null</c> or empty means no land.
     /// </summary>

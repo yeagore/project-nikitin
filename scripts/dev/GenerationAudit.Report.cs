@@ -43,7 +43,8 @@ public partial class GenerationAudit
     /// <summary>Hills, the sculpted landforms (their steps must never be two), mountains and the step profile.</summary>
     private void PrintLandforms(Tally t)
     {
-        Report($"hills relief per patch (Hilliness {Params.Hilliness:0.00})", t.HillsRelief, "slabs");
+        string hilliness = Params.Hilliness < 0f ? "rolled per seed" : $"Hilliness {Params.Hilliness:0.00}";
+        Report($"hills relief per patch ({hilliness})", t.HillsRelief, "slabs");
         Report("  that patch's width", t.HillsSpan, "cells");
 
         Report("badlands: gully wall", t.GullyDepths, "slabs");
@@ -297,7 +298,7 @@ public partial class GenerationAudit
         GD.Print($"  roads you can simply walk: {t.RoadsFree} of {t.RoadCosts.Count}");
         GD.Print($"  what they need built: {t.RoadStairs} stairs, {t.RoadBridges} bridges, "
             + $"{t.RoadFerries} ferries");
-        GD.Print($"  a step on a road longer than one bridge (want 0): {t.RoadJumps}");
+        GD.Print($"  a road hop no step, bridge or ferry explains (want 0): {t.RoadJumps}");
         GD.Print($"  flights of five-plus elevators: {t.Flights}, on {t.RoughIslands} of {Seeds} "
             + "islands (marked Rough — hard country, not a fault)\n");
     }

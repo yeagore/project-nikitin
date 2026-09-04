@@ -110,6 +110,9 @@ public partial class GenerationAudit
         GD.Print($"portraits: {wrote} written to {Portraits}");
     }
 
+    private static string Masses(int masses) => $"{masses} mass{(masses == 1 ? "" : "es")}";
+    private static string Caption(int seed, int masses) => $"{seed}  {Masses(masses)}";
+
     /// <summary>
     /// One sheet per arrangement: GallerySeeds consecutive seeds at GallerySize², four
     /// to a row, each tile captioned with its seed and how many landmasses it came out
@@ -126,7 +129,11 @@ public partial class GenerationAudit
         int n = GallerySize;
         int tile = n * scale;
         int font = tile >= 160 ? 2 : 1;      // a 48² tile is too narrow for the big caption
-        int caption = TinyFont.Height(font) + 4;
+        // The widest caption the sheet will carry; if it does not fit under a tile the
+        // seed and the count go on two lines instead of into the next tile.
+        int widest = TinyFont.Width(Caption(FirstSeed + GallerySeeds - 1, 10), font);
+        int captionLines = widest > tile ? 2 : 1;
+        int caption = captionLines * (TinyFont.Height(font) + 4);
         int rows = (GallerySeeds + columns - 1) / columns;
         int titleH = TinyFont.Height(3) + 8;
         int width = gap + columns * (tile + gap);
@@ -153,8 +160,15 @@ public partial class GenerationAudit
                 int px = gap + (i % columns) * (tile + gap);
                 int pz = titleH + gap + (i / columns) * (tile + caption + gap);
                 sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, pz));
-                TinyFont.Draw(sheet, $"{seed}  {masses} mass{(masses == 1 ? "" : "es")}",
-                              px, pz + tile + 2, font, new Color(0.85f, 0.85f, 0.8f));
+                var inkC = new Color(0.85f, 0.85f, 0.8f);
+                if (captionLines == 1)
+                    TinyFont.Draw(sheet, Caption(seed, masses), px, pz + tile + 2, font, inkC);
+                else
+                {
+                    TinyFont.Draw(sheet, seed.ToString(), px, pz + tile + 2, font, inkC);
+                    TinyFont.Draw(sheet, Masses(masses), px, pz + tile + 2 + TinyFont.Height(font) + 4,
+                                  font, inkC);
+                }
             }
 
             sheet.SavePng($"{Gallery}/{how}_{n}.png");

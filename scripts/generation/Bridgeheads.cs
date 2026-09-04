@@ -41,7 +41,11 @@ internal static class Bridgeheads
         return moved;
     }
 
-    /// <summary>Lowers the pad round a bridgehead to <paramref name="target"/>: only Plain/Hills ground, never below a basin's escarpment.</summary>
+    /// <summary>
+    /// Lowers the pad round a bridgehead to <paramref name="target"/>: only Plain,
+    /// Hills or Dunes ground (the one-slab landforms; a dune bridgehead left alone
+    /// stood three slabs over its partner), never below a basin's escarpment.
+    /// </summary>
     private static bool FlattenPad(bool[,] land, short[,] surface, short[,] water,
                                    int[,] region, RegionPlan[] plan,
                                    Vector2I c, short target, int n)
@@ -54,7 +58,7 @@ internal static class Bridgeheads
             if (!InBounds(n, x, z)) continue;
             if (!land[x, z] || surface[x, z] <= target) continue;
             if (NearWater(water, n, x, z)) continue;
-            if (plan[region[x, z]].Type is not (LandformType.Plain or LandformType.Hills))
+            if (plan[region[x, z]].Type is not (LandformType.Plain or LandformType.Hills or LandformType.Dunes))
                 continue;
             if (target < StepGrammar.BasinFloorNear(land, surface, region, plan, n, x, z)) continue;
             surface[x, z] = target;
