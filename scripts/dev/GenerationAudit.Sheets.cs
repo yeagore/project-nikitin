@@ -75,7 +75,7 @@ public partial class GenerationAudit
         };
         float[] steps = { 0f, 0.25f, 0.5f, 0.75f, 1f };
 
-        const int Zoom = 2, Gap = 10, Pad = 16, Gutter = 200;
+        const int Zoom = 3, Gap = 10, Pad = 16, Gutter = 200;
         int n = KnobSize, tile = n * Zoom;
         int titleH = TinyFont.Height(3) + 8 + TinyFont.Height(2) + 12;
         int headH = TinyFont.Height(2) + 10;
@@ -111,10 +111,22 @@ public partial class GenerationAudit
                 lo = Math.Min(lo, islandLo);
                 hi = Math.Max(hi, islandHi);
             }
+            // The wind's row reads moisture on the row's own range: the shadow is thirty
+            // points on a scale of 255, invisible on the full ramp.
+            byte mLo = 255, mHi = 0;
+            if (moisture)
+                foreach (IslandData d in islands)
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z) || d.WaterLevel[x, z] != IslandData.NoLand) continue;
+                    mLo = Math.Min(mLo, d.Moisture[x, z]);
+                    mHi = Math.Max(mHi, d.Moisture[x, z]);
+                }
             for (int c = 0; c < steps.Length; c++)
             {
                 IslandData d = islands[c];
-                Image img = moisture ? MoistureView(d) : Portrait(d, lo, hi);
+                Image img = moisture ? MoistureView(d, mLo, mHi) : Portrait(d, lo, hi);
                 img.Resize(tile, tile, Image.Interpolation.Nearest);
                 int left = Gutter + c * (tile + Gap);
                 sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(left, top));
@@ -126,10 +138,11 @@ public partial class GenerationAudit
         GD.Print($"knob sheet: {path}");
     }
 
-    /// <summary>The moisture axis as the lab draws it, water by kind over it.</summary>
-    private static Image MoistureView(IslandData d)
+    /// <summary>The moisture axis as the lab draws it, water by kind over it, the ramp stretched over <paramref name="lo"/>..<paramref name="hi"/>.</summary>
+    private static Image MoistureView(IslandData d, byte lo, byte hi)
     {
         int n = d.Size;
+        float span = Math.Max(1, hi - lo);
         var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -137,7 +150,8 @@ public partial class GenerationAudit
             Color c;
             if (!d.HasLand(x, z)) c = DevPalette.Aether;
             else if (d.WaterLevel[x, z] != IslandData.NoLand) c = DevPalette.Water(d, x, z);
-            else c = DevPalette.MoistureRamp.Lo.Lerp(DevPalette.MoistureRamp.Hi, d.Moisture[x, z] / 255f);
+            else c = DevPalette.MoistureRamp.Lo.Lerp(DevPalette.MoistureRamp.Hi,
+                Mathf.Clamp((d.Moisture[x, z] - lo) / span, 0f, 1f));
             img.SetPixel(x, z, c);
         }
         return img;
@@ -159,6 +173,78 @@ public partial class GenerationAudit
         ("climate", "CLIMATE: WARMTH", "WARMTH"),
         ("surface", "SURFACES", "SURFACES"),
     };
+
+    /// <summary>What each stage's colours mean, as swatch-and-name pairs; the sheet and the single tiles both draw them.</summary>
+    private static (string Name, Color C)[] StageLegend(string name)
+    {
+        var heightLow = new Color(0.2f, 0.32f, 0.16f);
+        var heightHigh = new Color(0.85f, 0.8f, 0.66f);
+        var beach = heightLow.Lerp(heightHigh, 0.3f).Lerp(new Color(0.9f, 0.85f, 0.55f), 0.5f);
+        switch (name)
+        {
+            case "footprint":
+                return new[] { ("LAND", new Color(0.80f, 0.80f, 0.72f)), ("AETHER", DevPalette.Aether) };
+            case "landforms":
+            {
+                var rows = new List<(string, Color)>();
+                foreach (LandformType t in Enum.GetValues<LandformType>())
+                    rows.Add((t.ToString().ToUpperInvariant(), DevPalette.Landform(t)));
+                rows.Add(("A BORDER (DARKENED)", DevPalette.Landform(LandformType.Plain).Darkened(0.5f)));
+                return rows.ToArray();
+            }
+            case "relief":
+                return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("SHADED: A RISE TO THE SOUTH-EAST", heightLow.Lerp(heightHigh, 0.5f) * 0.7f) };
+            case "lakes":
+                return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("LAKE", DevPalette.LakeTint), ("GOO", DevPalette.Goo) };
+            case "settled":
+                return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("BEACH (A SLAB DOWN)", beach), ("LAKE", DevPalette.LakeTint) };
+            case "rivers":
+                return new[] { ("STREAM", DevPalette.StreamTint), ("NAVIGABLE", DevPalette.ReachTint), ("LAKE", DevPalette.LakeTint), ("HOT WATER", DevPalette.HotTint), ("GOO", DevPalette.Goo) };
+            case "traversal":
+                return new[] { ("MAINLAND (UNDER THE ENTRY)", DevPalette.Mainland), ("ANOTHER DISTRICT", DevPalette.District(1)),
+                    ("BROKEN GROUND, UNDER 20 CELLS", DevPalette.Broken), ("WATER", DevPalette.WalkWater),
+                    ("GATE LANDING", new Color(0.98f, 0.78f, 0.15f)), ("HANGING GATE", new Color(1f, 0.2f, 0.2f)) };
+            case "roads":
+                return new[] { ("ROAD", new Color(0.98f, 0.95f, 0.62f)), ("A STAIR", new Color(1f, 0.45f, 0.25f)), ("A BRIDGE", new Color(1f, 0.80f, 0.20f)),
+                    ("GATE LANDING", new Color(0.95f, 0.82f, 0.25f)), ("HANGING GATE", new Color(1f, 0.2f, 0.2f)) };
+            case "climate":
+                return new[] { ("FROZEN", DevPalette.WarmthTint(20)), ("COLD", DevPalette.WarmthTint(100)), ("TEMPERATE", DevPalette.WarmthTint(150)),
+                    ("HOT", DevPalette.WarmthTint(200)), ("SAND", DevPalette.WarmthTint(240)) };
+            default:
+            {
+                var rows = new List<(string, Color)>();
+                foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
+                    rows.Add((m.ToString().ToUpperInvariant(), DevPalette.Material(m)));
+                return rows.ToArray();
+            }
+        }
+    }
+
+    /// <summary>How a legend lays out in a width: as many columns as the widest name allows, the rows shared between them, and the height that takes.</summary>
+    private static (int ColumnWidth, int PerColumn, int Height) LegendLayout((string Name, Color C)[] rows, int width, int font)
+    {
+        int lead = TinyFont.Height(font) + 8;
+        int colW = 0;
+        foreach (var (name, _) in rows) colW = Math.Max(colW, 16 + TinyFont.Width(name, font) + 14);
+        int columns = Math.Max(1, width / colW);
+        int perColumn = (rows.Length + columns - 1) / columns;
+        return (colW, perColumn, perColumn * lead);
+    }
+
+    /// <summary>Draws swatch-and-name pairs in columns from (left, top) within a width, as <see cref="LegendLayout"/> lays them; returns the height used.</summary>
+    private static int DrawLegendRows(Image img, (string Name, Color C)[] rows, int left, int top, int width, int font)
+    {
+        int lead = TinyFont.Height(font) + 8;
+        var (colW, perColumn, height) = LegendLayout(rows, width, font);
+        for (int i = 0; i < rows.Length; i++)
+        {
+            int cx = left + (i / perColumn) * colW, cy = top + (i % perColumn) * lead;
+            Fill(img, cx, cy + 1, 10, 10, rows[i].C);
+            Frame(img, cx, cy + 1, 10, 10, Rule);
+            TinyFont.Draw(img, rows[i].Name, cx + 16, cy + (font == 1 ? 3 : 0), font, Ink);
+        }
+        return height;
+    }
 
     /// <summary>
     /// One island drawn after every stage of the pipeline, through the generator's
@@ -184,12 +270,17 @@ public partial class GenerationAudit
         int n = StageSize, tile = n * Zoom;
         int cap = TinyFont.Height(2) + 8;
         int count = StageCaptions.Length;
+        // The legend band under each row is as tall as the tallest legend on the sheet.
+        int legendH = 0;
+        foreach (var (stageName, _, _) in StageCaptions)
+            legendH = Math.Max(legendH, LegendLayout(StageLegend(stageName), tile, 1).Height + 6);
+        int LegendH = legendH;
         int rows = (count + Columns - 1) / Columns;
         int titleH = TinyFont.Height(3) + 8 + TinyFont.Height(2) + 12;
         string subtitle = $"{d.Name.ToUpperInvariant()}, SEED {FirstSeed}, {n}X{n}, {d.Arrangement.ToString().ToUpperInvariant()}, "
             + $"{d.Character.ToString().ToUpperInvariant()}: THE SAME ISLAND AFTER EACH STAGE. THE KEEL HAS NO TOP VIEW.";
         int width = Math.Max(Pad * 2 + Columns * tile + (Columns - 1) * Gap, Pad * 2 + TinyFont.Width(subtitle, 2));
-        int height = Pad + titleH + rows * (tile + cap + Gap) + Pad;
+        int height = Pad + titleH + rows * (tile + cap + LegendH + Gap) + Pad;
 
         var sheet = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
         sheet.Fill(Page);
@@ -202,22 +293,28 @@ public partial class GenerationAudit
             int at = tiles.FindIndex(t => t.Name == name);
             if (at < 0) continue;
             Image img = tiles[at].Img;
-            // The tile on its own, captioned, for the page's stage headings.
-            var single = Image.CreateEmpty(n * 3 + 8, n * 3 + 8 + cap, false, Image.Format.Rgb8);
+            (string, Color)[] legend = StageLegend(name);
+
+            // The tile on its own, captioned and keyed, for the page's stage headings.
+            int singleW = n * 3 + 8;
+            int singleLegendH = LegendLayout(legend, singleW - 8, 1).Height + 12;
+            var single = Image.CreateEmpty(singleW, n * 3 + 8 + cap + singleLegendH, false, Image.Format.Rgb8);
             single.Fill(Page);
             Image big = (Image)img.Duplicate();
             big.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
             single.BlitRect(big, new Rect2I(0, 0, n * 3, n * 3), new Vector2I(4, 4));
             Frame(single, 3, 3, n * 3 + 2, n * 3 + 2, Rule);
             TinyFont.Draw(single, caption, 4, n * 3 + 10, 2, CaptionInk);
+            DrawLegendRows(single, legend, 4, n * 3 + 10 + cap, singleW - 8, 1);
             single.SavePng($"{StageSheet}/stage_{i + 1:00}_{name}.png");
 
             img.Resize(tile, tile, Image.Interpolation.Nearest);
             int px = Pad + (i % Columns) * (tile + Gap);
-            int py = Pad + titleH + (i / Columns) * (tile + cap + Gap);
+            int py = Pad + titleH + (i / Columns) * (tile + cap + LegendH + Gap);
             sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, py));
             Frame(sheet, px - 1, py - 1, tile + 2, tile + 2, Rule);
             TinyFont.Draw(sheet, brief, px, py + tile + 4, 2, CaptionInk);
+            DrawLegendRows(sheet, legend, px, py + tile + cap + 2, tile, 1);
         }
         string path = $"{StageSheet}/pipeline_{FirstSeed}_{n}.png";
         sheet.SavePng(path);

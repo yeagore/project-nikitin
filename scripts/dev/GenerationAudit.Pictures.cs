@@ -297,7 +297,27 @@ public partial class GenerationAudit
         return Portrait(d, lo, hi);
     }
 
-    /// <summary>The portrait with the height ramp over a given range, so several islands can share one scale.</summary>
+    /// <summary>Brightness per slab of rise toward the light, which stands to the north-west: a cliff of four slabs is a full step of shade.</summary>
+    private const float ShadePerSlab = 0.18f;
+
+    /// <summary>
+    /// A hillshade for the height views: how much a cell rises from its west and
+    /// north neighbours, as a brightness factor. A one-slab step shows faintly, a
+    /// cliff strongly, flat ground not at all, so hills, valleys and terraces read
+    /// where a bare height ramp hid them.
+    /// </summary>
+    private static float Shade(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        float here = d.EffectiveLevel(x, z), rise = 0f;
+        int seen = 0;
+        if (x > 0 && d.HasLand(x - 1, z)) { rise += here - d.EffectiveLevel(x - 1, z); seen++; }
+        if (z > 0 && d.HasLand(x, z - 1)) { rise += here - d.EffectiveLevel(x, z - 1); seen++; }
+        if (seen == 0) return 1f;
+        return Mathf.Clamp(1f + ShadePerSlab * rise / seen, 0.55f, 1.45f);
+    }
+
+    /// <summary>The portrait with the height ramp over a given range, so several islands can share one scale, and the hillshade on the land.</summary>
     private static Image Portrait(IslandData d, short lo, short hi)
     {
         int n = d.Size;
@@ -312,7 +332,8 @@ public partial class GenerationAudit
             else
             {
                 float t = hi > lo ? Mathf.Clamp((d.SurfaceLevel(x, z) - lo) / (float)(hi - lo), 0f, 1f) : 0.5f;
-                c = new Color(0.2f, 0.32f, 0.16f).Lerp(new Color(0.85f, 0.8f, 0.66f), t);
+                c = new Color(0.2f, 0.32f, 0.16f).Lerp(new Color(0.85f, 0.8f, 0.66f), t) * Shade(d, x, z);
+                c = new Color(Mathf.Min(1f, c.R), Mathf.Min(1f, c.G), Mathf.Min(1f, c.B));
                 if (d.Beach[x, z]) c = c.Lerp(new Color(0.9f, 0.85f, 0.55f), 0.5f);
                 if (d.Landings[x, z]) c = new Color(0.95f, 0.82f, 0.25f);
             }

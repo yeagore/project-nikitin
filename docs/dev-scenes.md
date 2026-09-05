@@ -249,11 +249,14 @@ each captioned. `KnobSheet=<dir>` draws `FirstSeed` at `KnobSize`² (96) with a
 row per 0–1 knob — mix, relief, hilliness, rivers, lakes, valleys in the
 height-and-water view, wind in the moisture view — the knob at 0, ¼, ½, ¾, 1
 across and everything else rolled by the seed; a row's height ramp is on one
-scale, since per-island scaling hid the relief knob. `StageSheet=<dir>` draws
+scale, since per-island scaling hid the relief knob, and every height view
+carries a hillshade (a rise toward the south-east is brighter), so a one-slab
+step shows where a bare ramp hid it. `StageSheet=<dir>` draws
 `FirstSeed` at `StageSize`² (96) after every stage of the pipeline — the mask,
 regions and landforms, relief, lakes, the settled surface with its beaches,
 rivers, walk areas and Gates, roads, warmth, surfaces — as one sheet and as a
-captioned tile per stage (`stage_NN_<name>.png`). It reads the generator's
+captioned tile per stage (`stage_NN_<name>.png`), each with its own key. It
+reads the generator's
 `OnStage` hook, a dev-only callback that hands each stage's live state out to
 be drawn; the hook is null in play and changes nothing, and the checksum says so.
 
