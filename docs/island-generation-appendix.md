@@ -188,6 +188,39 @@ are their named count of pieces in sixteen of sixteen seeds at every
 footprint; 75 of 442 checksum islands moved, nearly all Twins, Satellites and
 the default seeds that go through the scaling.
 
+### Ground inside two lobes is never cut
+
+The blocks came out of the gallery with a scatter of one-to-three-cell pits in
+the middle, at 128² a dozen of them where 64² had one or two blobs, and Arc grew
+crumbs along its inner coast. Two causes, both fixed. The shape noise had a
+fixed frequency per cell while the lobes scale with the footprint, so a 128²
+lobe held twice the periods of a 64² one and its cut broke into twice the
+pieces; the noise is now island-relative, normalised to 64² (which it leaves
+bit-identical), as its warp already was. That evened the sizes out and fixed
+nothing else: the pits were still there at 64². The cut ranks each lobe's cells
+by the noise and drops the lowest `1 − Coverage` of them, which on a coastal
+lobe shapes the coast; a block's hub is all interior, so its share had nowhere
+to land but the middle. Now a cell inside two lobes' discs at once is land
+whatever the noise says — interior by construction — and the cut only ever
+shapes an outer coast. 378 of 442 checksum islands moved, since nearly every
+layout overlaps somewhere, and the side effects were all in the right
+direction: Star stopped dropping an arm (sixteen of sixteen whole at every
+footprint, from ten or eleven), Rosette fused at its heart into one landmass
+(the spec had been rewritten to promise pieces; it was rewritten back), Ring
+and Caldera filled in, and Harmony's tails began to fuse. The `Solid` floors
+that guard thin shapes against perforation are now belt and braces.
+
+### Small tunes after the gallery
+
+The L's hub sat on the centre, and its round edge poked into the bay between
+the arms; on BrokenL the spur stood clear of both straits and read as a third
+petal. The hub sits an eighth of a radius back toward the outer corner. Harmony
+delivered three or four pieces against a spec of two because its comma tails,
+0.15 of the radius, parted from their heads; at 0.21 it is two pieces in
+fifteen of sixteen seeds at 128² and sixteen of sixteen at 96², with the S still
+carved between them, and two to four at 64², where the tails are small in cells
+whatever the ratio.
+
 ### Grouped lobes, and the seam between pieces
 
 A comma of `Harmony` is a chain of lobes that must fuse while the S between the

@@ -641,9 +641,9 @@ internal static class Footprint
                     break;
                 }
 
-                // A coil of one turn and a bit. Meant as a ring of round bays over a full hub, it
-                // comes out as a spray of narrow petals from a small heart, some parted from it,
-                // and that is what it is now for: the thin, busy cousin of Star.
+                // A coil of one turn and a bit: a spray of narrow petals fused at a small heart,
+                // the thin, busy cousin of Star. (Meant as a ring of round bays over a full
+                // hub; the petals are what the coil makes, and are kept.)
                 case IslandArrangement.Rosette:
                     Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
                          links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
@@ -692,7 +692,7 @@ internal static class Footprint
                             float f = t / 4f;
                             float a = phase + flip - Mathf.Pi * 0.5f + f * Mathf.Pi * 0.98f;
                             float ring = disc * Mathf.Lerp(0.34f, 0.70f, f * f * 0.6f + f * 0.4f);
-                            float size = radius * Mathf.Lerp(0.37f, 0.15f, f);
+                            float size = radius * Mathf.Lerp(0.37f, 0.21f, f);
                             Add(cx + MathF.Cos(a) * ring, cz + MathF.Sin(a) * ring, size,
                                 0xB501u ^ (uint)((half * 8 + t + 1) * 2654435761u),
                                 1.4f, a, group: half + 1);
@@ -969,7 +969,12 @@ internal static class Footprint
         }
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
-        var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
+        // The shape noise is island-relative, like its warp: the same number of
+        // periods across a lobe at every footprint, normalised to 64² (which it leaves
+        // bit-identical). At a fixed frequency per cell a 128² block's hub, almost all
+        // interior, had a dozen low patches of noise inside it, and the coverage cut
+        // took each one: a scatter of one-cell pits where 64² had one round hole.
+        var shape = new Noise(seed, frequency: 0.05f * 64f / n, octaves: 4)
             .WithWarp(amplitude: (0.25f + 0.55f * irr) * n, frequency: 0.6f / n);
         // Strait width wanders, so it narrows to a step across in places and opens elsewhere.
         var strait = new Noise(seed + 907, frequency: 0.09f, octaves: 3);
@@ -982,6 +987,12 @@ internal static class Footprint
         var norm = new float[n, n];
         var owner = new int[n, n];
         var cut = new bool[n, n];
+        // Inside two lobes at once: interior by construction, so the coverage cut
+        // leaves it alone. The cut ranks a lobe's cells by the shape noise and drops
+        // the lowest share, which shapes a coast; on a lobe that is all interior (a
+        // block's hub) it had nowhere to land but the middle, and the blocks came
+        // out with a scatter of pits where a single rolled hole was meant.
+        var overlap = new bool[n, n];
         var candidates = new List<float>[lobes.Length];
         for (int i = 0; i < lobes.Length; i++) candidates[i] = new List<float>();
 
@@ -995,9 +1006,11 @@ internal static class Footprint
             int mine = 0, bestPiece = int.MinValue;
             float dBest = float.MaxValue, rBest = 1f;
             float dOther = float.MaxValue, rOther = 1f;
+            int within = 0;
             for (int i = 0; i < lobes.Length; i++)
             {
                 float di = lobes[i].Distance(x, z, wobble, irr, out float ri);
+                if (di < 1f) within++;
                 if (di < d) { d = di; rd = ri; mine = i; }
 
                 int piece = lobes[i].Group >= 0 ? lobes[i].Group : -(i + 1);
@@ -1014,6 +1027,7 @@ internal static class Footprint
             }
             norm[x, z] = d;
             owner[x, z] = mine;
+            overlap[x, z] = within >= 2;
 
             // The seam in cells (a normalised unit is one lobe radius); the band never
             // closes completely.
@@ -1057,7 +1071,7 @@ internal static class Footprint
         // One-cell empty border so every land cell has a reachable coast.
         for (int x = 1; x < n - 1; x++)
         for (int z = 1; z < n - 1; z++)
-            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold[owner[x, z]]
+            mask[x, z] = norm[x, z] < 1f && (overlap[x, z] || field[x, z] > threshold[owner[x, z]])
                          && !cut[x, z];
 
         return mask;

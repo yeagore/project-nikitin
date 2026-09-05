@@ -71,7 +71,7 @@ public enum IslandArrangement
 
     // 20 was BrokenFractal (removed: a cluster of stepping stones played like Shards); keep the gap.
 
-    /// <summary>A spray of narrow petals from a small heart, a few of them parted from it: a thinner, busier Star.</summary>
+    /// <summary>A spray of narrow petals fused at a small heart: one landmass, the thinner, busier cousin of Star.</summary>
     Rosette = 21,
 
     /// <summary>A hub with five or six arms, so no two arms face each other.</summary>

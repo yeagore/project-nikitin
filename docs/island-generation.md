@@ -79,6 +79,15 @@ the lobes outright: a **lagoon** (a disc of aether, at the centre of a ring or
 off it for a block's hole) and a **waist** (two flaring bays either side of an
 axis, which cut a neck to a width however the heads bulge).
 
+The nearest lobe owns each cell, and each lobe keeps its own share of its disc:
+a **shape noise** ranks the lobe's cells and the lowest `1 − Coverage` of them
+are dropped, which is what makes a coast ragged rather than elliptical. The
+shape noise is **island-relative** — the same number of periods across a lobe at
+every footprint, normalised to 64² — as its warp always was. Ground **inside two
+lobes at once is never cut**: it is interior by construction, so the cut cannot
+perforate a seam or pit the middle of a block's hub, and only the outer coast is
+shaped by it.
+
 | layouts | shape |
 |---|---|
 | `Single`, `Satellites` | one landmass; with two to four islets round it. The only two that take **bites** |
@@ -89,7 +98,7 @@ axis, which cut a neck to a width however the heads bulge).
 | `Atoll` | beads on a string: rounded islets that all but touch, a step of water between each pair |
 | `Cross`, `TShape`, `LShape`, `Star`; `BrokenCross`, `BrokenT`, `BrokenL` | a wide hub with thick arms, **axis-aligned**, so an arm points at an edge and therefore at a Gate; the broken forms part the arms |
 | `Fractal` | a chain of overlapping lobes that turns as it goes |
-| `Rosette` | a spray of narrow petals from a small heart, a few of them parted from it — the thin, busy cousin of `Star`, and by intent two to five pieces |
+| `Rosette` | a spray of narrow petals fused at a small heart: one landmass, the thin, busy cousin of `Star` |
 | `ThousandIsles` | a **quilt**: a jittered 4×4 to 6×6 grid of lobes by footprint, a few holes, every seam a strait — the only spread the linker leaves where it was |
 | `Square`, `Rhomb` | blocky fused grids of lobes, axis-aligned and stood on a corner; a little under half the time with a hole of a rolled size, a little off the centre |
 | `NShape` | the letter itself: two uprights and the diagonal joining them, the strokes as fat as a cross's arm |
@@ -594,7 +603,7 @@ at the lab.
 |---|---|---|
 | `Size` | 64 / 96 / 128 | footprint edge, in cells. Audited at these three (`SupportedSizes`); any 16–128 is accepted, unaudited |
 | `Radius` | 0 = auto | land-mask radius |
-| `Coverage` | 0 – 1 | share of each lobe's disc that becomes land |
+| `Coverage` | 0 – 1 | share of each lobe's disc that becomes land, outside the ground it shares with another lobe (always land) |
 | `Irregularity` | 0 – 1 | disc ↔ deeply lobed coastline |
 | `Arrangement` | enum | the layout — see Footprint |
 | `NewArrangements` | bool | whether `Auto` may roll the newer layouts |
