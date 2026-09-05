@@ -1,4 +1,4 @@
-# Dev scenes: the lab, the audit, the checksum
+﻿# Dev scenes: the lab, the audit, the checksum
 
 Three scenes under `scenes/dev/` drive the generator without the game. All three
 load the same preset, `resources/island_default.tres`, so the audit measures the
@@ -22,8 +22,10 @@ Windows machine's locale prints decimals with a comma, which breaks patterns
 looking for `\.`; and the headless runs are independent processes, so the
 checksum, the audit and a collage can run at once.
 
-The preset leaves the ten 0–1 knobs (relief, hilliness, mix, rivers, lakes,
-valleys, moisture, warmth, wind, overhangs) on **Auto**, so every seed rolls its own;
+The preset leaves the sixteen 0–1 knobs (relief, hilliness, mix, rivers, lakes,
+valleys, moisture, warmth, wind, overhangs, and the six magicks knobs: supply,
+decay, inhibitor spread, producer spread, reproduction, settling) on **Auto**,
+so every seed rolls its own;
 a sweep that sets a knob pins it for every seed it builds, and the others still
 roll — the same way for every step of the sweep, since the roll is the seed's.
 
@@ -54,9 +56,17 @@ the slider is greyed, and once the island is built it sits at what the seed
 rolled and the caption says so (`Warmth   auto -> 0.71`), so the slider's
 position is always true to the island shown. Untick the box to keep that value
 and set it yourself; tick it again to hand the knob back to the seed, or press
-**All knobs to auto** for all nine at once. The readout's `settings:` line
-lists all ten, a star on each rolled one. **H** and **M** step their knob
-through auto, 0, 0.25 … 1.
+**All knobs to auto** for all of them at once. The readout's `settings:` line
+lists all sixteen over two lines, a star on each rolled one. **H** and **M** step
+their knob through auto, 0, 0.25 … 1.
+
+The six under **magicks** steer the Turing reaction the magick layer is grown by;
+watch them on the `magick` view (**C**). *Supply* and *decay* between them pick
+what kind of pattern it is — scattered wells, worms, a maze, a saturated Domain
+with inert holes in it — *inhibitor spread* its scale, *producer spread* and
+*reproduction* how hard its edges are, and *settling* how far it has got. Settling
+is the one slider that costs real time on a rebuild: it is steps × cells, about
+58 ms an island at 128² on average and roughly twice that at 1.00.
 
 The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
 one of the three footprints and the caption says which. **Goo may roll** is the
@@ -82,7 +92,7 @@ lake bed, goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
 Gate landing, ferry quay, summit; a sea stack is a dark column in the aether in
 every view), the six habitat axes as ramps: `moisture`, `warmth`, `rugged`,
 `exposure`, `rim`, `water` (the walk cost to fresh water), and the `magick`
-layer. Water is coloured by kind (ford, stream, navigable reach, lake; hot
+layer (the Turing reaction's spots, worms, mazes and lace). Water is coloured by kind (ford, stream, navigable reach, lake; hot
 water orange) and goo is violet in every view. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face

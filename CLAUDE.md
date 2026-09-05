@@ -1,4 +1,4 @@
-# Project Nikitin
+﻿# Project Nikitin
 
 A single-player economic/exploration strategy game built in **Godot 4.7**. The
 player is a merchant-pioneer running a trading company across the **Ecumene**, a
@@ -122,17 +122,18 @@ under `scripts/generation/`, in the order they run:
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
 | Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
-| Magicks | `Magicks` | The magickal density byte: for now pure noise in soft waves, read by nothing. |
+| Magicks | `Magicks` | The magickal density byte, grown rather than sampled: a Turing reaction (Gray–Scott) between the magick, which makes more of itself, and the inhibitor it feeds on, which is replenished everywhere and spreads faster — so the field breaks into spots, worms, mazes or lace instead of settling flat. Six knobs, mapped onto the reaction's live band rather than its raw coefficients. Read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The ten 0–1 knobs in `IslandParams` (relief, hilliness, mix,
-rivers, lakes, valleys, moisture, warmth, wind, overhang density) accept
-`IslandParams.Auto` (any negative value); `Roster.ResolveKnobs` then rolls
-them from the seed before anything runs, and the values used are
-`IslandData.Settings`. The preset leaves all ten on Auto, so the audit's
+**Auto knobs.** The sixteen 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, wind, overhang density, and the six
+magicks knobs: supply, decay, inhibitor spread, producer spread, reproduction,
+settling) accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
+then rolls them from the seed before anything runs, and the values used are
+`IslandData.Settings`. The preset leaves all sixteen on Auto, so the audit's
 default seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of

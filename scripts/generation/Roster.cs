@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
@@ -132,7 +132,10 @@ internal static class Roster
     {
         if (p.LandformMix >= 0f && p.Relief >= 0f && p.Hilliness >= 0f && p.Rivers >= 0f
             && p.Lakes >= 0f && p.Valleys >= 0f && p.Moisture >= 0f && p.Warmth >= 0f
-            && p.Wind >= 0f && p.OverhangDensity >= 0f && p.Size > 0)
+            && p.Wind >= 0f && p.OverhangDensity >= 0f && p.MagickProducerSpread >= 0f
+            && p.MagickInhibitorSpread >= 0f && p.MagickReproduction >= 0f
+            && p.MagickSupply >= 0f && p.MagickDecay >= 0f && p.MagickSettling >= 0f
+            && p.Size > 0)
             return p;
 
         var r = (IslandParams)p.Duplicate();
@@ -150,6 +153,12 @@ internal static class Roster
         if (p.Warmth < 0f) r.Warmth = Hash01(seed, 0x4B08u);
         if (p.OverhangDensity < 0f) r.OverhangDensity = Hash01(seed, 0x4B09u);
         if (p.Wind < 0f) r.Wind = Hash01(seed, 0x4B0Bu);
+        if (p.MagickProducerSpread < 0f) r.MagickProducerSpread = Hash01(seed, 0x4B0Cu);
+        if (p.MagickInhibitorSpread < 0f) r.MagickInhibitorSpread = Hash01(seed, 0x4B0Du);
+        if (p.MagickReproduction < 0f) r.MagickReproduction = Hash01(seed, 0x4B0Eu);
+        if (p.MagickSupply < 0f) r.MagickSupply = Hash01(seed, 0x4B0Fu);
+        if (p.MagickDecay < 0f) r.MagickDecay = Hash01(seed, 0x4B10u);
+        if (p.MagickSettling < 0f) r.MagickSettling = Hash01(seed, 0x4B11u);
         return r;
     }
 

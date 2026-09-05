@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin;
@@ -383,7 +383,14 @@ public partial class IslandLab : Node3D
 			+ Knob("moisture", Params.Moisture, s.Moisture) + "  "
 			+ Knob("warmth", Params.Warmth, s.Warmth) + "  "
 			+ Knob("wind", Params.Wind, s.Wind) + "  "
-			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity)
+			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity) + "\n"
+			+ "  magicks: "
+			+ Knob("supply", Params.MagickSupply, s.MagickSupply) + "  "
+			+ Knob("decay", Params.MagickDecay, s.MagickDecay) + "  "
+			+ Knob("inhibitor", Params.MagickInhibitorSpread, s.MagickInhibitorSpread) + "  "
+			+ Knob("producer", Params.MagickProducerSpread, s.MagickProducerSpread) + "  "
+			+ Knob("reproduction", Params.MagickReproduction, s.MagickReproduction) + "  "
+			+ Knob("settling", Params.MagickSettling, s.MagickSettling)
 			+ "   (* rolled from the seed)";
 	}
 }

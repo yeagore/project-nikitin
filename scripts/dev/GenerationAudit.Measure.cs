@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
@@ -94,7 +94,16 @@ public partial class GenerationAudit
         public readonly List<int> RimMeans = new();
         public readonly List<int> WaterMeans = new();
         public readonly List<int> MagickMeans = new();
-        public readonly List<int> MagickSpread = new();
+
+        /// <summary>
+        /// Share of an island's land the magick reaction left saturated, as a
+        /// percentage of cells over half. The layer is stretched to its own range,
+        /// so its span is 255 by construction and says nothing; how much of the
+        /// Domain the pattern covers is the number that moves — 2% to 86% over the
+        /// Auto seeds — and a run where it stops moving is a run where the reaction
+        /// has fallen out of its band.
+        /// </summary>
+        public readonly List<int> MagickCover = new();
         public readonly List<int> QuayRise = new();
         public long SunnyWarmth, SunnyCells, ShadedWarmth, ShadedCells;
         public long LeeMoisture, LeeWarmth, LeeCells, OpenMoisture, OpenWarmth, OpenCells;
@@ -729,7 +738,7 @@ public partial class GenerationAudit
             int beachHere = 0, torsHere = 0;
             long moistSum = 0, warmSum = 0, rugSum = 0, expSum = 0, rimSum = 0;
             long waterSum = 0, magickSum = 0;
-            int magickLo = 255, magickHi = 0;
+            int magickHot = 0;
             int landHere = 0;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
@@ -747,8 +756,7 @@ public partial class GenerationAudit
                 rimSum += d.RimDistance[x, z];
                 waterSum += d.WaterDistance[x, z];
                 magickSum += d.Magick[x, z];
-                magickLo = Math.Min(magickLo, d.Magick[x, z]);
-                magickHi = Math.Max(magickHi, d.Magick[x, z]);
+                if (d.Magick[x, z] > 127) magickHot++;
 
                 bool dry = d.WaterLevel[x, z] == IslandData.NoLand;
                 var form = (LandformType)d.Landform[x, z];
@@ -813,7 +821,7 @@ public partial class GenerationAudit
                 RimMeans.Add((int)(rimSum / landHere));
                 WaterMeans.Add((int)(waterSum / landHere));
                 MagickMeans.Add((int)(magickSum / landHere));
-                MagickSpread.Add(magickHi - magickLo);
+                MagickCover.Add((int)(100L * magickHot / landHere));
             }
         }
 

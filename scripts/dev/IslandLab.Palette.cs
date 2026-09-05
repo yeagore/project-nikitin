@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
@@ -141,7 +141,8 @@ public partial class IslandLab
 
 			default:
 				return $"[b]magick[/b]   {Ramp(DevPalette.MagickRamp)}  inert … saturated: the magickal "
-					+ "density layer. For now pure noise in soft waves, read by nothing";
+					+ "density layer, grown by a Turing reaction between the magick and the inhibitor "
+					+ "it feeds on — spots, worms, mazes or lace by the six magicks knobs. Read by nothing";
 		}
 	}
 

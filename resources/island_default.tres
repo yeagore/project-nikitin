@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="IslandParams" load_steps=2 format=3]
+﻿[gd_resource type="Resource" script_class="IslandParams" load_steps=2 format=3]
 
 [ext_resource type="Script" uid="uid://rjdpfihab1os" path="res://scripts/generation/IslandParams.cs" id="1_params"]
 
@@ -27,6 +27,12 @@ Valleys = -1.0
 Moisture = -1.0
 Warmth = -1.0
 Wind = -1.0
+MagickProducerSpread = -1.0
+MagickInhibitorSpread = -1.0
+MagickReproduction = -1.0
+MagickSupply = -1.0
+MagickDecay = -1.0
+MagickSettling = -1.0
 Crossings = 3
 EntryGate = 2
 EntryEdge = 0

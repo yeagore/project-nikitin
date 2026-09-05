@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -160,7 +160,7 @@ public partial class GenerationAudit
         Report("  rim distance", t.RimMeans, "cells");
         Report("  water distance (walk cost, 255 out of reach)", t.WaterMeans, "");
         Report("  magick   (0 inert - 255 saturated)", t.MagickMeans, "");
-        Report("  magick range within one island", t.MagickSpread, "");
+        Report("  magick saturated share of an island", t.MagickCover, "%");
         GD.Print("  the sun: warmth on slopes turned to it "
             + (t.SunnyCells > 0 ? $"{t.SunnyWarmth / (double)t.SunnyCells:0.0}" : "-")
             + $" (n={t.SunnyCells}), turned away "

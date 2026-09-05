@@ -1,4 +1,4 @@
-# Island Generation — the spec
+﻿# Island Generation — the spec
 
 How a Domain is generated, in the order it happens: the model, each stage's
 rules and the class that owns them, the parameters, the rendering handoff. **The
@@ -519,13 +519,66 @@ gorge floors wet by about 40 and the lee warms by about 15, while the open
 ground does not move.
 
 **The magickal density** (`Magicks.Measure`, `IslandData.Magick`) is a seventh
-byte and a layer of its own, not a habitat axis. For now it is noise and
-nothing else: two octaves of warped simplex at a wavelength of about forty
-cells, pushed through a tanh so the byte uses most of its range (about 200 of
-255 within one island) without the flat plateaus a hard clip made — soft waves
-with nothing behind them, read by nothing. What the Magicks system makes of it
-is design to come; the byte exists so the lab, the audit and the collages carry
-it from the first.
+byte and a layer of its own, not a habitat axis. It is **grown, not sampled**:
+a Turing reaction between two substances on the land, in the Gray–Scott form,
+integrated with explicit Euler at dt = 1 on the cell lattice.
+
+- The **producer** is the magick itself, and it is autocatalytic: where there is
+  some, more is made, at the cost of the substance it feeds on.
+- The **inhibitor** is that substance. It is replenished everywhere, and it
+  spreads faster than the producer does.
+
+That last clause is Turing's condition and the whole trick. A substance that
+makes more of itself locally while starving its own surroundings at a distance
+cannot settle into a flat field; it breaks into spots, worms, mazes, cells and
+lace — the instability that puts the spots on a leopard. So consecutive seeds do
+not merely shift a noise field about, they give a Domain of a *different kind*:
+scattered magickal wells, one veined with filaments, one almost saturated with
+inert holes punched through it.
+
+The land is compacted to a flat list of cells, each carrying its eight
+neighbours; a neighbour off the land is the cell itself, which makes the coast a
+**no-flux wall** — neither substance crosses into the aether. That wall is why
+many Domains carry a bright rim: with nowhere to diffuse to, the producer banks
+up against the coast. It is the model's own behaviour rather than a rule anyone
+wrote, and it sits well enough with `RimDistance` — the rim is already the
+Domain's strange edge — that it was left alone. The producer is sown in the
+cells above 55% of a warped noise field's *own range over that island* (roughly
+the top third, in a few broad irregular patches) at `u = 0.5, v = 0.25`, the rest
+of the land starting inert at `u = 1, v = 0`. The share is read against the
+island's own range and not a fixed level because a small landmass can sit
+entirely under a fixed one, in which case nothing is sown and there is no
+reaction to run.
+
+**Six knobs** on `IslandParams` steer it, all Auto like the rest: `MagickSupply`
+(the feed F), `MagickDecay` (the removal k), `MagickInhibitorSpread` and
+`MagickProducerSpread` (the two diffusions), `MagickReproduction` (the
+autocatalytic rate ρ) and `MagickSettling` (400 to 2600 steps). They are mapped
+onto the *live band* of the reaction and not onto its raw coefficients, because
+almost all of the rectangle around that band is a dead field or a full one:
+
+| Mapped | How |
+|---|---|
+| `MagickSupply` | F over 0.014 … 0.060 |
+| `MagickDecay` | k as a **multiple of the saddle-node curve** `√(ρF)/2 − F` — the line under which the reaction has a second, live steady state. The multiple runs 1 ± a reach, and the reach itself narrows from 0.075 at no supply to 0.035 at full supply, because the live band round the curve tightens as the feed rises: a width that suits a starved Domain kills a well-fed one outright. Expressing k relative to the curve is what lets the supply knob range over the whole feed axis without walking out of the band |
+| `MagickInhibitorSpread` | Dᵤ over 0.14 … 0.21, which is the pattern's scale: how far apart two wells can stand and still starve each other |
+| `MagickProducerSpread` | Dᵥ as 0.40 … 0.55 **of** Dᵤ. Relative, never absolute and never 1, so Turing's condition holds at every setting |
+| `MagickReproduction` | ρ over 0.85 … 1.20, and it moves the saddle-node curve with it, so the decay ceiling is computed from the ρ actually used |
+| `MagickSettling` | 400 … 2600 steps. The one stage whose cost is steps × cells: about 58 ms an island, which is most of what the reaction costs |
+
+The producer rarely uses more than a third of 0–1, so the finished field is
+stretched to the island's own range before it becomes the byte. If it comes back
+with no peak (`< 0.05`, the reaction died) or no range under the peak
+(`< 0.02`, it flooded), the layer **falls back** to the seeding field alone,
+tanh-stretched — the soft waves the layer used to be. Numerical residue stretched
+over a byte would be drawn as if it were country, so the two tests catch both
+failures rather than only the dead one. Across sixty Auto seeds and every knob
+swept end to end, the fallback does not currently fire; it is there because the
+band is tuned, not proved.
+
+Nothing reads the byte yet. What the Magicks system makes of it is design to
+come; the byte exists so the lab, the audit and the collages carry it from the
+first.
 
 **Every geometric question is asked of the effective surface**
 (`EffectiveLevel`), because habitat and anchors describe what a place *looks

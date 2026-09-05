@@ -1,4 +1,4 @@
-# Island Generation — appendix
+﻿# Island Generation — appendix
 
 The reasoning behind [island-generation.md](island-generation.md): why each
 mechanism is the way it is, what was tried and removed, how the audit and the
@@ -504,6 +504,70 @@ field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
 one soft cell in a hundred — put building stone on a Domain with no rock
 landform, material only.
 
+### The magick layer is grown, not sampled
+
+The density byte was two octaves of warped simplex through a tanh. It was
+honest about being a placeholder, and it had the failing every noise field has:
+turning its knobs moves the blobs about, changes the size of the blobs, and
+never produces anything but blobs. A Domain could not be *a different kind of*
+magickal place.
+
+A Turing reaction can. The producer (the magick) makes more of itself out of an
+inhibitor it consumes; the inhibitor is fed everywhere and diffuses faster than
+the producer does, and that inequality alone — the thing Turing showed in 1952 —
+makes a flat field unstable and splits it into spots, worms, mazes, cells and
+lace. The Gray–Scott form of it was taken over Gierer–Meinhardt: the same
+producer/inhibitor structure, but numerically forgiving (explicit Euler at
+dt = 1 needs no stiff-solver care) and with a far richer parameter zoo. Six
+knobs, all Auto with the rest, and the map from knob to coefficient is where all
+the work went.
+
+**The band is narrow and it moves.** Most of the (F, k) rectangle is a dead
+field or a full one, so the knobs are mapped onto the live band rather than onto
+the coefficients. The first attempt set k as a fraction, 0.86–0.99, of the
+saddle-node curve `√F/2 − F` on the reasoning that patterns live under the curve
+where the second steady state exists. They do not live *well* under it: at 0.5
+on every knob the producer flooded 99.9% of the land, and the min–max stretch was
+drawing numerical residue as if it were country. The published recipes put the
+interesting band within a few per cent *either side* of the curve — coral at
+F = 0.0545, k = 0.062 is 0.997 of it; worms at F = 0.078, k = 0.061 is 0.990 —
+so k became a multiple of the curve centred on 1.
+
+Two corrections followed from measuring rather than reasoning:
+
+- The reproduction rate ρ scales the autocatalytic term, so it moves the curve
+  with it (`√(ρF)/2 − F`). Computing the ceiling from a ρ of 1 while running at
+  0.85 put a fourteenth of Auto seeds outside the band.
+- The band's *width* is not constant: it tightens as the feed rises. A fixed
+  reach of ±0.075 that suited a starved Domain killed a well-fed one outright,
+  which is why nine seeds in forty died at high supply. The reach now runs from
+  0.075 at no supply to 0.035 at full, and the top of the feed axis was pulled
+  back from 0.070 to 0.060 for the last two.
+
+Across sixty Auto seeds and all six knobs swept end to end, nothing now falls
+back, every sweep is monotone in coverage, and the saturated share of a Domain
+runs from 2% to 86%.
+
+**The seeding is relative.** The producer starts in the cells above a fixed
+level of a noise field — and a small landmass can sit entirely under a fixed
+level, in which case nothing is sown at all and the reaction has nothing to run
+on. Eleven of the checksum's Rhomb and Archipelago rows at one seed failed
+exactly that way, and failed silently, since the fallback field is bit-identical
+to what the layer used to be. The threshold is read against the island's own
+noise range instead.
+
+**The coast is a no-flux wall** — a neighbour off the land is the cell itself,
+so neither substance crosses into the aether — and the producer therefore banks
+up against it, which gives many Domains a bright rim. Nobody wrote that rule; it
+is what the boundary condition does. It was left alone because `RimDistance`
+already makes the rim the Domain's strange edge and essencecoral country, so
+magick pooling there reads as intent rather than as an artefact.
+
+**What it costs.** The reaction is the one stage whose cost is steps × cells:
+the checksum's 446 islands went from 38 to 64 seconds, about 58 ms an island.
+That is cheap enough that the settling knob was left at a full 400–2600 steps
+rather than trimmed.
+
 ## C. Tried and removed
 
 - **A road check that could not pass.** The audit flagged any road hop that was
@@ -527,6 +591,8 @@ landform, material only.
 | **Craters and the `Volcanic` character** | Either messy or indistinguishable from a mesa-and-basin pair, and a large share of unreachable ground. The sculpt mechanism is the same one the others use, so a caldera can come back if the biome layer wants one. |
 | **A two-cell-wide fall sheet** | Centred on one cell, half of it poured out of solid rock. Each cell of a navigable pair emits its own sheet. |
 | **Overhangs anywhere with an 8-slab face** | A lip off a two-cell karst tower reads as a hole punched through it. Undercuts need backing. |
+| **Magick as a noise field** | Two octaves of warped simplex through a tanh. Its knobs could only move and resize blobs; a Domain could not be a different *kind* of magickal place. Replaced by the Turing reaction (§B). |
+| **k as a fraction under the saddle-node curve** | 0.86–0.99 of `√F/2 − F`, on the reasoning that patterns need the second steady state to exist. That whole range floods: at the middle of every knob the producer covered 99.9% of the land. The band straddles the curve, so k is a multiple of it centred on 1. |
 | **Streams fordable everywhere** | A watercourse that costs nothing to cross anywhere is a line on the map, and roads walked down the bed. The crossing is now a place. |
 | **A berth wherever the domino fits** | Thousands per audit, nearly all on water you could walk round. Berths are pruned against a ferry-less reach flood. |
 | **A pad bigger than the Domain** | Clamping a lobe's centre to `[r + 3, n − 1 − r − 3]` is an empty range once a lobe is wider than half the map, and `Math.Clamp` throws. The pad is capped at half the footprint. |
@@ -584,7 +650,7 @@ measured a fixed preset are kept where they still say something.
 | the sun and the hollows | warmth on slopes turned to the sun 141.6, turned away 133.5 (n≈18.8k each); basin floors 147.0 against an island median of 154 |
 | rivers after the terminal lakes and deltas | 7876 river cells (from 7812), 3565 navigable, 778 falls; 8 lakes swallow a river on 8 islands, fed by 16 channel cells; 17 deltas on 12 islands, 70 cells of fan; 218 springs, none on a navigable cell; fords per 100 stream cells 11.2 on flat ground and 6.1 on broken; every island's rivers still reach the rim |
 | districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
-| the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick mean 106–141, median 130, and a range of 195–222 within one island (no plateaus) |
+| the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick per-island mean 18–158, median 77, and a saturated share of 6–90% of the land, median 31% — the span within one island is 255 by construction, since the field is stretched to its own range, so the share is the number that moves, and a run where it stops moving is a run where the reaction has fallen out of its band |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
 | the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
 | its corners (`Climate`, 12 seeds each) | cold dry: tundra 62%, heath 8%. Cold balanced: heath 60%, moorland 10%. Cold wet: moorland 63%, bog 9%. Cool wet (0.35): grass 64%, bog 9%. Temperate wet: grass 73%, marsh 0.8%. Warm wet (0.65): grass 72%, marsh 0.9%. Hot wet: savanna 43%, verdure 21%, floodplain 9%, marsh 1%. Frigid wet (0.05): tundra 38%, moorland 26% (the tempered banks), bog 9%. Snow end: tundra 69%, bog 2% |
