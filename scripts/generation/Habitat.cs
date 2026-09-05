@@ -3,13 +3,16 @@ using System.Collections.Generic;
 
 using Godot;
 using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// The habitat vector: five bytes per column (moisture, warmth, ruggedness,
-/// exposure, rim distance), kept as separate axes so the biome layer composes
-/// them. Derived from the finished terrain plus one noise field; no climate sim.
+/// The habitat vector: six bytes per column (moisture, warmth, ruggedness,
+/// exposure, rim distance, water distance), kept as separate axes so the biome
+/// layer composes them. Derived from the finished terrain plus a few noise
+/// fields; no climate sim. Two things are rolled per Domain and read here: the
+/// wind (rolled with the dunes, its strength a knob) and the sun.
 /// </summary>
 internal static class Habitat
 {
@@ -19,8 +22,11 @@ internal static class Habitat
     /// <summary>Cells of walk one slab of climb costs the water: it spreads along and down, not up.</summary>
     private const int ClimbCost = 2;
 
-    /// <summary>Walk cost beyond which the water adds nothing worth counting (under e^-7 of its share), so the flood stops.</summary>
+    /// <summary>Walk cost beyond which the water adds nothing worth counting (under e^-7 of its share).</summary>
     private const int MoistureReach = 60;
+
+    /// <summary>Furthest walk cost the water flood records: the byte's own end, <see cref="IslandData.WaterDistance"/>.</summary>
+    private const int WaterReach = 255;
 
     /// <summary>How far (±) noise wobbles a cell's effective water distance.</summary>
     private const float MoistureWobble = 0.3f;
@@ -34,8 +40,20 @@ internal static class Habitat
     /// <summary>Moisture (±) the background wobbles by, so a climate is patchy rather than one flat value.</summary>
     private const float BackgroundWobble = 25f;
 
-    /// <summary>Moisture a fully sheltered cell gains: the lee holds its damp.</summary>
-    private const float LeeMoisture = 20f;
+    /// <summary>
+    /// Moisture a fully sheltered cell loses at the nominal wind: the rain falls on
+    /// the windward side and the lee is its shadow. (It was the other way round —
+    /// the lee "holding its damp" — until the rain shadow was pointed out.)
+    /// </summary>
+    private const float RainShadow = 30f;
+
+    /// <summary>
+    /// Moisture a fully sheltered, fully broken cell gains at the nominal wind: a
+    /// gorge floor keeps its damp under its walls while the plateau above dries.
+    /// Scaled by both shelter and ruggedness, so flat sheltered ground gains little
+    /// and a windswept brink nothing.
+    /// </summary>
+    private const float GorgeDamp = 70f;
 
     /// <summary>Moisture a dry patch loses, on a rock landform or within <see cref="RockFringe"/> cells of one, where its noise clears <see cref="RockDroughtBar"/>.</summary>
     private const float RockDrought = 60f;
@@ -64,14 +82,26 @@ internal static class Habitat
     /// Where <see cref="IslandParams.Warmth"/> lands on the byte: 0 is a lowland of
     /// 60 (cold, but its water still thaws), 1 is 240 (sand). The offset keeps the
     /// whole knob liveable: the extreme cold is a slider you cannot quite reach.
-    /// The label is the open lowland: the chills below are small, and the lee
-    /// warms rather than the wind cooling, so an island's mean warmth reads at
-    /// its knob.
+    /// The label is the open flat lowland: the chills below are small, the lee
+    /// warms rather than the wind cooling, and a slope's sun is as often for as
+    /// against, so an island's mean warmth reads at its knob.
     /// </summary>
     private const float WarmthFloor = 60f, WarmthSpan = 180f;
 
-    /// <summary>Warmth a fully sheltered cell gains: the lee is milder than the open ground.</summary>
+    /// <summary>Warmth a fully sheltered cell gains at the nominal wind: the lee is milder than the open ground.</summary>
     private const float LeeWarmth = 10f;
+
+    /// <summary>Warmth a slope turned full to the sun gains, and one turned full away loses.</summary>
+    private const float SunWarmth = 8f;
+
+    /// <summary>Slabs per cell of slope at which a face counts as turned full to or from the sun.</summary>
+    private const float SunSlope = 2f;
+
+    /// <summary>Warmth a frost hollow loses: a basin's floor, or a sinkhole's pit, is colder than its rung.</summary>
+    private const float HollowChill = 8f;
+
+    /// <summary>Slabs a sinkhole cell must lie under the ground within two cells of it to be the pit and not the country round it.</summary>
+    private const int HollowDrop = 3;
 
     /// <summary>
     /// Warmth the rim loses, fading to nothing <see cref="RimChillReach"/> cells
@@ -93,15 +123,26 @@ internal static class Habitat
     /// <summary>Slabs of upwind rise that count as full shelter.</summary>
     private const float FullCover = 8f;
 
+    /// <summary>Slabs of local relief at which ruggedness saturates.</summary>
+    private const int FullRelief = 8;
+
     /// <summary>The tallest mountain a footprint allows, in slabs.</summary>
     internal static float MountainCap(int size) => Math.Max(8f, size * (40f / 128f));
 
     /// <summary>
-    /// Fills the five axes, in a fixed order: the shape axes first, then moisture
-    /// (which reads the lee), then warmth (which reads everything).
+    /// How hard the wind blows, from <see cref="IslandParams.Wind"/>: 0 still, 1 the
+    /// nominal figures (the knob's middle), 2 twice them. Every modifier exposure
+    /// drives is multiplied by it; the exposure byte itself is geometry and is not.
+    /// </summary>
+    private static float Gust(IslandParams p) => 2f * Math.Clamp(p.Wind, 0f, 1f);
+
+    /// <summary>
+    /// Rolls the sun, then fills the six axes in a fixed order: the shape axes
+    /// first, then moisture (which reads the lee), then warmth (which reads everything).
     /// </summary>
     public static void Measure(int seed, IslandParams p, IslandData d)
     {
+        d.Sun = (int)(Hash(seed, 0x5A4Eu) % 8);
         MeasureRuggedness(d);
         MeasureExposure(d);
         MeasureRimDistance(d);
@@ -110,19 +151,22 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// The Domain's background moisture, wobbled by noise into patches, plus what
-    /// its fresh water adds: a walk cost from watered columns (goo waters nothing),
-    /// a cell per cell along or down and <see cref="ClimbCost"/> more per slab up,
-    /// so a river waters the plain it crosses and not the mountain or the canyon
-    /// wall it passes, decayed over <see cref="MoistureFalloff"/> cells. The lee
-    /// holds a little damp; a rock landform and its fringe carry patches of drought.
+    /// The Domain's background moisture, wobbled by noise into patches; the rain
+    /// shadow, drier in the lee by how sheltered the cell is; the gorge damp, a gain
+    /// where the ground is both sheltered and broken; plus what its fresh water
+    /// adds: a walk cost from watered columns (goo waters nothing), a cell per cell
+    /// along or down and <see cref="ClimbCost"/> more per slab up, so a river waters
+    /// the plain it crosses and not the mountain or the canyon wall it passes,
+    /// decayed over <see cref="MoistureFalloff"/> cells. The walk cost is kept as
+    /// <see cref="IslandData.WaterDistance"/>. A rock landform and its fringe carry
+    /// patches of drought.
     /// </summary>
     private static void MeasureMoisture(int seed, IslandParams p, IslandData d)
     {
         int n = d.Size;
         var cost = new int[n, n];
         // A bucket per unit of cost (Dial's queue): integer costs, scan order kept.
-        var buckets = new List<Vector2I>[MoistureReach + 1];
+        var buckets = new List<Vector2I>[WaterReach + 1];
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -134,7 +178,7 @@ internal static class Habitat
             (buckets[0] ??= new List<Vector2I>()).Add(new Vector2I(x, z));
         }
 
-        for (int c = 0; c <= MoistureReach; c++)
+        for (int c = 0; c <= WaterReach; c++)
         {
             List<Vector2I>? bucket = buckets[c];
             if (bucket == null) continue;
@@ -150,7 +194,7 @@ internal static class Habitat
                     // The step up out of the water onto its bank is the free one.
                     int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here - (c == 0 ? 1 : 0));
                     int next = c + 1 + climb * ClimbCost;
-                    if (next > MoistureReach) continue;
+                    if (next > WaterReach) continue;
                     if (cost[nx, nz] >= 0 && cost[nx, nz] <= next) continue;
                     cost[nx, nz] = next;
                     (buckets[next] ??= new List<Vector2I>()).Add(new Vector2I(nx, nz));
@@ -168,15 +212,19 @@ internal static class Habitat
         var background = new Noise(seed + 71_007, 0.03f, octaves: 2);
         var drought = new Noise(seed + 71_011, 0.06f, octaves: 2);
         float baseline = 255f * Math.Clamp(p.Moisture, 0f, 1f);
+        float gust = Gust(p);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
+            d.WaterDistance[x, z] = (byte)(cost[x, z] < 0 ? WaterReach : cost[x, z]);
 
+            float shelter = 1f - d.Exposure[x, z] / 255f;
             float moisture = baseline + BackgroundWobble * (background.At(x, z) * 2f - 1f);
-            moisture += LeeMoisture * (1f - d.Exposure[x, z] / 255f);
-            if (cost[x, z] >= 0)
+            moisture -= RainShadow * gust * shelter;
+            moisture += GorgeDamp * gust * shelter * (d.Ruggedness[x, z] / 255f);
+            if (cost[x, z] >= 0 && cost[x, z] <= MoistureReach)
             {
                 float sway = 1f + MoistureWobble * (wobble.At(x, z) * 2f - 1f);
                 moisture += Math.Max(0f, WaterMoisture * MathF.Exp(-cost[x, z] * sway / MoistureFalloff) - WaterFloor);
@@ -194,9 +242,11 @@ internal static class Habitat
     /// nothing up to <see cref="ColdFrom"/> of the mountain cap above the foot,
     /// then the full loss over <see cref="LapseReach"/> more, so a mountain's upper
     /// part is cold and its top is snow at every footprint and whatever it stands
-    /// on, and no plateau, mesa or massif is ever cold. Then the lee is a little
-    /// warmer, the rim a little colder, and wet ground is pulled toward
-    /// <see cref="Temperate"/> from either side. No land leaves it all zero.
+    /// on, and no plateau, mesa or massif is ever cold. Then the small modifiers:
+    /// the sun, a slope descending toward it warmer and one descending away
+    /// colder; the frost hollows, a basin floor or a sinkhole's pit colder than its
+    /// rung; the lee a little warmer; the rim a little colder; and wet ground
+    /// pulled toward <see cref="Temperate"/> from either side. No land leaves it all zero.
     /// </summary>
     private static void MeasureWarmth(IslandParams p, IslandData d)
     {
@@ -226,6 +276,8 @@ internal static class Habitat
         float coldFrom = cap * ColdFrom;
         float reach = Math.Max(1f, cap * LapseReach);
         float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
+        float gust = Gust(p);
+        Vector2 sun = d.SunVector;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
@@ -237,7 +289,9 @@ internal static class Habitat
                 warmth -= LapseShare * t;
             }
 
-            warmth += LeeWarmth * (1f - d.Exposure[x, z] / 255f);
+            warmth += SunWarmth * SunFacing(eff, land, n, x, z, sun);
+            if (Hollow(d, eff, land, n, x, z)) warmth -= HollowChill;
+            warmth += LeeWarmth * gust * (1f - d.Exposure[x, z] / 255f);
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);
             warmth = Temperate + (warmth - Temperate) * (1f - MoistTemper * d.Moisture[x, z] / 255f);
 
@@ -246,10 +300,65 @@ internal static class Habitat
     }
 
     /// <summary>
-    /// Spread of the surface within two cells, saturating at eight slabs. Water is
-    /// read as its bank (<see cref="BankLevel"/>): a stream through a plain is flat
-    /// country, and a gorge is still its walls.
+    /// How far a cell's slope is turned to the sun, −1 … 1: the downhill direction
+    /// of the effective surface dotted with the way to the sun, over
+    /// <see cref="SunSlope"/>. Flat ground is 0, so the label is untouched; water
+    /// is flat by construction.
     /// </summary>
+    private static float SunFacing(short[,] eff, bool[,] land, int n, int x, int z, Vector2 sun)
+    {
+        float gx = Gradient(eff, land, n, x, z, 1, 0);
+        float gz = Gradient(eff, land, n, x, z, 0, 1);
+        // Downhill is minus the gradient; facing the sun is downhill toward it.
+        return Mathf.Clamp(-(gx * sun.X + gz * sun.Y) / SunSlope, -1f, 1f);
+    }
+
+    /// <summary>The same reading off the finished data, for the audit: how far a cell's slope is turned to the Domain's sun, −1 … 1.</summary>
+    internal static float SunFacing(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        float Along(int dx, int dz)
+        {
+            bool fore = InBounds(n, x + dx, z + dz) && d.HasLand(x + dx, z + dz);
+            bool back = InBounds(n, x - dx, z - dz) && d.HasLand(x - dx, z - dz);
+            if (fore && back) return (d.EffectiveLevel(x + dx, z + dz) - d.EffectiveLevel(x - dx, z - dz)) * 0.5f;
+            if (fore) return d.EffectiveLevel(x + dx, z + dz) - d.EffectiveLevel(x, z);
+            if (back) return d.EffectiveLevel(x, z) - d.EffectiveLevel(x - dx, z - dz);
+            return 0f;
+        }
+        Vector2 sun = d.SunVector;
+        return Mathf.Clamp(-(Along(1, 0) * sun.X + Along(0, 1) * sun.Y) / SunSlope, -1f, 1f);
+    }
+
+    /// <summary>Slabs per cell the surface rises along (dx, dz): central where both neighbours are land, one-sided at a coast.</summary>
+    private static float Gradient(short[,] eff, bool[,] land, int n, int x, int z, int dx, int dz)
+    {
+        bool fore = InBounds(n, x + dx, z + dz) && land[x + dx, z + dz];
+        bool back = InBounds(n, x - dx, z - dz) && land[x - dx, z - dz];
+        if (fore && back) return (eff[x + dx, z + dz] - eff[x - dx, z - dz]) * 0.5f;
+        if (fore) return eff[x + dx, z + dz] - eff[x, z];
+        if (back) return eff[x, z] - eff[x - dx, z - dz];
+        return 0f;
+    }
+
+    /// <summary>A frost hollow: any cell of a basin, or a sinkhole cell lying <see cref="HollowDrop"/> slabs or more under the ground within two cells of it — the pit, not the field between the pits.</summary>
+    private static bool Hollow(IslandData d, short[,] eff, bool[,] land, int n, int x, int z)
+    {
+        var form = (LandformType)d.Landform[x, z];
+        if (form == LandformType.Basin) return true;
+        if (form != LandformType.Sinkholes) return false;
+
+        short hi = eff[x, z];
+        for (int ox = -2; ox <= 2; ox++)
+        for (int oz = -2; oz <= 2; oz++)
+        {
+            int nx = x + ox, nz = z + oz;
+            if (InBounds(n, nx, nz) && land[nx, nz] && eff[nx, nz] > hi) hi = eff[nx, nz];
+        }
+        return hi - eff[x, z] >= HollowDrop;
+    }
+
+    /// <summary>Spread of the surface within two cells, saturating at <see cref="FullRelief"/> slabs (<see cref="LocalRelief"/>).</summary>
     private static void MeasureRuggedness(IslandData d)
     {
         int n = d.Size;
@@ -257,20 +366,31 @@ internal static class Habitat
         for (int z = 0; z < n; z++)
         {
             if (!d.HasLand(x, z)) continue;
-            short lo = short.MaxValue, hi = short.MinValue;
-            for (int ox = -2; ox <= 2; ox++)
-            for (int oz = -2; oz <= 2; oz++)
-            {
-                int nx = x + ox, nz = z + oz;
-                if (!InBounds(n, nx, nz)) continue;
-                short eff = BankLevel(d, nx, nz);
-                if (eff == IslandData.NoLand) continue;
-                if (eff < lo) lo = eff;
-                if (eff > hi) hi = eff;
-            }
-            int relief = hi - lo;
-            d.Ruggedness[x, z] = (byte)Math.Min(255, relief * 32);
+            d.Ruggedness[x, z] = (byte)Math.Min(255, LocalRelief(d, x, z) * (256 / FullRelief));
         }
+    }
+
+    /// <summary>
+    /// Slabs between the lowest and highest effective surface within two cells,
+    /// with water read as its bank (<see cref="BankLevel"/>): a stream through a
+    /// plain is flat country, and a gorge is still its walls. What ruggedness is
+    /// made of, and what spaces the fords (<c>Rivers.MarkFords</c>).
+    /// </summary>
+    internal static int LocalRelief(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        short lo = short.MaxValue, hi = short.MinValue;
+        for (int ox = -2; ox <= 2; ox++)
+        for (int oz = -2; oz <= 2; oz++)
+        {
+            int nx = x + ox, nz = z + oz;
+            if (!InBounds(n, nx, nz)) continue;
+            short eff = BankLevel(d, nx, nz);
+            if (eff == IslandData.NoLand) continue;
+            if (eff < lo) lo = eff;
+            if (eff > hi) hi = eff;
+        }
+        return hi < lo ? 0 : hi - lo;
     }
 
     /// <summary>
@@ -288,7 +408,8 @@ internal static class Habitat
     /// <summary>
     /// Openness to the Domain's wind — rolled for every Domain, dunes or not: the
     /// tallest rise found walking upwind is cover; a walk that leaves the island
-    /// gets the wind off the aether.
+    /// gets the wind off the aether. Geometry only: how much the shelter is worth
+    /// is the wind knob's business, read where the modifiers are applied.
     /// </summary>
     private static void MeasureExposure(IslandData d)
     {

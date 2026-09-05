@@ -84,11 +84,14 @@ public static class IslandGenerator
             missing.Add("the exits asked for");
         if (wrongExitKind > 0) missing.Add("exits of the kind asked for");
 
+        // Somewhere to build is a district — walk-connected ground, no works — that
+        // the heartland holds. Every walk area lies inside one reach area, so one
+        // cell of it says which.
         bool buildable = false;
-        foreach (Shelf shelf in d.Shelves)
+        foreach (WalkArea area in d.Areas)
         {
-            if (!shelf.Buildable) continue;
-            if (d.Heartland >= 0 && d.Reach[shelf.Center.X, shelf.Center.Y] != d.Heartland) continue;
+            if (!area.IsDistrict) continue;
+            if (d.Heartland >= 0 && d.Reach[area.Seat.X, area.Seat.Y] != d.Heartland) continue;
             buildable = true;
             break;
         }
@@ -170,11 +173,13 @@ public static class IslandGenerator
     /// <summary>
     /// Stage 1. The landmass should cover 55–85% of the grid, measured after the
     /// bites, the islet filter and the linker (which shrinks every scattered
-    /// layout), so the whole mask stage runs inside the fit loop.
+    /// layout), so the whole mask stage runs inside the fit loop. Of the specks
+    /// the filter drops on the mask that ships, two or three stay as sea stacks.
     /// </summary>
     private static void FitFootprint(Draft d)
     {
         float scale = 1f;
+        var dropped = new List<List<Vector2I>>();
         for (int fit = 0; fit < 3; fit++)
         {
             d.Land = Footprint.BuildMask(d.Seed, d.P, d.How, scale);
@@ -189,10 +194,10 @@ public static class IslandGenerator
 
             // Every arrangement but Single keeps its pieces, and then has to earn
             // them: the linker nudges them until each is within one bridge of the next.
-            if (d.How == IslandArrangement.Single) Landmasses.KeepLargestComponent(d.Land);
+            if (d.How == IslandArrangement.Single) dropped = Landmasses.KeepLargestComponent(d.Land);
             else
             {
-                Landmasses.DropComponentsUnder(d.Land, Landmasses.MinIsletCells);
+                dropped = Landmasses.DropComponentsUnder(d.Land, Landmasses.MinIsletCells);
                 Landmasses.LinkLandmasses(d.Land, d.Span);
             }
             Landmasses.CloseDiagonalJoins(d.Land);
@@ -204,6 +209,7 @@ public static class IslandGenerator
             if (MathF.Abs(factor - 1f) < 0.03f) break;
             scale *= factor;
         }
+        Landmasses.KeepSeaStacks(d.Seed, d.Land, dropped, d.Data.SeaStacks);
         d.Bridges = Landmasses.FindBridgeSites(d.Land, d.Span);
     }
 
@@ -333,7 +339,8 @@ public static class IslandGenerator
     /// Stage 4b. Rivers are cut across the finished patchwork and carry their own
     /// step grammar. The bridgeheads are off limits to the water (a channel
     /// through one un-levels the crossing), and so is goo with its whole
-    /// king's-move neighbourhood: fluids never touch, even diagonally.
+    /// king's-move neighbourhood: fluids never touch, even diagonally. The
+    /// terminal lakes, deltas and springs are written straight onto the data.
     /// </summary>
     private static void CarveRivers(Draft d)
     {
@@ -361,7 +368,8 @@ public static class IslandGenerator
         }
 
         Rivers.Carve(d.Seed, d.P, d.Land, d.Surface, d.Water, d.Data.River, d.Data.Navigable,
-                     d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid);
+                     d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid,
+                     d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs);
 
         // The valley and bank passes only lower; a cell can end up under the water beside it.
         Lakes.RaiseSunkenShores(d.Land, d.Surface, d.Water);
@@ -416,12 +424,47 @@ public static class IslandGenerator
             Traversal.AnchorOn(data, g.Apron);
             break;
         }
+        ClearApproaches(data);
 
         Passages.Find(data);
         Habitat.Measure(seed, p, data);
+        Magicks.Measure(seed, data);
         Surfaces.Classify(seed, data);
         Names.Give(seed, data);
         Overhangs.Carve(seed, p, data);
+    }
+
+    /// <summary>
+    /// A sea stack is aether to every rule, so a hanging Gate's flight path can run
+    /// through one. Any stack within a cell of the line from a portal to its rim
+    /// is dropped whole: a pillar in the approach is a pillar in the approach.
+    /// </summary>
+    private static void ClearApproaches(IslandData data)
+    {
+        if (data.SeaStacks.Count == 0 || data.Gates.Count == 0) return;
+        var blocked = new HashSet<Vector2I>();
+        foreach (Gate g in data.Gates)
+        {
+            if (g.Kind != GateKind.Hanging) continue;
+            Vector2I outward = g.Outward;
+            for (int step = 0; step <= GatePlacement.HangingOffset; step++)
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                blocked.Add(new Vector2I(g.Center.X - outward.X * step + dx,
+                                         g.Center.Z - outward.Y * step + dz));
+        }
+
+        // Stacks are listed one after another in scan order; regroup them by 4-connection.
+        int n = data.Size;
+        var stack = new int[n, n];
+        var isStack = new HashSet<Vector2I>(data.SeaStacks);
+        Flood.Label(n, (x, z) => isStack.Contains(new Vector2I(x, z)), stack);
+
+        var drop = new HashSet<int>();
+        foreach (Vector2I c in data.SeaStacks)
+            if (blocked.Contains(c)) drop.Add(stack[c.X, c.Y]);
+        if (drop.Count == 0) return;
+        data.SeaStacks.RemoveAll(c => drop.Contains(stack[c.X, c.Y]));
     }
 
     /// <summary>

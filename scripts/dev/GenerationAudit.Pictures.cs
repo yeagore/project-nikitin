@@ -336,12 +336,12 @@ public partial class GenerationAudit
         GD.Print($"field maps: {wrote} written to {FieldMaps}");
     }
 
-    /// <summary>The five habitat axes as two-colour ramps side by side; rim distance clamps at 40 cells.</summary>
+    /// <summary>The six habitat axes and the magick layer as two-colour ramps side by side; rim distance clamps at 40 cells, water distance at 60.</summary>
     private static void SaveHabitat(IslandData d, string path)
     {
         int n = d.Size;
-        const int gap = 2;
-        var img = Image.CreateEmpty(5 * n + 4 * gap, n, false, Image.Format.Rgb8);
+        const int gap = 2, panels = 7;
+        var img = Image.CreateEmpty(panels * n + (panels - 1) * gap, n, false, Image.Format.Rgb8);
         img.Fill(new Color(0.05f, 0.05f, 0.07f));
 
         void Panel(int index, Func<int, int, float> value, Color lo, Color hi)
@@ -361,8 +361,10 @@ public partial class GenerationAudit
         Panel(2, (x, z) => d.Ruggedness[x, z] / 255f, DevPalette.RuggedRamp.Lo, DevPalette.RuggedRamp.Hi);
         Panel(3, (x, z) => d.Exposure[x, z] / 255f, DevPalette.ExposureRamp.Lo, DevPalette.ExposureRamp.Hi);
         Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f), DevPalette.RimRamp.Lo, DevPalette.RimRamp.Hi);
+        Panel(5, (x, z) => Math.Min(1f, d.WaterDistance[x, z] / 60f), DevPalette.WaterRamp.Lo, DevPalette.WaterRamp.Hi);
+        Panel(6, (x, z) => d.Magick[x, z] / 255f, DevPalette.MagickRamp.Lo, DevPalette.MagickRamp.Hi);
 
-        img.Resize((5 * n + 4 * gap) * 3, n * 3, Image.Interpolation.Nearest);
+        img.Resize((panels * n + (panels - 1) * gap) * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);
     }
 
@@ -402,12 +404,15 @@ public partial class GenerationAudit
         foreach (Vector2I p in d.CliffCells)
             img.SetPixel(p.X, p.Y, DevPalette.Anchor(feet.Contains(p) ? DevPalette.Ledge : DevPalette.Brink));
         Mark(d.BankCells, DevPalette.Anchor(DevPalette.Bank));
+        foreach (Fall f in d.Falls) img.SetPixel(f.Cell.X, f.Cell.Y, DevPalette.Anchor(DevPalette.FallLip));
+        Mark(d.Springs, DevPalette.Anchor(DevPalette.Spring));
         MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
         MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));
         MarkMask(d.Landings, DevPalette.Anchor(DevPalette.Landing));
         MarkMask(d.Ferry, DevPalette.Anchor(DevPalette.Quay));
         Mark(d.Overhangs, DevPalette.Anchor(DevPalette.Overhang));
         Mark(d.Summits, DevPalette.Anchor(DevPalette.Summit));
+        Mark(d.SeaStacks, DevPalette.Anchor(DevPalette.SeaStack));
 
         img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);

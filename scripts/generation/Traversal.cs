@@ -6,22 +6,15 @@ namespace ProjectNikitin.Generation;
 
 /// <summary>
 /// Reads walkability off finished terrain and never changes it: what connects on
-/// foot (a one-slab step is free), what connects once built, and what is level
-/// enough to build on. The floods live in the partial files beside this one.
+/// foot (a one-slab step is free) and what connects once built. A district — a
+/// walk area of <see cref="MinDistrictArea"/> cells — is the ground a settlement
+/// is laid out on: walk-connected, no works. The floods live in the partial
+/// files beside this one.
 /// </summary>
 public static partial class Traversal
 {
-    /// <summary>Below this, a walk area is broken ground rather than a place.</summary>
+    /// <summary>Below this, a walk area is broken ground rather than a place; at it, somewhere to build.</summary>
     public const int MinDistrictArea = 20;
-
-    /// <summary>Smallest shelf a settlement could use, in cells.</summary>
-    public const int MinShelfArea = 24;
-
-    /// <summary>Narrowest shelf a settlement could use, in cells.</summary>
-    public const int MinShelfWidth = 3;
-
-    /// <summary>Neighbours a shelf cell may step against; two or more is a hillside.</summary>
-    private const int ShelfSteps = 1;
 
     /// <summary>Value in <see cref="IslandData.Walk"/> / <see cref="IslandData.Reach"/> for a flooded column.</summary>
     public const int Water = -2;
@@ -44,7 +37,7 @@ public static partial class Traversal
     /// <summary>Slabs a quay may stand above its water; higher is a cliff, not a landing.</summary>
     public const int MaxQuayRise = 2;
 
-    /// <summary>Fills walk areas, water bodies, ferry berths, reach areas and shelves on <paramref name="d"/>, in that order.</summary>
+    /// <summary>Fills walk areas, water bodies, ferry berths and reach areas on <paramref name="d"/>, in that order.</summary>
     public static void Analyse(IslandData d)
     {
         BuildWalkAreas(d);
@@ -52,7 +45,6 @@ public static partial class Traversal
         BuildBerths(d);
         PruneBerths(d);
         BuildReachAreas(d);
-        BuildShelves(d);
     }
 
     /// <summary>In-bounds land that is dry, or a ford (see <c>Rivers.MarkFords</c>); a stream is crossed nowhere else.</summary>

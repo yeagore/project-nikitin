@@ -33,6 +33,7 @@ public partial class IslandLab : Node3D
 	private PlaneMesh _fallQuad = null!;
 	private readonly List<Label3D> _compass = new();
 	private Label3D _windLabel = null!;
+	private Label3D _sunLabel = null!;
 	private int _lastSignature;
 	private IslandData? _data;
 
@@ -299,6 +300,7 @@ public partial class IslandLab : Node3D
 			h.Add(Params.KeelRoughness);
 			h.Add(Params.Moisture);
 			h.Add(Params.Warmth);
+			h.Add(Params.Wind);
 		}
 		return h.ToHashCode();
 	}
@@ -380,6 +382,7 @@ public partial class IslandLab : Node3D
 			+ Knob("valleys", Params.Valleys, s.Valleys) + "  "
 			+ Knob("moisture", Params.Moisture, s.Moisture) + "  "
 			+ Knob("warmth", Params.Warmth, s.Warmth) + "  "
+			+ Knob("wind", Params.Wind, s.Wind) + "  "
 			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity)
 			+ "   (* rolled from the seed)";
 	}

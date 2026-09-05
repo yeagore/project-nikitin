@@ -2,12 +2,74 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
-/// <summary>Routing: the priority flood inward from the rim, the named sources, and the trace down.</summary>
+/// <summary>Routing: the priority flood inward from the rim, the named sources, the trace down, and the lake that keeps its river.</summary>
 internal static partial class Rivers
 {
+    /// <summary>Share of islands on which a river-fed lake keeps its river, when one exists to keep it.</summary>
+    private const float TerminalChance = 0.3f;
+
+    /// <summary>
+    /// Occasionally, a lake swallows a river. The routing passes straight through
+    /// standing water, so every lake has an outflow by construction; here one lake
+    /// that a river drains into — a basin's for preference, else the one with the
+    /// strongest inflow — has every cell made a sink (no downstream neighbour), so
+    /// the flood's tree ends there: nothing is traced past it, and <see cref="Sources"/>
+    /// finds no spill on it. The caller sums the drainage again. This is the one
+    /// exception to every course reaching the aether, which is the point of it.
+    /// </summary>
+    private static bool SwallowRiver(int seed, int n, bool[,] land, short[,] water, byte[,] form,
+                                     Vector2I[,] down, int[,] flow, int riverAt,
+                                     List<Vector2I> terminal)
+    {
+        if (Hash01(seed, 0x7E12u) >= TerminalChance) return false;
+
+        var lakeOf = new int[n, n];
+        int lakes = Flood.Label(n, (x, z) => land[x, z] && water[x, z] != IslandData.NoLand, lakeOf);
+        if (lakes == 0) return false;
+
+        var inflow = new int[lakes];
+        var basin = new bool[lakes];
+        var first = new Vector2I[lakes];
+        var seen = new bool[lakes];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            int id = lakeOf[x, z];
+            if (id < 0) continue;
+            if (!seen[id]) { seen[id] = true; first[id] = new Vector2I(x, z); }
+            if ((LandformType)form[x, z] == LandformType.Basin) basin[id] = true;
+        }
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z] || water[x, z] != IslandData.NoLand) continue;
+            Vector2I to = down[x, z];
+            if (to.X < 0 || lakeOf[to.X, to.Y] < 0) continue;
+            int id = lakeOf[to.X, to.Y];
+            inflow[id] = Math.Max(inflow[id], flow[x, z]);
+        }
+
+        int best = -1;
+        for (int id = 0; id < lakes; id++)
+        {
+            if (inflow[id] < riverAt) continue;
+            if (best < 0 || (basin[id] && !basin[best])
+                || (basin[id] == basin[best] && inflow[id] > inflow[best]))
+                best = id;
+        }
+        if (best < 0) return false;
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (lakeOf[x, z] == best) down[x, z] = new Vector2I(-1, -1);
+        terminal.Add(first[best]);
+        return true;
+    }
+
     /// <summary>
     /// Gives every land cell a downstream neighbour by flooding inward from the
     /// void: <paramref name="order"/> is the order cells were reached in, outlets

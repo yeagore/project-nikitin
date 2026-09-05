@@ -99,15 +99,31 @@ internal static partial class Rivers
         }
     }
 
-    /// <summary>Cells of stream between one ford and the next.</summary>
+    /// <summary>Cells of stream between one ford and the next, on flat ground.</summary>
     public const int FordSpacing = 11;
+
+    /// <summary>Cells added to that spacing through the roughest ground, so a gorge is forded a third as often as a plain.</summary>
+    public const int FordGorgeExtra = 22;
+
+    /// <summary>
+    /// The spacing wanted at one stream cell: <see cref="FordSpacing"/> where the
+    /// ground within two cells lies within a slab (<see cref="Habitat.LocalRelief"/>),
+    /// growing to <see cref="FordSpacing"/> + <see cref="FordGorgeExtra"/> at four slabs
+    /// of relief and over. Ruggedness itself is measured later; this is its number.
+    /// </summary>
+    private static int FordSpacingAt(IslandData d, int x, int z)
+    {
+        float rugged = Mathf.Clamp((Habitat.LocalRelief(d, x, z) - 1) / 3f, 0f, 1f);
+        return FordSpacing + Mathf.RoundToInt(FordGorgeExtra * rugged);
+    }
 
     /// <summary>
     /// Marks where a stream can be crossed on foot: a ford at the head of each
-    /// course and one every <see cref="FordSpacing"/> cells along it, sliding past
-    /// any cell that will not take one, and a short course still gets one. A ford
-    /// has both banks across the flow dry, walkable and within a slab of the water.
-    /// Runs on the finished columns; read by <see cref="Traversal"/>.
+    /// course and one every <see cref="FordSpacing"/> cells along it on the plain,
+    /// up to three times that through broken ground (<see cref="FordSpacingAt"/>),
+    /// sliding past any cell that will not take one; a short course still gets
+    /// one. A ford has both banks across the flow dry, walkable and within a slab
+    /// of the water. Runs on the finished columns; read by <see cref="Traversal"/>.
     /// </summary>
     public static void MarkFords(IslandData d)
     {
@@ -162,12 +178,12 @@ internal static partial class Rivers
                 }
             }
 
-            int since = FordSpacing;
+            int since = FordSpacing + FordGorgeExtra;       // the head qualifies at once
             bool any = false;
             foreach (Vector2I c in order)
             {
                 since++;
-                if (since < FordSpacing) continue;
+                if (since < FordSpacingAt(d, c.X, c.Y)) continue;
                 if (!Crossable(c.X, c.Y)) continue;
                 d.Ford[c.X, c.Y] = true;
                 since = 0;

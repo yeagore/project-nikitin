@@ -111,27 +111,28 @@ under `scripts/generation/`, in the order they run:
 
 | Stage | Class | What it settles |
 |---|---|---|
-| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid. |
+| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
 | Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
 | Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords, falls. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river, and a delta where a navigable river meets a gentle coast. |
 | Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas, reach areas (once built), water bodies, ferry berths, shelves. |
+| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built), water bodies, ferry berths. Shelves are gone. |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The five-byte habitat vector (warmth's lapse is per mountain, from its own foot; no plateau is ever cold), the feature anchors and a provisional material per column, names. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. Then the feature anchors and a provisional material per column (marsh past grass, rare bogs, tors in soft country, floodplain on a delta), names. |
+| Magicks | `Magicks` | The magickal density byte: for now pure noise in soft waves, read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The nine 0–1 knobs in `IslandParams` (relief, hilliness, mix,
-rivers, lakes, valleys, moisture, warmth, overhang density) accept
+**Auto knobs.** The ten 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, wind, overhang density) accept
 `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs` then rolls
 them from the seed before anything runs, and the values used are
-`IslandData.Settings`. The preset leaves all nine on Auto, so the audit's
+`IslandData.Settings`. The preset leaves all ten on Auto, so the audit's
 default seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
@@ -167,12 +168,13 @@ scripts/
     Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
     Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
     Roster.cs                  The terrain stages (see the table above).
-    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords.
-    Traversal*.cs, WalkArea.cs, Shelf.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
+    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,
+                               deltas and springs, the lake that swallows a river.
+    Traversal*.cs, WalkArea.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
                                The read-back analysis and its value types.
     Passage.cs, Works.cs       The roads between the Gates.
     Gate.cs, GatePlacement.cs, GateSites.cs
-    Habitat.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
+    Habitat.cs, Magicks.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
     IslandData.cs, IslandParams.cs, Span.cs, Terrain.cs
     LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
     FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs

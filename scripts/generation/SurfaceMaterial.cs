@@ -4,8 +4,10 @@ namespace ProjectNikitin.Generation;
 /// What the top of a column is made of — a provisional reading of the habitat
 /// vector, one byte per column in <see cref="IslandData.Material"/>. Not a biome.
 /// The living ground is a three-by-three of warmth (cold, temperate, hot) against
-/// moisture (dry, balanced, wet); the rest is rock, water, sand and snow. The byte
-/// is stored by value, so new members are appended and nothing is renumbered.
+/// moisture (dry, balanced, wet), with a cell past wet in each row — bog, marsh,
+/// floodplain — where the water is in excess; the rest is rock, water, sand and
+/// snow. The byte is stored by value, so new members are appended and nothing is
+/// renumbered.
 /// </summary>
 public enum SurfaceMaterial : byte
 {
@@ -50,4 +52,7 @@ public enum SurfaceMaterial : byte
 
     /// <summary>Hot and balanced, and hot and wet away from any water.</summary>
     Savanna = 13,
+
+    /// <summary>Temperate and past wet, occasionally: flat low ground within two cells of fresh water, with moisture in excess — reeds and standing puddles where the grass gives out.</summary>
+    Marsh = 14,
 }

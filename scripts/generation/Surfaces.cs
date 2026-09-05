@@ -10,7 +10,9 @@ namespace ProjectNikitin.Generation;
 /// Collects the feature anchors (coast, cliff brinks and feet, banks, beds, summits)
 /// and the provisional <see cref="SurfaceMaterial"/>. Everything is measured against
 /// <see cref="IslandData.EffectiveLevel"/> — the water surface where a column is
-/// flooded — otherwise every river bank reads as a cliff over its own bed.
+/// flooded — otherwise every river bank reads as a cliff over its own bed. The
+/// springs, the falls, the sea stacks and the deltas are anchors the water and
+/// footprint stages wrote already.
 /// </summary>
 internal static class Surfaces
 {
@@ -66,14 +68,34 @@ internal static class Surfaces
     /// </summary>
     private const int FloodplainFrom = 170;
 
-    /// <summary>The noise bar cold wet ground must clear to be bog rather than moorland: occasional, not the rule.</summary>
-    private const float BogBar = 0.6f;
+    /// <summary>Moisture from which cold ground may be bog at all: past wet, water in excess.</summary>
+    private const int BogFrom = 190;
+
+    /// <summary>The noise bar cold ground in excess of water must clear to be bog rather than moorland: occasional, not the rule.</summary>
+    private const float BogBar = 0.7f;
+
+    /// <summary>Moisture from which temperate ground beside the water may be marsh: past wet, as the bog is.</summary>
+    private const int MarshFrom = 205;
+
+    /// <summary>Cells from fresh water a marsh reaches.</summary>
+    private const int MarshReach = 2;
+
+    /// <summary>Ruggedness (32 per slab) a marsh tolerates: flat, give or take a slab, so the ground is low as well as near.</summary>
+    private const int MarshFlat = 40;
+
+    /// <summary>The noise bar such ground must clear to be marsh rather than grass: occasional.</summary>
+    private const float MarshBar = 0.62f;
+
+    /// <summary>The noise bar a plain or a hillside must clear to show a tor: a small outcrop, rare.</summary>
+    private const float TorBar = 0.87f;
 
     /// <summary>Rebuilds the anchor lists in scan order and picks every column's material.</summary>
     public static void Classify(int seed, IslandData d)
     {
         int n = d.Size;
         var bog = new Noise(seed + 71_019, 0.07f, octaves: 2);
+        var marsh = new Noise(seed + 71_029, 0.09f, octaves: 2);
+        var tor = new Noise(seed + 71_027, 0.16f, octaves: 1);
         // Cells from fresh water (goo waters nothing), as far as a floodplain reaches; -1 beyond.
         int[,] toWater = Flood.Distance(n,
             (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
@@ -128,7 +150,7 @@ internal static class Surfaces
                 d.BankCells.Add(new Vector2I(x, z));
 
             int near = toWater[x, z] < 0 ? int.MaxValue : toWater[x, z];
-            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, bog);
+            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, bog, marsh, tor);
         }
 
         WipeStrandedFloodplain(d);
@@ -204,12 +226,14 @@ internal static class Surfaces
     /// snow; then rock — a tall face bares stone at its brink and drops scree at its
     /// foot whatever the landform, and a rock landform shows stone and scree
     /// wherever it is broken, so a mountain is stone up to its snow; then the dunes
-    /// and the sculpted rock; then the climate grid, warmth against moisture. A
-    /// beach is ground like any other — nothing washes it — and a plateau rung in
-    /// soft country changes nothing: the ground runs up to the edge.
+    /// and the sculpted rock; then a delta's fan, floodplain in any climate; then
+    /// the tors, small outcrops of stone in soft country; then the climate grid,
+    /// warmth against moisture, with a cell past wet in each row. A beach is
+    /// ground like any other — nothing washes it — and a plateau rung in soft
+    /// country changes nothing: the ground runs up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
-                                        bool gooSide, int near, Noise bog)
+                                        bool gooSide, int near, Noise bog, Noise marsh, Noise tor)
     {
         if (d.WaterLevel[x, z] != IslandData.NoLand)
             return d.Fluid[x, z] == (byte)FluidKind.Goo ? SurfaceMaterial.Stone : SurfaceMaterial.Silt;
@@ -235,14 +259,22 @@ internal static class Surfaces
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Scree;
 
+        // A delta's fan is the river's own floodplain, whatever the climate says.
+        if (d.Delta[x, z]) return SurfaceMaterial.Floodplain;
+
+        // A tor: building stone in soft country, where no rock landform is.
+        if (form is LandformType.Plain or LandformType.Hills && tor.At(x, z) > TorBar)
+            return SurfaceMaterial.Stone;
+
         // The climate grid. A mountain is stone and scree up to its snow; the cold
-        // band is for the ground that is not rock.
+        // band is for the ground that is not rock. Each row has a cell past wet —
+        // bog, marsh, floodplain — for water in excess, and none of them is the rule.
         byte moist = d.Moisture[x, z];
         bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
 
         if (warmth < ColdBelow)
         {
-            if (wet && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
+            if (moist >= BogFrom && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
             return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
         }
 
@@ -252,7 +284,14 @@ internal static class Surfaces
             if (warmth >= SandFrom) return SurfaceMaterial.Sand;
             return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
         }
-        if (wet) return SurfaceMaterial.Grass;
+        if (wet)
+        {
+            // Past grass: flat low ground beside the water, with moisture in excess, occasionally.
+            if (moist >= MarshFrom && near <= MarshReach && rugged <= MarshFlat
+                && marsh.At(x, z) > MarshBar)
+                return SurfaceMaterial.Marsh;
+            return SurfaceMaterial.Grass;
+        }
         return dryGround ? SurfaceMaterial.Steppe : SurfaceMaterial.Meadow;
     }
 }

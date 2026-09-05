@@ -69,8 +69,21 @@ public sealed class IslandData
     /// <summary>Drainage accumulation: how many cells upstream drain through this one.</summary>
     public int[,] Flow { get; }
 
-    /// <summary>Waterfalls: drops of three slabs or more along a channel, and every channel reaching the rim.</summary>
+    /// <summary>Waterfalls: drops of three slabs or more along a channel, and every channel reaching the rim. An anchor list: the content layer reads the lip cells.</summary>
     public List<Fall> Falls { get; } = new();
+
+    /// <summary>
+    /// Lakes that swallow a river: fed by a course and drained by none, one cell per
+    /// lake (the first in scan order). The one exception to every course reaching
+    /// the aether, on about three islands in ten that have a river-fed lake.
+    /// </summary>
+    public List<Vector2I> TerminalLakes { get; } = new();
+
+    /// <summary>Cells of a delta fan: the ground between a navigable mouth's distributaries, floodplain whatever the climate.</summary>
+    public bool[,] Delta { get; }
+
+    /// <summary>The apex of each delta: the axis cell the mouths part at, a few cells upstream of the rim.</summary>
+    public List<Vector2I> Deltas { get; } = new();
 
     /// <summary>Stream cells crossable on foot; a stream is an obstacle everywhere else (<see cref="Rivers.FordSpacing"/>).</summary>
     public bool[,] Ford { get; }
@@ -130,12 +143,6 @@ public sealed class IslandData
     /// <summary>Index of the largest reachable area — the heartland.</summary>
     public int Heartland { get; internal set; } = -1;
 
-    /// <summary>Which <see cref="Shelf"/> a column belongs to, or <c>-1</c> for none.</summary>
-    public int[,] ShelfId { get; }
-
-    /// <summary>Level ground: one entry per contiguous same-level patch big enough to settle on.</summary>
-    public List<Shelf> Shelves { get; } = new();
-
     // ---- gates and roads ----
 
     /// <summary>The Domain's Gates: one <see cref="GateRole.Entry"/> and one to three <see cref="GateRole.Exit"/>, at most one per edge.</summary>
@@ -151,8 +158,9 @@ public sealed class IslandData
     public bool Rough { get; internal set; }
 
     // ---- habitat and anchors ----
-    // Five bytes per column, filled by Habitat.Measure: the measurable growing
-    // conditions the biome layer will combine, kept as separate axes.
+    // Six bytes per column, filled by Habitat.Measure: the measurable growing
+    // conditions the biome layer will combine, kept as separate axes; then the
+    // magickal density, a layer of its own.
 
     /// <summary>0 parched … 255 waterside: nearness to fresh water (goo waters nothing), decayed over ~15 cells and wobbled by noise.</summary>
     public byte[,] Moisture { get; }
@@ -168,6 +176,34 @@ public sealed class IslandData
 
     /// <summary>Cells of land between this column and the aether, capped at 255.</summary>
     public byte[,] RimDistance { get; }
+
+    /// <summary>
+    /// Walk cost to fresh water, as the moisture strip reads it: 0 on the water, a
+    /// cell per cell along or down and two more per slab climbed (the step up onto
+    /// the bank free), 255 where no fresh water is within reach. Kept for what
+    /// comes after the habitat: settlement and the biome layer will ask it.
+    /// </summary>
+    public byte[,] WaterDistance { get; }
+
+    /// <summary>
+    /// Magickal density, 0 inert … 255 saturated: a layer of its own beside the
+    /// habitat, and for now pure noise — soft, low-frequency waves with nothing
+    /// behind them. See <c>Magicks</c>.
+    /// </summary>
+    public byte[,] Magick { get; }
+
+    /// <summary>
+    /// Where the sun stands, as a compass index in <see cref="Grid.Dx8"/> order like
+    /// <see cref="DuneGrain"/>: a slope descending toward it is a touch warmer, one
+    /// descending away a touch colder. Rolled for every Domain.
+    /// </summary>
+    public int Sun { get; internal set; }
+
+    /// <summary>Where the sun stands, in compass letters.</summary>
+    public string SunFrom => Compass[Sun & 7];
+
+    /// <summary>Toward the sun, as a unit vector on the X/Z plane.</summary>
+    public Vector2 SunVector => Vector2.FromAngle(Sun * Mathf.Tau / 8f);
 
     /// <summary>Provisional <see cref="SurfaceMaterial"/> of each column's top, mapped from the habitat vector by <c>Surfaces</c>.</summary>
     public byte[,] Material { get; }
@@ -186,6 +222,17 @@ public sealed class IslandData
 
     /// <summary>The highest dry cells of the high country, spaced so one massif does not claim a ridge of them.</summary>
     public List<Vector2I> Summits { get; } = new();
+
+    /// <summary>Springs: where a stream begins on dry ground — a channel cell nothing drains into, away from any lake and off a delta.</summary>
+    public List<Vector2I> Springs { get; } = new();
+
+    /// <summary>
+    /// Sea stacks: two or three of the islets the footprint dropped as too small to
+    /// matter, kept as decoration in the aether off the coast. Aether cells, not
+    /// land — nothing walks, builds or flies through them — listed for the content
+    /// layer to stand a pillar on.
+    /// </summary>
+    public List<Vector2I> SeaStacks { get; } = new();
 
     /// <summary>Columns with more than one span: an undercut cliff or a cell of an arch.</summary>
     public List<Vector2I> Overhangs { get; } = new();
@@ -254,6 +301,8 @@ public sealed class IslandData
         Ruggedness = new byte[size, size];
         Exposure = new byte[size, size];
         RimDistance = new byte[size, size];
+        WaterDistance = new byte[size, size];
+        Magick = new byte[size, size];
         Landform = new byte[size, size];
         Land = new bool[size, size];
         Region = new int[size, size];
@@ -267,18 +316,17 @@ public sealed class IslandData
         Ferry = new bool[size, size];
         Ford = new bool[size, size];
         Beach = new bool[size, size];
+        Delta = new bool[size, size];
         WaterBody = new int[size, size];
         Flow = new int[size, size];
         Walk = new int[size, size];
         Reach = new int[size, size];
-        ShelfId = new int[size, size];
         for (int x = 0; x < size; x++)
         for (int z = 0; z < size; z++)
         {
             WaterLevel[x, z] = NoLand;
             Walk[x, z] = -1;
             Reach[x, z] = -1;
-            ShelfId[x, z] = -1;
             WaterBody[x, z] = -1;
         }
     }

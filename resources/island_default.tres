@@ -26,6 +26,7 @@ Lakes = -1.0
 Valleys = -1.0
 Moisture = -1.0
 Warmth = -1.0
+Wind = -1.0
 Crossings = 3
 EntryGate = 2
 EntryEdge = 0

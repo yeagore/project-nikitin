@@ -67,6 +67,7 @@ public partial class GenerationChecksum : Node
             ("KeelRoughness", (p, v) => p.KeelRoughness = v), ("OverhangDensity", (p, v) => p.OverhangDensity = v),
             ("Radius", (p, v) => p.Radius = v * 24f),
             ("Moisture", (p, v) => p.Moisture = v), ("Warmth", (p, v) => p.Warmth = v),
+            ("Wind", (p, v) => p.Wind = v),
         };
         foreach (var (name, set) in floats)
             foreach (float v in new[] { 0f, 1f })
@@ -166,20 +167,22 @@ public partial class GenerationChecksum : Node
             h.Add(d.WaterBody[x, z]); h.Add(d.Ferry[x, z]); h.Add(d.Beach[x, z]);
             h.Add(d.Ford[x, z]); h.Add(d.River[x, z]); h.Add(d.Navigable[x, z]);
             h.Add(d.Flow[x, z]); h.Add(d.Walk[x, z]); h.Add(d.Reach[x, z]);
-            h.Add(d.ShelfId[x, z]); h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
+            h.Add(d.Delta[x, z]); h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
             h.Add(d.Ruggedness[x, z]); h.Add(d.Exposure[x, z]); h.Add(d.RimDistance[x, z]);
+            h.Add(d.WaterDistance[x, z]); h.Add(d.Magick[x, z]);
             Span[] spans = d.Spans[x, z];
             h.Add(spans?.Length ?? -1);
             if (spans != null) foreach (Span s in spans) { h.Add(s.Bottom); h.Add(s.Top); }
         }
         foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells, d.BankCells,
-                                     d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells })
+                                     d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells,
+                                     d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas })
         {
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);
         }
         h.AddAll(d.Geysers); h.AddAll(d.Bridges); h.AddAll(d.Berths); h.AddAll(d.Falls);
-        h.AddAll(d.Areas); h.AddAll(d.Reaches); h.AddAll(d.Shelves); h.AddAll(d.Gates);
+        h.AddAll(d.Areas); h.AddAll(d.Reaches); h.AddAll(d.Gates);
         h.Add(d.Passages.Count);
         foreach (Passage p in d.Passages)
         {
@@ -190,7 +193,7 @@ public partial class GenerationChecksum : Node
         }
         h.Add(d.Name);
         h.AddAll(d.Districts); h.AddAll(d.WaterNames);
-        h.Add(d.DuneGrain); h.Add(d.BridgeSpan); h.Add(d.WaterBodies); h.Add(d.BerthSites);
+        h.Add(d.DuneGrain); h.Add(d.Sun); h.Add(d.BridgeSpan); h.Add(d.WaterBodies); h.Add(d.BerthSites);
         h.Add(d.Mainland); h.Add(d.Heartland); h.Add((int)d.Style); h.Add((int)d.Arrangement);
         h.Add((int)d.Character); h.Add(d.Attempts); h.Add(d.Unmet); h.Add(d.Rough);
         return h.Value;

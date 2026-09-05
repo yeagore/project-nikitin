@@ -22,8 +22,8 @@ Windows machine's locale prints decimals with a comma, which breaks patterns
 looking for `\.`; and the headless runs are independent processes, so the
 checksum, the audit and a collage can run at once.
 
-The preset leaves the nine 0–1 knobs (relief, hilliness, mix, rivers, lakes,
-valleys, moisture, warmth, overhangs) on **Auto**, so every seed rolls its own;
+The preset leaves the ten 0–1 knobs (relief, hilliness, mix, rivers, lakes,
+valleys, moisture, warmth, wind, overhangs) on **Auto**, so every seed rolls its own;
 a sweep that sets a knob pins it for every seed it builds, and the others still
 roll — the same way for every step of the sweep, since the roll is the seed's.
 
@@ -54,8 +54,8 @@ the slider is greyed, and once the island is built it sits at what the seed
 rolled and the caption says so (`Warmth   auto -> 0.71`), so the slider's
 position is always true to the island shown. Untick the box to keep that value
 and set it yourself; tick it again to hand the knob back to the seed, or press
-**All knobs to auto** for all eight at once. The readout's `settings:` line
-lists all nine, a star on each rolled one. **H** and **M** step their knob
+**All knobs to auto** for all nine at once. The readout's `settings:` line
+lists all ten, a star on each rolled one. **H** and **M** step their knob
 through auto, 0, 0.25 … 1.
 
 The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
@@ -70,17 +70,19 @@ Anything that is not a whole number is put back. The field is a `LineEdit`, so
 while it has focus it swallows the single-key shortcuts; the camera still polls
 **WASD** every frame, but a seed is digits.
 
-Views: `height`, `landform`, `region`, `walk` (what connects on foot), `reach`
-(what connects once you build; red is out of reach whatever you build),
-`shelves`, `surface` (stone, scree, snow, sand, silt and the climate grid —
-tundra, moorland, bog; steppe, meadow, grass; dust, savanna, floodplain; an
+Views: `height`, `landform`, `region`, `walk` (what connects on foot; a
+district of twenty cells is somewhere to build), `reach` (what connects once
+you build; red is out of reach whatever you build), `surface` (stone, scree,
+snow, sand, silt and the climate grid — tundra, moorland, bog; steppe, meadow,
+grass, marsh; dust, savanna, floodplain; tors of stone in soft country; an
 overhang's lip is drawn as stone; a beach is the ground round it, not sand),
-`anchors` (what the content layer attaches
-to: coast, cliff brink, cliff foot, a ledge where a cell is both, bank, river
-bed, lake bed, goo bed, overhang lip, beach, ford, Gate landing, ferry quay,
-summit) and the five habitat axes as
-ramps: `moisture`, `warmth`, `rugged`, `exposure`, `rim`. Water is coloured by
-kind (ford, stream, navigable reach, lake) and goo is violet in every view. The
+`anchors` (what the content layer attaches to: coast, cliff brink, cliff foot,
+a ledge where a cell is both, bank, river bed, lake bed, goo bed, spring, fall,
+overhang lip, beach, ford, Gate landing, ferry quay, summit; a sea stack is a
+dark column in the aether in every view), the six habitat axes as ramps:
+`moisture`, `warmth`, `rugged`, `exposure`, `rim`, `water` (the walk cost to
+fresh water), and the `magick` layer. Water is coloured by kind (ford, stream,
+navigable reach, lake) and goo is violet in every view. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face
 reads at about the legend's colour: a steep white sun over a neutral ambient,
@@ -96,15 +98,17 @@ berths; **O** fords; **P** the roads between the Gates (pale yellow walk; red
 stair, gold bridge, cyan ferry); **X** the compass, each Gate's landward vector,
 the Domain's wind — a run of orange arrows standing off the upwind edge with
 its name, whether or not there are dunes, plus its grain along each dune field —
-and two bounding boxes: the faint cube of the Domain (Size cells across and
+the sun, a gold disc off the edge it shines from with its name (the warmth
+view's sunny and shaded slopes read against it), and two bounding boxes: the faint cube of the Domain (Size cells across and
 Size slabs tall, standing on the keel's lowest point; nothing the generator
 builds may hang outside it, and its shape never changes between seeds) and a
 gold box tight round the landmass.
 
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
-reach shares, shelves, berths, rivers, the wind, Gates, and what each road out
-costs.
+reach shares, districts (and how many the heartland holds), berths, rivers,
+springs, any lake that swallows a river, deltas, the wind and the sun, Gates,
+and what each road out costs.
 `ROUGH GOING` means a road climbs five elevators in fifteen cells; `COAST WOULD
 NOT` means a Gate you asked for is not the Gate you got.
 
@@ -179,13 +183,15 @@ and a legend of every colour. Moisture and warmth are read by the Habitat stage
 alone, so the terrain is the same island in every tile and the sheet is the
 climate model on its own. The text on it is plain and sized to the tile: the
 ramp labels under the field strip drop to two lines when a 48-cell tile is too
-narrow for both, and the legend columns are as wide as their longest name. Under the grid is a strip of the five fields the
-surface is read from — height, warmth, moisture, exposure and rim distance — each
-with its own ramp, which is the context for why a tile looks as it does: the snow
-line is the lapse crossing the height panel, the green threads are the fresh-water
-moisture strip. Height, exposure and rim hold across all twenty-five, so they are
-drawn once and the run prints the cell counts that prove it; warmth and moisture
-are the middle tile. `ClimateGridSize` picks the footprint (64 by default; 128
+narrow for both, and the legend columns are as wide as their longest name. Under the grid is a strip of the seven fields the
+surface is read from — height, warmth, moisture, exposure, rim distance, water
+distance and magick, in two rows — each with its own ramp, which is the context
+for why a tile looks as it does: the snow line is the lapse crossing the height
+panel, the green threads are the fresh-water moisture strip. Height, exposure,
+rim, water distance and magick hold across all twenty-five, so they are drawn
+once and the run prints the cell counts that prove it; warmth and moisture are
+the middle tile. The note over the strip names the wind and the sun the seed
+rolled. `ClimateGridSize` picks the footprint (64 by default; 128
 does not read at a glance) and `FirstSeed` picks the seed. It also prints the
 material shares of each of the twenty-five, and drops the tiles beside the sheet.
 

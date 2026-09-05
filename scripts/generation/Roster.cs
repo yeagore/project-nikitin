@@ -132,7 +132,7 @@ internal static class Roster
     {
         if (p.LandformMix >= 0f && p.Relief >= 0f && p.Hilliness >= 0f && p.Rivers >= 0f
             && p.Lakes >= 0f && p.Valleys >= 0f && p.Moisture >= 0f && p.Warmth >= 0f
-            && p.OverhangDensity >= 0f && p.Size > 0)
+            && p.Wind >= 0f && p.OverhangDensity >= 0f && p.Size > 0)
             return p;
 
         var r = (IslandParams)p.Duplicate();
@@ -149,6 +149,7 @@ internal static class Roster
         if (p.Moisture < 0f) r.Moisture = Hash01(seed, 0x4B07u);
         if (p.Warmth < 0f) r.Warmth = Hash01(seed, 0x4B08u);
         if (p.OverhangDensity < 0f) r.OverhangDensity = Hash01(seed, 0x4B09u);
+        if (p.Wind < 0f) r.Wind = Hash01(seed, 0x4B0Bu);
         return r;
     }
 

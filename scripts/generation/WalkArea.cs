@@ -12,9 +12,10 @@ namespace ProjectNikitin.Generation;
 /// <param name="High">Highest crossing level in the set, slabs.</param>
 /// <param name="Min">Bounding box corner, cells.</param>
 /// <param name="Max">Bounding box corner, cells.</param>
+/// <param name="Seat">One cell of the set: the first in scan order, where its flood began. Reading <see cref="IslandData.Reach"/> there says which reach area holds the whole set.</param>
 public readonly record struct WalkArea(int Id, int Area, short Low, short High,
-                                       Vector2I Min, Vector2I Max)
+                                       Vector2I Min, Vector2I Max, Vector2I Seat)
 {
-    /// <summary>Big enough to be a place; under <see cref="Traversal.MinDistrictArea"/> it is broken ground (benches, ledges).</summary>
+    /// <summary>Big enough to be a place; under <see cref="Traversal.MinDistrictArea"/> it is broken ground (benches, ledges). A district is also somewhere to build: walk-connected ground, no works.</summary>
     public bool IsDistrict => Area >= Traversal.MinDistrictArea;
 }

@@ -113,6 +113,15 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Warmth { get; set; } = Auto;
 
+    /// <summary>
+    /// How hard the Domain's one wind blows: how far exposure moves the climate.
+    /// 0 is still air, where shelter changes nothing; 0.5 the nominal figures (a
+    /// rain shadow of 30 in the lee, the lee 10 warmer, a sheltered gorge up to
+    /// 70 damper); 1 twice them. The exposure byte itself is geometry and does
+    /// not move. Auto rolls it per seed.
+    /// </summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Wind { get; set; } = Auto;
+
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>

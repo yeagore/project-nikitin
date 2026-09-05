@@ -12,12 +12,26 @@ internal static partial class Rivers
     /// Makes every course run downhill. The routing guarantees a downstream
     /// neighbour, not a lower one. Walking the routing order backwards visits
     /// every cell before the one it drains into, so one pass settles it; only
-    /// ever lowers, and only inside a cut channel. Returns whether anything moved.
+    /// ever lowers, and only inside a cut channel. A delta arm's head is first
+    /// held to the pair cell it branches from (<paramref name="branch"/>), since
+    /// no <c>down</c> joins the two. Returns whether anything moved.
     /// </summary>
     private static bool Descend(int n, List<Vector2I> order, Vector2I[,] down,
-                                bool[,] river, short[,] water, short[,] surface)
+                                bool[,] river, short[,] water, short[,] surface,
+                                Vector2I[,] branch)
     {
         bool moved = false;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            Vector2I b = branch[x, z];
+            if (b.X < 0 || !river[x, z] || !river[b.X, b.Y]) continue;
+            if (water[x, z] <= water[b.X, b.Y]) continue;
+            int drop = water[x, z] - water[b.X, b.Y];
+            water[x, z] = water[b.X, b.Y];
+            surface[x, z] = (short)(surface[x, z] - drop);
+            moved = true;
+        }
         for (int i = order.Count - 1; i >= 0; i--)
         {
             Vector2I c = order[i];
@@ -75,11 +89,11 @@ internal static partial class Rivers
     /// </summary>
     private static void Settle(int n, List<Vector2I> order, Vector2I[,] down,
                                bool[,] river, bool[,] navigable, short[,] water,
-                               short[,] surface, Vector2I[,] twin)
+                               short[,] surface, Vector2I[,] twin, Vector2I[,] branch)
     {
         for (int pass = 0; pass < 6; pass++)
         {
-            bool moved = Descend(n, order, down, river, water, surface);
+            bool moved = Descend(n, order, down, river, water, surface, branch);
             moved |= LevelPairs(n, twin, river, navigable, water, surface);
             if (!moved) break;
         }

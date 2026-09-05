@@ -79,7 +79,7 @@ public partial class GenerationAudit : Node
     /// <summary>Four hanging Gates — the maximum request — for every arrangement x character, then the reductions.</summary>
     [Export] public bool GateMatrix { get; set; } = false;
 
-    /// <summary>Sweep Lakes, Rivers, Crossings and Valleys with everything else held, so a knob that does nothing shows.</summary>
+    /// <summary>Sweep Lakes, Rivers, Crossings, Valleys and Wind with everything else held, so a knob that does nothing shows.</summary>
     [Export] public bool Knobs { get; set; } = false;
 
     /// <summary>Material shares at the four climate corners (dry/wet x cold/warm) and the preset: the rebalancing check.</summary>
@@ -137,7 +137,7 @@ public partial class GenerationAudit : Node
         PrintCharacters(t);
         PrintWalkability(t);
         PrintPasses(t);
-        PrintShelves(t);
+        PrintDistricts(t);
         PrintCrossings(t);
         PrintGates(t);
         PrintRoads(t);

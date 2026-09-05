@@ -14,7 +14,7 @@ archipelago floating in aether, seen from a strategy camera; terrain is mostly
 flat with the occasional single-slab step, punctuated by cliffs that mean
 something; cliffs are costs, not walls, so a player who builds reaches almost
 all of the island; every Domain has somewhere to arrive (a Gate and its apron)
-and somewhere to build (a shelf); and water means lakes, rivers, and, because
+and somewhere to build (a district); and water means lakes, rivers, and, because
 there is no sea, every watercourse pouring off the rim.
 
 ---
@@ -364,6 +364,113 @@ way in.
 
 ---
 
+### Shelves gave way to districts
+
+A shelf was a contiguous patch of level ground — every cell flat or at one
+lone step — with the width of its largest inscribed square, and it was what
+"somewhere to build" meant, what the Gate apron scored, and a lab view. It
+never read as a place: a hillside of one-slab steps, walkable end to end, was
+a scatter of shelves and non-shelves with nothing between them a player would
+recognise, and the mechanic was disliked for it from the start. On 2026-09-05
+it went. What replaced it is the thing the walk analysis already had: a
+**district**, a walk area of twenty cells or more — walk-connected ground, no
+works. The guarantee is now "a district on the heartland", the apron is the
+largest district within four cells of the strip's head (capped at 400, so the
+mainland does not outrank the edge; the old shelf areas ran to a few hundred),
+and `WalkArea.Seat` was added so a walk area can say which reach area holds
+it. Every island in the audit has one, which is the point: the guarantee is
+now near-trivial, and settlement placement will want a stricter reading —
+level ground *within* a district — when it exists. That reading belongs to the
+settlement layer, not to the generator.
+
+### The lee is a rain shadow, and the gorge keeps its damp
+
+The moisture stage gave the lee up to 20 more ("the lee holds its damp"),
+which is the wrong way round: the windward side takes the rain and the
+sheltered side is the shadow. Reversed on 2026-09-05, and made a knob at the
+same time — `Wind`, the tenth 0–1 knob, rolled per seed like the rest — since
+"how much exposure moves things" is a property of a Domain and not of the
+model. `2 × Wind` multiplies every modifier exposure drives: the rain shadow
+(30 in the lee at the nominal 0.5), the milder lee (10) and the **gorge damp**
+(70 × shelter × ruggedness), added in the same change so that a gorge floor
+under its walls goes mossy while the plateau above it stays steppe. The
+exposure byte is geometry and does not move, so the collage's field strip
+holds across a wind sweep. In the `Knobs` sweep, from wind 0 to 1, flat lee
+ground dries by 32, gorge floors wet by 41 and the lee warms by 15 while open
+ground does not move. One thing the mean will not show: at any wind the flat
+lee reads wetter than the flat open, because sheltered flat ground is valley
+floor beside water and the water strip outweighs the shadow. The shadow is
+real; the audit reads it in the sweep, not in the mean.
+
+### The sun and the frost hollows
+
+Warmth had a lapse and three small modifiers, none of which knew which way a
+slope faced. Now a Domain rolls a sun as it rolls a wind: the effective
+surface's downhill direction dotted with the way to the sun, over two slabs
+per cell, gives −1 … 1, and a slope turned full to the sun is 8 warmer, one
+turned away 8 colder, flat ground untouched — so the label still reads at the
+knob (the audit puts sunny slopes at 141.6 and shaded at 133.5). Basins and
+sinkhole pits are frost hollows, 8 colder than their rung. Both are touches:
+the bands are 70 wide, and neither moves a whole landform across one.
+
+### A lake that swallows a river
+
+Every course reached the aether by construction, because the routing flood
+passes straight through standing water and every lake got a spill. That was
+also the one thing a terrain with no sea could never do: end a river. Now, on
+about three islands in ten that have a river-fed lake, one lake — a basin's
+for preference — is made a sink after the first accumulation: its cells lose
+their downstream neighbour, the drainage is summed again, nothing is traced
+past it and it finds no spill. The channel downstream of the old outflow
+usually vanishes with it, which is the visible sign. The cost is one more
+accumulate-and-trace on those islands. The audit found eight on sixty seeds,
+each fed by about two channel cells, and every island still has a river that
+reaches the rim.
+
+### A delta is cut, not found
+
+Nothing in the routing makes a river fork toward the rim — the flood's tree
+converges. So a delta is built: from the axis cell four upstream of a
+navigable mouth, an arm is walked off each side of the pair (sideways, forward,
+forward, and round — cardinal all the way, since diagonals are not a channel)
+until it meets the rim, over ground that never climbs and never drops more
+than the free step, and is refused if it meets water, a bridgehead, an eyot or
+the river itself. The arm is a stream with the pair cell as its head, and
+`Descend` holds that head to the pair, since no `down` joins them. The dry
+ground between the mouths is the fan, floodplain whatever the climate. Two
+things kept the first version at zero deltas: the mouth cell has no partner
+(`Widen` needs a downstream cell to find the side), so "an axis cell with a
+mate" found no mouths at all — a mouth is an axis cell with nothing
+downstream, and nothing else. And an arm that met the rim on its first
+sideways step — the river running along the coast — made a one-cell notch
+beside the pair; an arm now needs two cells forward before the rim. Seventeen
+on sixty seeds, on twelve islands, with fans of about four cells: a navigable
+river has to meet the rim over a plain for one to exist at all.
+
+### Sea stacks are aether
+
+The specks the islet filter dropped were simply gone. Now two or three of them
+(under thirty cells, still wholly aether on the mask that ships, no land beside
+them cardinally) are kept as `IslandData.SeaStacks` — an anchor list, not
+land: nothing walks, builds, routes or flies through them, and one within a
+cell of a hanging Gate's flight path is dropped once the Gates are placed. The
+lab draws them as dark pillars so they can be seen at all. They are rarer
+than the rule suggests: on most seeds the crop leaves no speck to keep, so the
+audit found them on nine islands of sixty. If every Domain should have them,
+they will have to be placed, not salvaged.
+
+### Marsh past grass, and rarer bogs
+
+The temperate row had no cell for water in excess where the cold row had bog
+and the hot row floodplain. Marsh is that cell: moisture 205 or more, fresh
+water within two cells, flat ground (so it is low as well as near) and a noise
+field over 0.62 — 0.4% of land over sixty seeds, which is "occasionally". Bog
+was a third of cold wet ground; it now needs moisture past 190 and a noise
+field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
+2.1%. Tors — stone on plains and hills where a fine noise clears 0.87, about
+one soft cell in a hundred — put building stone on a Domain with no rock
+landform, material only.
+
 ## C. Tried and removed
 
 - **A road check that could not pass.** The audit flagged any road hop that was
@@ -379,6 +486,8 @@ way in.
 | | |
 |---|---|
 | **Ramps** | A ramp cut into a cliff read as a fixture, and one per cliff made every escarpment the same. Replaced by passes: a saddle where one plateau sags to meet the next. |
+| **Shelves** | Level-ground patches with an inscribed-square width, as the meaning of "somewhere to build" and the Gate apron. Never read as a place. Replaced by districts: walk-connected ground, no works (§B). |
+| **The lee holds its damp** | Sheltered ground gained moisture. The lee is a rain shadow; it loses it now, by a knob. |
 | **Lake chains** | Neighbouring patches holding water at slightly different levels read as flooding. A patch beside one that holds water stays dry. Provisional: "not for now", not "wrong". |
 | **`Fragmentation`, a float** | One number asked to mean both "how broken up" and "into how many pieces". Replaced by named `IslandArrangement`s. |
 | **Damping the coastline noise on multi-blob layouts** | Made every multi-island arrangement a field of discs. Replaced by carving the strait along the seam, so the layout decides where the land is and the noise decides no coast is a circle. |
@@ -430,12 +539,20 @@ commit. `docs/dev-scenes.md` has both scenes in detail.
 
 ### What the baseline does not carry
 
-Measured on the accepted run of 2026-09-05 (60 seeds, 128², the nine knobs
+Measured on the accepted run of 2026-09-05 (60 seeds, 128², the ten knobs
 rolled per seed); nothing here is diffed automatically. Older rows that
 measured a fixed preset are kept where they still say something.
 
 | | |
 |---|---|
+| surface, the sixty rolled seeds, after marsh, tors and the rarer bog | grass 22.1%, moorland 10.6%, meadow 9.7%, dust 8.4%, tundra 7.2%, savanna 6.6%, steppe 4.4%, floodplain 2.3%, bog 0.7% (from 2.1%), marsh 0.4%, stone 11.2% (from 9.5%: the tors, 6718 cells on all sixty islands), scree 5.7%, sand 5.3%, silt 4.7%, snow 0.8% |
+| the climate corners after the change (`Climate`, 12 seeds each) | cold wet: moorland 69%, bog 6% (was 22%). Temperate balanced: meadow 61%, grass 12%, marsh 0.8%. Temperate wet: grass 73%, marsh 0.9%. The other corners within a point of before, stone a point higher everywhere (the tors) |
+| the wind (`Knobs`, 6 seeds, wind 0 → 1) | flat lee moisture 188 → 156 against flat open 151 held; gorge floors 160 → 201; flat lee warmth 156 → 172 against open 160 held; marsh 0.62% → 0.55%, bog 0.74% → 0.72% |
+| the sun and the hollows | warmth on slopes turned to the sun 141.6, turned away 133.5 (n≈18.8k each); basin floors 147.0 against an island median of 154 |
+| rivers after the terminal lakes and deltas | 7876 river cells (from 7812), 3565 navigable, 778 falls; 8 lakes swallow a river on 8 islands, fed by 16 channel cells; 17 deltas on 12 islands, 70 cells of fan; 218 springs, none on a navigable cell; fords per 100 stream cells 11.2 on flat ground and 6.1 on broken; every island's rivers still reach the rim |
+| districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
+| the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick mean 106–141, median 130, and a range of 195–222 within one island (no plateaus) |
+| sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
 | surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
 | the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
 | walking by king's moves | against four-way walking on the same islands: land on the mainland 40.8% → 42.8%, heartland 94.9% → 95.0%, roads that can simply be walked 45 → 50 of 121. Cutting corners joins a few scraps to their districts and lets a few roads round a cliff; nothing large moves |
@@ -468,14 +585,18 @@ runs at one attempt with most of the island reachable.
 | undersized patches on `ThousandIsles` and `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. Accepted. |
 | overhangs are not walkable | By design; span-as-node traversal is its own problem (§E). |
 | `Halves` and `Triplets` fuse on one 128² seed in twelve | Ungrouped layouts, so not the seam bug; the re-roll absorbs it. Logged by `Strain`. |
+| deltas are small, and rare | 17 on 60 seeds, fans of about four cells: a navigable river has to meet the rim over a plain. A longer arm walk or a wider fan would make more of each; more deltas need more navigable mouths on gentle coasts, which is the terrain's doing. |
+| sea stacks on one island in seven | The islet filter usually has nothing under thirty cells to drop. Placing pillars deliberately off the rim would put them on every Domain; salvaging keeps them honest and rare. |
 | 5 sealed gorge reaches | Misaligned rims, 4–19 cells, on which a deck fits but the banks disagree by three or more. Nothing is cut off, but a 19-cell reach with no deck is a real detour. A pass that re-levels the two rims at the least-misaligned cell would close it; it is the same class of surgery as `LevelBridgeheads` and worth doing deliberately. |
 
 ---
 
 ## E. Ideas not taken yet
 
-1. **Settlement placement.** Everything it needs exists: shelves, berths, roads,
-   Gate aprons. It is the first thing that would show whether the terrain rules
+1. **Settlement placement.** Everything it needs exists: districts, berths,
+   roads, Gate aprons, the water-distance byte. It will want a stricter reading
+   of level ground within a district than "walk-connected" — that is where the
+   old shelf idea belongs, if anywhere. It is the first thing that would show whether the terrain rules
    make good play rather than good pictures.
 2. **A real cost model for works.** Every work costs one point today, so
    `Passage.Cost` means "how many projects". Pricing by span, climb and ferry

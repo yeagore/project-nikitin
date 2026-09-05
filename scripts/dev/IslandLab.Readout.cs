@@ -37,7 +37,7 @@ public partial class IslandLab
 		return found;
 	}
 
-	/// <summary>The traversal analysis in one line: walk, reach, shelves, works, water.</summary>
+	/// <summary>The traversal analysis in one line: walk, reach, districts, works, water.</summary>
 	private static string WalkSummary(IslandData d)
 	{
 		int land = 0;
@@ -53,8 +53,9 @@ public partial class IslandLab
 		}
 
 		int mainland = d.Mainland >= 0 ? d.Areas[d.Mainland].Area : 0;
-		int buildable = 0;
-		foreach (Shelf shelf in d.Shelves) if (shelf.Buildable) buildable++;
+		int onHeart = 0;
+		foreach (WalkArea a in d.Areas)
+			if (a.IsDistrict && d.Heartland >= 0 && d.Reach[a.Seat.X, a.Seat.Y] == d.Heartland) onHeart++;
 
 		int heart = d.Heartland >= 0 ? d.Reaches[d.Heartland].Area : 0;
 		int rim = 0;
@@ -65,12 +66,15 @@ public partial class IslandLab
 			if (d.WaterLevel[x, z] != IslandData.NoLand
 				&& d.Fluid[x, z] == (byte)FluidKind.Goo) gooCells++;
 
-		return $"walk {100f * mainland / land:0}% mainland in {districts} districts   "
+		return $"walk {100f * mainland / land:0}% mainland in {districts} districts "
+			+ $"({onHeart} on the heartland: somewhere to build)   "
 			+ $"reach {100f * heart / land:0}%   "
-			+ $"shelves {buildable} buildable of {d.Shelves.Count}   "
 			+ $"passes {d.Passes.Count}   bridges {d.Bridges.Count}   "
 			+ $"ferry berths {d.Berths.Count} on {d.WaterBodies} bodies   "
-			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim)"
+			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim), "
+			+ $"{d.Springs.Count} springs"
+			+ (d.TerminalLakes.Count > 0 ? $"   {d.TerminalLakes.Count} lake swallows a river" : "")
+			+ (d.Deltas.Count > 0 ? $"   deltas {d.Deltas.Count}" : "")
 			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")
 			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");
 	}
@@ -100,14 +104,17 @@ public partial class IslandLab
 		var parts = new List<string>();
 		foreach (var (name, cells) in bits) parts.Add($"{name} {100 * cells / land}%");
 
-		string wind = $"   wind from {d.WindFrom}" + (dunes > 0 ? $", dunes run {d.DuneRun}" : "");
+		string wind = $"   wind from {d.WindFrom}" + (dunes > 0 ? $", dunes run {d.DuneRun}" : "")
+			+ $"   sun from {d.SunFrom}";
 		return $"ground: {string.Join(", ", parts)}{wind}"
 			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} brink, "
 			+ $"{d.CliffFootCells.Count} foot, {d.BankCells.Count} bank, "
 			+ $"{d.RiverBedCells.Count} river bed, {d.LakeBedCells.Count} lake bed, "
 			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "
 			+ $"{CellCount(d.Beach)} beach, {CellCount(d.Ford)} ford, "
-			+ $"{CellCount(d.Landings)} gate landing, {d.Berths.Count} quay";
+			+ $"{d.Springs.Count} spring, {d.Falls.Count} fall, "
+			+ $"{CellCount(d.Landings)} gate landing, {d.Berths.Count} quay, "
+			+ $"{d.SeaStacks.Count} sea stack cells";
 	}
 
 	private static int CellCount(bool[,] flags)

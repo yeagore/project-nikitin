@@ -21,7 +21,7 @@ public partial class IslandLab
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
 	private OptionButton _exitKind = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
-	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!;
+	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
@@ -196,6 +196,11 @@ public partial class IslandLab
 			"The open lowland: under about 0.3 is cold country, 0.5 temperate, over about "
 			+ "0.7 hot, the last twentieth sand. Even 0 keeps its lowland above the snow — "
 			+ "the snow on the map is a mountain's upper part, at every footprint.");
+		_wind = Slide(rows, "Wind strength", 0f, 1f, 0.05f,
+			() => Params.Wind, v => Params.Wind = v, q => q.Wind,
+			"How far exposure moves the climate: 0 still air, where shelter changes nothing; "
+			+ "0.5 the nominal rain shadow, milder lee and damp gorge floors; 1 twice them. "
+			+ "The exposure view itself is geometry and does not move.");
 		AddButton(rows, "All knobs to auto", AllKnobsAuto);
 
 		Heading(rows, "gates and crossings");

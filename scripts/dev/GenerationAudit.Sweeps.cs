@@ -628,6 +628,43 @@ public partial class GenerationAudit
         PrintRiversSweep(steps);
         PrintCrossingsSweep();
         PrintValleysSweep(steps);
+        PrintWindSweep(steps);
+    }
+
+    /// <summary>
+    /// Wind 0..1: what exposure moves. On flat ground (rugged under 64), mean
+    /// moisture and warmth in the lee (exposure under 128) against the open (224 and
+    /// over): the rain shadow and the milder lee. On sheltered broken ground (rugged
+    /// 128 and over): the gorge damp. Then the marsh and bog shares, which read the
+    /// moisture. At 0 the lee and the open should agree but for the sun and the
+    /// water; at 1 the flat lee should be markedly drier and milder and the gorge floors wetter.
+    /// </summary>
+    private void PrintWindSweep(float[] steps)
+    {
+        GD.Print("  wind   flat lee moist  flat open moist   gorge moist   flat lee warm  flat open warm   marsh%   bog%");
+        foreach (float v in steps)
+        {
+            IslandParams p = Variant(q => q.Wind = v);
+            long leeM = 0, leeW = 0, lee = 0, openM = 0, openW = 0, open = 0, gorgeM = 0, gorge = 0;
+            long land = 0, marsh = 0, bog = 0;
+            foreach (IslandData d in Sweep(p, SweepSeeds))
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    land++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Marsh) marsh++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Bog) bog++;
+                    bool flat = d.Ruggedness[x, z] < 64;
+                    if (d.Exposure[x, z] < 128 && flat) { leeM += d.Moisture[x, z]; leeW += d.Warmth[x, z]; lee++; }
+                    else if (d.Exposure[x, z] < 128 && d.Ruggedness[x, z] >= 128) { gorgeM += d.Moisture[x, z]; gorge++; }
+                    else if (d.Exposure[x, z] >= 224 && flat) { openM += d.Moisture[x, z]; openW += d.Warmth[x, z]; open++; }
+                }
+            GD.Print($"  {v,4:0.00} {(lee > 0 ? leeM / (double)lee : 0),15:0.0} {(open > 0 ? openM / (double)open : 0),16:0.0} "
+                + $"{(gorge > 0 ? gorgeM / (double)gorge : 0),13:0.0} "
+                + $"{(lee > 0 ? leeW / (double)lee : 0),14:0.0} {(open > 0 ? openW / (double)open : 0),15:0.0} "
+                + $"{100.0 * marsh / Math.Max(1, land),8:0.00} {100.0 * bog / Math.Max(1, land),6:0.00}");
+        }
     }
 
     /// <summary>

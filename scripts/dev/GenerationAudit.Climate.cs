@@ -62,15 +62,15 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// Checks the claim the strip makes: that surface height, exposure and rim distance
-    /// are the same in all twenty-five, so drawing them once is honest. Counts the cells
-    /// that differ from the first tile rather than asserting it.
+    /// Checks the claim the strip makes: that surface height, exposure, rim distance,
+    /// water distance and magick are the same in all twenty-five, so drawing them once
+    /// is honest. Counts the cells that differ from the first tile rather than asserting it.
     /// </summary>
     private static void PrintClimateHeld(IslandData[,] tiles)
     {
         IslandData first = tiles[0, 0];
         int steps = ClimateSteps.Length;
-        long height = 0, exposure = 0, rim = 0, rugged = 0;
+        long height = 0, exposure = 0, rim = 0, rugged = 0, water = 0, magick = 0;
 
         for (int row = 0; row < steps; row++)
         for (int col = 0; col < steps; col++)
@@ -84,11 +84,13 @@ public partial class GenerationAudit
                 if (d.Exposure[x, z] != first.Exposure[x, z]) exposure++;
                 if (d.RimDistance[x, z] != first.RimDistance[x, z]) rim++;
                 if (d.Ruggedness[x, z] != first.Ruggedness[x, z]) rugged++;
+                if (d.WaterDistance[x, z] != first.WaterDistance[x, z]) water++;
+                if (d.Magick[x, z] != first.Magick[x, z]) magick++;
             }
         }
         GD.Print($"  held across all {steps * steps}: height {height} cells differ, "
-            + $"exposure {exposure}, rim {rim}, rugged {rugged} (0 each is the claim "
-            + "the field strip makes)");
+            + $"exposure {exposure}, rim {rim}, rugged {rugged}, water distance {water}, "
+            + $"magick {magick} (0 each is the claim the field strip makes)");
     }
 
     /// <summary>The two or three materials that carry each cell of the grid, so the picture has numbers behind it.</summary>
@@ -149,8 +151,9 @@ public partial class GenerationAudit
             + $"{sample.Character.ToString().ToUpperInvariant()}. SURFACE VIEW.";
         string SameNote = $"SAME TERRAIN IN ALL {steps * steps} TILES. ONLY MOISTURE AND WARMTH CHANGE.";
         string middleLabel = Label(ClimateSteps[steps / 2]);
-        string fieldNote = $"HEIGHT, EXPOSURE, RIM: SAME IN ALL {steps * steps}. "
-            + $"WARMTH, MOISTURE: FROM THE {middleLabel} / {middleLabel} TILE.";
+        string fieldNote = $"HEIGHT, EXPOSURE, RIM, WATER, MAGICK: SAME IN ALL {steps * steps}. "
+            + $"WARMTH, MOISTURE: FROM THE {middleLabel} / {middleLabel} TILE. "
+            + $"WIND FROM {sample.WindFrom}, SUN FROM {sample.SunFrom}.";
 
         (string Head, (string Name, Color C)[] Rows)[] legend = LegendColumns();
         int textW = 0;
@@ -174,7 +177,8 @@ public partial class GenerationAudit
         int gridTop = headY + TinyFont.Height(2) + 10;
         int gridBottom = gridTop + steps * tile + (steps - 1) * Gap;
 
-        // The context strip: the fields the surface is read from, panels the width of a tile.
+        // The context strip: the fields the surface is read from, panels the width of
+        // a tile, as many to a row as the grid has columns, and a second row for the rest.
         int stripHeadY = gridBottom + 24;
         int stripNoteY = stripHeadY + TinyFont.Height(2) + 7;
         int panelTitleY = stripNoteY + TinyFont.Height(2) + 14;
@@ -184,7 +188,10 @@ public partial class GenerationAudit
         int barLabelY = barTop + BarHeight + 7;
         // A narrow tile puts the bar's two labels on two lines rather than over each other.
         int barLines = FieldLabelsFit(tile) ? 1 : 2;
-        int stripBottom = barLabelY + barLines * (TinyFont.Height(2) + 4);
+        int rowBottom = barLabelY + barLines * (TinyFont.Height(2) + 4);
+        int rowHeight = rowBottom - panelTitleY + 18;
+        int fieldRows = (FieldPanels + steps - 1) / steps;
+        int stripBottom = rowBottom + (fieldRows - 1) * rowHeight;
 
         int legendRows = 0;
         foreach (var column in legend) legendRows = Math.Max(legendRows, column.Rows.Length);
@@ -232,7 +239,8 @@ public partial class GenerationAudit
         }
 
         DrawFieldStrip(img, tiles, Gutter, fieldNote, tile, Zoom, Gap,
-            stripHeadY, stripNoteY, panelTitleY, panelTop, barTop, BarHeight, barLabelY);
+            stripHeadY, stripNoteY, panelTitleY, panelTop, barTop, BarHeight, barLabelY,
+            steps, rowHeight);
 
         HLine(img, Gutter, ruleY, gridW, Rule);
         TinyFont.Draw(img, "LEGEND", Gutter, legendTitleY, 2, Ink);
@@ -262,17 +270,22 @@ public partial class GenerationAudit
         return img;
     }
 
+    /// <summary>How many field panels the strip carries; the layout wraps them at the grid's width.</summary>
+    private const int FieldPanels = 7;
+
     /// <summary>
-    /// The five fields the surface view is read from, a panel each under the grid with
-    /// its own ramp: the height the climate is draped over, the two knobs as they end
-    /// up per column, and the two that shift them — openness to the wind and how near
-    /// the aether a column is. Height, exposure and rim are the same island in all
+    /// The fields the surface view is read from, a panel each under the grid with its
+    /// own ramp: the height the climate is draped over, the two knobs as they end up
+    /// per column, the two that shift them — openness to the wind and how near the
+    /// aether a column is — then the walk cost to fresh water the moisture strip
+    /// reads, and the magick layer, which reads nothing and is read by nothing yet.
+    /// Height, exposure, rim, water and magick are the same island in all
     /// twenty-five, so they are drawn once; warmth and moisture come from the middle
     /// tile, since those two are the thing the grid is sweeping.
     /// </summary>
     private static void DrawFieldStrip(Image img, IslandData[,] tiles, int gutter,
         string note, int tile, int zoom, int gap, int headY, int noteY, int titleY,
-        int top, int barTop, int barHeight, int barLabelY)
+        int top, int barTop, int barHeight, int barLabelY, int perRow, int rowHeight)
     {
         IslandData terrain = tiles[0, 0];
         IslandData middle = tiles[ClimateSteps.Length / 2, ClimateSteps.Length / 2];
@@ -305,6 +318,13 @@ public partial class GenerationAudit
                 (d, x, z) => Ramp((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp),
                 t => DevPalette.RimRamp.Lo.Lerp(DevPalette.RimRamp.Hi, t),
                 FieldLabels[4].Low, FieldLabels[4].High),
+            ("WATER DISTANCE", terrain,
+                (d, x, z) => Ramp((byte)Math.Min(255, d.WaterDistance[x, z] * 4), DevPalette.WaterRamp),
+                t => DevPalette.WaterRamp.Lo.Lerp(DevPalette.WaterRamp.Hi, t),
+                FieldLabels[5].Low, FieldLabels[5].High),
+            ("MAGICK", terrain, (d, x, z) => Ramp(d.Magick[x, z], DevPalette.MagickRamp),
+                t => DevPalette.MagickRamp.Lo.Lerp(DevPalette.MagickRamp.Hi, t),
+                FieldLabels[6].Low, FieldLabels[6].High),
         };
 
         TinyFont.Draw(img, "INPUT FIELDS", gutter, headY, 2, Ink);
@@ -317,22 +337,23 @@ public partial class GenerationAudit
         for (int i = 0; i < panels.Length; i++)
         {
             var (title, from, of, bar, low, high) = panels[i];
-            int left = gutter + i * (tile + gap);
+            int left = gutter + (i % perRow) * (tile + gap);
+            int down = (i / perRow) * rowHeight;
 
-            TinyFont.Draw(img, title, left, titleY, 2, Ink);
-            Frame(img, left - 1, top - 1, tile + 2, tile + 2, Rule);
+            TinyFont.Draw(img, title, left, titleY + down, 2, Ink);
+            Frame(img, left - 1, top + down - 1, tile + 2, tile + 2, Rule);
             for (int x = 0; x < from.Size; x++)
             for (int z = 0; z < from.Size; z++)
-                Fill(img, left + x * zoom, top + z * zoom, zoom, zoom,
+                Fill(img, left + x * zoom, top + down + z * zoom, zoom, zoom,
                     from.HasLand(x, z) ? of(from, x, z) : DevPalette.Aether);
 
             for (int px = 0; px < tile; px++)
-                Fill(img, left + px, barTop, 1, barHeight, bar(px / (float)(tile - 1)));
-            Frame(img, left, barTop, tile, barHeight, Rule);
+                Fill(img, left + px, barTop + down, 1, barHeight, bar(px / (float)(tile - 1)));
+            Frame(img, left, barTop + down, tile, barHeight, Rule);
 
-            TinyFont.Draw(img, low, left + FieldInset, barLabelY, 2, Dim);
+            TinyFont.Draw(img, low, left + FieldInset, barLabelY + down, 2, Dim);
             TinyFont.DrawRight(img, high, left + tile - FieldInset,
-                oneLine ? barLabelY : barLabelY + TinyFont.Height(2) + 4, 2, Dim);
+                (oneLine ? barLabelY : barLabelY + TinyFont.Height(2) + 4) + down, 2, Dim);
         }
     }
 
@@ -340,6 +361,7 @@ public partial class GenerationAudit
     private static readonly (string Low, string High)[] FieldLabels =
     {
         ("LOW", "HIGH"), ("COLD", "HOT"), ("DRY", "WET"), ("LEE", "OPEN"), ("EDGE", "INLAND"),
+        ("BANK", "FAR"), ("INERT", "SATURATED"),
     };
 
     /// <summary>Pixels the ramp labels stand in from each end of a panel.</summary>
@@ -374,20 +396,21 @@ public partial class GenerationAudit
             ("COLD", new[]
             {
                 Of("TUNDRA (DRY)", SurfaceMaterial.Tundra),
-                Of("MOORLAND (MID)", SurfaceMaterial.Moorland),
-                Of("BOG (WET)", SurfaceMaterial.Bog),
+                Of("MOORLAND (MID, WET)", SurfaceMaterial.Moorland),
+                Of("BOG (EXCESS)", SurfaceMaterial.Bog),
             }),
             ("TEMPERATE", new[]
             {
                 Of("STEPPE (DRY)", SurfaceMaterial.Steppe),
                 Of("MEADOW (MID)", SurfaceMaterial.Meadow),
                 Of("GRASS (WET)", SurfaceMaterial.Grass),
+                Of("MARSH (EXCESS)", SurfaceMaterial.Marsh),
             }),
             ("HOT", new[]
             {
                 Of("DUST (DRY)", SurfaceMaterial.Dust),
                 Of("SAVANNA (MID)", SurfaceMaterial.Savanna),
-                Of("FLOODPLAIN (WET)", SurfaceMaterial.Floodplain),
+                Of("FLOODPLAIN (WET, BY WATER)", SurfaceMaterial.Floodplain),
             }),
             ("BARE", new[]
             {

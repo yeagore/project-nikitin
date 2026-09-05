@@ -82,7 +82,16 @@ public partial class GenerationAudit
             GD.Print($"  how the courses run: {100.0 * t.RiverStraight / reachCells:0}% straight, "
                 + $"{100.0 * t.RiverBends / reachCells:0}% turning  (n={reachCells})");
         Report("  longest run held in one direction", t.StraightRuns, "cells");
-        GD.Print($"  eyots: {t.EyotCells} cells of island parted by a braided reach\n");
+        GD.Print($"  eyots: {t.EyotCells} cells of island parted by a braided reach");
+        GD.Print($"  lakes that swallow a river: {t.TerminalLakes} on {t.TerminalIslands} of {Seeds} islands, "
+            + $"fed by {t.TerminalInflows} channel cells   (the one exception to reaching the rim)");
+        GD.Print($"  deltas: {t.Deltas} on {t.DeltaIslands} of {Seeds} islands, {t.DeltaFanCells} cells of fan");
+        GD.Print($"  springs: {t.Springs}   on a navigable cell (want 0): {t.SpringsOnNavigable}");
+        GD.Print("  fords per 100 stream cells: flat ground "
+            + (t.StreamFlat > 0 ? $"{100.0 * t.FordsFlat / t.StreamFlat:0.0}" : "-")
+            + $" (n={t.StreamFlat}), broken ground (4+ slabs within two cells) "
+            + (t.StreamRugged > 0 ? $"{100.0 * t.FordsRugged / t.StreamRugged:0.0}" : "-")
+            + $" (n={t.StreamRugged})\n");
     }
 
     /// <summary>Berths against the sites the domino rule found: a low share is the pruning working unless the sites are low too.</summary>
@@ -125,8 +134,11 @@ public partial class GenerationAudit
         GD.Print($"anchors: {t.CoastAnchors} coast, {t.CliffAnchors} cliff brink, "
             + $"{t.CliffFootAnchors} cliff foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
             + $"{t.OverhangCells} overhang, {t.BeachCells} beach, {t.FordCells} ford, "
+            + $"{t.Springs} spring, {t.FallCells} fall, "
             + $"{t.LandingCells} gate landing, {t.Berths} quay, "
-            + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed");
+            + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed, "
+            + $"{t.SeaStackCells} sea stack cells on {t.SeaStackIslands} of {Seeds} islands");
+        GD.Print($"  tors (stone on plains and hills): {t.TorCells} cells on {t.TorIslands} of {Seeds} islands");
         GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {t.BrinksBesideWater}");
         GD.Print($"  islands with no beach at all: {t.IslandsWithoutBeach} of {Seeds}");
         // Against the coast ring, not the beach's own cells: a beach is two deep, so that ratio reads 151%.
@@ -144,6 +156,27 @@ public partial class GenerationAudit
         Report("  rugged   (0 flat - 255 broken)", t.RuggedMeans, "");
         Report("  exposure (0 lee - 255 windswept)", t.ExposureMeans, "");
         Report("  rim distance", t.RimMeans, "cells");
+        Report("  water distance (walk cost, 255 out of reach)", t.WaterMeans, "");
+        Report("  magick   (0 inert - 255 saturated)", t.MagickMeans, "");
+        Report("  magick range within one island", t.MagickSpread, "");
+        GD.Print("  the sun: warmth on slopes turned to it "
+            + (t.SunnyCells > 0 ? $"{t.SunnyWarmth / (double)t.SunnyCells:0.0}" : "-")
+            + $" (n={t.SunnyCells}), turned away "
+            + (t.ShadedCells > 0 ? $"{t.ShadedWarmth / (double)t.ShadedCells:0.0}" : "-")
+            + $" (n={t.ShadedCells})");
+        GD.Print("  the wind, on flat ground (rugged < 64): sheltered (exposure < 128) moisture "
+            + (t.LeeCells > 0 ? $"{t.LeeMoisture / (double)t.LeeCells:0.0}" : "-")
+            + ", warmth " + (t.LeeCells > 0 ? $"{t.LeeWarmth / (double)t.LeeCells:0.0}" : "-")
+            + $" (n={t.LeeCells}); open (224+) moisture "
+            + (t.OpenCells > 0 ? $"{t.OpenMoisture / (double)t.OpenCells:0.0}" : "-")
+            + ", warmth " + (t.OpenCells > 0 ? $"{t.OpenWarmth / (double)t.OpenCells:0.0}" : "-")
+            + $" (n={t.OpenCells})   (the rain shadow: a drier, milder lee)");
+        GD.Print("  sheltered broken ground (rugged 128+, the gorge floors): moisture "
+            + (t.DampCells > 0 ? $"{t.DampMoisture / (double)t.DampCells:0.0}" : "-")
+            + $" (n={t.DampCells})   (the gorge damp)");
+        GD.Print("  frost hollows: warmth on basin floors "
+            + (t.HollowCells > 0 ? $"{t.HollowWarmth / (double)t.HollowCells:0.0}" : "-")
+            + $" (n={t.HollowCells})");
         {
             var bins = new List<string>();
             for (int i = 0; i < Tally.RuggedBins; i++)
@@ -241,14 +274,14 @@ public partial class GenerationAudit
         GD.Print("");
     }
 
-    private void PrintShelves(Tally t)
+    /// <summary>Somewhere to build is a district on the heartland: walk-connected ground of MinDistrictArea cells, no works.</summary>
+    private void PrintDistricts(Tally t)
     {
-        GD.Print($"shelves (flat, >= {Traversal.MinShelfArea} cells and "
-            + $">= {Traversal.MinShelfWidth} wide): {t.BuildableShelves} buildable, "
-            + $"on {t.IslandsWithShelf} of {Seeds} islands");
-        Report("  widest square of flat ground", t.WidestShelf, "cells");
-        Report("  buildable shelves off the mainland", t.ShelfOffMainland, "per island");
-        Report("  descent across one shelf", t.ShelfDrops, "slabs");
+        GD.Print($"districts (walk-connected, no works, >= {Traversal.MinDistrictArea} cells): "
+            + $"{t.DistrictsOnHeartland} on the heartland — somewhere to build — "
+            + $"on {t.IslandsWithBuildGround} of {Seeds} islands");
+        Report("  districts per island", t.DistrictsPerIsland, "");
+        Report("  largest district", t.LargestDistrict, "cells");
         GD.Print("");
     }
 
@@ -358,7 +391,12 @@ public partial class GenerationAudit
             ["mainland%"] = Math.Round(100.0 * t.WalkMainland / t.WalkLand, 1),
             ["heartland%"] = Math.Round(100.0 * t.ReachHeartland / t.WalkLand, 1),
             ["islandsOneWhole"] = t.IslandsFullyReachable,
-            ["buildableShelves"] = t.BuildableShelves,
+            ["districtsOnHeartland"] = t.DistrictsOnHeartland,
+            ["terminalLakes"] = t.TerminalLakes,
+            ["deltas"] = t.Deltas,
+            ["springs"] = t.Springs,
+            ["seaStackCells"] = t.SeaStackCells,
+            ["fords"] = t.FordCells,
             ["crossings"] = t.Crossings,
             ["deckSteep"] = t.DeckSteep,
             ["noEntry"] = t.NoEntry,

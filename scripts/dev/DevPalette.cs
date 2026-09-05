@@ -14,13 +14,14 @@ internal static class DevPalette
 
     public const int Coast = 1, Brink = 2, Overhang = 3, Beach = 4, Ford = 5,
                      Landing = 6, Quay = 7, CliffFoot = 8, Bank = 9, Summit = 10,
-                     RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14;
+                     RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
+                     Spring = 15, FallLip = 16, SeaStack = 17;
 
-    /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high.</summary>
+    /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
-        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Ford, Quay,
-        Brink, CliffFoot, Ledge, Overhang, Landing, Summit,
+        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, FallLip, Ford, Quay,
+        Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
     };
 
     /// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
@@ -43,6 +44,17 @@ internal static class DevPalette
     public static readonly (Color Lo, Color Hi) RimRamp =
         (new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f));
 
+    /// <summary>Water distance: teal at the bank, dry earth where no fresh water is within reach.</summary>
+    public static readonly (Color Lo, Color Hi) WaterRamp =
+        (new Color(0.16f, 0.58f, 0.70f), new Color(0.38f, 0.28f, 0.20f));
+
+    /// <summary>Magickal density: inert indigo to a saturated, luminous violet.</summary>
+    public static readonly (Color Lo, Color Hi) MagickRamp =
+        (new Color(0.10f, 0.08f, 0.22f), new Color(0.98f, 0.62f, 1.00f));
+
+    /// <summary>A sea stack's column in the lab: darker than any stone the island shows.</summary>
+    public static readonly Color StackTint = new(0.24f, 0.23f, 0.27f);
+
     /// <summary>The four kinds of standing water, named so a legend can show them without an island to sample.</summary>
     public static readonly Color FordTint = new(0.55f, 0.80f, 0.72f, 0.55f);
     public static readonly Color ReachTint = new(0.10f, 0.45f, 0.60f, 0.85f);
@@ -60,9 +72,10 @@ internal static class DevPalette
     }
 
     /// <summary>
-    /// Fourteen materials. The climate grid reads as a grid: the cold row is
-    /// blue-grey, mauve and dark; the temperate row straw, yellow-green and green;
-    /// the hot row red-brown, gold and emerald. Sand pale, snow white, silt brown.
+    /// Fifteen materials. The climate grid reads as a grid: the cold row is
+    /// blue-grey, mauve and dark; the temperate row straw, yellow-green, green and
+    /// a blue-green marsh past it; the hot row red-brown, gold and emerald. Sand
+    /// pale, snow white, silt brown.
     /// </summary>
     public static Color Material(SurfaceMaterial m) => m switch
     {
@@ -80,6 +93,7 @@ internal static class DevPalette
         SurfaceMaterial.Dust => new Color(0.78f, 0.48f, 0.30f),
         SurfaceMaterial.Savanna => new Color(0.90f, 0.72f, 0.22f),
         SurfaceMaterial.Floodplain => new Color(0.16f, 0.74f, 0.46f),
+        SurfaceMaterial.Marsh => new Color(0.30f, 0.52f, 0.50f),        // blue-green, duller than grass, lighter than bog
         _ => new Color(1f, 0f, 1f),                    // an unmapped member: make it shout
     };
 
@@ -126,6 +140,9 @@ internal static class DevPalette
         LakeBed => new Color(0.14f, 0.44f, 0.50f),
         GooBed => new Color(0.42f, 0.12f, 0.52f),
         Ledge => new Color(0.98f, 0.72f, 0.58f),      // between the brink's red and the foot's orange
+        Spring => new Color(0.62f, 0.95f, 1.00f),     // a pale spark at the head of a stream
+        FallLip => new Color(0.80f, 0.90f, 1.00f),    // white water
+        SeaStack => StackTint,
         _ => new Color(0.26f, 0.26f, 0.27f),
     };
 
@@ -146,6 +163,9 @@ internal static class DevPalette
         LakeBed => "lake bed",
         GooBed => "goo bed",
         Ledge => "brink and foot (a ledge)",
+        Spring => "spring",
+        FallLip => "fall",
+        SeaStack => "sea stack (in the aether)",
         _ => "unremarkable",
     };
 }
