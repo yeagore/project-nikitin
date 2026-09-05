@@ -865,8 +865,10 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   50,000 ground and 600 water triangles, 62% of what the boxes drew, meshed in
   9 ms with another 40 ms for the meshes, colliders and tiles, about 6 MB; the
   mesh matches the count of visible faces to 0.000 m² on every island tried.
-  Twenty whole Domains on screen at once, and forty, still draw at the Mac's
-  full screen rate; making twenty takes about three seconds.
+  Twenty whole Domains on screen at once, and forty, and eighty, still draw at
+  the Mac's full screen rate; the screen starts to slow somewhere between
+  eighty and a hundred and sixty whole Domains in view. Making twenty takes
+  about three seconds.
 
 Known gaps: a few two-slab steps where the ground the fix would cut is a
 landform, a bridgehead or standing water; one islet adrift on the most broken

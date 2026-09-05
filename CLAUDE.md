@@ -200,13 +200,23 @@ at every third column from above and below and expects the top and the keel.
 **Many Domains.** `godot --path . -- domains=20 bench` (windowed) lays out N
 Domains on consecutive seeds in a grid a quarter footprint apart, frames them
 all, and after six seconds with vsync off prints the frame rate, draw calls,
-primitives and memory, then quits. Measured on the Mac on 2026-09-06 with every
-Domain in view: 1, 20 and 40 Domains all hold the display's 120 Hz at about
-10 ms a frame; 20 is 1,082 draw calls and 800,000 triangles, 40 is 2,140 and
-1.5 million; about 3.5 MB of video memory and 2.5 MB of static memory per
-Domain over a 170 MB engine baseline. Rendering twenty at once is not the
-constraint. Generating them is: 3.3 s for twenty on one thread at load, and
-`Generate` is pure, so that parallelises when it matters.
+primitives, the render thread's CPU time and memory, then quits (the GPU time
+reads 0 on Metal; past 150 Domains it builds no colliders, since Jolt's default
+cap of 10,240 bodies is 160 Domains × 64 chunk bodies, a project setting).
+Measured on the Mac (M2, 16 GB, a 4K display) on 2026-09-06 with every Domain
+in view: 1, 20, 40 and 80 Domains all hold the display's 120 Hz; 80 is 4,173
+draw calls and 3.0 million triangles. The knee is between 80 and 160: 160
+Domains (8,300 draw calls, 6.1 million triangles) run at 65 fps, 320 at 33,
+640 at 17, the frame time growing about 0.1 ms per Domain in view with draw
+submission about 0.65 µs a call. Per Domain: about 52 draw calls, 50,000
+triangles, 3.5 MB of video memory, 1 MB of data and 2 MB of collider, over a
+170 MB engine baseline. Rendering the terrain of twenty Domains is not the
+constraint; generating them is 3.3 s for twenty on one thread at load, and
+`Generate` is pure, so that parallelises. The budget the biome layer inherits
+with one Domain in view is some 4 million triangles a frame at 120 Hz on this
+machine, on two conditions: features are drawn by instancing (`MultiMesh`),
+never a node or a draw call per tree, and the directional shadow's cascades,
+which multiply geometry cost, are the first knob if it is ever needed.
 
 ---
 

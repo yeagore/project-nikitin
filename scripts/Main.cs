@@ -40,7 +40,13 @@ public partial class Main : Node3D
         var sun = GetNode<DirectionalLight3D>("Sun");
         sun.LookAt(sun.GlobalPosition + new Vector3(0.35f, -0.85f, 0.45f), Vector3.Up);
         Params ??= new IslandParams();
-        if (_bench) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+        if (_bench)
+        {
+            DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+            RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
+            // Every Domain must sit inside the far plane, or the count is of what the frustum kept.
+            _rig.GetNode<Camera3D>("Camera3D").Far = 100000f;
+        }
         Build();
     }
 
@@ -52,6 +58,8 @@ public partial class Main : Node3D
         _bench = false;
         GD.Print($"[Main] bench: {_domains} Domains in view, {Engine.GetFramesPerSecond():0} fps"
             + $" ({Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0:0.0} ms a frame),"
+            + $" GPU {RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid()):0.0} ms,"
+            + $" CPU {RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid()):0.0} ms,"
             + $" {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame):N0} draw calls,"
             + $" {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame):N0} primitives,"
             + $" {RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.VideoMemUsed) / 1048576.0:0} MB video,"
@@ -108,6 +116,8 @@ public partial class Main : Node3D
                 _more.Add(r);
             }
             r.Position = new Vector3(i % across * pitch, 0f, i / across * pitch);
+            // Jolt caps bodies at 10,240 by default: 160 Domains of 64 chunks. Past 150 the bench measures drawing alone.
+            r.Colliders = _domains <= 150;
             r.Show(data);
             meshMs += r.LastBuildMs;
             ground += r.GroundTriangles;
@@ -124,7 +134,8 @@ public partial class Main : Node3D
         Frame();
 
         GD.Print($"[Main] {_domains} Domain{(_domains == 1 ? $" ({first}, seed {Seed})" : "s")}, {footprint}²: "
-            + $"generated in {genMs:0} ms, meshed in {meshMs:0} ms; {ground:N0} ground and {liquid:N0} liquid triangles");
+            + $"generated in {genMs:0} ms, meshed in {meshMs:0} ms; {ground:N0} ground and {liquid:N0} liquid triangles"
+            + (_domains > 150 ? " (no colliders past 150 Domains)" : ""));
     }
 
     private void Frame() => _rig.Frame(_center, _radius);
