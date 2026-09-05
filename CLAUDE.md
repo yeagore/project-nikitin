@@ -9,6 +9,9 @@ in-fiction Age of Exploration driven by opening links between Domains.
 **Documentation split:** the **Notion wiki is the design overview** (premise,
 concepts, glossary, decisions); see **Design source of truth** below. **Technical
 detail lives in this repo**: this file for orientation, `docs/*.md` for specs.
+`docs/island-generation-plain.md` is a plain-language retelling for Maxim: not
+a source for you, but a document you owe an update to whenever a change alters
+what the spec or the dev-scenes manual say.
 When a task needs a design fact that is not written down, ask rather than
 invent, and offer to log the answer in the Notion Decision Log.
 
@@ -189,6 +192,10 @@ resources/island_default.tres  The IslandParams preset all three dev scenes load
 docs/
   island-generation.md         The generation spec.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
+  island-generation-plain.md   The spec, appendix and manual retold in plain words,
+                               for Maxim. Do not read it for orientation (the spec
+                               is the source); do keep it true when the generator
+                               or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit and checksum manual.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
