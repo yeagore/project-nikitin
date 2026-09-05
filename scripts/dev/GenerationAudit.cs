@@ -97,6 +97,24 @@ public partial class GenerationAudit : Node
     /// <summary>Directory for the surface statistics — mean shares at the 25 knob positions, and which grounds occur together over rolled seeds — or empty for none.</summary>
     [Export] public string ClimateStats { get; set; } = "";
 
+    /// <summary>Directory for the arrangement sheet — FirstSeed in every layout, captioned — or empty for none.</summary>
+    [Export] public string ArrangementSheet { get; set; } = "";
+
+    /// <summary>Footprint of the arrangement sheet's tiles.</summary>
+    [Export] public int ArrangementSize { get; set; } = 64;
+
+    /// <summary>Directory for the knob sheet — FirstSeed with each 0–1 knob swept, a row per knob — or empty for none.</summary>
+    [Export] public string KnobSheet { get; set; } = "";
+
+    /// <summary>Footprint of the knob sheet's tiles.</summary>
+    [Export] public int KnobSize { get; set; } = 96;
+
+    /// <summary>Directory for the stage sheet — FirstSeed drawn after every stage of the pipeline, one sheet and a tile per stage — or empty for none.</summary>
+    [Export] public string StageSheet { get; set; } = "";
+
+    /// <summary>Footprint of the stage sheet's island.</summary>
+    [Export] public int StageSize { get; set; } = 96;
+
     /// <summary>Seeds per knob position in the shares count.</summary>
     [Export] public int StatsSeeds { get; set; } = 30;
 
@@ -186,6 +204,12 @@ public partial class GenerationAudit : Node
                 case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
                 case nameof(ClimateChart): ClimateChart = value; break;
                 case nameof(ClimateStats): ClimateStats = value; break;
+                case nameof(ArrangementSheet): ArrangementSheet = value; break;
+                case nameof(ArrangementSize): ArrangementSize = int.Parse(value); break;
+                case nameof(KnobSheet): KnobSheet = value; break;
+                case nameof(KnobSize): KnobSize = int.Parse(value); break;
+                case nameof(StageSheet): StageSheet = value; break;
+                case nameof(StageSize): StageSize = int.Parse(value); break;
                 case nameof(StatsSeeds): StatsSeeds = int.Parse(value); break;
                 case nameof(StatsIslands): StatsIslands = int.Parse(value); break;
                 case nameof(ClimateScout): ClimateScout = int.Parse(value); break;
@@ -231,6 +255,9 @@ public partial class GenerationAudit : Node
         if (ClimateGrid.Length > 0) WriteClimateGrid();
         if (ClimateChart.Length > 0) WriteClimateChart();
         if (ClimateStats.Length > 0) WriteClimateStats();
+        if (ArrangementSheet.Length > 0) WriteArrangementSheet();
+        if (KnobSheet.Length > 0) WriteKnobSheet();
+        if (StageSheet.Length > 0) WriteStageSheet();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>

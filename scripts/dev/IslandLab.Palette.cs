@@ -145,20 +145,7 @@ public partial class IslandLab
 		}
 	}
 
-	private static Color LandformColor(LandformType type) => type switch
-	{
-		LandformType.Plain => new Color(0.45f, 0.60f, 0.28f),
-		LandformType.Hills => new Color(0.30f, 0.44f, 0.20f),
-		LandformType.Mountain => new Color(0.52f, 0.50f, 0.55f),
-		LandformType.Mesa => new Color(0.68f, 0.45f, 0.26f),
-		LandformType.Basin => new Color(0.28f, 0.40f, 0.52f),
-		LandformType.Badlands => new Color(0.72f, 0.56f, 0.34f),
-		LandformType.Karst => new Color(0.58f, 0.66f, 0.62f),
-		LandformType.Massif => new Color(0.62f, 0.42f, 0.48f),
-		LandformType.Dunes => new Color(0.80f, 0.74f, 0.46f),
-		LandformType.Sinkholes => new Color(0.50f, 0.58f, 0.44f),
-		_ => new Color(0.5f, 0.5f, 0.5f),
-	};
+	private static Color LandformColor(LandformType type) => DevPalette.Landform(type);
 
 	/// <summary>A distinct hue per region; the golden-ratio step keeps adjacent ids apart.</summary>
 	private static Color RegionColor(int id)
@@ -170,10 +157,10 @@ public partial class IslandLab
 		return Color.FromHsv(hue, sat, val);
 	}
 
-	private static readonly Color Unremarkable = new(0.34f, 0.34f, 0.36f);
-	private static readonly Color WaterTint = new(0.16f, 0.34f, 0.52f);
+	private static readonly Color Unremarkable = DevPalette.Broken;
+	private static readonly Color WaterTint = DevPalette.WalkWater;
 	private static readonly Color PassTint = new(0.92f, 0.85f, 0.42f);
-	private static readonly Color MainlandTint = new(0.42f, 0.62f, 0.28f);
+	private static readonly Color MainlandTint = DevPalette.Mainland;
 
 	private static readonly Color DeckTint = new(0.95f, 0.72f, 0.30f);
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);
@@ -249,9 +236,7 @@ public partial class IslandLab
 		if (id < 0 || id >= d.Areas.Count) return Unremarkable;
 		if (!d.Areas[id].IsDistrict) return Unremarkable;
 		if (id == d.Mainland) return MainlandTint;
-
-		float hue = (0.08f + id * 0.61803399f) % 1f;
-		return Color.FromHsv(hue, 0.62f, 0.88f);
+		return DevPalette.District(id);
 	}
 
 	/// <summary>Reach areas: green heartland; red for what stays out of reach whatever you build, warmer the smaller.</summary>

@@ -156,15 +156,39 @@ public static class IslandGenerator
         }
     }
 
+    /// <summary>
+    /// Dev hook: after each stage of <see cref="Build"/>, the stage's name and a
+    /// view of the draft as it stands, so the pipeline can be drawn stage by stage.
+    /// Null in play. The view is the live state — draw it before returning — and
+    /// the hook must not change it: every stage reads what the one before left.
+    /// Fires for every attempt of a re-rolled seed; the last "footprint" begins
+    /// the island that shipped.
+    /// </summary>
+    internal static Action<string, StageView>? OnStage;
+
+    /// <summary>What a stage leaves for <see cref="OnStage"/>: whatever the draft has filled so far, null before its stage, and the data being built.</summary>
+    internal readonly record struct StageView(int Size, bool[,] Land, int[,]? Region, RegionPlan[]? Plan,
+                                              short[,]? Surface, short[,]? Water, byte[,]? Fluid,
+                                              IslandData Data);
+
+    private static void Stage(string name, Draft d)
+        => OnStage?.Invoke(name, new StageView(d.N, d.Land, d.Region, d.Plan, d.Surface, d.Water, d.Fluid, d.Data));
+
     private static IslandData Build(int seed, IslandParams p)
     {
         var d = new Draft(seed, p);
         FitFootprint(d);
+        Stage("footprint", d);
         PlanRegions(d);
+        Stage("landforms", d);
         ShapeSurface(d);
+        Stage("relief", d);
         PlaceStandingWater(d);
+        Stage("lakes", d);
         Settle(d);
+        Stage("settled", d);
         CarveRivers(d);
+        Stage("rivers", d);
         Pack(d);
         ReadBack(seed, p, d.Data);
         return d.Data;
@@ -425,14 +449,22 @@ public static class IslandGenerator
             break;
         }
         ClearApproaches(data);
+        Packed("traversal", data);
 
         Passages.Find(data);
+        Packed("roads", data);
         Habitat.Measure(seed, p, data);
         Magicks.Measure(seed, data);
+        Packed("climate", data);
         Surfaces.Classify(seed, data);
         Names.Give(seed, data);
         Overhangs.Carve(seed, p, data);
+        Packed("surface", data);
     }
+
+    /// <summary>The hook for the stages after the pack, where the data holds everything.</summary>
+    private static void Packed(string name, IslandData data)
+        => OnStage?.Invoke(name, new StageView(data.Size, data.Land, data.Region, null, null, null, null, data));
 
     /// <summary>
     /// A sea stack is aether to every rule, so a hanging Gate's flight path can run
