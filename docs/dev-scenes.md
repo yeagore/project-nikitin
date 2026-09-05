@@ -224,6 +224,23 @@ from the code. No seed is involved; `Seeds=1` keeps the run short.
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateChart=C:/tmp/chart
 ```
 
+### The surface statistics — `ClimateStats`
+
+`ClimateStats=<dir>` counts two things and draws each. `surface_shares.png`
+is the knob grid again, but each tile is the mean share of dry land every
+material takes at that pair of moisture and warmth, over `StatsSeeds` (30)
+seeds with everything else rolled: a stacked bar and the figures beside it.
+`surface_cooccurrence.png` is a matrix over `StatsIslands` (500) rolled
+seeds: row A, column B, the share of islands that have A which also have B,
+with a first column for how many islands have A at all; present means twenty
+cells or more of dry land, a district's worth, so a tor does not make stone
+"present". Both tables are printed as text as well. About four minutes at
+128².
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateStats=C:/tmp/stats
+```
+
 The labels are pixels: headless Godot has no rendering device, so `TinyFont` draws
 a 5 × 7 bitmap alphabet straight into the `Image`.
 

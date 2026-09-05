@@ -94,6 +94,15 @@ public partial class GenerationAudit : Node
     /// <summary>Directory for the climate chart — warmth against moisture, every byte pair coloured with its ground, from the surface stage's own rule — or empty for none.</summary>
     [Export] public string ClimateChart { get; set; } = "";
 
+    /// <summary>Directory for the surface statistics — mean shares at the 25 knob positions, and which grounds occur together over rolled seeds — or empty for none.</summary>
+    [Export] public string ClimateStats { get; set; } = "";
+
+    /// <summary>Seeds per knob position in the shares count.</summary>
+    [Export] public int StatsSeeds { get; set; } = 30;
+
+    /// <summary>Rolled seeds in the co-occurrence count.</summary>
+    [Export] public int StatsIslands { get; set; } = 500;
+
     /// <summary>Score this many consecutive seeds from FirstSeed for the collage, or 0 for none.</summary>
     [Export] public int ClimateScout { get; set; } = 0;
 
@@ -176,6 +185,9 @@ public partial class GenerationAudit : Node
                 case nameof(ClimateGrid): ClimateGrid = value; break;
                 case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
                 case nameof(ClimateChart): ClimateChart = value; break;
+                case nameof(ClimateStats): ClimateStats = value; break;
+                case nameof(StatsSeeds): StatsSeeds = int.Parse(value); break;
+                case nameof(StatsIslands): StatsIslands = int.Parse(value); break;
                 case nameof(ClimateScout): ClimateScout = int.Parse(value); break;
                 // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
                 case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
@@ -218,6 +230,7 @@ public partial class GenerationAudit : Node
         if (Gallery.Length > 0) WriteGallery();
         if (ClimateGrid.Length > 0) WriteClimateGrid();
         if (ClimateChart.Length > 0) WriteClimateChart();
+        if (ClimateStats.Length > 0) WriteClimateStats();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>
