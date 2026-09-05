@@ -117,7 +117,8 @@ public partial class IslandLab
 					+ "(yellow) … hot (orange): one climate over the whole island, then the lapse over a "
 					+ "mountain's upper part; a slope facing the sun (compass overlay, X) a touch warmer and "
 					+ "one facing away colder; basins and sinkhole pits frost hollows; the lee milder by the "
-					+ "wind knob, the rim colder, wet ground tempered";
+					+ "wind knob, the rim colder, wet ground tempered; on a cold Domain a bloom round each "
+					+ "hot spring or pool (orange water)";
 			}
 
 			case View.Rugged:
@@ -218,6 +219,7 @@ public partial class IslandLab
 			if (d.WaterLevel[x, z] != IslandData.NoLand && d.Fluid[x, z] == (byte)FluidKind.Goo)
 				grid[x, z] = DevPalette.GooBed;
 			if (d.Beach[x, z]) grid[x, z] = DevPalette.Beach;
+			if (d.Hot[x, z]) grid[x, z] = DevPalette.HotSpring;
 			if (d.Ford[x, z]) grid[x, z] = DevPalette.Ford;
 			if (d.Landings[x, z]) grid[x, z] = DevPalette.Landing;
 			if (d.Ferry[x, z]) grid[x, z] = DevPalette.Quay;

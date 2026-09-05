@@ -502,7 +502,7 @@ and the sun.
 | axis | 0 … 255 | how it is measured |
 |---|---|---|
 | `Moisture` | parched … waterside | the Domain's **background** (`IslandParams.Moisture` × 255) wobbled ±25 by a low-frequency noise into patches; the **rain shadow**: the lee loses up to 30 × the wind, because the rain falls on the windward side (it gained 20 as "the lee holds its damp" until 2026-09-05, which was the wrong way round); the **gorge damp**: ground that is both sheltered *and* broken gains up to 70 × the wind × shelter × ruggedness, so a gorge floor under its walls goes mossy while the plateau above it, flat and open, stays steppe; a rock landform and three cells round it carry noise-gated patches of drought (−60); plus what fresh water adds (goo waters nothing): 200 at the bank less a floor of 8, decaying to 1/e over 5 cells of **walk cost** and gone by 16 — a cell per cell along or down, two more per slab climbed except the free step up onto the bank, so a river waters the plain it crosses and not the mountain or the canyon wall it passes — wobbled by noise so the bands are not contour lines of the water network |
-| `Warmth` | frozen … sand | the Domain's **background** (60 + 180 × `IslandParams.Warmth`, so even the coldest knob keeps its lowland above the snow) over the whole island, then a **lapse on mountains alone**, measured from each mountain's own foot (`Relief.MountainFoot` read off the finished surface): nothing for the first 40% of the mountain cap (`Size × 40/128`) above the foot, then the full 255 over the next 60%. So a mountain of the full cap is snow at its top in any climate and one of half the cap is merely cold, at every footprint and whatever the mountain stands on; and no rung, mesa or massif is ever cold, because the lapse never reads them. (Two earlier models: centring the island in its cube and freezing the cube's top fifth — the keel pushes a centred island down, so no mountaintop reached the cold at temperate settings; then a ceiling read off `PlateauLevels`, `CliffHeight` and `MesaHeight` — which put the snow line at 128² only, and let a mesa knob move the snow on a Domain with no mesas.) Then the modifiers, kept small so an island's mean warmth reads at its knob: the **sun** — rolled per Domain like the wind (`IslandData.Sun`, `SunFrom`) — the effective surface's downhill direction dotted with the way to the sun, so a slope of two slabs per cell turned full to it is 8 warmer and one turned full away 8 colder, and flat ground is untouched; **frost hollows** — every cell of a basin, and the floor of a sinkhole (three slabs or more under the ground within two cells) — 8 colder than their rung; the lee up to 10 × the wind warmer (the label is the open flat ground); the rim 6 colder fading over four cells inland (rim distance is a median five cells even at 128², so a long fade never faded); and wet ground pulled 30% of the way toward the temperate middle (135) from either side — water tempers heat and cold alike. Measured last, since it reads the other axes |
+| `Warmth` | frozen … sand | the Domain's **background** (60 + 180 × `IslandParams.Warmth`, so even the coldest knob keeps its lowland above the snow) over the whole island, then a **lapse on mountains alone**, measured from each mountain's own foot (`Relief.MountainFoot` read off the finished surface): nothing for the first 40% of the mountain cap (`Size × 40/128`) above the foot, then the full 255 over the next 60%. So a mountain of the full cap is snow at its top in any climate and one of half the cap is merely cold, at every footprint and whatever the mountain stands on; and no rung, mesa or massif is ever cold, because the lapse never reads them. (Two earlier models: centring the island in its cube and freezing the cube's top fifth — the keel pushes a centred island down, so no mountaintop reached the cold at temperate settings; then a ceiling read off `PlateauLevels`, `CliffHeight` and `MesaHeight` — which put the snow line at 128² only, and let a mesa knob move the snow on a Domain with no mesas.) Then the modifiers, kept small so an island's mean warmth reads at its knob: the **sun** — rolled per Domain like the wind (`IslandData.Sun`, `SunFrom`) — the effective surface's downhill direction dotted with the way to the sun, so a slope of two slabs per cell turned full to it is 8 warmer and one turned full away 8 colder, and flat ground is untouched; **frost hollows** — every cell of a basin, and the floor of a sinkhole (three slabs or more under the ground within two cells) — 8 colder than their rung; the lee up to 10 × the wind warmer (the label is the open flat ground); the rim 6 colder fading over four cells inland (rim distance is a median five cells even at 128², so a long fade never faded); the bloom of any **hot water** — on a Domain whose warmth knob is under 0.35, each spring has up to a 40% chance and each pool of standing water of at most 60 cells with no watercourse through it up to 35% of running hot, the chance full at a knob of 0 and gone at 0.35 (`IslandData.HotWater`, `Hot`); a hot source adds 90 at the source decaying to 1/e over 4 cells of the same walk cost the moisture uses, so a frigid Domain keeps a meadow round its hot spring; and wet ground pulled 30% of the way toward the temperate middle (135) from either side — water tempers heat and cold alike. Measured last, since it reads the other axes |
 | `Ruggedness` | flat … broken | local relief within two cells, 32 per slab, with **water read as its bank** (a slab over its surface): a stream through a plain is flat country and a gorge is still its walls. Measured against the water surface instead, every shore read a slab rougher than the country round it |
 | `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter. The wind is rolled for every Domain, dunes or not |
 | `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |
@@ -573,21 +573,31 @@ island reads as a place in the lab before the biome layer exists. In order:
   0.87 (about one soft cell in a hundred, in patches of a few cells), the ground
   is stone: small outcrops of building stone where there is no rock landform.
   Material only; nothing about the terrain moves.
-- **The climate grid**, warmth against moisture. Warmth is three bands — cold
-  below 115, hot from 185, temperate between — and moisture three: dry below
-  90, wet from 170, balanced between. On open lowland warmth is 60 + 180 × the
-  knob, so cold is a knob under about 0.3, hot one over about 0.7.
+- **The climate grid**, warmth against moisture. Warmth is four bands —
+  frigid below 85, cold below 115, hot from 185, temperate between — and
+  moisture three: dry below 90, wet from 170, balanced between. On open
+  lowland warmth is 60 + 180 × the knob, so frigid is a knob under about 0.14,
+  cold under about 0.3, hot one over about 0.7.
 
-| | dry | balanced | wet | past wet: water in excess, occasionally |
+| | dry | balanced | wet | by the water |
 |---|---|---|---|---|
-| **cold** | tundra | moorland | moorland | **bog**, where moisture is 190 or more and a noise field clears 0.7 |
-| **temperate** | steppe | meadow | grass | **marsh**, where moisture is 205 or more, fresh water is within two cells, the ground is flat (ruggedness 40 or under, so it is low as well as near) and a noise field clears 0.62 |
-| **hot** | dust | savanna | floodplain within three cells of a river or lake, savanna beyond | (the floodplain is the excess cell) |
+| **frigid** | tundra | tundra | tundra | |
+| **cold** | tundra | heath | moorland | |
+| **temperate** | steppe | meadow | grass | |
+| **hot** | dust | savanna | **verdure** where moisture is 200 or more (a higher bar than grass: heat is the less forgiving side), savanna under it | floodplain within three cells of a river or lake when wet |
 
-Each row has a cell past wet, and none of them is the rule: bog was a third of
-cold wet ground and is now about a sixteenth of it (0.7% of all land over the
-sixty seeds, from 2.1%), marsh is 0.4% of land, and a delta's fan is
-floodplain whatever the row.
+**Water in excess** is two cells laid over that grid, in patches, and neither
+is the rule. On the cold-to-cool half of the range (warmth under 140) it is
+**bog**: moisture 190 or more and a noise field over 0.66, so the cold and cool
+wet corners are about a tenth bog. On the warm-to-hot half (140 and over) it
+is **marsh**: moisture 230 or more — extreme, which takes a high background
+and the water's strip both — within two cells of fresh water, on flat ground
+(ruggedness 40 or under, so it is low as well as near), and a noise field over
+0.62; a marsh shares the floodplain's ground on a hot Domain and takes a few
+percent of it. The line at 140 sits just under the knob's middle less what
+the water's tempering takes off a bank, so a temperate Domain's riversides are
+marsh-side and a cool one's (a knob of 0.4 and under) bog-side. There are more
+bogs than marshes by design. A delta's fan is floodplain whatever the row.
 
 A floodplain has its own warmth line (170, under the hot line by what the
 water's tempering takes off a bank), so the bank and the strip behind it read

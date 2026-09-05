@@ -139,6 +139,8 @@ public partial class GenerationAudit
             + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed, "
             + $"{t.SeaStackCells} sea stack cells on {t.SeaStackIslands} of {Seeds} islands");
         GD.Print($"  tors (stone on plains and hills): {t.TorCells} cells on {t.TorIslands} of {Seeds} islands");
+        GD.Print($"  hot water (springs and pools that run warm): {t.HotWaterCells} cells on {t.HotIslands} islands, "
+            + $"of the {t.ColdIslands} with a warmth knob under 0.35: {t.ColdIslandsWithHot} have some");
         GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {t.BrinksBesideWater}");
         GD.Print($"  islands with no beach at all: {t.IslandsWithoutBeach} of {Seeds}");
         // Against the coast ring, not the beach's own cells: a beach is two deep, so that ratio reads 151%.
@@ -396,6 +398,7 @@ public partial class GenerationAudit
             ["deltas"] = t.Deltas,
             ["springs"] = t.Springs,
             ["seaStackCells"] = t.SeaStackCells,
+            ["hotWaterCells"] = t.HotWaterCells,
             ["fords"] = t.FordCells,
             ["crossings"] = t.Crossings,
             ["deckSteep"] = t.DeckSteep,

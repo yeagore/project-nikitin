@@ -15,12 +15,12 @@ internal static class DevPalette
     public const int Coast = 1, Brink = 2, Overhang = 3, Beach = 4, Ford = 5,
                      Landing = 6, Quay = 7, CliffFoot = 8, Bank = 9, Summit = 10,
                      RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
-                     Spring = 15, FallLip = 16, SeaStack = 17;
+                     Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18;
 
     /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
-        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, FallLip, Ford, Quay,
+        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, HotSpring, FallLip, Ford, Quay,
         Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
     };
 
@@ -61,10 +61,14 @@ internal static class DevPalette
     public static readonly Color StreamTint = new(0.35f, 0.66f, 0.80f, 0.70f);
     public static readonly Color LakeTint = new(0.13f, 0.30f, 0.55f, 0.80f);
 
-    /// <summary>Standing fluid by kind: goo, then ford, navigable reach, stream, lake.</summary>
+    /// <summary>Hot water: a spring or a pool that runs warm on a cold Domain.</summary>
+    public static readonly Color HotTint = new(0.96f, 0.56f, 0.38f, 0.85f);
+
+    /// <summary>Standing fluid by kind: goo, then hot water, ford, navigable reach, stream, lake.</summary>
     public static Color Water(IslandData d, int x, int z)
     {
         if (d.Fluid[x, z] == (byte)FluidKind.Goo) return Goo;
+        if (d.Hot[x, z]) return HotTint;
         if (d.Ford[x, z]) return FordTint;
         if (d.Navigable[x, z]) return ReachTint;
         if (d.River[x, z]) return StreamTint;
@@ -72,10 +76,10 @@ internal static class DevPalette
     }
 
     /// <summary>
-    /// Fifteen materials. The climate grid reads as a grid: the cold row is
-    /// blue-grey, mauve and dark; the temperate row straw, yellow-green, green and
-    /// a blue-green marsh past it; the hot row red-brown, gold and emerald. Sand
-    /// pale, snow white, silt brown.
+    /// Seventeen materials. The climate grid reads as a grid: the cold row is
+    /// mint, heather-brown, mauve and a dark bog; the temperate row straw,
+    /// yellow-green, green and a blue-green marsh; the hot row red-brown, gold, a
+    /// deep verdure and the emerald floodplain. Sand pale, snow white, silt brown.
     /// </summary>
     public static Color Material(SurfaceMaterial m) => m switch
     {
@@ -94,6 +98,8 @@ internal static class DevPalette
         SurfaceMaterial.Savanna => new Color(0.90f, 0.72f, 0.22f),
         SurfaceMaterial.Floodplain => new Color(0.16f, 0.74f, 0.46f),
         SurfaceMaterial.Marsh => new Color(0.30f, 0.52f, 0.50f),        // blue-green, duller than grass, lighter than bog
+        SurfaceMaterial.Heath => new Color(0.58f, 0.42f, 0.40f),        // heather-brown, between the mint and the mauve
+        SurfaceMaterial.Verdure => new Color(0.08f, 0.42f, 0.20f),      // the deepest green: darker than grass, purer than bog
         _ => new Color(1f, 0f, 1f),                    // an unmapped member: make it shout
     };
 
@@ -143,6 +149,7 @@ internal static class DevPalette
         Spring => new Color(0.62f, 0.95f, 1.00f),     // a pale spark at the head of a stream
         FallLip => new Color(0.80f, 0.90f, 1.00f),    // white water
         SeaStack => StackTint,
+        HotSpring => new Color(1.00f, 0.50f, 0.20f),  // steam-orange
         _ => new Color(0.26f, 0.26f, 0.27f),
     };
 
@@ -166,6 +173,7 @@ internal static class DevPalette
         Spring => "spring",
         FallLip => "fall",
         SeaStack => "sea stack (in the aether)",
+        HotSpring => "hot spring or pool",
         _ => "unremarkable",
     };
 }

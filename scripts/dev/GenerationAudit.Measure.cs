@@ -101,6 +101,8 @@ public partial class GenerationAudit
         public long DampMoisture, DampCells;
         public long HollowWarmth, HollowCells, TorCells, SeaStackCells;
         public int TorIslands, SeaStackIslands;
+        public long HotWaterCells;
+        public int HotIslands, ColdIslands, ColdIslandsWithHot;
 
         /// <summary>Ruggedness summed over dry land by cells from fresh water: 0 is the bank, the last bin is everything further.</summary>
         public readonly long[] RuggedByWater = new long[RuggedBins];
@@ -780,6 +782,13 @@ public partial class GenerationAudit
             if (torsHere > 0) TorIslands++;
             SeaStackCells += d.SeaStacks.Count;
             if (d.SeaStacks.Count > 0) SeaStackIslands++;
+            HotWaterCells += d.HotWater.Count;
+            if (d.HotWater.Count > 0) HotIslands++;
+            if (d.Settings.Warmth < 0.35f)
+            {
+                ColdIslands++;
+                if (d.HotWater.Count > 0) ColdIslandsWithHot++;
+            }
 
             // Ruggedness against distance from fresh water: a bank that reads broken is the water, not the country.
             int[,] toWater = Flood.Distance(n,

@@ -73,16 +73,17 @@ while it has focus it swallows the single-key shortcuts; the camera still polls
 Views: `height`, `landform`, `region`, `walk` (what connects on foot; a
 district of twenty cells is somewhere to build), `reach` (what connects once
 you build; red is out of reach whatever you build), `surface` (stone, scree,
-snow, sand, silt and the climate grid — tundra, moorland, bog; steppe, meadow,
-grass, marsh; dust, savanna, floodplain; tors of stone in soft country; an
-overhang's lip is drawn as stone; a beach is the ground round it, not sand),
-`anchors` (what the content layer attaches to: coast, cliff brink, cliff foot,
-a ledge where a cell is both, bank, river bed, lake bed, goo bed, spring, fall,
-overhang lip, beach, ford, Gate landing, ferry quay, summit; a sea stack is a
-dark column in the aether in every view), the six habitat axes as ramps:
-`moisture`, `warmth`, `rugged`, `exposure`, `rim`, `water` (the walk cost to
-fresh water), and the `magick` layer. Water is coloured by kind (ford, stream,
-navigable reach, lake) and goo is violet in every view. The
+snow, sand, silt and the climate grid — tundra, heath, moorland; steppe, meadow,
+grass; dust, savanna, verdure, floodplain; bog and marsh for water in excess;
+tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
+the ground round it, not sand), `anchors` (what the content layer attaches to:
+coast, cliff brink, cliff foot, a ledge where a cell is both, bank, river bed,
+lake bed, goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
+Gate landing, ferry quay, summit; a sea stack is a dark column in the aether in
+every view), the six habitat axes as ramps: `moisture`, `warmth`, `rugged`,
+`exposure`, `rim`, `water` (the walk cost to fresh water), and the `magick`
+layer. Water is coloured by kind (ford, stream, navigable reach, lake; hot
+water orange) and goo is violet in every view. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face
 reads at about the legend's colour: a steep white sun over a neutral ambient,

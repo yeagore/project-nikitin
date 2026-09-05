@@ -73,6 +73,7 @@ public partial class IslandLab
 			+ $"ferry berths {d.Berths.Count} on {d.WaterBodies} bodies   "
 			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim), "
 			+ $"{d.Springs.Count} springs"
+			+ (d.HotWater.Count > 0 ? $"   hot water {d.HotWater.Count} cells" : "")
 			+ (d.TerminalLakes.Count > 0 ? $"   {d.TerminalLakes.Count} lake swallows a river" : "")
 			+ (d.Deltas.Count > 0 ? $"   deltas {d.Deltas.Count}" : "")
 			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")

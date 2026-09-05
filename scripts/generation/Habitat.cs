@@ -117,6 +117,23 @@ internal static class Habitat
     /// <summary>How far waterside ground is pulled toward <see cref="Temperate"/>.</summary>
     private const float MoistTemper = 0.3f;
 
+    /// <summary>
+    /// Below this warmth knob a Domain may have hot water, the chance growing as
+    /// the knob falls toward 0: a hot spring in a temperate country is a curiosity,
+    /// in a frigid one the only meadow there is.
+    /// </summary>
+    private const float HotClimateBelow = 0.35f;
+
+    /// <summary>Chance, at the coldest, that a spring runs hot, and that a small pool does.</summary>
+    private const float HotSpringChance = 0.4f, HotPoolChance = 0.35f;
+
+    /// <summary>Cells of standing water a pool may have and still be hot: a tarn, not a lake.</summary>
+    private const int HotPoolMax = 60;
+
+    /// <summary>Warmth hot water adds at its source, decaying to 1/e over <see cref="HotFalloff"/> cells of walk cost, and the cost past which it adds nothing.</summary>
+    private const float HotBloom = 90f, HotFalloff = 4f;
+    private const int HotReach = 24;
+
     /// <summary>Cells upwind a cell looks for cover.</summary>
     private const int WindScan = 10;
 
@@ -138,7 +155,8 @@ internal static class Habitat
 
     /// <summary>
     /// Rolls the sun, then fills the six axes in a fixed order: the shape axes
-    /// first, then moisture (which reads the lee), then warmth (which reads everything).
+    /// first, then moisture (which reads the lee), then warmth (which reads
+    /// everything, and rolls the hot water on a cold Domain).
     /// </summary>
     public static void Measure(int seed, IslandParams p, IslandData d)
     {
@@ -147,7 +165,7 @@ internal static class Habitat
         MeasureExposure(d);
         MeasureRimDistance(d);
         MeasureMoisture(seed, p, d);
-        MeasureWarmth(p, d);
+        MeasureWarmth(seed, p, d);
     }
 
     /// <summary>
@@ -164,43 +182,12 @@ internal static class Habitat
     private static void MeasureMoisture(int seed, IslandParams p, IslandData d)
     {
         int n = d.Size;
-        var cost = new int[n, n];
-        // A bucket per unit of cost (Dial's queue): integer costs, scan order kept.
-        var buckets = new List<Vector2I>[WaterReach + 1];
-
+        var watered = new bool[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-        {
-            cost[x, z] = -1;
-            if (!d.HasLand(x, z) || d.WaterLevel[x, z] == IslandData.NoLand) continue;
-            if (d.Fluid[x, z] == (byte)FluidKind.Goo) continue;
-            cost[x, z] = 0;
-            (buckets[0] ??= new List<Vector2I>()).Add(new Vector2I(x, z));
-        }
-
-        for (int c = 0; c <= WaterReach; c++)
-        {
-            List<Vector2I>? bucket = buckets[c];
-            if (bucket == null) continue;
-            for (int i = 0; i < bucket.Count; i++)
-            {
-                Vector2I at = bucket[i];
-                if (cost[at.X, at.Y] != c) continue;             // relaxed since it was queued
-                short here = d.EffectiveLevel(at.X, at.Y);
-                for (int k = 0; k < 4; k++)
-                {
-                    int nx = at.X + Dx[k], nz = at.Y + Dz[k];
-                    if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
-                    // The step up out of the water onto its bank is the free one.
-                    int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here - (c == 0 ? 1 : 0));
-                    int next = c + 1 + climb * ClimbCost;
-                    if (next > WaterReach) continue;
-                    if (cost[nx, nz] >= 0 && cost[nx, nz] <= next) continue;
-                    cost[nx, nz] = next;
-                    (buckets[next] ??= new List<Vector2I>()).Add(new Vector2I(nx, nz));
-                }
-            }
-        }
+            watered[x, z] = d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                            && d.Fluid[x, z] != (byte)FluidKind.Goo;
+        int[,] cost = WalkCost(d, watered, WaterReach);
 
         // Rock and its fringe: where the drought patches may fall.
         int[,] toRock = Flood.Distance(n,
@@ -236,6 +223,101 @@ internal static class Habitat
     }
 
     /// <summary>
+    /// Walk cost out from <paramref name="source"/> cells over the land, as water
+    /// spreads: a cell per cell along or down, <see cref="ClimbCost"/> more per slab
+    /// up, the first step up off the source free (that is the bank). A bucket per
+    /// unit of cost (Dial's queue): integer costs, scan order kept. −1 where nothing
+    /// is reached within <paramref name="reach"/>.
+    /// </summary>
+    private static int[,] WalkCost(IslandData d, bool[,] source, int reach)
+    {
+        int n = d.Size;
+        var cost = new int[n, n];
+        var buckets = new List<Vector2I>[reach + 1];
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            cost[x, z] = -1;
+            if (!source[x, z]) continue;
+            cost[x, z] = 0;
+            (buckets[0] ??= new List<Vector2I>()).Add(new Vector2I(x, z));
+        }
+
+        for (int c = 0; c <= reach; c++)
+        {
+            List<Vector2I>? bucket = buckets[c];
+            if (bucket == null) continue;
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Vector2I at = bucket[i];
+                if (cost[at.X, at.Y] != c) continue;             // relaxed since it was queued
+                short here = d.EffectiveLevel(at.X, at.Y);
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = at.X + Dx[k], nz = at.Y + Dz[k];
+                    if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
+                    // The step up out of the water onto its bank is the free one.
+                    int climb = Math.Max(0, d.EffectiveLevel(nx, nz) - here - (c == 0 ? 1 : 0));
+                    int next = c + 1 + climb * ClimbCost;
+                    if (next > reach) continue;
+                    if (cost[nx, nz] >= 0 && cost[nx, nz] <= next) continue;
+                    cost[nx, nz] = next;
+                    (buckets[next] ??= new List<Vector2I>()).Add(new Vector2I(nx, nz));
+                }
+            }
+        }
+        return cost;
+    }
+
+    /// <summary>
+    /// On a cold Domain, some springs and small pools run hot. The chance is
+    /// <see cref="HotSpringChance"/> / <see cref="HotPoolChance"/> at a warmth knob
+    /// of 0, falling to nothing at <see cref="HotClimateBelow"/>; a pool is a body of
+    /// standing water with no watercourse in it and at most <see cref="HotPoolMax"/>
+    /// cells. Fills <see cref="IslandData.Hot"/> and <see cref="IslandData.HotWater"/>.
+    /// </summary>
+    private static bool FindHotWater(int seed, IslandParams p, IslandData d)
+    {
+        float coldness = Mathf.Clamp((HotClimateBelow - Math.Clamp(p.Warmth, 0f, 1f)) / HotClimateBelow, 0f, 1f);
+        if (coldness <= 0f) return false;
+        int n = d.Size;
+
+        foreach (Vector2I c in d.Springs)
+            if (Hash01(seed, 0x4075u ^ (uint)(c.X * 733 + c.Y * 7919)) < HotSpringChance * coldness)
+                d.Hot[c.X, c.Y] = true;
+
+        int bodies = Math.Max(1, d.WaterBodies);
+        var size = new int[bodies];
+        var flows = new bool[bodies];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            int id = d.WaterBody[x, z];
+            if (id < 0 || id >= bodies) continue;
+            size[id]++;
+            if (d.River[x, z] || d.Fluid[x, z] != (byte)FluidKind.Water) flows[id] = true;
+        }
+        var hotPool = new bool[bodies];
+        for (int id = 0; id < bodies; id++)
+            hotPool[id] = !flows[id] && size[id] > 0 && size[id] <= HotPoolMax
+                          && Hash01(seed, 0x4076u ^ (uint)id * 2654435761u) < HotPoolChance * coldness;
+
+        bool any = false;
+        d.HotWater.Clear();
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            int id = d.WaterBody[x, z];
+            if (id >= 0 && id < bodies && hotPool[id]) d.Hot[x, z] = true;
+            if (!d.Hot[x, z]) continue;
+            d.HotWater.Add(new Vector2I(x, z));
+            any = true;
+        }
+        return any;
+    }
+
+    /// <summary>
     /// Warmth: the Domain's background (<see cref="IslandParams.Warmth"/>) over the
     /// whole island, then a lapse on mountains alone, measured from each mountain's
     /// own foot (<see cref="Relief.MountainFoot"/> read off the finished surface):
@@ -245,10 +327,13 @@ internal static class Habitat
     /// on, and no plateau, mesa or massif is ever cold. Then the small modifiers:
     /// the sun, a slope descending toward it warmer and one descending away
     /// colder; the frost hollows, a basin floor or a sinkhole's pit colder than its
-    /// rung; the lee a little warmer; the rim a little colder; and wet ground
-    /// pulled toward <see cref="Temperate"/> from either side. No land leaves it all zero.
+    /// rung; the lee a little warmer; the rim a little colder; the bloom of any
+    /// hot water (<see cref="FindHotWater"/>), <see cref="HotBloom"/> at the source
+    /// decaying over <see cref="HotFalloff"/> cells of walk cost, so a frigid Domain
+    /// keeps a meadow round its hot spring; and wet ground pulled toward
+    /// <see cref="Temperate"/> from either side. No land leaves it all zero.
     /// </summary>
-    private static void MeasureWarmth(IslandParams p, IslandData d)
+    private static void MeasureWarmth(int seed, IslandParams p, IslandData d)
     {
         int n = d.Size;
         var land = new bool[n, n];
@@ -278,6 +363,7 @@ internal static class Habitat
         float baseline = WarmthFloor + WarmthSpan * Math.Clamp(p.Warmth, 0f, 1f);
         float gust = Gust(p);
         Vector2 sun = d.SunVector;
+        int[,]? hot = FindHotWater(seed, p, d) ? WalkCost(d, d.Hot, HotReach) : null;
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
@@ -293,6 +379,7 @@ internal static class Habitat
             if (Hollow(d, eff, land, n, x, z)) warmth -= HollowChill;
             warmth += LeeWarmth * gust * (1f - d.Exposure[x, z] / 255f);
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);
+            if (hot != null && hot[x, z] >= 0) warmth += HotBloom * MathF.Exp(-hot[x, z] / HotFalloff);
             warmth = Temperate + (warmth - Temperate) * (1f - MoistTemper * d.Moisture[x, z] / 255f);
 
             d.Warmth[x, z] = (byte)Mathf.Clamp(Mathf.RoundToInt(warmth), 0, 255);

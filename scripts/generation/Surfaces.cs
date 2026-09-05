@@ -32,18 +32,30 @@ internal static class Surfaces
     private const int BrokenAt = 224;
 
     // ---- the climate grid --------------------------------------------------
-    // Warmth in three bands and moisture in three, nine living grounds between
-    // them, with sand and snow past the ends.
+    // Warmth in four bands (frigid, cold, temperate, hot) and moisture in three,
+    // with two cells for water in excess — bog on the cold-to-cool half of the
+    // warmth range, marsh on the warm-to-hot half — and sand and snow past the ends.
 
     /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its tundra.</summary>
     private const int SnowBelow = 35;
 
     // The bands are placed on the knob: warmth is 60 + 180 × the knob on open
-    // lowland, so cold is a knob under about 0.3, hot one over about 0.7, and sand
-    // the last twentieth.
+    // lowland, so frigid is a knob under about 0.14, cold under about 0.3, hot one
+    // over about 0.7, and sand the last twentieth.
 
-    /// <summary>Warmth below which the ground is the cold band: tundra, moorland, bog.</summary>
+    /// <summary>Warmth below which the ground is frigid: tundra whatever the moisture, but for the bog.</summary>
+    private const int FrigidBelow = 85;
+
+    /// <summary>Warmth below which the ground is the cold band: tundra, heath, moorland.</summary>
     private const int ColdBelow = 115;
+
+    /// <summary>
+    /// Warmth from which the excess cell is marsh rather than bog: the warm part of
+    /// the temperate band and everything hotter. Just under the knob's middle (150)
+    /// less what the water's tempering takes off a wet bank, so a temperate Domain's
+    /// riversides are warm-side and a cool one's (a knob of 0.4 and under) bog-side.
+    /// </summary>
+    private const int WarmFrom = 140;
 
     /// <summary>Warmth from which the ground is the hot band: dust, savanna, floodplain.</summary>
     private const int HotFrom = 185;
@@ -68,14 +80,17 @@ internal static class Surfaces
     /// </summary>
     private const int FloodplainFrom = 170;
 
-    /// <summary>Moisture from which cold ground may be bog at all: past wet, water in excess.</summary>
+    /// <summary>Moisture from which hot ground is verdure rather than savanna: a higher bar than grass, since heat is the less forgiving side.</summary>
+    private const int HotWetFrom = 200;
+
+    /// <summary>Moisture from which cold-to-cool ground may be bog: past wet, water in excess.</summary>
     private const int BogFrom = 190;
 
-    /// <summary>The noise bar cold ground in excess of water must clear to be bog rather than moorland: occasional, not the rule.</summary>
-    private const float BogBar = 0.7f;
+    /// <summary>The noise bar such ground must clear to be bog: in patches, and more of them than there are marshes, but a tenth of a wet cool Domain and not a fifth.</summary>
+    private const float BogBar = 0.66f;
 
-    /// <summary>Moisture from which temperate ground beside the water may be marsh: past wet, as the bog is.</summary>
-    private const int MarshFrom = 205;
+    /// <summary>Moisture from which warm-to-hot ground beside the water may be marsh: extreme, so a high background and the water's own strip both.</summary>
+    private const int MarshFrom = 230;
 
     /// <summary>Cells from fresh water a marsh reaches.</summary>
     private const int MarshReach = 2;
@@ -83,7 +98,7 @@ internal static class Surfaces
     /// <summary>Ruggedness (32 per slab) a marsh tolerates: flat, give or take a slab, so the ground is low as well as near.</summary>
     private const int MarshFlat = 40;
 
-    /// <summary>The noise bar such ground must clear to be marsh rather than grass: occasional.</summary>
+    /// <summary>The noise bar such ground must clear to be marsh: occasional.</summary>
     private const float MarshBar = 0.62f;
 
     /// <summary>The noise bar a plain or a hillside must clear to show a tor: a small outcrop, rare.</summary>
@@ -227,10 +242,11 @@ internal static class Surfaces
     /// foot whatever the landform, and a rock landform shows stone and scree
     /// wherever it is broken, so a mountain is stone up to its snow; then the dunes
     /// and the sculpted rock; then a delta's fan, floodplain in any climate; then
-    /// the tors, small outcrops of stone in soft country; then the climate grid,
-    /// warmth against moisture, with a cell past wet in each row. A beach is
-    /// ground like any other — nothing washes it — and a plateau rung in soft
-    /// country changes nothing: the ground runs up to the edge.
+    /// the tors, small outcrops of stone in soft country; then the water in excess
+    /// — marsh on warm-to-hot ground, bog on cold-to-cool — and then the climate
+    /// grid, warmth against moisture. A beach is ground like any other — nothing
+    /// washes it — and a plateau rung in soft country changes nothing: the ground
+    /// runs up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
                                         bool gooSide, int near, Noise bog, Noise marsh, Noise tor)
@@ -266,32 +282,39 @@ internal static class Surfaces
         if (form is LandformType.Plain or LandformType.Hills && tor.At(x, z) > TorBar)
             return SurfaceMaterial.Stone;
 
-        // The climate grid. A mountain is stone and scree up to its snow; the cold
-        // band is for the ground that is not rock. Each row has a cell past wet —
-        // bog, marsh, floodplain — for water in excess, and none of them is the rule.
+        // Water in excess, in patches: marsh on the warm-to-hot half, bog on the
+        // cold-to-cool half, and neither is the rule. A marsh wants extreme moisture
+        // — a high background and the water's strip both — on flat ground beside the
+        // water; a bog only asks for the excess, so there are more bogs than marshes.
         byte moist = d.Moisture[x, z];
         bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
+        if (warmth >= WarmFrom)
+        {
+            if (moist >= MarshFrom && near <= MarshReach && rugged <= MarshFlat
+                && marsh.At(x, z) > MarshBar)
+                return SurfaceMaterial.Marsh;
+        }
+        else if (moist >= BogFrom && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
 
+        // The climate grid. A mountain is stone and scree up to its snow; the cold
+        // bands are for the ground that is not rock. Frigid ground is tundra
+        // whatever the moisture; the cold band splits tundra, heath, moorland.
+        if (warmth < FrigidBelow) return SurfaceMaterial.Tundra;
         if (warmth < ColdBelow)
         {
-            if (moist >= BogFrom && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
-            return dryGround ? SurfaceMaterial.Tundra : SurfaceMaterial.Moorland;
+            if (dryGround) return SurfaceMaterial.Tundra;
+            return wet ? SurfaceMaterial.Moorland : SurfaceMaterial.Heath;
         }
 
         if (wet && near <= FloodplainReach && warmth >= FloodplainFrom) return SurfaceMaterial.Floodplain;
         if (warmth >= HotFrom)
         {
+            // Hot and wet enough: verdure, the hot row's grass, and it beats the sand as the floodplain does.
+            if (moist >= HotWetFrom) return SurfaceMaterial.Verdure;
             if (warmth >= SandFrom) return SurfaceMaterial.Sand;
             return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
         }
-        if (wet)
-        {
-            // Past grass: flat low ground beside the water, with moisture in excess, occasionally.
-            if (moist >= MarshFrom && near <= MarshReach && rugged <= MarshFlat
-                && marsh.At(x, z) > MarshBar)
-                return SurfaceMaterial.Marsh;
-            return SurfaceMaterial.Grass;
-        }
+        if (wet) return SurfaceMaterial.Grass;
         return dryGround ? SurfaceMaterial.Steppe : SurfaceMaterial.Meadow;
     }
 }

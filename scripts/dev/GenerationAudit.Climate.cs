@@ -395,21 +395,23 @@ public partial class GenerationAudit
         {
             ("COLD", new[]
             {
-                Of("TUNDRA (DRY)", SurfaceMaterial.Tundra),
-                Of("MOORLAND (MID, WET)", SurfaceMaterial.Moorland),
-                Of("BOG (EXCESS)", SurfaceMaterial.Bog),
+                Of("TUNDRA (DRY; ALL IF FRIGID)", SurfaceMaterial.Tundra),
+                Of("HEATH (MID)", SurfaceMaterial.Heath),
+                Of("MOORLAND (WET)", SurfaceMaterial.Moorland),
+                Of("BOG (EXCESS, COLD TO COOL)", SurfaceMaterial.Bog),
             }),
             ("TEMPERATE", new[]
             {
                 Of("STEPPE (DRY)", SurfaceMaterial.Steppe),
                 Of("MEADOW (MID)", SurfaceMaterial.Meadow),
                 Of("GRASS (WET)", SurfaceMaterial.Grass),
-                Of("MARSH (EXCESS)", SurfaceMaterial.Marsh),
+                Of("MARSH (EXCESS, WARM TO HOT)", SurfaceMaterial.Marsh),
             }),
             ("HOT", new[]
             {
                 Of("DUST (DRY)", SurfaceMaterial.Dust),
                 Of("SAVANNA (MID)", SurfaceMaterial.Savanna),
+                Of("VERDURE (WET)", SurfaceMaterial.Verdure),
                 Of("FLOODPLAIN (WET, BY WATER)", SurfaceMaterial.Floodplain),
             }),
             ("BARE", new[]
@@ -426,6 +428,7 @@ public partial class GenerationAudit
                 ("STREAM", DevPalette.StreamTint),
                 ("NAVIGABLE", DevPalette.ReachTint),
                 ("FORD", DevPalette.FordTint),
+                ("HOT SPRING OR POOL", DevPalette.HotTint),
                 ("GOO", DevPalette.Goo),
                 ("AETHER", DevPalette.Aether),
             }),

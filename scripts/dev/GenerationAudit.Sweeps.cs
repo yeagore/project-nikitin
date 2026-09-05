@@ -678,6 +678,9 @@ public partial class GenerationAudit
         foreach (var (warmName, warmth) in new[] { ("cold", 0.15f), ("temperate", 0.5f), ("hot", 0.85f) })
         foreach (var (wetName, moisture) in new[] { ("dry", 0.15f), ("balanced", 0.45f), ("wet", 0.75f) })
             corners.Add(($"{warmName} {wetName}", moisture, warmth));
+        corners.Add(("cool wet", 0.75f, 0.35f));
+        corners.Add(("warm wet", 0.75f, 0.65f));
+        corners.Add(("frigid wet", 0.75f, 0.05f));
         corners.Add(("sand end", 0.45f, 1f));
         corners.Add(("snow end", 0.45f, 0f));
         if (Params.Moisture >= 0f && Params.Warmth >= 0f)

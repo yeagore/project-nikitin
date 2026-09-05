@@ -459,6 +459,39 @@ than the rule suggests: on most seeds the crop leaves no speck to keep, so the
 audit found them on nine islands of sixty. If every Domain should have them,
 they will have to be placed, not salvaged.
 
+### Bog on the cold side, marsh on the warm, and the hot row's grass
+
+The first cut put marsh in the temperate row and bog in the cold one, as
+"past wet" cells. The second, later the same day, split them by warmth
+instead: **bog** is water in excess on the cold-to-cool half (warmth under
+140, moisture 190 or more, a noise field over 0.66) and **marsh** on the
+warm-to-hot half (140 and over, moisture 230 or more — extreme, which takes a
+high background and the water's strip both — within two cells of water, flat,
+a noise field over 0.62). So there are more bogs than marshes, a marsh shares
+the floodplain's ground on a hot Domain and takes a few percent of it, and a
+warm temperate Domain gets no bog. The line at 140 rather than 150 is the
+water's tempering: at a knob of 0.5 a wet bank is pulled to about 145, and at
+150 the whole riverside of a temperate Domain went bog-side. At 0.6 the bog
+was a fifth of the wet cool corners; 0.66 makes it a tenth. The hot row also
+got its own wet cell, **verdure**, at moisture 200 or more, a higher bar than
+grass because heat is the less forgiving side: at 0.75 moisture a hot Domain
+is half savanna and a quarter verdure, at 1.0 it is verdure where it was all
+savanna. And the cold row got **heath** between tundra and moorland, with a
+**frigid** band under 85 that is tundra whatever the moisture: a knob of 0 is
+mostly tundra, and the heath and the moor are a knob of 0.25.
+
+### Hot water on a cold Domain
+
+A frigid Domain had nothing livable on it but the bank the water tempered.
+Now, on a Domain whose warmth knob is under 0.35, each spring has a chance
+(40% at a knob of 0, nothing at 0.35) and each pool of standing water with no
+watercourse through it and at most sixty cells a chance (35%) of running hot,
+and a hot source adds 90 warmth at the source, decaying to 1/e over four cells
+of the same walk cost the moisture uses. That is a meadow round a spring in
+the tundra, which is what the extremes wanted. Eleven of the twenty cold
+islands in the audit have some; the collages show them as orange water in
+the cold columns.
+
 ### Marsh past grass, and rarer bogs
 
 The temperate row had no cell for water in excess where the cold row had bog
@@ -553,6 +586,8 @@ measured a fixed preset are kept where they still say something.
 | districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
 | the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick mean 106–141, median 130, and a range of 195–222 within one island (no plateaus) |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
+| the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
+| its corners (`Climate`, 12 seeds each) | cold dry: tundra 62%, heath 8%. Cold balanced: heath 60%, moorland 10%. Cold wet: moorland 63%, bog 9%. Cool wet (0.35): grass 64%, bog 9%. Temperate wet: grass 73%, marsh 0.8%. Warm wet (0.65): grass 72%, marsh 0.9%. Hot wet: savanna 43%, verdure 21%, floodplain 9%, marsh 1%. Frigid wet (0.05): tundra 38%, moorland 26% (the tempered banks), bog 9%. Snow end: tundra 69%, bog 2% |
 | surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
 | the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
 | walking by king's moves | against four-way walking on the same islands: land on the mainland 40.8% → 42.8%, heartland 94.9% → 95.0%, roads that can simply be walked 45 → 50 of 121. Cutting corners joins a few scraps to their districts and lets a few roads round a cliff; nothing large moves |

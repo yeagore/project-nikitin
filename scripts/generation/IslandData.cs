@@ -227,6 +227,17 @@ public sealed class IslandData
     public List<Vector2I> Springs { get; } = new();
 
     /// <summary>
+    /// Hot water: on a cold Domain, some springs and small pools run warm, and a
+    /// bloom of warmth round each keeps some ground livable in the extremes. The
+    /// source cells themselves — the spring, or every cell of the pool — as a mask
+    /// (<see cref="Hot"/>) and as a list in scan order.
+    /// </summary>
+    public List<Vector2I> HotWater { get; } = new();
+
+    /// <summary>Whether a flooded column is a hot source. See <see cref="HotWater"/>.</summary>
+    public bool[,] Hot { get; }
+
+    /// <summary>
     /// Sea stacks: two or three of the islets the footprint dropped as too small to
     /// matter, kept as decoration in the aether off the coast. Aether cells, not
     /// land — nothing walks, builds or flies through them — listed for the content
@@ -317,6 +328,7 @@ public sealed class IslandData
         Ford = new bool[size, size];
         Beach = new bool[size, size];
         Delta = new bool[size, size];
+        Hot = new bool[size, size];
         WaterBody = new int[size, size];
         Flow = new int[size, size];
         Walk = new int[size, size];
