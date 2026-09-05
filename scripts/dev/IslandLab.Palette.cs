@@ -15,7 +15,6 @@ public partial class IslandLab
 		Region,
 		Walk,
 		Reach,
-		Shelves,
 		Surface,
 		Anchors,
 		Moisture,
@@ -23,6 +22,8 @@ public partial class IslandLab
 		Rugged,
 		Exposure,
 		Rim,
+		Water,
+		Magick,
 	}
 
 	private static readonly int ViewCount = Enum.GetValues<View>().Length;
@@ -66,7 +67,8 @@ public partial class IslandLab
 					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
 
 			case View.Walk:
-				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are cliffs   "
+				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are cliffs; "
+					+ $"a district ({Traversal.MinDistrictArea}+ cells) is somewhere to build   "
 					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
 					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
 
@@ -75,11 +77,6 @@ public partial class IslandLab
 					+ Keyed(MainlandTint, "heartland") + "   "
 					+ Ramp(ReachColor(0f), ReachColor(1f)) + " out of reach whatever you build, "
 					+ "warmer the smaller   " + Keyed(WaterTint, "water");
-
-			case View.Shelves:
-				return "[b]shelves[/b]   ground you could settle on: a hue per buildable shelf   "
-					+ Keyed(ShelfTooSmall, "level but too small or too narrow") + "   "
-					+ Keyed(Unremarkable, "not level") + "   " + Keyed(WaterTint, "water");
 
 			case View.Surface:
 			{
@@ -100,13 +97,14 @@ public partial class IslandLab
 					+ "here the built and rarer kinds win, and a cell that is both brink and foot "
 					+ "is a ledge   " + string.Join("   ", bits)
 					+ "   Only the lip of an overhang is magenta: the ground under it is its own kind. "
-					+ "Beds show with liquid off (I).";
+					+ "Beds show with liquid off (I). A sea stack is a dark column in the aether, in every view.";
 			}
 
 			case View.Moisture:
 				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: the "
-					+ "Domain's background moisture in patches, the lee a little damper, rock and its "
-					+ "fringe with patches of drought, plus what fresh water adds along a walk from it "
+					+ "Domain's background moisture in patches; the lee in the wind's rain shadow, and "
+					+ "sheltered broken ground (a gorge floor) damper, both by the wind knob; rock and its "
+					+ "fringe with patches of drought; plus what fresh water adds along a walk from it "
 					+ "(two cells more per slab climbed, so a river waters the plain it crosses and "
 					+ "not the mountain it passes)";
 
@@ -116,9 +114,11 @@ public partial class IslandLab
 				foreach (byte w in new byte[] { 0, 64, 110, 150, 190, 205, 220, 235, 255 })
 					stops.Add(Swatch(DevPalette.WarmthTint(w)));
 				return $"[b]warmth[/b]   {string.Join("", stops)}  frozen … cold (blue) … temperate "
-					+ "(yellow) … hot (orange): one climate up to the plateau ceiling, what the ladder and "
-					+ "a mesa chain can stack, then the lapse over a mountain's upper part; windswept ground, the rim and dry country "
-					+ "colder, wet ground tempered";
+					+ "(yellow) … hot (orange): one climate over the whole island, then the lapse over a "
+					+ "mountain's upper part; a slope facing the sun (compass overlay, X) a touch warmer and "
+					+ "one facing away colder; basins and sinkhole pits frost hollows; the lee milder by the "
+					+ "wind knob, the rim colder, wet ground tempered; on a cold Domain a bloom round each "
+					+ "hot spring or pool (orange water)";
 			}
 
 			case View.Rugged:
@@ -130,26 +130,22 @@ public partial class IslandLab
 				return $"[b]exposure[/b]   {Ramp(DevPalette.ExposureRamp)}  lee … windswept: openness to "
 					+ "the Domain's one wind (compass overlay, X, shows it), dunes or not";
 
-			default:
+			case View.Rim:
 				return $"[b]rim[/b]   {Ramp(DevPalette.RimRamp)}  rim … interior: cells of land between "
 					+ "here and the aether. Essencecoral country is the violet end";
+
+			case View.Water:
+				return $"[b]water distance[/b]   {Ramp(DevPalette.WaterRamp)}  bank … out of reach: the walk "
+					+ "cost to fresh water the moisture strip reads (a cell per cell along or down, two more "
+					+ "per slab up), kept as a byte for the settlement and biome layers; shown to 60";
+
+			default:
+				return $"[b]magick[/b]   {Ramp(DevPalette.MagickRamp)}  inert … saturated: the magickal "
+					+ "density layer. For now pure noise in soft waves, read by nothing";
 		}
 	}
 
-	private static Color LandformColor(LandformType type) => type switch
-	{
-		LandformType.Plain => new Color(0.45f, 0.60f, 0.28f),
-		LandformType.Hills => new Color(0.30f, 0.44f, 0.20f),
-		LandformType.Mountain => new Color(0.52f, 0.50f, 0.55f),
-		LandformType.Mesa => new Color(0.68f, 0.45f, 0.26f),
-		LandformType.Basin => new Color(0.28f, 0.40f, 0.52f),
-		LandformType.Badlands => new Color(0.72f, 0.56f, 0.34f),
-		LandformType.Karst => new Color(0.58f, 0.66f, 0.62f),
-		LandformType.Massif => new Color(0.62f, 0.42f, 0.48f),
-		LandformType.Dunes => new Color(0.80f, 0.74f, 0.46f),
-		LandformType.Sinkholes => new Color(0.50f, 0.58f, 0.44f),
-		_ => new Color(0.5f, 0.5f, 0.5f),
-	};
+	private static Color LandformColor(LandformType type) => DevPalette.Landform(type);
 
 	/// <summary>A distinct hue per region; the golden-ratio step keeps adjacent ids apart.</summary>
 	private static Color RegionColor(int id)
@@ -161,11 +157,10 @@ public partial class IslandLab
 		return Color.FromHsv(hue, sat, val);
 	}
 
-	private static readonly Color Unremarkable = new(0.34f, 0.34f, 0.36f);
-	private static readonly Color WaterTint = new(0.16f, 0.34f, 0.52f);
+	private static readonly Color Unremarkable = DevPalette.Broken;
+	private static readonly Color WaterTint = DevPalette.WalkWater;
 	private static readonly Color PassTint = new(0.92f, 0.85f, 0.42f);
-	private static readonly Color MainlandTint = new(0.42f, 0.62f, 0.28f);
-	private static readonly Color ShelfTooSmall = new(0.40f, 0.36f, 0.30f);
+	private static readonly Color MainlandTint = DevPalette.Mainland;
 
 	private static readonly Color DeckTint = new(0.95f, 0.72f, 0.30f);
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);
@@ -181,6 +176,7 @@ public partial class IslandLab
 
 	private static readonly Color FordTint = new(0.85f, 0.95f, 0.60f);
 	private static readonly Color WindTint = new(0.98f, 0.62f, 0.30f);
+	private static readonly Color SunTint = new(1.00f, 0.90f, 0.35f);
 
 	/// <summary>
 	/// The feature anchors flattened onto the footprint, ground span only. Later
@@ -201,6 +197,8 @@ public partial class IslandLab
 		foreach (Vector2I c in d.CliffCells)
 			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.CliffFoot ? DevPalette.Ledge : DevPalette.Brink);
 		foreach (Vector2I c in d.BankCells) grid[c.X, c.Y] = DevPalette.Bank;
+		foreach (Fall f in d.Falls) grid[f.Cell.X, f.Cell.Y] = DevPalette.FallLip;
+		foreach (Vector2I c in d.Springs) grid[c.X, c.Y] = DevPalette.Spring;
 
 		for (int x = 0; x < n; x++)
 		for (int z = 0; z < n; z++)
@@ -208,6 +206,7 @@ public partial class IslandLab
 			if (d.WaterLevel[x, z] != IslandData.NoLand && d.Fluid[x, z] == (byte)FluidKind.Goo)
 				grid[x, z] = DevPalette.GooBed;
 			if (d.Beach[x, z]) grid[x, z] = DevPalette.Beach;
+			if (d.Hot[x, z]) grid[x, z] = DevPalette.HotSpring;
 			if (d.Ford[x, z]) grid[x, z] = DevPalette.Ford;
 			if (d.Landings[x, z]) grid[x, z] = DevPalette.Landing;
 			if (d.Ferry[x, z]) grid[x, z] = DevPalette.Quay;
@@ -237,9 +236,7 @@ public partial class IslandLab
 		if (id < 0 || id >= d.Areas.Count) return Unremarkable;
 		if (!d.Areas[id].IsDistrict) return Unremarkable;
 		if (id == d.Mainland) return MainlandTint;
-
-		float hue = (0.08f + id * 0.61803399f) % 1f;
-		return Color.FromHsv(hue, 0.62f, 0.88f);
+		return DevPalette.District(id);
 	}
 
 	/// <summary>Reach areas: green heartland; red for what stays out of reach whatever you build, warmer the smaller.</summary>
@@ -253,21 +250,6 @@ public partial class IslandLab
 
 	/// <summary>The out-of-reach red at a size, 0 the smallest and warmest.</summary>
 	private static Color ReachColor(float t) => new(0.86f, 0.22f + 0.26f * t, 0.18f);
-
-	/// <summary>Shelves: a buildable one gets a hue; level-but-too-small ground is dimmed.</summary>
-	private static Color ShelfColor(IslandData d, int x, int z)
-	{
-		if (d.WaterLevel[x, z] != IslandData.NoLand) return WaterTint;
-
-		int id = d.ShelfId[x, z];
-		if (id < 0 || id >= d.Shelves.Count) return Unremarkable;
-
-		Shelf shelf = d.Shelves[id];
-		if (!shelf.Buildable) return ShelfTooSmall;
-
-		float hue = (0.30f + id * 0.61803399f) % 1f;
-		return Color.FromHsv(hue, 0.55f, 0.95f);
-	}
 
 	/// <summary>Ford, navigable reach, stream and standing water are four colours.</summary>
 	private static Color WaterColor(IslandData d, int x, int z) => DevPalette.Water(d, x, z);

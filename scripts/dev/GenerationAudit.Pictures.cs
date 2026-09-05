@@ -110,6 +110,9 @@ public partial class GenerationAudit
         GD.Print($"portraits: {wrote} written to {Portraits}");
     }
 
+    private static string Masses(int masses) => $"{masses} mass{(masses == 1 ? "" : "es")}";
+    private static string Caption(int seed, int masses) => $"{seed}  {Masses(masses)}";
+
     /// <summary>
     /// One sheet per arrangement: GallerySeeds consecutive seeds at GallerySize², four
     /// to a row, each tile captioned with its seed and how many landmasses it came out
@@ -126,7 +129,11 @@ public partial class GenerationAudit
         int n = GallerySize;
         int tile = n * scale;
         int font = tile >= 160 ? 2 : 1;      // a 48² tile is too narrow for the big caption
-        int caption = TinyFont.Height(font) + 4;
+        // The widest caption the sheet will carry; if it does not fit under a tile the
+        // seed and the count go on two lines instead of into the next tile.
+        int widest = TinyFont.Width(Caption(FirstSeed + GallerySeeds - 1, 10), font);
+        int captionLines = widest > tile ? 2 : 1;
+        int caption = captionLines * (TinyFont.Height(font) + 4);
         int rows = (GallerySeeds + columns - 1) / columns;
         int titleH = TinyFont.Height(3) + 8;
         int width = gap + columns * (tile + gap);
@@ -140,6 +147,10 @@ public partial class GenerationAudit
             TinyFont.Draw(sheet, $"{how} {n}", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
 
             var histogram = new SortedDictionary<int, int>();
+            var flagged = new List<string>();
+            int attempts = 0, unmet = 0;
+            long landCells = 0;
+            float extent = 0;
             for (int i = 0; i < GallerySeeds; i++)
             {
                 int seed = FirstSeed + i;
@@ -148,19 +159,111 @@ public partial class GenerationAudit
                 histogram.TryGetValue(masses, out int had);
                 histogram[masses] = had + 1;
 
+                attempts += d.Attempts;
+                if (d.Unmet.Length > 0) unmet++;
+                if (d.Attempts > 1 || d.Unmet.Length > 0)
+                    flagged.Add($"{seed}:{d.Attempts}{(d.Unmet.Length > 0 ? " unmet " + d.Unmet : "")}");
+                landCells += LandCount(d);
+                extent += ExtentPercent(d);
+
                 Image img = Portrait(d);
                 img.Resize(tile, tile, Image.Interpolation.Nearest);
                 int px = gap + (i % columns) * (tile + gap);
                 int pz = titleH + gap + (i / columns) * (tile + caption + gap);
                 sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, pz));
-                TinyFont.Draw(sheet, $"{seed}  {masses} mass{(masses == 1 ? "" : "es")}",
-                              px, pz + tile + 2, font, new Color(0.85f, 0.85f, 0.8f));
+                var inkC = new Color(0.85f, 0.85f, 0.8f);
+                if (captionLines == 1)
+                    TinyFont.Draw(sheet, Caption(seed, masses), px, pz + tile + 2, font, inkC);
+                else
+                {
+                    TinyFont.Draw(sheet, seed.ToString(), px, pz + tile + 2, font, inkC);
+                    TinyFont.Draw(sheet, Masses(masses), px, pz + tile + 2 + TinyFont.Height(font) + 4,
+                                  font, inkC);
+                }
             }
 
             sheet.SavePng($"{Gallery}/{how}_{n}.png");
+            if (GalleryMasks) WriteMaskSheet(how, p, width, height, tile, font, caption, titleH);
             string counts = string.Join(", ", histogram.Select(kv => $"{kv.Value} x {kv.Key}"));
-            GD.Print($"gallery: {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}");
+            float landShare = 100f * landCells / (GallerySeeds * (float)n * n);
+            GD.Print($"gallery: {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}"
+                + $" | attempts {attempts / (float)GallerySeeds:0.00} unmet {unmet}"
+                + $" land% {landShare:0.0} extent% {extent / GallerySeeds:0.0}"
+                + (flagged.Count > 0 ? " | rerolled/unmet: " + string.Join(", ", flagged) : ""));
         }
+    }
+
+    /// <summary>
+    /// The gallery's twin: the same seeds' raw footprint masks, land white on aether,
+    /// captioned with the landmass count and the extent share of the mask alone.
+    /// </summary>
+    private void WriteMaskSheet(IslandArrangement how, IslandParams p, int width, int height,
+                                int tile, int font, int caption, int titleH)
+    {
+        const int columns = 4, gap = 6;
+        int n = p.Size;
+        var sheet = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
+        sheet.Fill(new Color(0.12f, 0.12f, 0.14f));
+        TinyFont.Draw(sheet, $"{how} {n} MASK", gap, 4, 3, new Color(0.9f, 0.9f, 0.85f));
+
+        var histogram = new SortedDictionary<int, int>();
+        float extentSum = 0, extentLo = float.MaxValue, extentHi = 0;
+        for (int i = 0; i < GallerySeeds; i++)
+        {
+            int seed = FirstSeed + i;
+            bool[,] mask = Footprint.BuildMask(seed, p, how);
+            int masses = Label(n, (x, z) => mask[x, z], new int[n, n]);
+            float extent = 100f * Footprint.ExtentShare(mask);
+            histogram.TryGetValue(masses, out int had);
+            histogram[masses] = had + 1;
+            extentSum += extent;
+            extentLo = MathF.Min(extentLo, extent);
+            extentHi = MathF.Max(extentHi, extent);
+
+            var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                img.SetPixel(x, z, mask[x, z] ? new Color(0.8f, 0.8f, 0.72f) : DevPalette.Aether);
+            img.Resize(tile, tile, Image.Interpolation.Nearest);
+            int px = gap + (i % columns) * (tile + gap);
+            int pz = titleH + gap + (i / columns) * (tile + caption + gap);
+            sheet.BlitRect(img, new Rect2I(0, 0, tile, tile), new Vector2I(px, pz));
+            TinyFont.Draw(sheet, $"{seed} {masses}m {extent:0}%", px, pz + tile + 2, font,
+                          new Color(0.85f, 0.85f, 0.8f));
+        }
+        sheet.SavePng($"{Gallery}/{how}_{n}_mask.png");
+        string counts = string.Join(", ", histogram.Select(kv => $"{kv.Value} x {kv.Key}"));
+        GD.Print($"masks:   {how,-14} {GallerySeeds} seeds at {n}²: landmasses {counts}"
+            + $" | extent% mean {extentSum / GallerySeeds:0.0} range {extentLo:0}-{extentHi:0}"
+            + " (the fit band wants 55-85)");
+    }
+
+    /// <summary>Land columns, wet or dry.</summary>
+    private static long LandCount(IslandData d)
+    {
+        int n = d.Size;
+        long land = 0;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            if (d.HasLand(x, z)) land++;
+        return land;
+    }
+
+    /// <summary>The landmass's bounding box as a percentage of the grid (the footprint wants 55-85).</summary>
+    private static float ExtentPercent(IslandData d)
+    {
+        int n = d.Size;
+        int xLo = n, xHi = -1, zLo = n, zHi = -1;
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!d.HasLand(x, z)) continue;
+            if (x < xLo) xLo = x;
+            if (x > xHi) xHi = x;
+            if (z < zLo) zLo = z;
+            if (z > zHi) zHi = z;
+        }
+        return xHi < 0 ? 0 : 100f * (xHi - xLo + 1) * (zHi - zLo + 1) / (n * (float)n);
     }
 
     /// <summary>Top view, 3x nearest: land an elevation ramp with beach tint and gold landings, water by kind, Gates one red (hanging) or orange (land) pixel.</summary>
@@ -172,21 +275,53 @@ public partial class GenerationAudit
         img.SavePng(path);
     }
 
-    /// <summary>The portrait at one pixel a cell, before any scaling.</summary>
-    private static Image Portrait(IslandData d)
+    /// <summary>The lowest and highest dry-or-wet ground of an island, for a height ramp.</summary>
+    private static (short Lo, short Hi) HeightRange(IslandData d)
     {
-        int n = d.Size;
-        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
-
         short lo = short.MaxValue, hi = short.MinValue;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
+        for (int x = 0; x < d.Size; x++)
+        for (int z = 0; z < d.Size; z++)
         {
             if (!d.HasLand(x, z)) continue;
             short top = d.SurfaceLevel(x, z);
             lo = Math.Min(lo, top);
             hi = Math.Max(hi, top);
         }
+        return (lo, hi);
+    }
+
+    /// <summary>The portrait at one pixel a cell, before any scaling, the height ramp over the island's own range.</summary>
+    private static Image Portrait(IslandData d)
+    {
+        var (lo, hi) = HeightRange(d);
+        return Portrait(d, lo, hi);
+    }
+
+    /// <summary>Brightness per slab of rise toward the light, which stands to the north-west: a cliff of four slabs is a full step of shade.</summary>
+    private const float ShadePerSlab = 0.18f;
+
+    /// <summary>
+    /// A hillshade for the height views: how much a cell rises from its west and
+    /// north neighbours, as a brightness factor. A one-slab step shows faintly, a
+    /// cliff strongly, flat ground not at all, so hills, valleys and terraces read
+    /// where a bare height ramp hid them.
+    /// </summary>
+    private static float Shade(IslandData d, int x, int z)
+    {
+        int n = d.Size;
+        float here = d.EffectiveLevel(x, z), rise = 0f;
+        int seen = 0;
+        if (x > 0 && d.HasLand(x - 1, z)) { rise += here - d.EffectiveLevel(x - 1, z); seen++; }
+        if (z > 0 && d.HasLand(x, z - 1)) { rise += here - d.EffectiveLevel(x, z - 1); seen++; }
+        if (seen == 0) return 1f;
+        return Mathf.Clamp(1f + ShadePerSlab * rise / seen, 0.55f, 1.45f);
+    }
+
+    /// <summary>The portrait with the height ramp over a given range, so several islands can share one scale, and the hillshade on the land.</summary>
+    private static Image Portrait(IslandData d, short lo, short hi)
+    {
+        int n = d.Size;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -196,8 +331,9 @@ public partial class GenerationAudit
             else if (d.WaterLevel[x, z] != IslandData.NoLand) c = WaterTint(d, x, z);
             else
             {
-                float t = hi > lo ? (d.SurfaceLevel(x, z) - lo) / (float)(hi - lo) : 0.5f;
-                c = new Color(0.2f, 0.32f, 0.16f).Lerp(new Color(0.85f, 0.8f, 0.66f), t);
+                float t = hi > lo ? Mathf.Clamp((d.SurfaceLevel(x, z) - lo) / (float)(hi - lo), 0f, 1f) : 0.5f;
+                c = new Color(0.2f, 0.32f, 0.16f).Lerp(new Color(0.85f, 0.8f, 0.66f), t) * Shade(d, x, z);
+                c = new Color(Mathf.Min(1f, c.R), Mathf.Min(1f, c.G), Mathf.Min(1f, c.B));
                 if (d.Beach[x, z]) c = c.Lerp(new Color(0.9f, 0.85f, 0.55f), 0.5f);
                 if (d.Landings[x, z]) c = new Color(0.95f, 0.82f, 0.25f);
             }
@@ -233,12 +369,12 @@ public partial class GenerationAudit
         GD.Print($"field maps: {wrote} written to {FieldMaps}");
     }
 
-    /// <summary>The five habitat axes as two-colour ramps side by side; rim distance clamps at 40 cells.</summary>
+    /// <summary>The six habitat axes and the magick layer as two-colour ramps side by side; rim distance clamps at 40 cells, water distance at 60.</summary>
     private static void SaveHabitat(IslandData d, string path)
     {
         int n = d.Size;
-        const int gap = 2;
-        var img = Image.CreateEmpty(5 * n + 4 * gap, n, false, Image.Format.Rgb8);
+        const int gap = 2, panels = 7;
+        var img = Image.CreateEmpty(panels * n + (panels - 1) * gap, n, false, Image.Format.Rgb8);
         img.Fill(new Color(0.05f, 0.05f, 0.07f));
 
         void Panel(int index, Func<int, int, float> value, Color lo, Color hi)
@@ -258,8 +394,10 @@ public partial class GenerationAudit
         Panel(2, (x, z) => d.Ruggedness[x, z] / 255f, DevPalette.RuggedRamp.Lo, DevPalette.RuggedRamp.Hi);
         Panel(3, (x, z) => d.Exposure[x, z] / 255f, DevPalette.ExposureRamp.Lo, DevPalette.ExposureRamp.Hi);
         Panel(4, (x, z) => Math.Min(1f, d.RimDistance[x, z] / 40f), DevPalette.RimRamp.Lo, DevPalette.RimRamp.Hi);
+        Panel(5, (x, z) => Math.Min(1f, d.WaterDistance[x, z] / 60f), DevPalette.WaterRamp.Lo, DevPalette.WaterRamp.Hi);
+        Panel(6, (x, z) => d.Magick[x, z] / 255f, DevPalette.MagickRamp.Lo, DevPalette.MagickRamp.Hi);
 
-        img.Resize((5 * n + 4 * gap) * 3, n * 3, Image.Interpolation.Nearest);
+        img.Resize((panels * n + (panels - 1) * gap) * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);
     }
 
@@ -299,12 +437,15 @@ public partial class GenerationAudit
         foreach (Vector2I p in d.CliffCells)
             img.SetPixel(p.X, p.Y, DevPalette.Anchor(feet.Contains(p) ? DevPalette.Ledge : DevPalette.Brink));
         Mark(d.BankCells, DevPalette.Anchor(DevPalette.Bank));
+        foreach (Fall f in d.Falls) img.SetPixel(f.Cell.X, f.Cell.Y, DevPalette.Anchor(DevPalette.FallLip));
+        Mark(d.Springs, DevPalette.Anchor(DevPalette.Spring));
         MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
         MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));
         MarkMask(d.Landings, DevPalette.Anchor(DevPalette.Landing));
         MarkMask(d.Ferry, DevPalette.Anchor(DevPalette.Quay));
         Mark(d.Overhangs, DevPalette.Anchor(DevPalette.Overhang));
         Mark(d.Summits, DevPalette.Anchor(DevPalette.Summit));
+        Mark(d.SeaStacks, DevPalette.Anchor(DevPalette.SeaStack));
 
         img.Resize(n * 3, n * 3, Image.Interpolation.Nearest);
         img.SavePng(path);

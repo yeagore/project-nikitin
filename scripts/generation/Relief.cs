@@ -45,7 +45,7 @@ internal static class Relief
 
         RungSurface(land, region, plan, h, isMountain, amp, hilly, gcos, gsin, detail, coarse, drift);
 
-        float[,] foot = MountainFoot(land, region, plan, h, isMountain);
+        float[,] foot = MountainFoot(land, h, isMountain, (x, z) => plan[region[x, z]].Plateau);
         HangMountains(p, h, isMountain, inward, foot, summit);
         return h;
     }
@@ -116,12 +116,15 @@ internal static class Relief
     }
 
     /// <summary>
-    /// The height a massif rises from, per cell: seeded from the surface each border
+    /// The height a mountain rises from, per cell: seeded from the surface each border
     /// cell touches, propagated inward along the front (so enqueue order matters),
-    /// then blurred so fronts meeting inside the massif leave no seam.
+    /// then blurred so fronts meeting inside the mountain leave no seam. A mountain
+    /// meeting only the coastline starts from <paramref name="ownRung"/>. Also read
+    /// by <see cref="Habitat"/> off the finished surface, so the lapse measures a
+    /// mountain from its own foot.
     /// </summary>
-    private static float[,] MountainFoot(bool[,] land, int[,] region, RegionPlan[] plan,
-                                         short[,] h, bool[,] isMountain)
+    internal static float[,] MountainFoot(bool[,] land, short[,] h, bool[,] isMountain,
+                                          Func<int, int, float> ownRung)
     {
         int n = land.GetLength(0);
         var foot = new float[n, n];
@@ -147,8 +150,8 @@ internal static class Relief
                 if (!InBounds(n, nx, nz) || !land[nx, nz]) { atCoast = true; continue; }
                 if (!isMountain[nx, nz]) best = MathF.Max(best, h[nx, nz]);
             }
-            // A massif meeting only the coastline starts from its own rung.
-            if (best == float.MinValue && atCoast) best = plan[region[x, z]].Plateau;
+            // A mountain meeting only the coastline starts from its own rung.
+            if (best == float.MinValue && atCoast) best = ownRung(x, z);
 
             if (best > float.MinValue)
             {

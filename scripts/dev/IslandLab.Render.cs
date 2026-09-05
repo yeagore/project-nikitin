@@ -145,9 +145,6 @@ public partial class IslandLab
 					case View.Reach:
 						col.Add(ReachColor(d, d.Reach[x, z]));
 						break;
-					case View.Shelves:
-						col.Add(ShelfColor(d, x, z));
-						break;
 					case View.Surface:
 						// Material is the ground's; a lip is a rock roof.
 						col.Add(MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]));
@@ -170,6 +167,12 @@ public partial class IslandLab
 					case View.Rim:
 						col.Add(FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp));
 						break;
+					case View.Water:
+						col.Add(FieldColor((byte)Math.Min(255, d.WaterDistance[x, z] * 4), DevPalette.WaterRamp));
+						break;
+					case View.Magick:
+						col.Add(FieldColor(d.Magick[x, z], DevPalette.MagickRamp));
+						break;
 					default:
 						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
 						col.Add(DevPalette.Height(t));
@@ -186,6 +189,24 @@ public partial class IslandLab
 		{
 			_islandCenter = (bbMin + bbMax) * 0.5f;
 			_islandRadius = Mathf.Max(1f, (bbMax - bbMin).Length() * 0.5f);
+		}
+
+		// The sea stacks: aether to every rule, drawn as dark pillars in every view,
+		// eight slabs tall with their tops about the lowest dry ground.
+		short low = short.MaxValue;
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+			if (d.HasLand(x, z) && d.WaterLevel[x, z] == IslandData.NoLand)
+				low = Math.Min(low, d.SurfaceLevel(x, z));
+		if (low == short.MaxValue) low = 0;
+		foreach (Vector2I c in d.SeaStacks)
+		{
+			int top = low + (c.X * 7 + c.Y * 13) % 3;
+			const int Tall = 8;
+			float yCenter = (top - Tall + 1 + top + 1) * 0.5f * sh;
+			var origin = new Vector3((c.X - half) * cs, yCenter, (c.Y - half) * cs);
+			xf.Add(new Transform3D(Basis.Identity.Scaled(new Vector3(cs, Tall * sh, cs)), origin));
+			col.Add(DevPalette.StackTint);
 		}
 
 		_terrain.Multimesh = BuildMultiMesh(_unitBox, xf, col);
@@ -375,6 +396,7 @@ public partial class IslandLab
 		{
 			DrawGateVectors(d, m);
 			DrawWind(d, m);
+			DrawSun(d, m);
 			DrawDuneGrain(d, m.Add);
 			DrawBounds(d, m);
 		}
@@ -410,6 +432,35 @@ public partial class IslandLab
 			float px = half - dir.X * off, pz = half - dir.Y * off;
 			float w = Mathf.Lerp(0.9f, 0.2f, step / (float)run);
 			m.Add(px, y, pz, new Vector3(cs * w, sh * 0.8f, cs * w), WindTint);
+		}
+	}
+
+	/// <summary>
+	/// The sun: a gold disc of marks standing off the edge it shines from, at the
+	/// wind arrows' height, so the warmth view's sunny and shaded slopes can be read
+	/// against something.
+	/// </summary>
+	private static void DrawSun(IslandData d, MarkList m)
+	{
+		const float sh = Terrain.SlabHeight;
+		const float cs = Terrain.CellSize;
+		int n = d.Size;
+
+		short top = 0;
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+			if (d.HasLand(x, z)) top = Math.Max(top, d.Spans[x, z][^1].Top);
+		float y = (top + 1) * sh + 2f * cs;
+
+		Vector2 dir = d.SunVector;
+		float half = n * 0.5f;
+		float off = half + 6f;
+		float cx = half + dir.X * off, cz = half + dir.Y * off;
+		for (int dx = -1; dx <= 1; dx++)
+		for (int dz = -1; dz <= 1; dz++)
+		{
+			float w = dx == 0 && dz == 0 ? 1.1f : (dx == 0 || dz == 0 ? 0.8f : 0.45f);
+			m.Add(cx + dx * 1.2f, y, cz + dz * 1.2f, new Vector3(cs * w, sh * 0.8f, cs * w), SunTint);
 		}
 	}
 
@@ -639,13 +690,14 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>N / E / S / W billboards, standing off the four edges of the footprint, and the wind's label.</summary>
+	/// <summary>N / E / S / W billboards, standing off the four edges of the footprint, and the wind's and the sun's labels.</summary>
 	private void BuildCompass()
 	{
 		var letters = new[] { "N", "E", "S", "W" };
 		foreach (string text in letters)
 			_compass.Add(Billboard(text, 128, new Color(1f, 0.95f, 0.8f, 0.85f)));
 		_windLabel = Billboard("", 72, new Color(WindTint, 0.95f));
+		_sunLabel = Billboard("", 72, new Color(SunTint, 0.95f));
 	}
 
 	private Label3D Billboard(string text, int fontSize, Color tint)
@@ -692,5 +744,13 @@ public partial class IslandLab
 		_windLabel.Position = new Vector3(-dir.X * off,
 			(top + 1) * Terrain.SlabHeight + 2f * Terrain.CellSize + 1f, -dir.Y * off);
 		_windLabel.Visible = _showCompass;
+
+		// The sun's name beside its disc, off the edge it shines from.
+		Vector2 sun = d.SunVector;
+		float sunOff = half + 9f;
+		_sunLabel.Text = $"sun from {d.SunFrom}";
+		_sunLabel.Position = new Vector3(sun.X * sunOff,
+			(top + 1) * Terrain.SlabHeight + 2f * Terrain.CellSize + 1f, sun.Y * sunOff);
+		_sunLabel.Visible = _showCompass;
 	}
 }

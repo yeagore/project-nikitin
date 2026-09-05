@@ -53,7 +53,7 @@ public static partial class Traversal
                     queue.Enqueue((nx, nz));
                 }
             }
-            areas.Add(new WalkArea(id, area, low, high, min, max));
+            areas.Add(new WalkArea(id, area, low, high, min, max, new Vector2I(sx, sz)));
         }
 
         List<WalkArea> order = RankByArea(areas, d.Walk, n);
@@ -149,7 +149,7 @@ public static partial class Traversal
                     queue.Enqueue((quay.X, quay.Y));
                 }
             }
-            areas.Add(new WalkArea(id, area, low, high, min, max));
+            areas.Add(new WalkArea(id, area, low, high, min, max, new Vector2I(sx, sz)));
         }
 
         List<WalkArea> order = RankByArea(areas, label, n);

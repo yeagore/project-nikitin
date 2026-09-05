@@ -230,13 +230,37 @@ internal static class Footprint
 
     /// <summary>
     /// Keeps a lobe's centre a margin inside the grid so a later nudge cannot push it
-    /// into the wall. The pad is capped at half the footprint: past that Math.Clamp's
-    /// minimum would exceed its maximum and throw.
+    /// into the wall: the radius plus three cells, whatever the lobe's shape. The pad
+    /// is capped at half the footprint: past that Math.Clamp's minimum would exceed
+    /// its maximum and throw. This is the pad every layout was tuned against, so it
+    /// stays the pad at placement; the fit pass has its own (below).
     /// </summary>
     private static (float x, float z) ClampIntoFootprint(int n, float x, float z, float r)
     {
         float pad = Math.Min(r + 3f, (n - 1) * 0.5f);
         return (Math.Clamp(x, pad, n - 1 - pad), Math.Clamp(z, pad, n - 1 - pad));
+    }
+
+    /// <summary>
+    /// The fit pass's clamp: on each axis the pad is the lobe's own reach — an ellipse
+    /// of <paramref name="r"/> / aspect along its axis and <paramref name="r"/> × aspect
+    /// across, turned by (<paramref name="cos"/>, <paramref name="sin"/>) — or the
+    /// radius, whichever is less, plus three cells. Padding a stretched lobe by its
+    /// long axis on both axes pinned every scaled-up split layout to the centre, and
+    /// two lobes pinned together have no seam for the strait to follow, so the cut
+    /// shredded both (Halves at 64² was the worst of it). Never stricter than the
+    /// placement pad, because padding an arm by its long axis pinned it onto its hub
+    /// instead, and BrokenL came out in eight pieces.
+    /// </summary>
+    private static (float x, float z) ClampIntoFootprint(int n, float x, float z, float r,
+                                                         float aspect, float cos, float sin)
+    {
+        float along = r / aspect, across = r * aspect;
+        float ex = MathF.Sqrt(along * along * cos * cos + across * across * sin * sin);
+        float ez = MathF.Sqrt(along * along * sin * sin + across * across * cos * cos);
+        float half = (n - 1) * 0.5f;
+        float padX = Math.Min(Math.Min(ex, r) + 3f, half), padZ = Math.Min(Math.Min(ez, r) + 3f, half);
+        return (Math.Clamp(x, padX, n - 1 - padX), Math.Clamp(z, padZ, n - 1 - padZ));
     }
 
     /// <summary>
@@ -382,9 +406,17 @@ internal static class Footprint
         /// A wide hub with thick arms at the given fractions of a turn. Axis-aligned,
         /// always: an arm points at an edge, and so at a Gate.
         /// </summary>
-        private void Arms(float[] spokes, uint salt)
+        private void Arms(float[] spokes, uint salt, float hubBack = float.NaN)
         {
-            Add(cx, cz, radius * 0.45f, salt, 1f, 0f);
+            // hubBack, in turns, is the direction the hub is set back in, by an eighth
+            // of the radius; NaN leaves it on the centre.
+            float hx = cx, hz = cz;
+            if (!float.IsNaN(hubBack))
+            {
+                hx += MathF.Cos(hubBack * Mathf.Tau) * radius * 0.125f;
+                hz += MathF.Sin(hubBack * Mathf.Tau) * radius * 0.125f;
+            }
+            Add(hx, hz, radius * 0.45f, salt, 1f, 0f);
             float reach = radius * 0.58f * spread;
 
             for (int i = 0; i < spokes.Length; i++)
@@ -543,9 +575,12 @@ internal static class Footprint
                     Arms(new[] { 0f, 0.25f, 0.75f }, 0x7100u);
                     break;
 
+                // The hub sits back toward the outer corner: centred, its round edge
+                // poked into the bay between the two arms as a spur, which on the
+                // broken form stood clear of both straits as a third petal.
                 case IslandArrangement.LShape:
                 case IslandArrangement.BrokenL:
-                    Arms(new[] { 0f, 0.25f }, 0x7200u);
+                    Arms(new[] { 0f, 0.25f }, 0x7200u, hubBack: 0.625f);
                     break;
 
                 // Five or six, so no two face each other and every bay is a wedge.
@@ -606,7 +641,9 @@ internal static class Footprint
                     break;
                 }
 
-                // A fat coil of one turn and a bit: the lobes overlap into a ring of round bays.
+                // A coil of one turn and a bit: a spray of narrow petals fused at a small heart,
+                // the thin, busy cousin of Star. (Meant as a ring of round bays over a full
+                // hub; the petals are what the coil makes, and are kept.)
                 case IslandArrangement.Rosette:
                     Coil(0xA000u, sweep: 1.35f, thick: 0.26f,
                          links: 9 + (int)(Hash01(seed, 0xA000u) * 4f));
@@ -655,7 +692,7 @@ internal static class Footprint
                             float f = t / 4f;
                             float a = phase + flip - Mathf.Pi * 0.5f + f * Mathf.Pi * 0.98f;
                             float ring = disc * Mathf.Lerp(0.34f, 0.70f, f * f * 0.6f + f * 0.4f);
-                            float size = radius * Mathf.Lerp(0.37f, 0.15f, f);
+                            float size = radius * Mathf.Lerp(0.37f, 0.21f, f);
                             Add(cx + MathF.Cos(a) * ring, cz + MathF.Sin(a) * ring, size,
                                 0xB501u ^ (uint)((half * 8 + t + 1) * 2654435761u),
                                 1.4f, a, group: half + 1);
@@ -890,13 +927,15 @@ internal static class Footprint
     }
 
     /// <summary>The fit pass's move: every lobe grows or shrinks about the centre, radii included, so the shape keeps its proportions.</summary>
+
     private static void ScaleLobes(Lobe[] lobes, int n, float cx, float cz, float scale)
     {
         for (int i = 0; i < lobes.Length; i++)
         {
             Lobe l = lobes[i];
             float r = l.Radius * scale;
-            var (x, z) = ClampIntoFootprint(n, cx + (l.Cx - cx) * scale, cz + (l.Cz - cz) * scale, r);
+            var (x, z) = ClampIntoFootprint(n, cx + (l.Cx - cx) * scale, cz + (l.Cz - cz) * scale, r,
+                                            l.Aspect, l.Cos, l.Sin);
             lobes[i] = new Lobe(l, x, z, r);
         }
     }
@@ -930,7 +969,12 @@ internal static class Footprint
         }
 
         var wobble = new Noise(seed + 23, frequency: 1f, octaves: 2);
-        var shape = new Noise(seed, frequency: 0.05f, octaves: 4)
+        // The shape noise is island-relative, like its warp: the same number of
+        // periods across a lobe at every footprint, normalised to 64² (which it leaves
+        // bit-identical). At a fixed frequency per cell a 128² block's hub, almost all
+        // interior, had a dozen low patches of noise inside it, and the coverage cut
+        // took each one: a scatter of one-cell pits where 64² had one round hole.
+        var shape = new Noise(seed, frequency: 0.05f * 64f / n, octaves: 4)
             .WithWarp(amplitude: (0.25f + 0.55f * irr) * n, frequency: 0.6f / n);
         // Strait width wanders, so it narrows to a step across in places and opens elsewhere.
         var strait = new Noise(seed + 907, frequency: 0.09f, octaves: 3);
@@ -943,6 +987,12 @@ internal static class Footprint
         var norm = new float[n, n];
         var owner = new int[n, n];
         var cut = new bool[n, n];
+        // Inside two lobes at once: interior by construction, so the coverage cut
+        // leaves it alone. The cut ranks a lobe's cells by the shape noise and drops
+        // the lowest share, which shapes a coast; on a lobe that is all interior (a
+        // block's hub) it had nowhere to land but the middle, and the blocks came
+        // out with a scatter of pits where a single rolled hole was meant.
+        var overlap = new bool[n, n];
         var candidates = new List<float>[lobes.Length];
         for (int i = 0; i < lobes.Length; i++) candidates[i] = new List<float>();
 
@@ -956,9 +1006,11 @@ internal static class Footprint
             int mine = 0, bestPiece = int.MinValue;
             float dBest = float.MaxValue, rBest = 1f;
             float dOther = float.MaxValue, rOther = 1f;
+            int within = 0;
             for (int i = 0; i < lobes.Length; i++)
             {
                 float di = lobes[i].Distance(x, z, wobble, irr, out float ri);
+                if (di < 1f) within++;
                 if (di < d) { d = di; rd = ri; mine = i; }
 
                 int piece = lobes[i].Group >= 0 ? lobes[i].Group : -(i + 1);
@@ -975,6 +1027,7 @@ internal static class Footprint
             }
             norm[x, z] = d;
             owner[x, z] = mine;
+            overlap[x, z] = within >= 2;
 
             // The seam in cells (a normalised unit is one lobe radius); the band never
             // closes completely.
@@ -1018,7 +1071,7 @@ internal static class Footprint
         // One-cell empty border so every land cell has a reachable coast.
         for (int x = 1; x < n - 1; x++)
         for (int z = 1; z < n - 1; z++)
-            mask[x, z] = norm[x, z] < 1f && field[x, z] > threshold[owner[x, z]]
+            mask[x, z] = norm[x, z] < 1f && (overlap[x, z] || field[x, z] > threshold[owner[x, z]])
                          && !cut[x, z];
 
         return mask;

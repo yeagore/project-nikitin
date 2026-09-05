@@ -60,7 +60,7 @@ internal static partial class GatePlacement
     /// <summary>Candidate sites kept per edge for the set-wise search.</summary>
     private const int CandidatesPerEdge = 16;
 
-    /// <summary>Cells around a strip head to look for a buildable shelf; a coast cell is rarely on one itself.</summary>
+    /// <summary>Cells around a strip head to look for a district; a coast cell can be a scrap beside the one it serves.</summary>
     private const int ApronSearch = 4;
 
     /// <summary>Places the Gates and levels their strips. Returns whether terrain changed, so the caller re-runs the traversal analysis.</summary>

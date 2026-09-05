@@ -2,14 +2,21 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using static ProjectNikitin.Generation.Grid;
+using static ProjectNikitin.Generation.SeedHash;
 
 namespace ProjectNikitin.Generation;
 
-/// <summary>Connected pieces of the mask: components, the linker that huddles strays within bridge reach, and the bridge sites.</summary>
+/// <summary>Connected pieces of the mask: components, the linker that huddles strays within bridge reach, the bridge sites, and the sea stacks kept from what was dropped.</summary>
 internal static class Landmasses
 {
-    /// <summary>Smallest thing that counts as an islet. Below it, it is coastline noise.</summary>
+    /// <summary>Smallest thing that counts as an islet. Below it, it is coastline noise — or a sea stack.</summary>
     internal const int MinIsletCells = 30;
+
+    /// <summary>Smallest speck kept as a sea stack: one cell is a pillar.</summary>
+    internal const int MinStackCells = 1;
+
+    /// <summary>The most sea stacks a Domain keeps.</summary>
+    private const int MaxStacks = 3;
 
     /// <summary>Cells a stray is looked for across before it is dragged: past the widest strait a layout makes, short enough to keep the sweep cheap.</summary>
     private const int Sightline = 48;
@@ -34,24 +41,87 @@ internal static class Landmasses
         return best;
     }
 
-    /// <summary>Clears every component with fewer than <paramref name="minCells"/> cells.</summary>
-    internal static void DropComponentsUnder(bool[,] mask, int minCells)
+    /// <summary>Clears every component with fewer than <paramref name="minCells"/> cells, and returns them in label order.</summary>
+    internal static List<List<Vector2I>> DropComponentsUnder(bool[,] mask, int minCells)
     {
         int n = mask.GetLength(0);
+        var dropped = new List<List<Vector2I>>();
         foreach (List<Vector2I> cells in Components(mask, new int[n, n]))
-            if (cells.Count < minCells) Clear(mask, cells);
+        {
+            if (cells.Count >= minCells) continue;
+            Clear(mask, cells);
+            dropped.Add(cells);
+        }
+        return dropped;
     }
 
-    /// <summary>Reduces the mask to its largest component; every component tied for largest survives.</summary>
-    internal static void KeepLargestComponent(bool[,] mask)
+    /// <summary>Reduces the mask to its largest component; every component tied for largest survives. Returns what was cleared, in label order.</summary>
+    internal static List<List<Vector2I>> KeepLargestComponent(bool[,] mask)
     {
         int n = mask.GetLength(0);
+        var dropped = new List<List<Vector2I>>();
         List<List<Vector2I>> parts = Components(mask, new int[n, n]);
-        if (parts.Count <= 1) return;
+        if (parts.Count <= 1) return dropped;
 
         int largest = parts[Largest(parts)].Count;
         foreach (List<Vector2I> cells in parts)
-            if (cells.Count < largest) Clear(mask, cells);
+        {
+            if (cells.Count >= largest) continue;
+            Clear(mask, cells);
+            dropped.Add(cells);
+        }
+        return dropped;
+    }
+
+    /// <summary>
+    /// Keeps two or three of the islets dropped as too small to matter — under
+    /// <see cref="MinIsletCells"/>, at least <see cref="MinStackCells"/> — as sea
+    /// stacks: decoration in the aether, never land. Only a speck still wholly in
+    /// the aether with no land beside it cardinally qualifies, since the linker may
+    /// have dragged a landmass over where it stood; one touching the coast at a
+    /// corner is a pillar off a headland and stays. The largest are taken, ties in
+    /// label order, and each stack's cells are listed in scan order.
+    /// </summary>
+    internal static void KeepSeaStacks(int seed, bool[,] mask, List<List<Vector2I>> dropped,
+                                       List<Vector2I> into)
+    {
+        int n = mask.GetLength(0);
+        var candidates = new List<List<Vector2I>>();
+        foreach (List<Vector2I> cells in dropped)
+        {
+            if (cells.Count < MinStackCells || cells.Count >= MinIsletCells) continue;
+            bool clear = true;
+            foreach (Vector2I c in cells)
+            {
+                if (mask[c.X, c.Y]) { clear = false; break; }
+                for (int k = 0; k < 4 && clear; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (InBounds(n, nx, nz) && mask[nx, nz]) clear = false;
+                }
+                if (!clear) break;
+            }
+            if (clear) candidates.Add(cells);
+        }
+        if (candidates.Count == 0) return;
+
+        // Largest first, ties as they came: an insertion sort, since List.Sort is unstable.
+        for (int i = 1; i < candidates.Count; i++)
+        {
+            List<Vector2I> c = candidates[i];
+            int j = i - 1;
+            while (j >= 0 && candidates[j].Count < c.Count) { candidates[j + 1] = candidates[j]; j--; }
+            candidates[j + 1] = c;
+        }
+
+        int keep = Math.Min(candidates.Count, MaxStacks - 1 + (int)(Hash(seed, 0x5EA5u) % 2));
+        into.Clear();
+        for (int i = 0; i < keep; i++)
+        {
+            List<Vector2I> cells = candidates[i];
+            cells.Sort((a, b) => a.X != b.X ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
+            into.AddRange(cells);
+        }
     }
 
     /// <summary>

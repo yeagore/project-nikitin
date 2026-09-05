@@ -83,7 +83,7 @@ public enum GateRole
 /// <param name="Facing">Which edge of the Domain it faces; at most one Gate per edge.</param>
 /// <param name="Center">The portal's column and the slab its base sits on.</param>
 /// <param name="Apron">The inner end of the landing strip: the ground the Gate is served by.</param>
-/// <param name="ApronArea">Cells of the best buildable shelf near the strip's head — what the first settlement has to work with.</param>
+/// <param name="ApronArea">Cells of the largest district within four cells of the strip's head, capped at 400 — what the first settlement has to work with.</param>
 public readonly record struct Gate(GateKind Kind, GateRole Role, Cardinal Facing,
                                    Vector3I Center, Vector2I Apron, int ApronArea)
 {

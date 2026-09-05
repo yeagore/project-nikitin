@@ -6,10 +6,11 @@ namespace ProjectNikitin.Generation;
 
 /// <summary>
 /// Cuts the watercourses across finished terrain, after the lakes and before the
-/// keel. There is no sea, so every course ends at the rim and pours off it. The
-/// routing is a priority flood inward from the rim with ties broken on noise:
-/// that gives every land cell a downstream neighbour by construction, and the
-/// noise is what makes rivers bend. Split by sub-stage across the partial files.
+/// keel. There is no sea, so every course ends at the rim and pours off it — all
+/// but the one, occasionally, that a lake swallows. The routing is a priority
+/// flood inward from the rim with ties broken on noise: that gives every land
+/// cell a downstream neighbour by construction, and the noise is what makes
+/// rivers bend. Split by sub-stage across the partial files.
 /// </summary>
 internal static partial class Rivers
 {
@@ -45,12 +46,17 @@ internal static partial class Rivers
     /// free step. Leaves every output untouched when <c>Rivers</c> is off or there is no land.
     /// </summary>
     /// <param name="keep">Cells the water may not touch: bridgeheads, and the king's-move neighbourhood of every goo puddle.</param>
-    /// <param name="form">Landform per column, so a bank that is a mesa rim is left alone.</param>
+    /// <param name="form">Landform per column, so a bank that is a mesa rim is left alone, and a basin can swallow a river.</param>
     /// <param name="fluid">What stands in each flooded column; anything that is not water is not-land to the routing.</param>
+    /// <param name="terminal">Out: one cell of each lake that keeps its river.</param>
+    /// <param name="delta">Out: the fan of every delta.</param>
+    /// <param name="deltas">Out: the apex of every delta.</param>
+    /// <param name="springs">Out: where each stream begins.</param>
     public static void Carve(int seed, IslandParams p, bool[,] land, short[,] surface,
                              short[,] water, bool[,] river, bool[,] navigable,
                              int[,] flow, List<Fall> falls, int bridgeSpan, byte[,] form,
-                             bool[,] keep, byte[,] fluid)
+                             bool[,] keep, byte[,] fluid, List<Vector2I> terminal,
+                             bool[,] delta, List<Vector2I> deltas, List<Vector2I> springs)
     {
         int n = p.Size;
         float strength = Math.Clamp(p.Rivers, 0f, 1f);
@@ -77,6 +83,15 @@ internal static partial class Rivers
         foreach (Vector2I src in Sources(n, land, surface, water, down, strength))
             Trace(n, src, down, flow, riverAt);
 
+        // Occasionally a river-fed lake keeps its river: the lake becomes a sink, and
+        // the drainage is summed again so that nothing downstream inherits its water.
+        if (SwallowRiver(seed, n, land, water, form, down, flow, riverAt, terminal))
+        {
+            Accumulate(order, down, flow);
+            foreach (Vector2I src in Sources(n, land, surface, water, down, strength))
+                Trace(n, src, down, flow, riverAt);
+        }
+
         var channel = new bool[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -97,20 +112,29 @@ internal static partial class Rivers
         var eyot = new bool[n, n];
         Braid(seed, n, land, water, surface, down, channel, navigable, twin, keep, eyot);
 
+        // A delta's arms branch off the pair; each arm's head is held to the cell it leaves.
+        var arm = new bool[n, n];
+        var branch = new Vector2I[n, n];
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++) branch[x, z] = new Vector2I(-1, -1);
+        Fan(n, land, water, surface, down, flow, channel, navigable, twin, keep, eyot,
+            riverAt, delta, deltas, arm, branch);
+
         CutBeds(n, channel, navigable, twin, river, water, surface);
 
-        Descend(n, order, down, river, water, surface);
+        Descend(n, order, down, river, water, surface, branch);
         Beach(n, water, river, surface, eyot);
         CutValleys(seed, p, n, land, surface, water, river, navigable, form, keep, twin);
         // The valley can leave water climbing at a pinned cell and sink one cell of a
         // pair without the other; Settle only ever lowers, so it converges.
-        Settle(n, order, down, river, navigable, water, surface, twin);
+        Settle(n, order, down, river, navigable, water, surface, twin, branch);
         FlattenReaches(n, order, down, river, navigable, water, surface);
-        Settle(n, order, down, river, navigable, water, surface, twin);
+        Settle(n, order, down, river, navigable, water, surface, twin, branch);
         // Flattening a reach lowers the water round an eyot Beach had already stood clear of it.
         Beach(n, water, river, surface, eyot);
         CutBanks(n, land, surface, water, river, form, keep);
         FindFalls(n, land, surface, water, river, down, falls);
+        FindSprings(n, river, navigable, water, down, arm, springs);
     }
 
     /// <summary>

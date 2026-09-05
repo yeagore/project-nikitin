@@ -26,7 +26,7 @@ public partial class GenerationAudit : Node
     /// <summary>Land per arrangement over SweepSeeds seeds each, thinnest first; Auto rolls give some shapes one island in sixty.</summary>
     [Export] public bool Bulk { get; set; } = false;
 
-    /// <summary>The guarantee set at every supported footprint — 48, 64, 72, 96, 128 — over SweepSeeds seeds each.</summary>
+    /// <summary>The guarantee set at every supported footprint — 64, 96, 128 — over SweepSeeds seeds each.</summary>
     [Export] public bool Sizes { get; set; } = false;
 
     /// <summary>Directory for a top-view PNG of two islands per arrangement, or empty for none: how a shape gets looked at headless.</summary>
@@ -51,10 +51,17 @@ public partial class GenerationAudit : Node
     /// <summary>Footprint of the gallery tiles; 96 reads at a glance and still shows a strait.</summary>
     [Export] public int GallerySize { get; set; } = 96;
 
+    /// <summary>
+    /// With the gallery, also write each shape's raw footprint masks (BuildMask alone:
+    /// before the bites, the linker and the fit pass) as a second sheet, so a shape
+    /// that comes out wrong can be blamed on the layout or on what came after.
+    /// </summary>
+    [Export] public bool GalleryMasks { get; set; } = false;
+
     /// <summary>The probation workup: each of the newest arrangements at every footprint and against every character.</summary>
     [Export] public bool Debut { get; set; } = false;
 
-    /// <summary>Every arrangement at 48² / 64² / 128², hardest-pressed first — the shortlist for a future size gate.</summary>
+    /// <summary>Every arrangement at 64² / 96² / 128², hardest-pressed first — the shortlist for a future size gate.</summary>
     [Export] public bool Strain { get; set; } = false;
 
     /// <summary>A digit height map of one patch each of badlands, karst, massif, dunes and sinkholes.</summary>
@@ -72,7 +79,7 @@ public partial class GenerationAudit : Node
     /// <summary>Four hanging Gates — the maximum request — for every arrangement x character, then the reductions.</summary>
     [Export] public bool GateMatrix { get; set; } = false;
 
-    /// <summary>Sweep Lakes, Rivers, Crossings and Valleys with everything else held, so a knob that does nothing shows.</summary>
+    /// <summary>Sweep Lakes, Rivers, Crossings, Valleys and Wind with everything else held, so a knob that does nothing shows.</summary>
     [Export] public bool Knobs { get; set; } = false;
 
     /// <summary>Material shares at the four climate corners (dry/wet x cold/warm) and the preset: the rebalancing check.</summary>
@@ -81,8 +88,38 @@ public partial class GenerationAudit : Node
     /// <summary>Directory for the moisture x warmth collage - 25 surface views of one seed - or empty for none.</summary>
     [Export] public string ClimateGrid { get; set; } = "";
 
-    /// <summary>Footprint the ClimateGrid collage and its scout use; 72 reads at a glance where 128 does not.</summary>
-    [Export] public int ClimateGridSize { get; set; } = 72;
+    /// <summary>Footprint the ClimateGrid collage and its scout use; 64 reads at a glance where 128 does not.</summary>
+    [Export] public int ClimateGridSize { get; set; } = 64;
+
+    /// <summary>Directory for the climate chart — warmth against moisture, every byte pair coloured with its ground, from the surface stage's own rule — or empty for none.</summary>
+    [Export] public string ClimateChart { get; set; } = "";
+
+    /// <summary>Directory for the surface statistics — mean shares at the 25 knob positions, and which grounds occur together over rolled seeds — or empty for none.</summary>
+    [Export] public string ClimateStats { get; set; } = "";
+
+    /// <summary>Directory for the arrangement sheet — FirstSeed in every layout, captioned — or empty for none.</summary>
+    [Export] public string ArrangementSheet { get; set; } = "";
+
+    /// <summary>Footprint of the arrangement sheet's tiles.</summary>
+    [Export] public int ArrangementSize { get; set; } = 64;
+
+    /// <summary>Directory for the knob sheet — FirstSeed with each 0–1 knob swept, a row per knob — or empty for none.</summary>
+    [Export] public string KnobSheet { get; set; } = "";
+
+    /// <summary>Footprint of the knob sheet's tiles.</summary>
+    [Export] public int KnobSize { get; set; } = 96;
+
+    /// <summary>Directory for the stage sheet — FirstSeed drawn after every stage of the pipeline, one sheet and a tile per stage — or empty for none.</summary>
+    [Export] public string StageSheet { get; set; } = "";
+
+    /// <summary>Footprint of the stage sheet's island.</summary>
+    [Export] public int StageSize { get; set; } = 96;
+
+    /// <summary>Seeds per knob position in the shares count.</summary>
+    [Export] public int StatsSeeds { get; set; } = 30;
+
+    /// <summary>Rolled seeds in the co-occurrence count.</summary>
+    [Export] public int StatsIslands { get; set; } = 500;
 
     /// <summary>Score this many consecutive seeds from FirstSeed for the collage, or 0 for none.</summary>
     [Export] public int ClimateScout { get; set; } = 0;
@@ -130,7 +167,7 @@ public partial class GenerationAudit : Node
         PrintCharacters(t);
         PrintWalkability(t);
         PrintPasses(t);
-        PrintShelves(t);
+        PrintDistricts(t);
         PrintCrossings(t);
         PrintGates(t);
         PrintRoads(t);
@@ -165,6 +202,16 @@ public partial class GenerationAudit : Node
                 case nameof(Climate): Climate = true; break;
                 case nameof(ClimateGrid): ClimateGrid = value; break;
                 case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
+                case nameof(ClimateChart): ClimateChart = value; break;
+                case nameof(ClimateStats): ClimateStats = value; break;
+                case nameof(ArrangementSheet): ArrangementSheet = value; break;
+                case nameof(ArrangementSize): ArrangementSize = int.Parse(value); break;
+                case nameof(KnobSheet): KnobSheet = value; break;
+                case nameof(KnobSize): KnobSize = int.Parse(value); break;
+                case nameof(StageSheet): StageSheet = value; break;
+                case nameof(StageSize): StageSize = int.Parse(value); break;
+                case nameof(StatsSeeds): StatsSeeds = int.Parse(value); break;
+                case nameof(StatsIslands): StatsIslands = int.Parse(value); break;
                 case nameof(ClimateScout): ClimateScout = int.Parse(value); break;
                 // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
                 case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
@@ -176,6 +223,7 @@ public partial class GenerationAudit : Node
                 case nameof(GalleryShapes): GalleryShapes = value; break;
                 case nameof(GallerySeeds): GallerySeeds = int.Parse(value); break;
                 case nameof(GallerySize): GallerySize = int.Parse(value); break;
+                case nameof(GalleryMasks): GalleryMasks = true; break;
                 case nameof(Seeds): Seeds = int.Parse(value); break;
                 case nameof(FirstSeed): FirstSeed = int.Parse(value); break;
                 case nameof(FeasibilitySeeds): FeasibilitySeeds = int.Parse(value); break;
@@ -205,6 +253,11 @@ public partial class GenerationAudit : Node
         if (FieldMaps.Length > 0) WriteFieldMaps();
         if (Gallery.Length > 0) WriteGallery();
         if (ClimateGrid.Length > 0) WriteClimateGrid();
+        if (ClimateChart.Length > 0) WriteClimateChart();
+        if (ClimateStats.Length > 0) WriteClimateStats();
+        if (ArrangementSheet.Length > 0) WriteArrangementSheet();
+        if (KnobSheet.Length > 0) WriteKnobSheet();
+        if (StageSheet.Length > 0) WriteStageSheet();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>

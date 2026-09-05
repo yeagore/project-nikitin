@@ -9,6 +9,9 @@ in-fiction Age of Exploration driven by opening links between Domains.
 **Documentation split:** the **Notion wiki is the design overview** (premise,
 concepts, glossary, decisions); see **Design source of truth** below. **Technical
 detail lives in this repo**: this file for orientation, `docs/*.md` for specs.
+`docs/island-generation-plain.md` is a plain-language retelling for Maxim: not
+a source for you, but a document you owe an update to whenever a change alters
+what the spec or the dev-scenes manual say.
 When a task needs a design fact that is not written down, ask rather than
 invent, and offer to log the answer in the Notion Decision Log.
 
@@ -21,7 +24,7 @@ invent, and offer to log the answer in the Notion Decision Log.
 | Engine | Godot **4.7**, Forward+ renderer, Direct3D 12, **Jolt** physics |
 | Scripting | **C#** (Godot .NET). `Project Nikitin.csproj` uses `Godot.NET.Sdk/4.7.2`, `net8.0`, nullable enabled, root namespace `ProjectNikitin`. Needs the .NET ("Mono") build of the editor. |
 | Main scene | `res://scenes/main/main.tscn` |
-| Platform | Windows. Shell is PowerShell; a Bash tool is also available. |
+| Platform | Two machines: a Mac (zsh; Godot at `/Applications/Godot_mono.app`) and a Windows box (PowerShell; Godot on `D:`). The checksum reproduces bit-for-bit across both. |
 
 `.godot/` is generated and git-ignored; never edit or commit it. `*.uid`
 sidecars are tracked.
@@ -29,10 +32,11 @@ sidecars are tracked.
 ### Building & running
 
 The C# side builds standalone with `dotnet build "Project Nikitin.csproj"`; do
-this after editing any `.cs`. Godot lives on the D: drive, off `PATH`:
+this after editing any `.cs`. Godot is off `PATH` on both machines:
 
 ```
-D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe
+/Applications/Godot_mono.app/Contents/MacOS/Godot                          # macOS
+D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   # Windows
 ```
 
 It runs headless, so the dev scenes can be executed from a shell and their
@@ -41,12 +45,14 @@ three of them: the island lab (F6 in the editor), the audit, and the checksum.
 The two commands that matter after touching the generator:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 448 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 442 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 ```
 
-Run both under a timeout (headless Godot does not always exit), and note this
-machine prints decimals with a comma. To *look* at a shape headless, the audit's
+Run both under a timeout (headless Godot does not always exit; macOS has no
+`timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`), and note the
+Windows machine prints decimals with a comma. The headless runs are separate
+processes and can run at once. To *look* at a shape headless, the audit's
 `Gallery=<dir> GalleryShapes=Isthmus,Quarters` writes a contact sheet of sixteen
 seeds per arrangement, captioned with the landmass count.
 
@@ -66,8 +72,10 @@ seeds per arrangement, captioned with the landmass count.
   slope limit is walkable by construction; every cliff is one some rule put there.
   Walking is by king's moves: a corner is cut unless both cardinal cells beside
   the diagonal are cliffs. Works, anchors and water stay cardinal.
-- **Five supported footprints: 48², 64², 72², 96², 128²** (128² is the stress
-  target). Altitude is bounded by the same number in slabs, so the bounding
+- **Three supported footprints: 64², 96², 128²** (128² is the stress target;
+  48² and 72² were dropped on 2026-09-05, 48² because the footprint constants
+  measured in cells wreck the split shapes there, 72² with the ladder it sat
+  on). Altitude is bounded by the same number in slabs, so the bounding
   cube is a real shape, and the landmass takes 55–85% of the grid's extent.
   30–40 Domains per game; up to four side Links per Domain, one Gate per edge.
 - **Terrain is stored per column**, not as a voxel array: each `(x, z)` holds a
@@ -106,24 +114,32 @@ under `scripts/generation/`, in the order they run:
 
 | Stage | Class | What it settles |
 |---|---|---|
-| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid. |
+| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
 | Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
 | Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords, falls. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river, and a delta where a navigable river meets a gentle coast. |
 | Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas, reach areas (once built), water bodies, ferry berths, shelves. |
+| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built), water bodies, ferry berths. Shelves are gone. |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The five-byte habitat vector, the feature anchors and a provisional material per column, names. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
+| Magicks | `Magicks` | The magickal density byte: for now pure noise in soft waves, read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
+**Auto knobs.** The ten 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, wind, overhang density) accept
+`IslandParams.Auto` (any negative value); `Roster.ResolveKnobs` then rolls
+them from the seed before anything runs, and the values used are
+`IslandData.Settings`. The preset leaves all ten on Auto, so the audit's
+default seeds sample the whole knob space; a sweep pins the knob it sweeps.
+
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 448 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 442 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against
@@ -155,12 +171,13 @@ scripts/
     Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
     Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
     Roster.cs                  The terrain stages (see the table above).
-    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords.
-    Traversal*.cs, WalkArea.cs, Shelf.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
+    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,
+                               deltas and springs, the lake that swallows a river.
+    Traversal*.cs, WalkArea.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
                                The read-back analysis and its value types.
     Passage.cs, Works.cs       The roads between the Gates.
     Gate.cs, GatePlacement.cs, GateSites.cs
-    Habitat.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
+    Habitat.cs, Magicks.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
     IslandData.cs, IslandParams.cs, Span.cs, Terrain.cs
     LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
     FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs
@@ -175,6 +192,10 @@ resources/island_default.tres  The IslandParams preset all three dev scenes load
 docs/
   island-generation.md         The generation spec.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
+  island-generation-plain.md   The spec, appendix and manual retold in plain words,
+                               for Maxim. Do not read it for orientation (the spec
+                               is the source); do keep it true when the generator
+                               or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit and checksum manual.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
@@ -248,7 +269,7 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 Consult the relevant page before non-trivial design work. When a decision gets
 made in a session, offer to add it to the Decision Log and to close the matching
 Open Question. Two decisions are made but not yet logged there: the slab's 1:4
-ratio, and the five supported footprints (the Ecumene page still says 16³–64³).
+ratio, and the three supported footprints (the Ecumene page still says 16³–64³).
 
 ---
 
@@ -256,9 +277,11 @@ ratio, and the five supported footprints (the Ecumene page still says 16³–64�
 
 - **Prototype 0**: dev environment (git, Godot, Claude, VS Code). Done; the repo
   is at `yeagore/project-nikitin`.
-- **Render an island**, branch `island-generation`, PR
-  [#2](https://github.com/yeagore/project-nikitin/pull/2). Every generation
-  stage is done and audited at all five footprints. What is next, in rough
+- **Render an island**, branch `island-generation`, merged in PRs
+  [#1](https://github.com/yeagore/project-nikitin/pull/1),
+  [#3](https://github.com/yeagore/project-nikitin/pull/3) and
+  [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
+  stage is done and audited at all three footprints. What is next, in rough
   order, is in `docs/island-generation.md` §6: the chunked span-aware mesher and
   colliders (the only thing that will answer the performance question), settlement
   placement, the biome layer above `Material`, and span-aware pathing.
@@ -276,5 +299,5 @@ Flagged so they are not silently hard-coded:
 3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
    `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
    bounds, an InputMap.
-4. **Domain size ladder.** Two candidate ladders (64/96/128 and 48/72/96) are
-   overlaid in the five supported footprints until Maxim picks one.
+4. ~~**Domain size ladder.**~~ Decided 2026-09-05: 64 / 96 / 128. Not yet in
+   the Notion Decision Log.

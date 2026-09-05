@@ -7,8 +7,8 @@ yet taken are in [island-generation-appendix.md](island-generation-appendix.md)*
 the lab and audit manuals, the repository layout and the glossary are in
 `CLAUDE.md`. History is in git.
 
-Status (2026-09-02): every stage below is implemented in `scripts/generation/`,
-five footprints — 48², 64², 72², 96², 128² — are supported and audited, and the
+Status (2026-09-05): every stage below is implemented in `scripts/generation/`,
+three footprints — 64², 96², 128² — are supported and audited, and the
 chunked mesher is the next piece of work.
 
 ---
@@ -48,8 +48,8 @@ point: the audit's `altOverCap` is keel-to-crest against `Size`, and the lab
 draws the same box.
 
 Everything the later stages work out — landform, water and fluid, the habitat
-vector, the anchor lists, Gates, roads, names — lives on `IslandData` beside
-the spans; `scripts/generation/IslandData.cs` is the field list.
+vector, the magick layer, the anchor lists, Gates, roads, names — lives on
+`IslandData` beside the spans; `scripts/generation/IslandData.cs` is the field list.
 
 Generation is a **pure function of `(seed, IslandParams)`**: same inputs, same
 Domain, every time. Every roll is salted per stage (`SeedHash`; the terrain
@@ -79,6 +79,15 @@ the lobes outright: a **lagoon** (a disc of aether, at the centre of a ring or
 off it for a block's hole) and a **waist** (two flaring bays either side of an
 axis, which cut a neck to a width however the heads bulge).
 
+The nearest lobe owns each cell, and each lobe keeps its own share of its disc:
+a **shape noise** ranks the lobe's cells and the lowest `1 − Coverage` of them
+are dropped, which is what makes a coast ragged rather than elliptical. The
+shape noise is **island-relative** — the same number of periods across a lobe at
+every footprint, normalised to 64² — as its warp always was. Ground **inside two
+lobes at once is never cut**: it is interior by construction, so the cut cannot
+perforate a seam or pit the middle of a block's hub, and only the outer coast is
+shaped by it.
+
 | layouts | shape |
 |---|---|
 | `Single`, `Satellites` | one landmass; with two to four islets round it. The only two that take **bites** |
@@ -89,7 +98,7 @@ axis, which cut a neck to a width however the heads bulge).
 | `Atoll` | beads on a string: rounded islets that all but touch, a step of water between each pair |
 | `Cross`, `TShape`, `LShape`, `Star`; `BrokenCross`, `BrokenT`, `BrokenL` | a wide hub with thick arms, **axis-aligned**, so an arm points at an edge and therefore at a Gate; the broken forms part the arms |
 | `Fractal` | a chain of overlapping lobes that turns as it goes |
-| `Rosette` | a ring of lobes over a full hub: a run of deep round bays with headlands between |
+| `Rosette` | a spray of narrow petals fused at a small heart: one landmass, the thin, busy cousin of `Star` |
 | `ThousandIsles` | a **quilt**: a jittered 4×4 to 6×6 grid of lobes by footprint, a few holes, every seam a strait — the only spread the linker leaves where it was |
 | `Square`, `Rhomb` | blocky fused grids of lobes, axis-aligned and stood on a corner; a little under half the time with a hole of a rolled size, a little off the centre |
 | `NShape` | the letter itself: two uprights and the diagonal joining them, the strokes as fat as a cross's arm |
@@ -106,11 +115,22 @@ one); components under `Landmasses.MinIsletCells` are dropped; and
 cardinally, across at most a bridge span (`Crossings`). Whatever the
 arrangement, the pieces are linkable, and `FindBridgeSites` records the pairs.
 
+**Sea stacks.** Of the specks the islet filter drops, two or three — the
+largest, on the mask that ships, still wholly in the aether with no land beside
+them cardinally — are kept as `IslandData.SeaStacks`: aether cells, never land.
+Nothing walks, builds, routes or flies through them (a stack within a cell of a
+hanging Gate's flight path is dropped once the Gates are placed); they are an
+anchor list for the content layer to stand a pillar on, and the lab draws each
+as a dark column eight slabs tall.
+
 **The fit pass** (`IslandGenerator.FitFootprint`) wraps the stage: the
 landmass's bounding rectangle must cover **55–85% of the grid's extent**,
 measured on what ships — after the bites, the islet filter and the linker,
 whose stray-dragging shrinks every scattered layout. A layout outside the band
-is rebuilt scaled about the centre, radii and all, up to three times.
+is rebuilt scaled about the centre, radii and all, up to three times. A scaled
+lobe is kept inside the grid by its own reach on each axis (the ellipse's
+extent, or the radius if that is less, plus three cells); at placement the pad
+is the plain radius plus three, which every layout was tuned against.
 
 `Roster` resolves `Auto` for the arrangement, the character and the relief
 style. The arrangement pool is weighted toward a single landmass, and
@@ -281,8 +301,11 @@ the upstream area a channel needs before it counts as a river.
 - **A river has a bed**: the channel is cut two slabs down and filled to one
   below the ground, so the banks stand proud and the course reads as a channel.
   The banks are cut to match, so no two-slab step is left behind.
-- **A stream is crossed at a ford** — one every ~11 cells, where both banks are
-  dry and within a slab of the water — and is an obstacle everywhere else.
+- **A stream is crossed at a ford** — one every ~11 cells on flat ground,
+  stretching to ~33 through broken ground (the relief within two cells, the
+  same measure ruggedness is made of, read before ruggedness exists), where
+  both banks are dry and within a slab of the water — and is an obstacle
+  everywhere else. The head of every course gets one whatever the ground.
 - **A navigable river** is two cells across, three slabs deep, not fordable,
   and a course earns it below its first real confluence, where a barge would in
   fact get in. It occasionally splits round an **eyot**. **It is a stair of
@@ -304,8 +327,29 @@ the upstream area a channel needs before it counts as a river.
   keeps its bare incision. 0 cuts nothing; 1 cuts steep courses in full and
   plain ones shallow. Because the valley and bank passes only lower,
   `Lakes.RaiseSunkenShores` runs afterwards.
-- **Every river reaches the rim and pours off it**, because there is no sea.
-  Rim falls are drawn spilling past the keel into the aether.
+- **Every river reaches the rim and pours off it**, because there is no sea —
+  all but the one a lake swallows. On about three islands in ten that have a
+  river-fed lake (`TerminalChance`), one such lake — a basin's for preference,
+  else the one with the strongest inflow — is made a sink after the first
+  accumulation: its cells get no downstream neighbour, the drainage is summed
+  again, nothing is traced past it and it has no spill. That breaks "every
+  course reaches the aether" on purpose; `IslandData.TerminalLakes` names the
+  lakes and the audit counts them. Rim falls are drawn spilling past the keel
+  into the aether.
+- **Deltas.** A navigable river that meets the rim over a gentle coast parts
+  into two or three mouths (`Rivers.Deltas`): from the axis cell four upstream
+  of the mouth, an arm leaves each side of the pair — a step sideways, two
+  forward, and again, cardinal all the way — as a stream of its own until it
+  reaches the rim. An arm that would climb, drop more than a step, run beside
+  standing water, or take a bridgehead, an eyot or a cell the river already
+  holds is not cut, and one that finds no rim inside nine cells is given up, so
+  a cliff coast has no delta. Each arm's head is held to the pair cell it
+  leaves (`Descend` reads the branch). The dry ground between the mouths, apex
+  to rim, is the **fan** (`IslandData.Delta`): floodplain whatever the climate.
+- **Springs** are where a stream begins on dry ground: a stream cell no other
+  channel cell drains into, not beside a lake (that is the lake's outflow, and
+  the lake is the source) and not a delta's arm. `IslandData.Springs` lists
+  them; with `Falls` (the lip cells) they are anchors like the banks.
 - **A lip pours every way it plausibly can.** A cell that is a fall at all —
   any aether beside it, or a fall's depth of drop along its own course — throws
   a sheet off *every* aether edge (a corner spills both ways) and toward every
@@ -359,10 +403,14 @@ playable.
   the crossings that exist because the water is genuinely in the way. In the
   audited sample every body can be bridged and no berth survives (`berths` in
   the baseline), so the ferry machinery is currently idle.
-- **Shelves** — ground level enough to lay a settlement out on: each cell flat
-  or at one lone step. `Width` is the largest square that fits, because a
-  fifty-cell ledge one cell deep is nowhere anyone can settle; a shelf is
-  **buildable** at `MinShelfArea` cells and `MinShelfWidth` across.
+- **Districts** — a walk area of `MinDistrictArea` cells or more is a district,
+  and a district is **somewhere to build**: walk-connected ground, no works.
+  `WalkArea.Seat` is one cell of it, so the reach area holding the whole set
+  can be read. There are no shelves any more: the level-ground patches ("each
+  cell flat or at one lone step", with an inscribed-square width) were removed
+  on 2026-09-05 in favour of walk-connected regions, and everything that read
+  them — the "somewhere to build" guarantee, the Gate apron, the lab, the audit
+  — reads districts instead.
 
 ### Gates (`GatePlacement`, `Gate`)
 
@@ -399,8 +447,9 @@ the cells running out toward the rim move. It is never short and never sloped,
 and the audit asserts both to the letter. Gate placement is therefore the one
 pass that both reads the traversal analysis and changes the terrain, so
 `Traversal.Analyse` runs again when it moved a slab. Each Gate also has an
-**apron** — the level ground its strip opens onto (`ApronArea` is a ranking
-target, not a requirement) — and the roads run apron to apron.
+**apron** — the largest district within four cells of its strip's head, capped
+at 400 cells so it stays a tie-break (`ApronArea` is a ranking target, not a
+requirement) — and the roads run apron to apron.
 
 **The Entry's kind and edge are inputs** (`EntryGate`, `EntryEdge`): a Link
 joins two Gates of the same kind, and a Domain reached by travelling east comes
@@ -444,24 +493,48 @@ Domain has any. Not a fault: a Domain is allowed to be hard country.
 
 ### Habitat, surfaces and names (`Habitat`, `Surfaces`, `Names`)
 
-**The habitat vector** (`Habitat.Measure`) is five bytes per column measuring
+**The habitat vector** (`Habitat.Measure`) is six bytes per column measuring
 the growing conditions, kept as separate axes so the biome layer can compose
-them instead of unpicking one score.
+them instead of unpicking one score. Two things are rolled per Domain and read
+here: the wind (rolled with the dunes; how hard it blows is the `Wind` knob)
+and the sun.
 
 | axis | 0 … 255 | how it is measured |
 |---|---|---|
-| `Moisture` | parched … waterside | the Domain's **background** (`IslandParams.Moisture` × 255) wobbled ±25 by a low-frequency noise into patches; the lee up to 20 damper; a rock landform and three cells round it carry noise-gated patches of drought (−60); plus what fresh water adds (goo waters nothing): 200 at the bank less a floor of 8, decaying to 1/e over 5 cells of **walk cost** and gone by 16 — a cell per cell along or down, two more per slab climbed except the free step up onto the bank, so a river waters the plain it crosses and not the mountain or the canyon wall it passes — wobbled by noise so the bands are not contour lines of the water network |
-| `Warmth` | frozen … sand | the Domain's **background** (60 + 180 × `IslandParams.Warmth`, so even the coldest knob keeps its lowland above the snow) over everything up to the **plateau ceiling** — the lowest ground plus what the plateau ladder (`PlateauLevels × CliffHeight`) and a chain of mesas (`2 × MesaHeight`) can stack, plus four slabs of ordinary relief — then a lapse of 255 over 60% of the mountain cap (`Size × 40/128`) above that. Read off the parameters on purpose: no rung or mesa is ever cold at any footprint, and only what stands above every plateau, a mountain's upper part, is; its top is snow in any climate. (Centring the island in its cube and freezing the cube's top fifth was tried first: it cleared the plateaus but the keel pushes a centred island down, so no mountaintop reached the cold at temperate settings.) Then the modifiers: a fully windswept cell is 15 colder, the rim 12 colder fading over 16 cells inland, and wet ground is pulled 30% of the way toward the temperate middle (135) from either side — water tempers heat and cold alike. Measured last, since it reads the other four axes |
+| `Moisture` | parched … waterside | the Domain's **background** (`IslandParams.Moisture` × 255) wobbled ±25 by a low-frequency noise into patches; the **rain shadow**: the lee loses up to 30 × the wind, because the rain falls on the windward side (it gained 20 as "the lee holds its damp" until 2026-09-05, which was the wrong way round); the **gorge damp**: ground that is both sheltered *and* broken gains up to 70 × the wind × shelter × ruggedness, so a gorge floor under its walls goes mossy while the plateau above it, flat and open, stays steppe; a rock landform and three cells round it carry noise-gated patches of drought (−60); plus what fresh water adds (goo waters nothing): 200 at the bank less a floor of 8, decaying to 1/e over 5 cells of **walk cost** and gone by 16 — a cell per cell along or down, two more per slab climbed except the free step up onto the bank, so a river waters the plain it crosses and not the mountain or the canyon wall it passes — wobbled by noise so the bands are not contour lines of the water network |
+| `Warmth` | frozen … sand | the Domain's **background** (60 + 180 × `IslandParams.Warmth`, so even the coldest knob keeps its lowland above the snow) over the whole island, then a **lapse on mountains alone**, measured from each mountain's own foot (`Relief.MountainFoot` read off the finished surface): nothing for the first 40% of the mountain cap (`Size × 40/128`) above the foot, then the full 255 over the next 60%. So a mountain of the full cap is snow at its top in any climate and one of half the cap is merely cold, at every footprint and whatever the mountain stands on; and no rung, mesa or massif is ever cold, because the lapse never reads them. (Two earlier models: centring the island in its cube and freezing the cube's top fifth — the keel pushes a centred island down, so no mountaintop reached the cold at temperate settings; then a ceiling read off `PlateauLevels`, `CliffHeight` and `MesaHeight` — which put the snow line at 128² only, and let a mesa knob move the snow on a Domain with no mesas.) Then the modifiers, kept small so an island's mean warmth reads at its knob: the **sun** — rolled per Domain like the wind (`IslandData.Sun`, `SunFrom`) — the effective surface's downhill direction dotted with the way to the sun, so a slope of two slabs per cell turned full to it is 8 warmer and one turned full away 8 colder, and flat ground is untouched; **frost hollows** — every cell of a basin, and the floor of a sinkhole (three slabs or more under the ground within two cells) — 8 colder than their rung; the lee up to 10 × the wind warmer (the label is the open flat ground); the rim 6 colder fading over four cells inland (rim distance is a median five cells even at 128², so a long fade never faded); the bloom of any **hot water** — on a Domain whose warmth knob is under 0.35, each spring has up to a 40% chance and each pool of standing water of at most 60 cells with no watercourse through it up to 35% of running hot, the chance full at a knob of 0 and gone at 0.35 (`IslandData.HotWater`, `Hot`); a hot source adds 90 at the source decaying to 1/e over 4 cells of the same walk cost the moisture uses, and never lifts a cell past 160, so a frigid Domain keeps a meadow round its hot spring and no hot ground appears in a cold country; and wet ground pulled 30% of the way toward the temperate middle (135) from either side — water tempers heat and cold alike. Measured last, since it reads the other axes |
 | `Ruggedness` | flat … broken | local relief within two cells, 32 per slab, with **water read as its bank** (a slab over its surface): a stream through a plain is flat country and a gorge is still its walls. Measured against the water surface instead, every shore read a slab rougher than the country round it |
 | `Exposure` | lee … windswept | tallest cover found walking up to ten cells upwind (`WindFrom`); eight slabs of upwind rise is full shelter. The wind is rolled for every Domain, dunes or not |
 | `RimDistance` | — | cells of land to the aether, capped at 255. The setting's own axis: essencecoral grows on rims, and the deep interior is the sheltered country |
+| `WaterDistance` | bank … out of reach | the walk cost the moisture strip is read from — 0 on fresh water, a cell per cell along or down, two more per slab climbed, the step up onto the bank free — kept whole to 255 where the moisture reads it only to 60. Not a climate axis but the settlement and biome layers' first question ("near water?"), so the byte is stored rather than thrown away |
+
+**The wind knob** (`IslandParams.Wind`, Auto like the rest) scales everything
+exposure moves — the rain shadow, the gorge damp, the milder lee — by `2 × Wind`:
+0 is still air, where shelter changes nothing; 0.5 the figures above; 1 twice
+them. The exposure byte itself is geometry and does not move, so the climate
+collage's field strip holds across a wind sweep. The audit's `Knobs` sweep
+prints, per wind setting, moisture and warmth on flat lee against flat open
+ground and on the gorge floors: from 0 to 1 the flat lee dries by about 30, the
+gorge floors wet by about 40 and the lee warms by about 15, while the open
+ground does not move.
+
+**The magickal density** (`Magicks.Measure`, `IslandData.Magick`) is a seventh
+byte and a layer of its own, not a habitat axis. For now it is noise and
+nothing else: two octaves of warped simplex at a wavelength of about forty
+cells, pushed through a tanh so the byte uses most of its range (about 200 of
+255 within one island) without the flat plateaus a hard clip made — soft waves
+with nothing behind them, read by nothing. What the Magicks system makes of it
+is design to come; the byte exists so the lab, the audit and the collages carry
+it from the first.
 
 **Every geometric question is asked of the effective surface**
 (`EffectiveLevel`), because habitat and anchors describe what a place *looks
 like* — measured against the bare ground, the bank of a navigable river is a
 "cliff" on the strength of its bed.
 
-`Surfaces.Classify` collects the **feature anchors**: `CoastCells`;
+`Surfaces.Classify` collects the **feature anchors** (and the water and
+footprint stages leave three more beside them: `Springs`, `Falls` — the lip
+cells — and `SeaStacks`, which are aether): `CoastCells`;
 `CliffCells` (**brinks**: dry cells three or more slabs over a neighbour's
 effective surface — a gorge rim qualifies, a bank does not); `CliffFootCells`
 (the ground under those faces); `BankCells` (the walkable wet margin, at most
@@ -481,7 +554,8 @@ questions once and content reads the lists.
 island reads as a place in the lab before the biome layer exists. In order:
 
 - **Beds and shores.** A river or lake bed is silt, and nothing else is. A goo
-  pool's bed and the dry cells round it are stone. A beach is sand.
+  pool's bed and the dry cells round it are stone. A beach is not sand: nothing
+  washes it, so it is whatever ground the climate grid says, a slab lower.
 - **Snow** below a warmth of 35: the extreme cold, and a mountain's top above
   its tundra.
 - **Rock is where rock is.** A **tall face** (six slabs, `TallFace`) bares
@@ -492,28 +566,62 @@ island reads as a place in the lab before the biome layer exists. In order:
   scree up to its snow. A plateau rung in soft
   country changes nothing: the ground runs up to the edge, because a four-slab
   step is the terrain's texture, not a wasteland.
-- **Dunes** are sand; badlands, karst and sinkhole country are dust.
-- **The climate grid**, warmth against moisture. Warmth is three bands — cold
-  below 100, hot from 175, temperate between — and moisture three: dry below
-  90, wet from 170, balanced between.
+- **Dunes** are sand where the warmth is at least the cold line (115); in the
+  cold band and under it the ridges stay and wear the climate's ground, a
+  frozen dune field under tundra rather than a pile of sand in it. Badlands,
+  karst and sinkhole country are scree (they were dust, which put a hot-band
+  ground beside tundra on a cold Domain).
+- **A delta's fan** is the wet ground of its row — floodplain on a hot Domain,
+  grass on a temperate, moorland on a cold, tundra where it is frigid — read
+  from the climate rule with the moisture held at wet and the water a cell
+  away. It was floodplain in any climate, which put floodplain in the tundra.
+- **Tors.** On a plain or a hillside, where a fine one-octave noise clears
+  0.87 (about one soft cell in a hundred, in patches of a few cells), the ground
+  is stone: small outcrops of building stone where there is no rock landform.
+  Material only; nothing about the terrain moves.
+- **The climate grid**, warmth against moisture. Warmth is four bands —
+  frigid below 85, cold below 115, hot from 185, temperate between — and
+  moisture three: dry below 90, wet from 170, balanced between. On open
+  lowland warmth is 60 + 180 × the knob, so frigid is a knob under about 0.14,
+  cold under about 0.3, hot one over about 0.7.
 
-| | dry | balanced | wet |
-|---|---|---|---|
-| **cold** | tundra | moorland | bog where a noise field allows (about a third), moorland otherwise |
-| **temperate** | steppe | meadow | grass |
-| **hot** | dust | savanna | floodplain within three cells of a river or lake, savanna beyond |
+| | dry | balanced | wet | by the water |
+|---|---|---|---|---|
+| **frigid** | tundra | tundra | tundra | |
+| **cold** | tundra | heath | moorland | |
+| **temperate** | steppe | meadow | grass | |
+| **hot** | dust | savanna | **verdure** where moisture is 200 or more (a higher bar than grass: heat is the less forgiving side), savanna under it | floodplain within three cells of a river or lake when wet |
 
-A floodplain has its own warmth line (158, under the hot line by what the
+The audit's `ClimateChart` draws this grid as an area chart, warmth against
+moisture, straight from the rule (`Surfaces.Climate`); it is the picture in the
+Notion page's Surfaces section.
+
+**Water in excess** is two cells laid over that grid, in patches, and neither
+is the rule. On the cold-to-cool half of the range (warmth under 140) it is
+**bog**: moisture 190 or more and a noise field over 0.66, so the cold and cool
+wet corners are about a tenth bog. On the warm-to-hot half (140 and over) it
+is **marsh**: moisture 230 or more — extreme, which takes a high background
+and the water's strip both — within two cells of fresh water, on flat ground
+(ruggedness 40 or under, so it is low as well as near), and a noise field over
+0.62; a marsh shares the floodplain's ground on a hot Domain and takes a few
+percent of it. The line at 140 sits just under the knob's middle less what
+the water's tempering takes off a bank, so a temperate Domain's riversides are
+marsh-side and a cool one's (a knob of 0.4 and under) bog-side. There are more
+bogs than marshes by design. A delta's fan is floodplain whatever the row.
+
+A floodplain has its own warmth line (170, under the hot line by what the
 water's tempering takes off a bank), so the bank and the strip behind it read
 the same; and any floodplain patch that does not touch fresh water through
 other floodplain is wiped to savanna — one flood over the footprint, so a
 floodplain never starts a cell away from its river. Past the ends: hot ground
-at a warmth of 205 or more is sand unless it is a floodplain, and a mountain's
-top is snow whatever the climate.
-The preset (moisture 0.45, warmth 0.5) is temperate and balanced: meadow with
-grass along the water. The audit's `Climate` sweep prints the whole grid, and
-the two ends, as material shares. The biome layer is expected to replace the
-mapping; the vector is the part meant to last. The lab's `surface`, `anchors` and five habitat views paint
+at a warmth of 220 or more is sand unless it is a floodplain (the last
+twentieth of the knob), and a mountain's top is snow whatever the climate.
+The preset leaves moisture and warmth on Auto, so each seed rolls its own
+climate; at 0.45 / 0.5 the grid is temperate and balanced, meadow with grass
+along the water. The audit's `Climate` sweep prints the whole grid, and the
+two ends, as material shares, and the `Sizes` sweep counts the snow at every
+footprint. The biome layer is expected to replace the
+mapping; the vector is the part meant to last. The lab's `surface`, `anchors`, six habitat views and `magick` view paint
 all of it, and the audit's `FieldMaps` writes the same as PNGs.
 
 `Names.Give` names the Domain, its districts and its bodies of water, so the
@@ -554,7 +662,7 @@ unmet) if none passes. Still a pure function of `(seed, params)`.
 | exactly one Entry, of the kind and on the edge asked for | a Link whose ends disagree is not a Link |
 | at least one Exit — as many as `ExitGates` asked for, of the kind `ExitGate` asked for | a Domain with no way onward is a dead end in a tree |
 | a road from the Entry to every Exit | an Exit you cannot reach is the same dead end wearing a portal |
-| a buildable shelf on the heartland | somewhere the first company can be laid out |
+| a district on the heartland | somewhere the first company can be laid out: walk-connected ground of twenty cells, no works |
 | the heartland covers ≥ 75% of the dry land | below that there is a second island nobody asked for |
 
 Nothing else is re-rolled for.
@@ -567,8 +675,8 @@ Its opt-in sweeps are the `[Export]` properties of `GenerationAudit.cs`, each
 documented there, and can be given on the command line after `--`
 (`godot --headless scenes/dev/generation_audit.tscn -- Knobs Portraits=<dir>`).
 `scenes/dev/generation_checksum.tscn` (`GenerationChecksum.cs`) hashes every
-field of `IslandData` for 448 islands — the 60 default seeds; every
-arrangement × character at 64²; all five sizes; every Gate request; every
+field of `IslandData` for 442 islands — the 60 default seeds; every
+arrangement × character at 64²; all three sizes; every Gate request; every
 `BridgeEase`; both ends of every knob — and diffs against
 `docs/checksum-baseline.txt` (`-- accept` rewrites it). Two runs that print the
 same lines built the same islands bit for bit: it is the regression gate for
@@ -584,32 +692,43 @@ at the lab.
 
 | param | range | drives |
 |---|---|---|
-| `Size` | 48 / 64 / 72 / 96 / 128 | footprint edge, in cells. Audited at these five (`SupportedSizes`); any 16–128 is accepted, unaudited |
+| `Size` | 64 / 96 / 128, or 0 | footprint edge, in cells. Audited at these three (`SupportedSizes`); any 16–128 is accepted, unaudited. 0 (`SizeAuto`) rolls one of the three per seed, like a knob on Auto |
 | `Radius` | 0 = auto | land-mask radius |
-| `Coverage` | 0 – 1 | share of each lobe's disc that becomes land |
+| `Coverage` | 0 – 1 | share of each lobe's disc that becomes land, outside the ground it shares with another lobe (always land) |
 | `Irregularity` | 0 – 1 | disc ↔ deeply lobed coastline |
 | `Arrangement` | enum | the layout — see Footprint |
 | `NewArrangements` | bool | whether `Auto` may roll the newer layouts |
 | `Character` | enum | which landforms the island is built from |
 | `NewLandforms` | bool | whether `Auto` may roll the sculpted characters |
-| `LandformMix` | 0 – 1 | the quota, low ground ↔ high |
-| `Relief` | 0 – 1 | vertical exaggeration |
-| `Hilliness` | 0 – 1 | swells ↔ mounds |
+| `LandformMix` | 0 – 1, Auto | the quota, low ground ↔ high |
+| `Relief` | 0 – 1, Auto | vertical exaggeration |
+| `Hilliness` | 0 – 1, Auto | swells ↔ mounds |
 | `RegionScale` | 6 – 40 | typical width of one region, in cells |
 | `CliffHeight` | 3 – 16 | one rung of the plateau ladder |
 | `PlateauLevels` | 1 – 8 | how many rungs — how terraced the island is |
 | `MountainHeight` | 8 – 160 | foot to summit, capped by `BoundAltitude` |
 | `MesaHeight` / `BasinDepth` | 3 – 24 | clearance above / below the ground around |
-| `Rivers` | 0 – 1 | how wet: the bar for a channel to be a river |
-| `Lakes` | 0 – 1 | how readily standing water collects |
-| `Valleys` | 0 – 1 | how far the ground falls toward a course |
-| `Moisture` | 0 – 1 | the background moisture before the water adds any: 0.15 dry country, 0.45 balanced, 0.75 wet |
-| `Warmth` | 0 – 1 | the background warmth of the lowland before the lapse and the chills: 0.15 cold country, 0.5 temperate, 0.85 hot, 1 sand; even 0 keeps its lowland above the snow |
+| `Rivers` | 0 – 1, Auto | how wet: the bar for a channel to be a river |
+| `Lakes` | 0 – 1, Auto | how readily standing water collects |
+| `Goo` | on / off | whether an island may roll goo puddles at all (three in ten do); off, no Domain has goo whatever the seed says |
+| `Valleys` | 0 – 1, Auto | how far the ground falls toward a course |
+| `Moisture` | 0 – 1, Auto | the background moisture before the water adds any: 0.15 dry country, 0.45 balanced, 0.75 wet |
+| `Warmth` | 0 – 1, Auto | the background warmth of open lowland: cold country under about 0.3, 0.5 temperate, hot from about 0.7, sand in the last twentieth; even 0 keeps its lowland above the snow |
+| `Wind` | 0 – 1, Auto | how far exposure moves the climate: 0 still air, 0.5 the nominal rain shadow, milder lee and damp gorge floors, 1 twice them |
 | `Crossings` | enum | Easy / Medium / Hard = 1 / 3 / 6 cells a bridge spans |
 | `EntryGate` / `EntryEdge` | enum | **inputs**, set by the Domain that sent you |
 | `ExitGates` / `ExitGate` | 0 – 3, enum | how many Links onward, and of what kind |
 | `EdgeThickness` / `KeelDepth` / `KeelRoughness` | | the underside; `KeelDepth` capped by `BoundAltitude` |
-| `OverhangDensity` / `OverhangDepth` / `ArchSpan` | | overhangs and arches |
+| `OverhangDensity` / `OverhangDepth` / `ArchSpan` | Auto / / | overhangs and arches |
+
+**Auto on a 0–1 knob** (`IslandParams.Auto`, any negative value) makes the
+generator roll that knob from the seed, uniformly over its whole range, before
+anything else runs (`Roster.ResolveKnobs`); the preset leaves all ten on
+Auto, so consecutive seeds differ in climate, water and relief and not only in
+shape, which is also how the audit's sixty seeds now sample the knob space.
+The values used are the island's `IslandData.Settings`, which the lab prints
+and shows on each slider. A knob set to a number is that number for every
+seed, which is what the sweeps and the checksum's knob cases do.
 
 **`Crossings` is not only an analysis setting.** It decides how wide the straits
 between an arrangement's landmasses may open, how far apart the linker leaves
@@ -651,8 +770,8 @@ The tree, with one line per file, is under **Repository layout** in
 
 1. **The chunked span-aware mesher + colliders** — the biggest piece left, and
    the only thing that will answer the performance question for real.
-2. **Settlement placement** — everything it needs exists: shelves, berths,
-   roads, Gate aprons.
+2. **Settlement placement** — everything it needs exists: districts, berths,
+   roads, Gate aprons, the water-distance byte.
 3. **The biome layer** above the habitat vector — the living things as opposed
    to the ground; the vector and the anchor lists are its inputs, the
    provisional `Material` mapping is its to replace.

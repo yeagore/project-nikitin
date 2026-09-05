@@ -335,25 +335,25 @@ public partial class GenerationAudit
     }
 
     /// <summary>
-    /// Every arrangement at 48² / 64² / 128², hardest-pressed first: att is the mean attempts,
+    /// Every arrangement at 64² / 96² / 128², hardest-pressed first: att is the mean attempts,
     /// short the islands under the masses the shape names, unmet the seeds that shipped broken.
     /// </summary>
     private void PrintStrain()
     {
         GD.Print($"\n=== strain at the small footprints ({SweepSeeds} seeds each; "
             + "att = attempts, short = islands under the masses the shape names) ===");
-        GD.Print($"  {"arrangement",-14} {"48:att",7} {"unmet",6} {"short",6} "
-            + $"{"64:att",7} {"unmet",6} {"short",6} {"128:att",8} {"unmet",6} {"short",6}");
+        GD.Print($"  {"arrangement",-14} {"64:att",7} {"unmet",6} {"short",6} "
+            + $"{"96:att",7} {"unmet",6} {"short",6} {"128:att",8} {"unmet",6} {"short",6}");
 
-        var rows = new List<(string Name, float Att48, string Cells)>();
+        var rows = new List<(string Name, float Att64, string Cells)>();
         foreach (IslandArrangement how in Enum.GetValues<IslandArrangement>())
         {
             if (how == IslandArrangement.Auto) continue;
             int wanted = MassesTheShapeNames(how);
             var bits = new List<string>();
-            float att48 = 0;
+            float att64 = 0;
 
-            foreach (int size in new[] { 48, 64, 128 })
+            foreach (int size in new[] { 64, 96, 128 })
             {
                 IslandParams p = Variant(q => { q.Arrangement = how; q.Size = size; });
 
@@ -367,13 +367,13 @@ public partial class GenerationAudit
                     if (masses < wanted) shortfall++;
                 }
                 float att = attempts / SweepSeeds;
-                if (size == 48) att48 = att;
+                if (size == 64) att64 = att;
                 bits.Add($"{att,7:0.00} {unmet,6} {shortfall,6}");
             }
-            rows.Add((how.ToString(), att48, string.Join(" ", bits)));
+            rows.Add((how.ToString(), att64, string.Join(" ", bits)));
         }
 
-        rows.Sort((a, b) => b.Att48.CompareTo(a.Att48));
+        rows.Sort((a, b) => b.Att64.CompareTo(a.Att64));
         foreach (var r in rows) GD.Print($"  {r.Name,-14} {r.Cells}");
     }
 
@@ -520,9 +520,11 @@ public partial class GenerationAudit
     private void PrintSizes()
     {
         GD.Print($"\n=== the guarantee set at every footprint ({SweepSeeds} seeds each) ===");
+        // snow% and snowy: the share of land under snow, and how many islands with a
+        // mountain carry any — the lapse is meant to reach the snow at every footprint.
         GD.Print($"  {"size",4} {"attempts",8} {"unmet",6} {"main%",6} {"heart%",7} "
             + $"{"gateFault",10} {"outBox",7} {"rimMiss",8} {"waterFault",11} "
-            + $"{"sealed",7} {"altMax",7} {"altOver",8} {"ms",6}");
+            + $"{"sealed",7} {"altMax",7} {"altOver",8} {"snow%",6} {"snowy",9} {"ms",6}");
 
         foreach (int size in IslandParams.SupportedSizes)
         {
@@ -532,6 +534,8 @@ public partial class GenerationAudit
             int unmet = 0, gateFault = 0, outBox = 0, rimMiss = 0, waterFault = 0;
             int sealedGorges = 0, altMax = 0, altOver = 0;
             double mainShare = 0, heartShare = 0;
+            long snowCells = 0, allLand = 0;
+            int mountainous = 0, snowy = 0;
             ulong t0 = Time.GetTicksMsec();
 
             foreach (IslandData d in Sweep(p, SweepSeeds))
@@ -540,12 +544,15 @@ public partial class GenerationAudit
                 attempts += d.Attempts;
                 if (d.Unmet.Length > 0) unmet++;
 
-                long land = 0, main = 0, heart = 0;
-                bool hasRiver = false, reachedRim = false;
+                long land = 0, main = 0, heart = 0, snowHere = 0;
+                bool hasRiver = false, reachedRim = false, hasMountain = false;
                 for (int x = 0; x < n; x++)
                 for (int z = 0; z < n; z++)
                 {
                     if (!d.HasLand(x, z)) continue;
+                    allLand++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Snow) snowHere++;
+                    if ((LandformType)d.Landform[x, z] == LandformType.Mountain) hasMountain = true;
                     short w = d.WaterLevel[x, z];
                     if (w == IslandData.NoLand)
                     {
@@ -570,6 +577,9 @@ public partial class GenerationAudit
                     }
                 }
                 if (hasRiver && !reachedRim) rimMiss++;
+                snowCells += snowHere;
+                if (hasMountain) mountainous++;
+                if (hasMountain && snowHere > 0) snowy++;
                 if (land > 0)
                 {
                     mainShare += 100.0 * main / land;
@@ -595,10 +605,12 @@ public partial class GenerationAudit
             }
 
             float ms = (Time.GetTicksMsec() - t0) / (float)SweepSeeds;
+            string snowyOf = $"{snowy} of {mountainous}";
             GD.Print($"  {size,4} {attempts / SweepSeeds,8:0.00} {unmet,6} "
                 + $"{mainShare / SweepSeeds,6:0.0} {heartShare / SweepSeeds,7:0.0} "
                 + $"{gateFault,10} {outBox,7} {rimMiss,8} {waterFault,11} "
-                + $"{sealedGorges,7} {altMax,7} {altOver,8} {ms,6:0}");
+                + $"{sealedGorges,7} {altMax,7} {altOver,8} "
+                + $"{100.0 * snowCells / Math.Max(1, allLand),6:0.0} {snowyOf,9} {ms,6:0}");
         }
     }
 
@@ -616,6 +628,43 @@ public partial class GenerationAudit
         PrintRiversSweep(steps);
         PrintCrossingsSweep();
         PrintValleysSweep(steps);
+        PrintWindSweep(steps);
+    }
+
+    /// <summary>
+    /// Wind 0..1: what exposure moves. On flat ground (rugged under 64), mean
+    /// moisture and warmth in the lee (exposure under 128) against the open (224 and
+    /// over): the rain shadow and the milder lee. On sheltered broken ground (rugged
+    /// 128 and over): the gorge damp. Then the marsh and bog shares, which read the
+    /// moisture. At 0 the lee and the open should agree but for the sun and the
+    /// water; at 1 the flat lee should be markedly drier and milder and the gorge floors wetter.
+    /// </summary>
+    private void PrintWindSweep(float[] steps)
+    {
+        GD.Print("  wind   flat lee moist  flat open moist   gorge moist   flat lee warm  flat open warm   marsh%   bog%");
+        foreach (float v in steps)
+        {
+            IslandParams p = Variant(q => q.Wind = v);
+            long leeM = 0, leeW = 0, lee = 0, openM = 0, openW = 0, open = 0, gorgeM = 0, gorge = 0;
+            long land = 0, marsh = 0, bog = 0;
+            foreach (IslandData d in Sweep(p, SweepSeeds))
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    land++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Marsh) marsh++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Bog) bog++;
+                    bool flat = d.Ruggedness[x, z] < 64;
+                    if (d.Exposure[x, z] < 128 && flat) { leeM += d.Moisture[x, z]; leeW += d.Warmth[x, z]; lee++; }
+                    else if (d.Exposure[x, z] < 128 && d.Ruggedness[x, z] >= 128) { gorgeM += d.Moisture[x, z]; gorge++; }
+                    else if (d.Exposure[x, z] >= 224 && flat) { openM += d.Moisture[x, z]; openW += d.Warmth[x, z]; open++; }
+                }
+            GD.Print($"  {v,4:0.00} {(lee > 0 ? leeM / (double)lee : 0),15:0.0} {(open > 0 ? openM / (double)open : 0),16:0.0} "
+                + $"{(gorge > 0 ? gorgeM / (double)gorge : 0),13:0.0} "
+                + $"{(lee > 0 ? leeW / (double)lee : 0),14:0.0} {(open > 0 ? openW / (double)open : 0),15:0.0} "
+                + $"{100.0 * marsh / Math.Max(1, land),8:0.00} {100.0 * bog / Math.Max(1, land),6:0.00}");
+        }
     }
 
     /// <summary>
@@ -629,9 +678,14 @@ public partial class GenerationAudit
         foreach (var (warmName, warmth) in new[] { ("cold", 0.15f), ("temperate", 0.5f), ("hot", 0.85f) })
         foreach (var (wetName, moisture) in new[] { ("dry", 0.15f), ("balanced", 0.45f), ("wet", 0.75f) })
             corners.Add(($"{warmName} {wetName}", moisture, warmth));
+        corners.Add(("cool wet", 0.75f, 0.35f));
+        corners.Add(("warm wet", 0.75f, 0.65f));
+        corners.Add(("frigid wet", 0.75f, 0.05f));
         corners.Add(("sand end", 0.45f, 1f));
         corners.Add(("snow end", 0.45f, 0f));
-        corners.Add(("preset", Params.Moisture, Params.Warmth));
+        if (Params.Moisture >= 0f && Params.Warmth >= 0f)
+            corners.Add(("preset", Params.Moisture, Params.Warmth));
+        else GD.Print("  (the preset rolls moisture and warmth per seed, so it has no corner of its own)");
         foreach (var (name, moisture, warmth) in corners)
         {
             IslandParams p = Variant(q => { q.Moisture = moisture; q.Warmth = warmth; });

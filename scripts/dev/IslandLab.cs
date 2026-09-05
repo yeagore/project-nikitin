@@ -33,6 +33,7 @@ public partial class IslandLab : Node3D
 	private PlaneMesh _fallQuad = null!;
 	private readonly List<Label3D> _compass = new();
 	private Label3D _windLabel = null!;
+	private Label3D _sunLabel = null!;
 	private int _lastSignature;
 	private IslandData? _data;
 
@@ -42,11 +43,11 @@ public partial class IslandLab : Node3D
 
 	private View _view = View.Height;
 
-	private bool _showBridges;
-	private bool _showLandings;
+	private bool _showBridges = true;
+	private bool _showLandings = true;
 	private bool _showFerries;
-	private bool _showRoutes;
-	private bool _showFords;
+	private bool _showRoutes = true;
+	private bool _showFords = true;
 	private bool _showCompass = true;
 	private bool _showLiquid = true;
 	private bool _showPanel = true;
@@ -186,13 +187,14 @@ public partial class IslandLab : Node3D
 	}
 
 	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>
+	/// <summary>Steps a 0–1 knob through auto, 0, 0.25 … 1 and round.</summary>
 	private void Cycle(Action<float> set, float current, string label)
 	{
 		Params ??= new IslandParams();
-		float next = Mathf.Round(current * 4f + 1f) / 4f;
-		if (next > 1.001f) next = 0f;
+		float next = current < 0f ? 0f : Mathf.Round(current * 4f + 1f) / 4f;
+		if (next > 1.001f) next = IslandParams.Auto;
 		set(next);
-		GD.Print($"[IslandLab] {label} = {next:0.00}");
+		GD.Print($"[IslandLab] {label} = {(next < 0f ? "auto" : next.ToString("0.00"))}");
 	}
 
 	private void CycleArrangement()
@@ -298,6 +300,7 @@ public partial class IslandLab : Node3D
 			h.Add(Params.KeelRoughness);
 			h.Add(Params.Moisture);
 			h.Add(Params.Warmth);
+			h.Add(Params.Wind);
 		}
 		return h.ToHashCode();
 	}
@@ -313,7 +316,7 @@ public partial class IslandLab : Node3D
 		int spans = RenderSpans(_data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		int lakes = Redraw();
-		GD.Print($"[IslandLab] seed {Seed}, {Params.Size}², {_data.Character} ({_data.Style})"
+		GD.Print($"[IslandLab] seed {Seed}, {_data.Size}², {_data.Character} ({_data.Style})"
 			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
 
 		if (!_framedOnce)
@@ -352,6 +355,7 @@ public partial class IslandLab : Node3D
 			+ $"\nladder {Params.PlateauLevels} rungs x {Params.CliffHeight} slabs   "
 			+ $"crossings {Params.Crossings} ({d.BridgeSpan} cells)   lakes {lakes}   "
 			+ $"built in {d.Attempts} attempt{(d.Attempts == 1 ? "" : "s")}\n"
+			+ SettingsSummary(d) + "\n"
 			+ WalkSummary(d) + "\n"
 			+ GroundSummary(d) + "\n"
 			+ GateSummary(d) + "\n"
@@ -359,5 +363,27 @@ public partial class IslandLab : Node3D
 
 		ShowLegend(ViewLegend(_view));
 		Sync();
+		ShowRolled(d);
+	}
+
+	/// <summary>The knobs the island was built with; a star marks one the seed rolled because the panel said Auto.</summary>
+	private string SettingsSummary(IslandData d)
+	{
+		IslandParams s = d.Settings;
+		if (s == null) return "settings: none";
+		string Knob(string name, float asked, float used)
+			=> $"{name} {used:0.00}{(asked < 0f ? "*" : "")}";
+		return "settings: "
+			+ Knob("mix", Params.LandformMix, s.LandformMix) + "  "
+			+ Knob("relief", Params.Relief, s.Relief) + "  "
+			+ Knob("hills", Params.Hilliness, s.Hilliness) + "  "
+			+ Knob("rivers", Params.Rivers, s.Rivers) + "  "
+			+ Knob("lakes", Params.Lakes, s.Lakes) + "  "
+			+ Knob("valleys", Params.Valleys, s.Valleys) + "  "
+			+ Knob("moisture", Params.Moisture, s.Moisture) + "  "
+			+ Knob("warmth", Params.Warmth, s.Warmth) + "  "
+			+ Knob("wind", Params.Wind, s.Wind) + "  "
+			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity)
+			+ "   (* rolled from the seed)";
 	}
 }

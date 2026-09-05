@@ -14,14 +14,37 @@ internal static class DevPalette
 
     public const int Coast = 1, Brink = 2, Overhang = 3, Beach = 4, Ford = 5,
                      Landing = 6, Quay = 7, CliffFoot = 8, Bank = 9, Summit = 10,
-                     RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14;
+                     RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
+                     Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18;
 
-    /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high.</summary>
+    /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
-        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Ford, Quay,
-        Brink, CliffFoot, Ledge, Overhang, Landing, Summit,
+        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, HotSpring, FallLip, Ford, Quay,
+        Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
     };
+
+    /// <summary>The landform view's colours: plains green, hills darker, mountain grey, mesa rust, basin blue, the sculpted ones their own.</summary>
+    public static Color Landform(LandformType type) => type switch
+    {
+        LandformType.Plain => new Color(0.45f, 0.60f, 0.28f),
+        LandformType.Hills => new Color(0.30f, 0.44f, 0.20f),
+        LandformType.Mountain => new Color(0.52f, 0.50f, 0.55f),
+        LandformType.Mesa => new Color(0.68f, 0.45f, 0.26f),
+        LandformType.Basin => new Color(0.28f, 0.40f, 0.52f),
+        LandformType.Badlands => new Color(0.72f, 0.56f, 0.34f),
+        LandformType.Karst => new Color(0.58f, 0.66f, 0.62f),
+        LandformType.Massif => new Color(0.62f, 0.42f, 0.48f),
+        LandformType.Dunes => new Color(0.80f, 0.74f, 0.46f),
+        LandformType.Sinkholes => new Color(0.50f, 0.58f, 0.44f),
+        _ => new Color(0.5f, 0.5f, 0.5f),
+    };
+
+    /// <summary>The walk view's greens and greys: the mainland, a hue per other district, one grey for broken ground.</summary>
+    public static readonly Color Mainland = new(0.42f, 0.62f, 0.28f);
+    public static readonly Color Broken = new(0.34f, 0.34f, 0.36f);
+    public static readonly Color WalkWater = new(0.16f, 0.34f, 0.52f);
+    public static Color District(int id) => Color.FromHsv((0.08f + id * 0.61803399f) % 1f, 0.62f, 0.88f);
 
     /// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
     public static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
@@ -43,16 +66,31 @@ internal static class DevPalette
     public static readonly (Color Lo, Color Hi) RimRamp =
         (new Color(0.85f, 0.55f, 0.90f), new Color(0.10f, 0.12f, 0.22f));
 
+    /// <summary>Water distance: teal at the bank, dry earth where no fresh water is within reach.</summary>
+    public static readonly (Color Lo, Color Hi) WaterRamp =
+        (new Color(0.16f, 0.58f, 0.70f), new Color(0.38f, 0.28f, 0.20f));
+
+    /// <summary>Magickal density: inert indigo to a saturated, luminous violet.</summary>
+    public static readonly (Color Lo, Color Hi) MagickRamp =
+        (new Color(0.10f, 0.08f, 0.22f), new Color(0.98f, 0.62f, 1.00f));
+
+    /// <summary>A sea stack's column in the lab: darker than any stone the island shows.</summary>
+    public static readonly Color StackTint = new(0.24f, 0.23f, 0.27f);
+
     /// <summary>The four kinds of standing water, named so a legend can show them without an island to sample.</summary>
     public static readonly Color FordTint = new(0.55f, 0.80f, 0.72f, 0.55f);
     public static readonly Color ReachTint = new(0.10f, 0.45f, 0.60f, 0.85f);
     public static readonly Color StreamTint = new(0.35f, 0.66f, 0.80f, 0.70f);
     public static readonly Color LakeTint = new(0.13f, 0.30f, 0.55f, 0.80f);
 
-    /// <summary>Standing fluid by kind: goo, then ford, navigable reach, stream, lake.</summary>
+    /// <summary>Hot water: a spring or a pool that runs warm on a cold Domain.</summary>
+    public static readonly Color HotTint = new(0.96f, 0.56f, 0.38f, 0.85f);
+
+    /// <summary>Standing fluid by kind: goo, then hot water, ford, navigable reach, stream, lake.</summary>
     public static Color Water(IslandData d, int x, int z)
     {
         if (d.Fluid[x, z] == (byte)FluidKind.Goo) return Goo;
+        if (d.Hot[x, z]) return HotTint;
         if (d.Ford[x, z]) return FordTint;
         if (d.Navigable[x, z]) return ReachTint;
         if (d.River[x, z]) return StreamTint;
@@ -60,9 +98,10 @@ internal static class DevPalette
     }
 
     /// <summary>
-    /// Fourteen materials. The climate grid reads as a grid: the cold row is
-    /// blue-grey, mauve and dark; the temperate row straw, yellow-green and green;
-    /// the hot row red-brown, gold and emerald. Sand pale, snow white, silt brown.
+    /// Seventeen materials. The climate grid reads as a grid: the cold row is
+    /// mint, heather-brown, mauve and a dark bog; the temperate row straw,
+    /// yellow-green, green and a blue-green marsh; the hot row red-brown, gold, a
+    /// deep verdure and the emerald floodplain. Sand pale, snow white, silt brown.
     /// </summary>
     public static Color Material(SurfaceMaterial m) => m switch
     {
@@ -80,6 +119,9 @@ internal static class DevPalette
         SurfaceMaterial.Dust => new Color(0.78f, 0.48f, 0.30f),
         SurfaceMaterial.Savanna => new Color(0.90f, 0.72f, 0.22f),
         SurfaceMaterial.Floodplain => new Color(0.16f, 0.74f, 0.46f),
+        SurfaceMaterial.Marsh => new Color(0.30f, 0.52f, 0.50f),        // blue-green, duller than grass, lighter than bog
+        SurfaceMaterial.Heath => new Color(0.58f, 0.42f, 0.40f),        // heather-brown, between the mint and the mauve
+        SurfaceMaterial.Verdure => new Color(0.08f, 0.42f, 0.20f),      // the deepest green: darker than grass, purer than bog
         _ => new Color(1f, 0f, 1f),                    // an unmapped member: make it shout
     };
 
@@ -126,6 +168,10 @@ internal static class DevPalette
         LakeBed => new Color(0.14f, 0.44f, 0.50f),
         GooBed => new Color(0.42f, 0.12f, 0.52f),
         Ledge => new Color(0.98f, 0.72f, 0.58f),      // between the brink's red and the foot's orange
+        Spring => new Color(0.62f, 0.95f, 1.00f),     // a pale spark at the head of a stream
+        FallLip => new Color(0.80f, 0.90f, 1.00f),    // white water
+        SeaStack => StackTint,
+        HotSpring => new Color(1.00f, 0.50f, 0.20f),  // steam-orange
         _ => new Color(0.26f, 0.26f, 0.27f),
     };
 
@@ -146,6 +192,10 @@ internal static class DevPalette
         LakeBed => "lake bed",
         GooBed => "goo bed",
         Ledge => "brink and foot (a ledge)",
+        Spring => "spring",
+        FallLip => "fall",
+        SeaStack => "sea stack (in the aether)",
+        HotSpring => "hot spring or pool",
         _ => "unremarkable",
     };
 }

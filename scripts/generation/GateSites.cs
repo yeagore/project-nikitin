@@ -324,10 +324,14 @@ internal static partial class GatePlacement
                + Hash01(seed, 0x2200u ^ (uint)(x * 733 + z)) * 0.5f;
     }
 
+    /// <summary>Cells at which a district stops counting for more: the apron is a tie-break, and a mainland of thousands must not outrank the edge.</summary>
+    private const int ApronCap = 400;
+
     /// <summary>
-    /// The best buildable shelf within <see cref="ApronSearch"/> of a point, read off
-    /// <see cref="IslandData.ShelfId"/>; searched around rather than under, because a coast
-    /// cell is rarely on a shelf itself.
+    /// The largest district within <see cref="ApronSearch"/> of a point — walk-connected
+    /// ground, no works — read off <see cref="IslandData.Walk"/> and capped at
+    /// <see cref="ApronCap"/>; searched around rather than under, because a coast cell
+    /// can be a scrap beside the district it serves.
     /// </summary>
     private static int ApronAt(IslandData d, int x, int z)
     {
@@ -338,13 +342,13 @@ internal static partial class GatePlacement
             int ax = x + dx, az = z + dz;
             if (!InBounds(d.Size, ax, az)) continue;
 
-            int id = d.ShelfId[ax, az];
-            if (id < 0 || id >= d.Shelves.Count) continue;
+            int id = d.Walk[ax, az];
+            if (id < 0 || id >= d.Areas.Count) continue;
 
-            Shelf shelf = d.Shelves[id];
-            if (shelf.Width >= Traversal.MinShelfWidth) best = Math.Max(best, shelf.Area);
+            WalkArea area = d.Areas[id];
+            if (area.IsDistrict) best = Math.Max(best, area.Area);
         }
-        return best;
+        return Math.Min(best, ApronCap);
     }
 
     /// <summary>Ground a Gate may be built on or served by: dry, and part of the heartland.</summary>

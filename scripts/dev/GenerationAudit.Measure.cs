@@ -75,6 +75,9 @@ public partial class GenerationAudit
         public int RiverStraight, RiverBends, EyotCells;
         public readonly List<int> StraightRuns = new();
         public int ReachCells => RiverStraight + RiverBends;
+        public int TerminalLakes, TerminalInflows, TerminalIslands;
+        public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable;
+        public long FordsFlat, StreamFlat, FordsRugged, StreamRugged;
 
         // ---- ferries, surfaces, anchors, habitat
         public const int RuggedBins = 7;
@@ -89,7 +92,17 @@ public partial class GenerationAudit
         public readonly List<int> RuggedMeans = new();
         public readonly List<int> ExposureMeans = new();
         public readonly List<int> RimMeans = new();
+        public readonly List<int> WaterMeans = new();
+        public readonly List<int> MagickMeans = new();
+        public readonly List<int> MagickSpread = new();
         public readonly List<int> QuayRise = new();
+        public long SunnyWarmth, SunnyCells, ShadedWarmth, ShadedCells;
+        public long LeeMoisture, LeeWarmth, LeeCells, OpenMoisture, OpenWarmth, OpenCells;
+        public long DampMoisture, DampCells;
+        public long HollowWarmth, HollowCells, TorCells, SeaStackCells;
+        public int TorIslands, SeaStackIslands;
+        public long HotWaterCells;
+        public int HotIslands, ColdIslands, ColdIslandsWithHot;
 
         /// <summary>Ruggedness summed over dry land by cells from fresh water: 0 is the bank, the last bin is everything further.</summary>
         public readonly long[] RuggedByWater = new long[RuggedBins];
@@ -126,7 +139,7 @@ public partial class GenerationAudit
         public readonly List<int> LipAir = new();
         public readonly Dictionary<IslandArrangement, (int Islands, int Masses, int Linked)> ByArrangement = new();
 
-        // ---- gates, crossings, shelves, guarantees
+        // ---- gates, crossings, guarantees
         public int NoEntry, BadExitCount, SharedEdge, WrongEntryKind;
         public int GateOffHeartland, GateApronShort, GateInWater, GateOutOfBox;
         public int LandGates, HangingGates, StripMissing, HangingOnLand;
@@ -134,7 +147,6 @@ public partial class GenerationAudit
         public readonly List<int> GateBehind = new();
         public int Crossings, DeckSteep, DeckOffBank;
         public readonly List<int> CrossingSpans = new();
-        public readonly List<int> ShelfDrops = new();
         public readonly List<int> Attempts = new();
         public int Unplayable;
         public int AirstripIslands;
@@ -148,7 +160,7 @@ public partial class GenerationAudit
         public readonly Dictionary<TerrainCharacter, int> CharIslands = new();
         public readonly Dictionary<TerrainCharacter, int[]> CharHas = new();
 
-        // ---- walkability, passes, shelves
+        // ---- walkability, passes, districts
         public long WalkLand, WalkMainland, WalkBroken;
         public long MesaCells, MesaOnMainland;
         public int Districts, Scraps;
@@ -162,9 +174,9 @@ public partial class GenerationAudit
         public int Passes, PassIslands, PassesJoined;
         public long PassCells;
         public readonly List<int> PassGrade = new();
-        public int BuildableShelves, IslandsWithShelf;
-        public readonly List<int> WidestShelf = new();
-        public readonly List<int> ShelfOffMainland = new();
+        public int DistrictsOnHeartland, IslandsWithBuildGround;
+        public readonly List<int> DistrictsPerIsland = new();
+        public readonly List<int> LargestDistrict = new();
 
         /// <summary>Every section, in the order the summary was always measured in.</summary>
         public void Measure(Island v)
@@ -189,7 +201,7 @@ public partial class GenerationAudit
             MeasureRoads(v);
             MeasureSculpts(v);
             MeasurePasses(v);
-            MeasureShelves(v);
+            MeasureDistricts(v);
             MeasureGates(v);
             MeasureCrossings(v);
             MeasureGuarantees(v);
@@ -570,6 +582,43 @@ public partial class GenerationAudit
                 RiverPerIsland.Add(here);
                 if (reachedRim) RiverIslandsReachingRim++;
             }
+
+            // The lakes that swallow a river, and the channels that feed them.
+            TerminalLakes += d.TerminalLakes.Count;
+            if (d.TerminalLakes.Count > 0) TerminalIslands++;
+            foreach (Vector2I seed in d.TerminalLakes)
+            {
+                var lake = new int[n, n];
+                int body = -1;
+                Flood.Label(n, (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+                                         && !d.River[x, z], lake);
+                body = lake[seed.X, seed.Y];
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                {
+                    if (!d.River[x, z]) continue;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int nx = x + Dx[k], nz = z + Dz[k];
+                        if (InBounds(n, nx, nz) && lake[nx, nz] == body && body >= 0) { TerminalInflows++; break; }
+                    }
+                }
+            }
+
+            Deltas += d.Deltas.Count;
+            if (d.Deltas.Count > 0) DeltaIslands++;
+            Springs += d.Springs.Count;
+            foreach (Vector2I c in d.Springs) if (d.Navigable[c.X, c.Y]) SpringsOnNavigable++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (d.Delta[x, z]) DeltaFanCells++;
+                if (!d.River[x, z] || d.Navigable[x, z]) continue;
+                // Fords by the ground round them: a stream through broken country is forded rarer.
+                bool rugged = Habitat.LocalRelief(d, x, z) >= 4;
+                if (rugged) { StreamRugged++; if (d.Ford[x, z]) FordsRugged++; }
+                else { StreamFlat++; if (d.Ford[x, z]) FordsFlat++; }
+            }
         }
 
         /// <summary>How much of a course runs straight, and the longest run held in one direction.</summary>
@@ -677,8 +726,10 @@ public partial class GenerationAudit
                 }
             }
 
-            int beachHere = 0;
+            int beachHere = 0, torsHere = 0;
             long moistSum = 0, warmSum = 0, rugSum = 0, expSum = 0, rimSum = 0;
+            long waterSum = 0, magickSum = 0;
+            int magickLo = 255, magickHi = 0;
             int landHere = 0;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
@@ -694,9 +745,50 @@ public partial class GenerationAudit
                 rugSum += d.Ruggedness[x, z];
                 expSum += d.Exposure[x, z];
                 rimSum += d.RimDistance[x, z];
+                waterSum += d.WaterDistance[x, z];
+                magickSum += d.Magick[x, z];
+                magickLo = Math.Min(magickLo, d.Magick[x, z]);
+                magickHi = Math.Max(magickHi, d.Magick[x, z]);
+
+                bool dry = d.WaterLevel[x, z] == IslandData.NoLand;
+                var form = (LandformType)d.Landform[x, z];
+                // A tor: stone on soft ground, which only the tor rule puts there.
+                if (dry && form is LandformType.Plain or LandformType.Hills
+                    && d.Material[x, z] == (byte)SurfaceMaterial.Stone) torsHere++;
+
+                // What the sun, the wind and the hollows do: means either side of each.
+                float facing = Habitat.SunFacing(d, x, z);
+                if (facing > 0.5f) { SunnyWarmth += d.Warmth[x, z]; SunnyCells++; }
+                else if (facing < -0.5f) { ShadedWarmth += d.Warmth[x, z]; ShadedCells++; }
+                // Flat ground either side of the wind reads the rain shadow; broken sheltered ground the gorge damp.
+                bool flat = d.Ruggedness[x, z] < 64;
+                if (d.Exposure[x, z] < 128 && flat)
+                {
+                    LeeMoisture += d.Moisture[x, z]; LeeWarmth += d.Warmth[x, z]; LeeCells++;
+                }
+                else if (d.Exposure[x, z] < 128 && d.Ruggedness[x, z] >= 128)
+                {
+                    DampMoisture += d.Moisture[x, z]; DampCells++;
+                }
+                else if (d.Exposure[x, z] >= 224 && flat)
+                {
+                    OpenMoisture += d.Moisture[x, z]; OpenWarmth += d.Warmth[x, z]; OpenCells++;
+                }
+                if (form == LandformType.Basin) { HollowWarmth += d.Warmth[x, z]; HollowCells++; }
             }
             BeachCells += beachHere;
             if (beachHere == 0) IslandsWithoutBeach++;
+            TorCells += torsHere;
+            if (torsHere > 0) TorIslands++;
+            SeaStackCells += d.SeaStacks.Count;
+            if (d.SeaStacks.Count > 0) SeaStackIslands++;
+            HotWaterCells += d.HotWater.Count;
+            if (d.HotWater.Count > 0) HotIslands++;
+            if (d.Settings.Warmth < 0.35f)
+            {
+                ColdIslands++;
+                if (d.HotWater.Count > 0) ColdIslandsWithHot++;
+            }
 
             // Ruggedness against distance from fresh water: a bank that reads broken is the water, not the country.
             int[,] toWater = Flood.Distance(n,
@@ -719,6 +811,9 @@ public partial class GenerationAudit
                 RuggedMeans.Add((int)(rugSum / landHere));
                 ExposureMeans.Add((int)(expSum / landHere));
                 RimMeans.Add((int)(rimSum / landHere));
+                WaterMeans.Add((int)(waterSum / landHere));
+                MagickMeans.Add((int)(magickSum / landHere));
+                MagickSpread.Add(magickHi - magickLo);
             }
         }
 
@@ -748,12 +843,16 @@ public partial class GenerationAudit
                 foreach (Works w in road.Built)
                     if (w.Kind == WorksKind.Ferry) sailed.Add((w.From, w.To));
 
+                // A road walks by king's moves, so a one-cell diagonal is a step; works
+                // stay cardinal, so anything longer must be straight and within a bridge.
                 for (int hop = 1; hop < road.Path.Count; hop++)
                 {
                     Vector2I a = road.Path[hop - 1], b = road.Path[hop];
                     if (sailed.Contains((a, b))) continue;
-                    int gap = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
-                    if (gap > d.BridgeSpan + 1 || (a.X != b.X && a.Y != b.Y)) RoadJumps++;
+                    int dx = Math.Abs(a.X - b.X), dz = Math.Abs(a.Y - b.Y);
+                    int reach = Math.Max(dx, dz);
+                    bool diagonal = dx != 0 && dz != 0;
+                    if (diagonal ? reach > 1 : reach > d.BridgeSpan + 1) RoadJumps++;
                 }
             }
         }
@@ -829,22 +928,22 @@ public partial class GenerationAudit
             }
         }
 
-        private void MeasureShelves(Island v)
+        /// <summary>Districts — walk-connected ground, no works — and how many the heartland holds: the "somewhere to build" guarantee's own number.</summary>
+        private void MeasureDistricts(Island v)
         {
             IslandData d = v.D;
-            int islandShelves = 0, widest = 0, offMain = 0;
-            foreach (Shelf shelf in d.Shelves)
+            int here = 0, onHeart = 0, largest = 0;
+            foreach (WalkArea a in d.Areas)
             {
-                widest = Math.Max(widest, shelf.Width);
-                if (!shelf.Buildable) continue;
-                islandShelves++;
-                ShelfDrops.Add(shelf.Drop);
-                if (d.Walk[shelf.Center.X, shelf.Center.Y] != d.Mainland) offMain++;
+                if (!a.IsDistrict) continue;
+                here++;
+                largest = Math.Max(largest, a.Area);
+                if (d.Heartland >= 0 && d.Reach[a.Seat.X, a.Seat.Y] == d.Heartland) onHeart++;
             }
-            BuildableShelves += islandShelves;
-            if (islandShelves > 0) IslandsWithShelf++;
-            WidestShelf.Add(widest);
-            ShelfOffMainland.Add(offMain);
+            DistrictsOnHeartland += onHeart;
+            if (onHeart > 0) IslandsWithBuildGround++;
+            DistrictsPerIsland.Add(here);
+            LargestDistrict.Add(largest);
         }
 
         /// <summary>Every Gate against its own rules: kind, box, apron, strip, edge, spacing; then the roles per island.</summary>
@@ -971,9 +1070,35 @@ public partial class GenerationAudit
                 CrossingSpans.Add(c.Span);
                 int a = Traversal.CrossLevel(d, c.A.X, c.A.Y);
                 int b = Traversal.CrossLevel(d, c.B.X, c.B.Y);
-                if (Math.Abs(a - b) > Traversal.MaxBridgeRise) DeckSteep++;
-                if (Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1) DeckOffBank++;
+                bool steep = Math.Abs(a - b) > Traversal.MaxBridgeRise;
+                bool offBank = Math.Abs(a - c.Deck) > 1 || Math.Abs(b - c.Deck) > 1;
+                if (steep) DeckSteep++;
+                if (offBank) DeckOffBank++;
+                // Named as it happens: a "want 0" with no seed behind it cannot be looked at.
+                if (steep || offBank)
+                    GD.Print($"  seed {v.Seed}: crossing {c.A}-{c.B} banks {a}/{b}, deck {c.Deck}"
+                        + $"{(steep ? " (steep)" : "")}{(offBank ? " (deck off bank)" : "")}"
+                        + $"; landing strip under {(d.Landings[c.A.X, c.A.Y] ? "A" : "")}"
+                        + $"{(d.Landings[c.B.X, c.B.Y] ? "B" : "")}, water under "
+                        + $"{(d.WaterLevel[c.A.X, c.A.Y] != IslandData.NoLand ? "A" : "")}"
+                        + $"{(d.WaterLevel[c.B.X, c.B.Y] != IslandData.NoLand ? "B" : "")}, beach under "
+                        + $"{(d.Beach[c.A.X, c.A.Y] ? "A" : "")}{(d.Beach[c.B.X, c.B.Y] ? "B" : "")}"
+                        + $"; landform {v.Form(c.A.X, c.A.Y)}/{v.Form(c.B.X, c.B.Y)}"
+                        + $", water within a cell of {(WaterNear(d, c.A) ? "A" : "")}{(WaterNear(d, c.B) ? "B" : "")}"
+                        + $", canyon/pass {d.Canyon[c.A.X, c.A.Y]}{d.Pass[c.A.X, c.A.Y]}/{d.Canyon[c.B.X, c.B.Y]}{d.Pass[c.B.X, c.B.Y]}");
             }
+        }
+
+        /// <summary>Whether standing water lies under a cell or any of its eight neighbours.</summary>
+        private static bool WaterNear(IslandData d, Vector2I c)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                int x = c.X + dx, z = c.Y + dz;
+                if (InBounds(d.Size, x, z) && d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand) return true;
+            }
+            return false;
         }
 
         /// <summary>The re-roll verdict; a seed that gave up is printed as it happens, before the summary.</summary>
