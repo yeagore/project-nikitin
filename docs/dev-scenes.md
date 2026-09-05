@@ -57,7 +57,8 @@ and set it yourself; tick it again to hand the knob back to the seed, or press
 **All knobs to auto** for all eight at once. The readout's `settings:` line
 lists all nine, a star on each rolled one. **H** and **M** step their knob
 through auto, 0, 0.25 … 1.
-nThe **Size** dropdown has an **Auto** entry that works the same way: the seed picks
+
+The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
 one of the three footprints and the caption says which. **Goo may roll** is the
 toggle for goo puddles; off, no seed makes any. The preset's Gates are three
 hanging Exits and a hanging Entry; the panel can still ask for anything else.
