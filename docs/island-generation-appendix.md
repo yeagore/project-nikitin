@@ -492,6 +492,24 @@ the tundra, which is what the extremes wanted. Eleven of the twenty cold
 islands in the audit have some; the collages show them as orange water in
 the cold columns.
 
+### Cold sand, and floodplain in the tundra
+
+The co-occurrence matrix caught two things the grid did not. Floodplain
+turned up on one tundra island in a hundred: a delta's fan was floodplain in
+any climate, and a hot spring's bloom on a cool Domain could lift a bank past
+the hot line. Now a fan is the wet ground of its row — floodplain on a hot
+Domain, grass on a temperate, moorland on a cold, tundra where it is frigid —
+and the bloom never lifts a cell past 160, the temperate band, so a hot spring
+makes a meadow in the tundra and nothing hotter. And sand held at 3% of land
+in every tile of the shares sheet, the frigid ones included: not the beaches,
+which have not been sand since the climate grid went in, but the Dunes
+character, rolled by one seed in eight whatever the climate, its fields sand
+in the tundra. A dune field is sand now only where the warmth is at least the
+cold line; colder, the ridges stay and wear the climate's ground, a frozen
+dune field. A sliver survives at a knob near 0.3, where the lee of a ridge is
+warm enough and its windward face is not; steering the character roll away
+from cold seeds would remove that too, at the cost of the dice.
+
 ### Marsh past grass, and rarer bogs
 
 The temperate row had no cell for water in excess where the cold row had bog
@@ -587,8 +605,8 @@ measured a fixed preset are kept where they still say something.
 | the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick mean 106–141, median 130, and a range of 195–222 within one island (no plateaus) |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
 | the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
-| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 tundra 74%, tundra 65%, steppe 68%, dust 66%, sand 77%; at 0.5 tundra 68%, heath 55%, meadow 58%, savanna 32% with meadow 27%, sand 52%; at 1.0 tundra 50% with bog 13%, moorland 48% with grass 14% and bog 13%, grass 74%, grass 63% with floodplain 10%, verdure 64% with floodplain 10%. Stone 12–14%, scree 7%, sand 3% in every tile: the rock and the dunes, which the knobs do not move |
-| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: grass 67%, meadow 52%, bog 33%, floodplain 30%, moorland 28%, savanna 28%, marsh 27%, steppe 26%, heath 25%, tundra 23%, snow 21%, sand 20%, dust 14%, verdure 11%; stone 100%, scree 81%. Given tundra: heath 79%, moorland 84%, bog 58%, no hot ground. Given verdure: floodplain 100%, savanna 92%, marsh 75%. Given dust: savanna 91%, floodplain 87%. Given bog: grass 77%, moorland 62%, marsh 4%. Given marsh: grass 78%, floodplain 59%, savanna 52%, bog 5%. The cold row and the hot row never share an island |
+| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 tundra 77%, tundra 68%, steppe 68%, dust 66%, sand 77%; at 0.5 tundra 70%, heath 55%, meadow 58%, savanna 32% with meadow 27%, sand 52%; at 1.0 tundra 52% with bog 14%, moorland 50% with grass 14% and bog 13%, grass 74%, grass 63% with floodplain 10%, verdure 64% with floodplain 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |
+| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: grass 67%, meadow 52%, bog 33%, floodplain 30%, moorland 28%, savanna 28%, marsh 27%, steppe 26%, heath 25%, tundra 23%, snow 21%, sand 17%, dust 14%, verdure 11%; stone 100%, scree 81%. Given tundra: heath 79%, moorland 84%, bog 58%, sand 3%, no hot ground at all. Given verdure: floodplain 100%, savanna 92%, marsh 75%. Given dust: savanna 91%, floodplain 87%. Given bog: grass 76%, moorland 63%, marsh 4%. Given marsh: grass 78%, floodplain 59%, savanna 52%, bog 5%. The cold row and the hot row never share an island |
 | its corners (`Climate`, 12 seeds each) | cold dry: tundra 62%, heath 8%. Cold balanced: heath 60%, moorland 10%. Cold wet: moorland 63%, bog 9%. Cool wet (0.35): grass 64%, bog 9%. Temperate wet: grass 73%, marsh 0.8%. Warm wet (0.65): grass 72%, marsh 0.9%. Hot wet: savanna 43%, verdure 21%, floodplain 9%, marsh 1%. Frigid wet (0.05): tundra 38%, moorland 26% (the tempered banks), bog 9%. Snow end: tundra 69%, bog 2% |
 | surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
 | the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |

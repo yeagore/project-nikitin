@@ -241,7 +241,8 @@ internal static class Surfaces
     /// snow; then rock — a tall face bares stone at its brink and drops scree at its
     /// foot whatever the landform, and a rock landform shows stone and scree
     /// wherever it is broken, so a mountain is stone up to its snow; then the dunes
-    /// and the sculpted rock; then a delta's fan, floodplain in any climate; then
+    /// and the sculpted rock (a dune field is sand only where it is not cold); then
+    /// a delta's fan, the wet ground of its row; then
     /// the tors, small outcrops of stone in soft country; then the water in excess
     /// — marsh on warm-to-hot ground, bog on cold-to-cool — and then the climate
     /// grid, warmth against moisture. A beach is ground like any other — nothing
@@ -270,13 +271,19 @@ internal static class Surfaces
         if (rocky && rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
-        if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
+        // A dune field is sand where it is warm enough to be one; in the cold band and
+        // under it the ridges stay and wear the climate's ground, a frozen dune field
+        // under tundra rather than a pile of sand in it.
+        if (form == LandformType.Dunes && warmth >= ColdBelow) return SurfaceMaterial.Sand;
         // Broken rock, not a desert: dust here put a hot-band ground in cold country.
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Scree;
 
-        // A delta's fan is the river's own floodplain, whatever the climate says.
-        if (d.Delta[x, z]) return SurfaceMaterial.Floodplain;
+        // A delta's fan is the river's own wet ground: the wet cell of its row (a
+        // floodplain on a hot Domain, grass on a temperate, moorland on a cold,
+        // tundra where it is frigid), never a hot ground in a cold country.
+        if (d.Delta[x, z])
+            return Climate(warmth, Math.Max(d.Moisture[x, z], (byte)WetFrom), 1, rugged, 0f, 0f);
 
         // A tor: building stone in soft country, where no rock landform is.
         if (form is LandformType.Plain or LandformType.Hills && tor.At(x, z) > TorBar)
