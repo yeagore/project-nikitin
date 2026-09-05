@@ -42,11 +42,11 @@ public partial class IslandLab : Node3D
 
 	private View _view = View.Height;
 
-	private bool _showBridges;
-	private bool _showLandings;
+	private bool _showBridges = true;
+	private bool _showLandings = true;
 	private bool _showFerries;
-	private bool _showRoutes;
-	private bool _showFords;
+	private bool _showRoutes = true;
+	private bool _showFords = true;
 	private bool _showCompass = true;
 	private bool _showLiquid = true;
 	private bool _showPanel = true;
@@ -314,7 +314,7 @@ public partial class IslandLab : Node3D
 		int spans = RenderSpans(_data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		int lakes = Redraw();
-		GD.Print($"[IslandLab] seed {Seed}, {Params.Size}², {_data.Character} ({_data.Style})"
+		GD.Print($"[IslandLab] seed {Seed}, {_data.Size}², {_data.Character} ({_data.Style})"
 			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
 
 		if (!_framedOnce)

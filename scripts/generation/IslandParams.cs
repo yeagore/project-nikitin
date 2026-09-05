@@ -15,8 +15,11 @@ public partial class IslandParams : Resource
     /// <summary>The footprints a Domain may have; altitude is bounded by the same number in slabs.</summary>
     public static readonly int[] SupportedSizes = { 64, 96, 128 };
 
-    /// <summary>Footprint edge length in cells.</summary>
-    [Export(PropertyHint.Range, "64,128,1")] public int Size { get; set; } = 96;
+    /// <summary>Footprint edge length in cells; <see cref="SizeAuto"/> (0) rolls one of <see cref="SupportedSizes"/> from the seed.</summary>
+    [Export(PropertyHint.Range, "0,128,1")] public int Size { get; set; } = 96;
+
+    /// <summary>The <see cref="Size"/> that makes the footprint roll per seed, over the supported sizes.</summary>
+    public const int SizeAuto = 0;
 
     /// <summary>Land-mask radius in cells. 0 = auto (Size * 0.45).</summary>
     [Export(PropertyHint.Range, "0,128,1")] public float Radius { get; set; } = 0f;
@@ -88,6 +91,9 @@ public partial class IslandParams : Resource
 
     /// <summary>How readily standing water collects: 0 no lakes, 1 one in every flat patch that could hold it. Auto rolls it per seed.</summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Lakes { get; set; } = Auto;
+
+    /// <summary>Whether an island may roll goo puddles at all. Off, no Domain has goo whatever the seed says.</summary>
+    [Export] public bool Goo { get; set; } = true;
 
     /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side. Auto rolls it per seed.</summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Valleys { get; set; } = Auto;

@@ -601,7 +601,7 @@ at the lab.
 
 | param | range | drives |
 |---|---|---|
-| `Size` | 64 / 96 / 128 | footprint edge, in cells. Audited at these three (`SupportedSizes`); any 16–128 is accepted, unaudited |
+| `Size` | 64 / 96 / 128, or 0 | footprint edge, in cells. Audited at these three (`SupportedSizes`); any 16–128 is accepted, unaudited. 0 (`SizeAuto`) rolls one of the three per seed, like a knob on Auto |
 | `Radius` | 0 = auto | land-mask radius |
 | `Coverage` | 0 – 1 | share of each lobe's disc that becomes land, outside the ground it shares with another lobe (always land) |
 | `Irregularity` | 0 – 1 | disc ↔ deeply lobed coastline |
@@ -619,6 +619,7 @@ at the lab.
 | `MesaHeight` / `BasinDepth` | 3 – 24 | clearance above / below the ground around |
 | `Rivers` | 0 – 1, Auto | how wet: the bar for a channel to be a river |
 | `Lakes` | 0 – 1, Auto | how readily standing water collects |
+| `Goo` | on / off | whether an island may roll goo puddles at all (three in ten do); off, no Domain has goo whatever the seed says |
 | `Valleys` | 0 – 1, Auto | how far the ground falls toward a course |
 | `Moisture` | 0 – 1, Auto | the background moisture before the water adds any: 0.15 dry country, 0.45 balanced, 0.75 wet |
 | `Warmth` | 0 – 1, Auto | the background warmth of open lowland: cold country under about 0.3, 0.5 temperate, hot from about 0.7, sand in the last twentieth; even 0 keeps its lowland above the snow |

@@ -24,7 +24,8 @@ public partial class IslandLab
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
-	private Label _poolNote = null!;
+	private Label _sizeCaption = null!, _poolNote = null!;
+	private CheckBox _gooBox = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
 	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
 	private CheckBox _liquidBox = null!;
@@ -110,10 +111,13 @@ public partial class IslandLab
 			v => { _view = v; Rebuild(); },
 			"Which field the island is coloured by. The legend on the right names the colours.");
 		// A dropdown over the supported footprints only: the pipeline is audited at exactly these.
-		rows.AddChild(Caption("Size, cells",
+		_sizeCaption = Caption("Size, cells",
 			"Footprint edge, in cells; altitude is bounded by the same number of slabs. "
-			+ "These three are the audited footprints."));
+			+ "These three are the audited footprints. Auto rolls one of them per seed, "
+			+ "and the caption says which once the island is built.");
+		rows.AddChild(_sizeCaption);
 		_size = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		_size.AddItem("Auto", IslandParams.SizeAuto);
 		foreach (int s in IslandParams.SupportedSizes)
 			_size.AddItem($"{s} × {s}  ({s} slabs tall)", s);
 		_size.Selected = _size.GetItemIndex(Params.Size);
@@ -164,6 +168,11 @@ public partial class IslandLab
 			() => Params.Valleys, v => Params.Valleys = v, q => q.Valleys,
 			"How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells "
 			+ "of valley either side.");
+		_gooBox = Check(rows, "Goo may roll",
+			() => Params.Goo, on => Params.Goo = on,
+			"About three islands in ten roll goo puddles instead of more lakes. Unticked, "
+			+ "no Domain gets goo whatever the seed says; the same seed with the box on "
+			+ "is the same island with its puddles back.");
 		_rungs = Spin(rows, "Plateau rungs  (L)", 1, 8,
 			() => Params.PlateauLevels, v => Params.PlateauLevels = v,
 			"Rungs on the plateau ladder above the coastal level: how terraced the island is.");
@@ -350,6 +359,7 @@ public partial class IslandLab
 
 		SyncKnobs();
 		_size.Selected = _size.GetItemIndex(Params.Size);
+		_gooBox.ButtonPressed = Params.Goo;
 		_rungs.Value = Params.PlateauLevels;
 		_cliff.Value = Params.CliffHeight;
 		_patch.Value = Params.RegionScale;
@@ -488,6 +498,12 @@ public partial class IslandLab
 				? $"{text}   auto -> {roll(rolled):0.00}"
 				: KnobCaption(text, v);
 		}
+
+		// The footprint is a knob too, on a dropdown: Auto's caption says what it rolled.
+		if (_sizeCaption != null)
+			_sizeCaption.Text = Params.Size > 0 ? "Size, cells"
+				: rolled != null ? $"Size, cells   auto -> {rolled.Size}"
+				: "Size, cells   auto";
 	}
 
 	/// <summary>After a build: the Auto knobs' sliders and captions take what the seed rolled.</summary>

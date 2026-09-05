@@ -132,10 +132,14 @@ internal static class Roster
     {
         if (p.LandformMix >= 0f && p.Relief >= 0f && p.Hilliness >= 0f && p.Rivers >= 0f
             && p.Lakes >= 0f && p.Valleys >= 0f && p.Moisture >= 0f && p.Warmth >= 0f
-            && p.OverhangDensity >= 0f)
+            && p.OverhangDensity >= 0f && p.Size > 0)
             return p;
 
         var r = (IslandParams)p.Duplicate();
+        // The footprint too: one of the supported sizes, evenly.
+        if (p.Size <= 0)
+            r.Size = IslandParams.SupportedSizes[Math.Min(IslandParams.SupportedSizes.Length - 1,
+                (int)(Hash01(seed, 0x4B0Au) * IslandParams.SupportedSizes.Length))];
         if (p.LandformMix < 0f) r.LandformMix = Hash01(seed, 0x4B01u);
         if (p.Relief < 0f) r.Relief = Hash01(seed, 0x4B02u);
         if (p.Hilliness < 0f) r.Hilliness = Hash01(seed, 0x4B03u);

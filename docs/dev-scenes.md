@@ -57,6 +57,10 @@ and set it yourself; tick it again to hand the knob back to the seed, or press
 **All knobs to auto** for all eight at once. The readout's `settings:` line
 lists all nine, a star on each rolled one. **H** and **M** step their knob
 through auto, 0, 0.25 … 1.
+nThe **Size** dropdown has an **Auto** entry that works the same way: the seed picks
+one of the three footprints and the caption says which. **Goo may roll** is the
+toggle for goo puddles; off, no seed makes any. The preset's Gates are three
+hanging Exits and a hanging Entry; the panel can still ask for anything else.
 
 **N** rolls a seed; the **Seed** field under the buttons takes one you already
 have — a seed named in an audit run, a commit or a screenshot — and **Enter** or
@@ -85,7 +89,8 @@ In the `anchors` view a column is coloured per span: only the lip of an
 overhang is magenta, and the ground under it is whatever it is — a river bed,
 a cliff foot. Turn the liquid off (**I**) to see the beds.
 
-Overlays: **B** bridge sites; **J** each Gate's 1 × 3 landing strip; **K** ferry
+Overlays (bridge sites, landings, roads, fords and the compass are on when the lab
+opens): **B** bridge sites; **J** each Gate's 1 × 3 landing strip; **K** ferry
 berths; **O** fords; **P** the roads between the Gates (pale yellow walk; red
 stair, gold bridge, cyan ferry); **X** the compass, each Gate's landward vector,
 the Domain's wind — a run of orange arrows standing off the upwind edge with

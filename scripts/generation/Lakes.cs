@@ -410,7 +410,7 @@ internal static class Lakes
                                  short[,] water, byte[,] fluid)
     {
         int n = p.Size;
-        if (Hash01(seed, 0x600A11u) >= GooIslandChance) return;
+        if (!p.Goo || Hash01(seed, 0x600A11u) >= GooIslandChance) return;
 
         int[,] inset = PatchInset(land, region);
 
