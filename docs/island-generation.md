@@ -779,7 +779,10 @@ varied any of them would change what a cliff *means*.
   triangles (62% of the twelve per span the lab's boxes drew; greedy merging of
   coplanar faces is not done and not needed), 9 ms to mesh, 40 ms more for the
   meshes, colliders and nodes, 6 MB. Triangles were never going to be the cost of
-  a Domain; the biome layer's features will be.
+  a Domain; the biome layer's features will be. Twenty whole Domains in view at
+  once (800,000 triangles, 1,100 draw calls) and forty (1.5 million, 2,100) both
+  hold the display's 120 Hz on the Mac; `main.tscn`'s `-- domains=N bench` flag
+  is the measurement (CLAUDE.md → Rendering).
 - The lab draws through the renderer (Z for the old box per span, the only mode
   that draws the sea stacks); the game scene `main.tscn` shows one generated
   Domain through it.

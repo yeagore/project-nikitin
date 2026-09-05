@@ -197,6 +197,17 @@ the column under the cursor off the colliders with a ray (`IslandLab.Pick.cs`),
 the pattern a settlement placer's cell pick will follow. The bench casts rays
 at every third column from above and below and expects the top and the keel.
 
+**Many Domains.** `godot --path . -- domains=20 bench` (windowed) lays out N
+Domains on consecutive seeds in a grid a quarter footprint apart, frames them
+all, and after six seconds with vsync off prints the frame rate, draw calls,
+primitives and memory, then quits. Measured on the Mac on 2026-09-06 with every
+Domain in view: 1, 20 and 40 Domains all hold the display's 120 Hz at about
+10 ms a frame; 20 is 1,082 draw calls and 800,000 triangles, 40 is 2,140 and
+1.5 million; about 3.5 MB of video memory and 2.5 MB of static memory per
+Domain over a 170 MB engine baseline. Rendering twenty at once is not the
+constraint. Generating them is: 3.3 s for twenty on one thread at load, and
+`Generate` is pure, so that parallelises when it matters.
+
 ---
 
 ## Repository layout
@@ -354,7 +365,9 @@ Flagged so they are not silently hard-coded:
 1. **Essence as currency.** Provisional; expect grades of Essence or per-Polity
    currencies later.
 2. **Domains loaded at once.** Whether only the active Domain is simulated and
-   rendered, or several. Drives the streaming and LOD approach.
+   rendered, or several. Drives the streaming and LOD approach. The renderer
+   does not constrain it: forty 128² Domains in view hold 120 Hz (see
+   Rendering); generation time and the simulation are what would.
 3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
    `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
    bounds, an InputMap.
