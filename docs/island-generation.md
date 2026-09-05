@@ -586,6 +586,10 @@ island reads as a place in the lab before the biome layer exists. In order:
 | **temperate** | steppe | meadow | grass | |
 | **hot** | dust | savanna | **verdure** where moisture is 200 or more (a higher bar than grass: heat is the less forgiving side), savanna under it | floodplain within three cells of a river or lake when wet |
 
+The audit's `ClimateChart` draws this grid as an area chart, warmth against
+moisture, straight from the rule (`Surfaces.Climate`); it is the picture in the
+Notion page's Surfaces section.
+
 **Water in excess** is two cells laid over that grid, in patches, and neither
 is the rule. On the cold-to-cool half of the range (warmth under 140) it is
 **bog**: moisture 190 or more and a noise field over 0.66, so the cold and cool

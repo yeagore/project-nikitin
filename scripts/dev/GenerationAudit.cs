@@ -91,6 +91,9 @@ public partial class GenerationAudit : Node
     /// <summary>Footprint the ClimateGrid collage and its scout use; 64 reads at a glance where 128 does not.</summary>
     [Export] public int ClimateGridSize { get; set; } = 64;
 
+    /// <summary>Directory for the climate chart — warmth against moisture, every byte pair coloured with its ground, from the surface stage's own rule — or empty for none.</summary>
+    [Export] public string ClimateChart { get; set; } = "";
+
     /// <summary>Score this many consecutive seeds from FirstSeed for the collage, or 0 for none.</summary>
     [Export] public int ClimateScout { get; set; } = 0;
 
@@ -172,6 +175,7 @@ public partial class GenerationAudit : Node
                 case nameof(Climate): Climate = true; break;
                 case nameof(ClimateGrid): ClimateGrid = value; break;
                 case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
+                case nameof(ClimateChart): ClimateChart = value; break;
                 case nameof(ClimateScout): ClimateScout = int.Parse(value); break;
                 // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
                 case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
@@ -213,6 +217,7 @@ public partial class GenerationAudit : Node
         if (FieldMaps.Length > 0) WriteFieldMaps();
         if (Gallery.Length > 0) WriteGallery();
         if (ClimateGrid.Length > 0) WriteClimateGrid();
+        if (ClimateChart.Length > 0) WriteClimateChart();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>

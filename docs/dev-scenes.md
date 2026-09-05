@@ -207,6 +207,23 @@ godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateSco
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=7046 ClimateGrid=C:/tmp/climate
 ```
 
+### The climate chart — `ClimateChart`
+
+`ClimateChart=<dir>` writes `climate_chart.png`: the climate grid as an area
+chart, warmth across and moisture down, every byte pair coloured with the
+ground it gives. Two panels, open ground away from water and flat ground
+beside it (where the floodplain and the marsh can be); the band lines drawn on
+the axes with their bytes; the range a warmth knob reaches on open lowland
+(60 to 240) bracketed, with the knob's quarters ticked on both axes; and the
+patches (bog, marsh) as a checker of their colour over the ground they sit in,
+since a noise field decides them cell by cell. It is drawn from
+`Surfaces.Climate`, the rule the surface stage itself uses, so it cannot drift
+from the code. No seed is involved; `Seeds=1` keeps the run short.
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateChart=C:/tmp/chart
+```
+
 The labels are pixels: headless Godot has no rendering device, so `TinyFont` draws
 a 5 × 7 bitmap alphabet straight into the `Image`.
 
