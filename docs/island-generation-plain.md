@@ -818,8 +818,10 @@ fields: moisture, warmth, ruggedness, exposure, rim, water distance, magick),
 each with a legend in its actual colours; overlays for bridge sites, landings,
 ferries, roads, fords, and the compass with the wind, the sun, the dune grain
 and the two boxes; a liquid toggle that shows the beds; a seed field; a
-frame-rate counter; and a readout that says what the island turned out to be,
-down to what each road out costs and how many triangles it took to draw. Every
+frame-rate counter; a line naming the cell under the mouse (found by casting a
+ray at the mesh's physics shape) with everything the pipeline said about it;
+and a readout that says what the island turned out to be, down to what each
+road out costs and how many triangles it took to draw. Every
 dial has an Auto box, and after a build the slider sits at what the seed rolled.
 Run from a shell with `-- shot`, the lab saves a screenshot and quits by itself,
 so a picture of the rendered island can be had without anyone at the keyboard.
@@ -828,9 +830,11 @@ so a picture of the rendered island can be had without anyone at the keyboard.
 
 `mesh_bench.tscn` measures the renderer rather than the generator: three seeds
 at each footprint, meshed, with the triangle counts against what the boxes
-drew, the times, and two checks that must pass — that Godot's triangles face
-the way the renderer assumes, and that the mesh's area equals the count of
-faces touching air. It runs without a window and quits by itself.
+drew, the times, and three checks that must pass — that Godot's triangles face
+the way the renderer assumes, that the mesh's area equals the count of faces
+touching air, and that a ray dropped onto a column lands on its top and one
+fired up from below lands on its keel, so the physics shapes are right too. It
+runs without a window and quits by itself.
 
 ---
 

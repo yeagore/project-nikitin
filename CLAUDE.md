@@ -192,7 +192,10 @@ and nodes in another 40 ms, about 6 MB. Triangles were never the cost; the
 performance question the mesher was to answer is answered, yes with room to
 spare. Greedy merging of coplanar faces is not done and not needed. `main.tscn`
 (F5) shows one generated Domain through the renderer (`Main.cs`: N for a new
-seed, F to frame); the lab draws through it too, Z for the old boxes.
+seed, F to frame); the lab draws through it too, Z for the old boxes, and reads
+the column under the cursor off the colliders with a ray (`IslandLab.Pick.cs`),
+the pattern a settlement placer's cell pick will follow. The bench casts rays
+at every third column from above and below and expects the top and the keel.
 
 ---
 
@@ -335,10 +338,9 @@ ratio, and the three supported footprints (the Ecumene page still says 16³–64
   [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
   stage is done and audited at all three footprints.
 - **The mesher**, branch `mesher` (from 2026-09-06): the chunked span-aware
-  renderer with colliders, drawing the main scene and the lab, with its bench.
-  Built and measured; the performance question is answered. Still to do on the
-  branch before it merges: a cell pick over the colliders (the cursor's column
-  in the lab's readout), the first thing to read them.
+  renderer with colliders, drawing the main scene and the lab, with its bench
+  and the lab's cursor pick as the colliders' first reader. Built, measured and
+  checked; the performance question is answered.
 - What comes after, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.

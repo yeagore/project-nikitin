@@ -145,8 +145,11 @@ public partial class IslandLab : Node3D
 	{
 		if (Signature() != _lastSignature)
 			Rebuild();
-		if (_fps != null && (Engine.GetProcessFrames() & 31) == 0)
-			_fps.Text = $"{Engine.GetFramesPerSecond():0} fps";
+		if (_fps != null)
+		{
+			if ((Engine.GetProcessFrames() & 31) == 0) _fpsText = $"{Engine.GetFramesPerSecond():0} fps";
+			_fps.Text = _pickText.Length > 0 ? $"{_pickText}      {_fpsText}" : _fpsText;
+		}
 		if (_shotAt != 0 && Engine.GetProcessFrames() >= _shotAt)
 		{
 			_shotAt = 0;

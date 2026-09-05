@@ -31,14 +31,20 @@ public partial class MeshBench : Node
     {
         Params ??= new IslandParams();
         Probe();
+        IslandData? last = null;
         foreach (int size in IslandParams.SupportedSizes)
         {
             var rows = new List<Row>();
-            for (int i = 0; i < Seeds; i++) rows.Add(Case(size, FirstSeed + i));
+            for (int i = 0; i < Seeds; i++)
+            {
+                rows.Add(Case(size, FirstSeed + i, out IslandData d));
+                last = d;
+            }
             Summary(size, rows);
         }
-        GD.Print(_failed ? "[MeshBench] FAILED" : "[MeshBench] all checks passed");
-        GetTree().Quit(_failed ? 1 : 0);
+        // The collider check needs a physics step; it finishes the run from _PhysicsProcess.
+        if (last != null) KeepForColliders(last);
+        else Finish();
     }
 
     /// <summary>Which way a BoxMesh winds its front faces, against what the buffer assumes.</summary>
@@ -70,7 +76,7 @@ public partial class MeshBench : Node
         if (!ok) _failed = true;
     }
 
-    private Row Case(int size, int seed)
+    private Row Case(int size, int seed, out IslandData data)
     {
         var p = (IslandParams)Params.Duplicate();
         p.Size = size;
@@ -134,6 +140,7 @@ public partial class MeshBench : Node
             + Inv($" -> ground {groundTris:N0} tris, liquid {liquidTris:N0} tris (the boxes draw {boxTris:N0});")
             + Inv($" generated {genMs:0} ms, meshed {meshMs:0.0} ms, nodes and colliders {nodeMs:0.0} ms, {bytes / 1048576.0:0.00} MB;")
             + Inv($" oracle off by {groundOff:0.000} m² ground, {liquidOff:0.000} m² liquid"));
+        data = d;
         return row;
     }
 

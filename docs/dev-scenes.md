@@ -116,7 +116,11 @@ a wall wherever the water meets air, so a fall is the face of the water dropping
 and the lab's fall sheets are not drawn. Every view tints the mesh as it tinted
 the boxes, every face of a span in the span's colour. The readout's last line
 says which mode is on, how many triangles and chunks the mesh came to and how
-long it took to build; a frame-rate counter sits above the readout.
+long it took to build. The line above the readout is the frame rate and, with
+the mesh on, the column under the cursor, read off the chunk's collider with a
+ray from the camera: cell, slab, landform and patch, surface level and ground,
+its water, its walk area or district, and its habitat bytes. It is the first
+thing to use the colliders, and the way to ask "what is that cell".
 
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
@@ -329,5 +333,9 @@ oracle** counts, slab by slab, every face of solid touching air and every face o
 water touching neither solid nor the same water, as area, and compares it with
 the area of the triangles the mesher emitted: `oracle off by 0.000 m²` says the
 mesh is exactly the exposed faces, nothing buried drawn and nothing exposed
-missed. About twenty seconds; it quits by itself and needs no timeout. Run it
-after touching anything under `scripts/terrain/`.
+missed. A third check runs last, once physics has stepped: the last island
+stays in the tree and a ray down onto every third land column must hit the top
+of its highest span, a ray up from below its keel, so the colliders are tested
+as the game will use them (headless physics is real physics). About twenty
+seconds; it quits by itself and needs no timeout. Run it after touching
+anything under `scripts/terrain/`.

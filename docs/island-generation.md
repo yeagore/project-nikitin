@@ -758,7 +758,10 @@ varied any of them would change what a cliff *means*.
   one `ArrayMesh` for the ground, one for the liquid, one trimesh collider over
   the ground. `IslandRenderer.RebuildAround(x, z)` remeshes the chunk holding a
   column and any neighbour the column borders, since a side face depends on the
-  column across it; that is the hook an edit calls.
+  column across it; that is the hook an edit calls. A ray against the collider
+  gives a point on a face; a step of 0.02 back along the hit normal and a round
+  to the cell gives the column (the lab's cursor pick; the bench casts at every
+  third column and expects the top and the keel).
 - **Water** is its own translucent surface at `WaterLevel + 1`: the top, and a
   wall wherever the water range meets what is neither solid nor the same fluid —
   a lower neighbour's water (a cataract), dry ground below the level, the aether
