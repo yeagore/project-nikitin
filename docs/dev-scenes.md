@@ -1,8 +1,9 @@
-# Dev scenes: the lab, the audit, the checksum
+# Dev scenes: the lab, the audit, the checksum, the mesh bench
 
-Three scenes under `scenes/dev/` drive the generator without the game. All three
-load the same preset, `resources/island_default.tres`, so the audit measures the
-island the lab shows. Edit the `.tres` in the Inspector to change it durably; use
+Four scenes under `scenes/dev/` drive the generator without the game: three
+measure the generator, and the mesh bench measures the renderer that draws its
+islands. All four load the same preset, `resources/island_default.tres`, so the
+audit measures the island the lab shows. Edit the `.tres` in the Inspector to change it durably; use
 the lab's panel (or the Remote tab of the Scene dock) for a throwaway experiment.
 
 Godot is not on `PATH`; from a shell use the .NET build's own binary:
@@ -43,6 +44,7 @@ write the same `Params`:
 | **T** / **Y** | entry Gate kind / bridge ease |
 | **B J K O P X** | overlays: bridge sites, Gate landings, ferry berths, fords, roads, compass |
 | **I** | liquid on or off: water, goo and falls; off shows the beds |
+| **Z** | the ground as the game's mesh, or as the old box per span |
 | **F2** | screenshot |
 
 Camera: **WASD** pan, **Q/E** or middle-drag yaw, middle-drag or **Up/Down**
@@ -105,6 +107,17 @@ Size slabs tall, standing on the keel's lowest point; nothing the generator
 builds may hang outside it, and its shape never changes between seeds) and a
 gold box tight round the landmass.
 
+The ground is drawn by the game's own renderer (`IslandRenderer`, the chunked
+mesh with colliders; `docs/island-generation.md` §4). The mesh is on when the
+lab opens; **Z**, or the **Mesh, not boxes** box under GROUND, swaps in the old
+one-box-per-span drawing, which is also the only mode that draws the sea stacks.
+With the mesh on, the water is the mesh's own: a flat top per flooded column and
+a wall wherever the water meets air, so a fall is the face of the water dropping,
+and the lab's fall sheets are not drawn. Every view tints the mesh as it tinted
+the boxes, every face of a span in the span's colour. The readout's last line
+says which mode is on, how many triangles and chunks the mesh came to and how
+long it took to build; a frame-rate counter sits above the readout.
+
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
 reach shares, districts (and how many the heartland holds), berths, rivers,
@@ -115,6 +128,21 @@ NOT` means a Gate you asked for is not the Gate you got.
 
 If the window is 1152 × 648 and will not stretch, the editor is embedding the
 game: Editor Settings → Run → Window Placement → Game Embed Mode: Disabled.
+
+### A screenshot from a shell — `-- shot`
+
+```
+godot --path . scenes/dev/island_lab.tscn -- shot nopanel view=surface zoom=4 at=64,96
+```
+
+Windowed, not headless (a screenshot needs a viewport): the lab builds the
+island, frames it, saves the screenshot **F2** would have saved
+(`user://island-<seed>-<view>.png`; the full path is printed) a few frames in,
+and quits by itself. `seed=N` picks the seed, `view=NAME` the view, `boxes` the
+box drawing, `nopanel` hides the panel, `zoom=N` frames a 1/N of the island and
+`at=X,Z` centres that on a cell. It is the one way to look at the mesh without
+a hand on the keys; the audit's pictures are drawn from the data and never see
+the renderer.
 
 ## The audit — `generation_audit.tscn`
 
@@ -274,10 +302,32 @@ a 5 × 7 bitmap alphabet straight into the `Image`.
 godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-Hashes every field of `IslandData` for 442 islands — 60 default seeds, every
+Hashes every field of `IslandData` for 446 islands — 60 default seeds, every
 arrangement × character at 64², all three sizes, every Gate request, every bridge
 ease, both ends of every knob — and diffs the hashes against
 `docs/checksum-baseline.txt`. A change meant to leave generation alone must
-report `0 of 442 islands moved`; a change meant to alter it re-baselines with
+report `0 of 446 islands moved`; a change meant to alter it re-baselines with
 `-- accept` on the command line and says so in its commit. This is the
 bit-for-bit gate; the audit is the readable one.
+
+## The mesh bench — `mesh_bench.tscn`
+
+```
+godot --path . --headless scenes/dev/mesh_bench.tscn
+```
+
+Measures the renderer rather than the generator. Three seeds at each footprint
+are generated and meshed by `ChunkMesher` chunk by chunk, and the run reports
+per island the columns, spans and flooded cells; the ground and liquid triangles
+against the twelve per span and two per flooded cell the boxes draw; the time to
+mesh (the pure part) and to build the `ArrayMesh`es, colliders and nodes; and
+the GPU bytes; then a mean per footprint. Two checks run with it and fail the run
+(exit code 1) when they fail. The **winding probe** reads a `BoxMesh`'s triangles
+to confirm Godot winds front faces clockwise, the way `MeshBuffer` assumes, so a
+mistaken constant cannot leave every face visible only from inside. The **voxel
+oracle** counts, slab by slab, every face of solid touching air and every face of
+water touching neither solid nor the same water, as area, and compares it with
+the area of the triangles the mesher emitted: `oracle off by 0.000 m²` says the
+mesh is exactly the exposed faces, nothing buried drawn and nothing exposed
+missed. About twenty seconds; it quits by itself and needs no timeout. Run it
+after touching anything under `scripts/terrain/`.

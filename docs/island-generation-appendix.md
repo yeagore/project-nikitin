@@ -522,6 +522,24 @@ field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
 one soft cell in a hundred — put building stone on a Domain with no rock
 landform, material only.
 
+### The mesh is the exposed faces, and a bench says so
+
+The renderer (spec §4) could have been checked by looking. It is checked by
+counting: `mesh_bench.tscn` walks every slab of every span and every slab of
+water and counts each face that touches air (for water, anything that is
+neither solid nor the same fluid) as area, and the mesher's triangles must sum
+to the same area. Nine islands across the three footprints agree to 0.000 m².
+The other check is Godot's winding rule, read off a `BoxMesh` rather than
+remembered: a wrong constant there is not a bug a test would show, it is an
+island visible only from underneath.
+
+The number the mesher was built to find: a 128² island is about 50,000 ground
+triangles, 62% of what the boxes drew, meshed in 9 ms, and Godot draws that
+without noticing. Merging coplanar faces into larger quads (greedy meshing)
+would take the count down by another large factor and was not done: it
+complicates per-cell texture tiling and vertex colours for nothing measurable.
+The cost of a Domain will be its features, not its ground.
+
 ## C. Tried and removed
 
 - **A road check that could not pass.** The audit flagged any road hop that was
