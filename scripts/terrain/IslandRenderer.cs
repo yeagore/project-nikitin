@@ -16,7 +16,7 @@ namespace ProjectNikitin.Meshing;
 /// </summary>
 public partial class IslandRenderer : Node3D
 {
-    /// <summary>How faces are coloured; the lab swaps in one per view. Applied at the next build or <see cref="Retint"/>.</summary>
+    /// <summary>How faces are coloured; the lab swaps in one per view. Applied at the next <see cref="Show"/>.</summary>
     public IslandTint Tint { get; set; } = IslandTint.Default;
 
     public TerrainMaterials Materials { get; set; } = new();
@@ -30,7 +30,7 @@ public partial class IslandRenderer : Node3D
 
     public int LiquidTriangles { get; private set; }
 
-    /// <summary>Milliseconds the last <see cref="Show"/> or <see cref="Retint"/> took, meshing and node work together.</summary>
+    /// <summary>Milliseconds the last <see cref="Show"/> took, meshing and node work together.</summary>
     public float LastBuildMs { get; private set; }
 
     /// <summary>Centre of the built terrain in local space, and the radius of a sphere round it: what a camera frames.</summary>
@@ -72,27 +72,6 @@ public partial class IslandRenderer : Node3D
         Tally();
         Measure(data);
         LastBuildMs = (Time.GetTicksUsec() - t0) / 1000f;
-    }
-
-    /// <summary>Rebuilds every chunk from the same data, for a changed <see cref="Tint"/>.</summary>
-    public void Retint()
-    {
-        if (Data == null || _chunks == null) return;
-        ulong t0 = Time.GetTicksUsec();
-        int across = _chunks.GetLength(0);
-        for (int cx = 0; cx < across; cx++)
-        for (int cz = 0; cz < across; cz++)
-            Build(cx, cz);
-        Tally();
-        LastBuildMs = (Time.GetTicksUsec() - t0) / 1000f;
-    }
-
-    /// <summary>Remeshes one chunk.</summary>
-    public void Rebuild(int cx, int cz)
-    {
-        if (_chunks == null) return;
-        Build(cx, cz);
-        Tally();
     }
 
     /// <summary>Remeshes the chunk holding column (x, z), and the neighbouring chunk on each side the column borders.</summary>

@@ -41,14 +41,15 @@ D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   #
 
 It runs headless, so the dev scenes can be executed from a shell and their
 output read without a window. **`docs/dev-scenes.md`** is the manual for the
-four of them: the island lab (F6 in the editor), the audit, the checksum, and
-the mesh bench. The two commands that matter after touching the generator, and
-the one after touching the renderer:
+five of them: the island lab (F6 in the editor), the audit, the checksum, the
+mesh bench, and the Domains bench. The two commands that matter after touching
+the generator, and the two after touching the renderer:
 
 ```
 godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 446 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
-godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle
+godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
+godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
 ```
 
 Run the first two under a timeout (headless Godot does not always exit; macOS
@@ -197,10 +198,11 @@ the column under the cursor off the colliders with a ray (`IslandLab.Pick.cs`),
 the pattern a settlement placer's cell pick will follow. The bench casts rays
 at every third column from above and below and expects the top and the keel.
 
-**Many Domains.** `godot --path . -- domains=20 bench` (windowed) lays out N
-Domains on consecutive seeds in a grid a quarter footprint apart, frames them
-all, and after six seconds with vsync off prints the frame rate, draw calls,
-primitives, the render thread's CPU time and memory, then quits (the GPU time
+**Many Domains.** `godot --path . scenes/dev/domains_bench.tscn -- domains=20`
+(windowed) lays out N Domains on consecutive seeds in a grid a quarter footprint
+apart, frames them all, and after six seconds with vsync off prints the frame
+rate, draw calls, primitives, the render thread's CPU time and memory, then
+quits (the GPU time
 reads 0 on Metal; past 150 Domains it builds no colliders, since Jolt's default
 cap of 10,240 bodies is 160 Domains × 64 chunk bodies, a project setting).
 Measured on the Mac (M2, 16 GB, a 4K display) on 2026-09-06 with every Domain
@@ -227,21 +229,22 @@ project.godot                  Engine config. run/main_scene points at main.tscn
 Project Nikitin.csproj / .sln   .NET project (Godot.NET.Sdk 4.7.2, net8.0).
 scenes/
   main/main.tscn               The game scene: one generated Domain through IslandRenderer.
-  terrain/grass_block.tscn     Prototype terrain slab (1 × 0.25 × 1); in no scene now.
   dev/island_lab.tscn          Island generation harness (see docs/dev-scenes.md).
   dev/generation_audit.tscn    Headless guarantee audit.
   dev/generation_checksum.tscn Headless bit-for-bit checksum.
-  dev/mesh_bench.tscn          Headless mesher measure: triangles, times, winding probe, voxel oracle.
+  dev/mesh_bench.tscn          Headless mesher measure: triangles, times, winding probe, voxel oracle, colliders.
+  dev/domains_bench.tscn       Windowed: N Domains in view, the frame rate.
 scripts/
   Main.cs                      The game scene's script: generate, show, frame.
   CameraRig.cs                 Strategy camera: pan / yaw / pitch / zoom, LookAt-aimed.
   terrain/                     Namespace ProjectNikitin.Meshing (see Rendering)
-    IslandRenderer.cs          The terrain renderer: the chunk grid; Show, Retint, RebuildAround.
+    IslandRenderer.cs          The terrain renderer: the chunk grid; Show and RebuildAround.
     TerrainChunk.cs            One 16 × 16 tile: ground mesh, liquid mesh, trimesh collider.
     ChunkMesher.cs             The pure mesher: the exposed faces of one chunk.
     MeshBuffer.cs              Quads into ArrayMesh arrays and collider faces; the winding rule.
-    IslandTint.cs, SurfacePalette.cs, TerrainMaterials.cs
-                               Colour per face, the provisional material palette, the materials.
+    IslandTint.cs, FaceKind.cs, SurfacePalette.cs, TerrainMaterials.cs
+                               Colour per face, which side a face is, the provisional
+                               material palette, the materials.
   generation/                  Namespace ProjectNikitin.Generation
     IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
     Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
@@ -262,7 +265,8 @@ scripts/
     IslandLab*.cs              The lab.
     GenerationAudit*.cs        The audit.
     GenerationChecksum.cs      The checksum.
-    MeshBench.cs               The mesh bench.
+    MeshBench*.cs, DomainsBench.cs
+                               The mesh bench and the Domains bench.
     DevPalette.cs, TinyFont.cs The shared colours, and a 5x7 bitmap font so a
                                headless PNG can carry its own labels.
 resources/island_default.tres  The IslandParams preset every dev scene and the game scene load.

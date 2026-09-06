@@ -726,7 +726,8 @@ terrain, shelves, and the damper lee.
 
 ## 5. How a change is trusted
 
-Three scenes run without a window, from a shell, and a fourth is the human end.
+Four scenes run from a shell (three of them without a window), and a fifth is
+the human end.
 
 ### The checksum
 
@@ -834,7 +835,9 @@ drew, the times, and three checks that must pass — that Godot's triangles face
 the way the renderer assumes, that the mesh's area equals the count of faces
 touching air, and that a ray dropped onto a column lands on its top and one
 fired up from below lands on its keel, so the physics shapes are right too. It
-runs without a window and quits by itself.
+runs without a window and quits by itself. A second bench, `domains_bench.tscn`,
+opens a window with many whole Domains in view and reports the frame rate; the
+numbers in section 6 about twenty and eighty Domains come from it.
 
 ---
 

@@ -1,9 +1,9 @@
 # Dev scenes: the lab, the audit, the checksum, the mesh bench
 
-Four scenes under `scenes/dev/` drive the generator without the game: three
-measure the generator, and the mesh bench measures the renderer that draws its
-islands. All four load the same preset, `resources/island_default.tres`, so the
-audit measures the island the lab shows. Edit the `.tres` in the Inspector to change it durably; use
+Five scenes under `scenes/dev/` drive the generator without the game: three
+measure the generator, two the renderer that draws its islands. All five load
+the same preset, `resources/island_default.tres`, so the audit measures the
+island the lab shows. Edit the `.tres` in the Inspector to change it durably; use
 the lab's panel (or the Remote tab of the Scene dock) for a throwaway experiment.
 
 Godot is not on `PATH`; from a shell use the .NET build's own binary:
@@ -339,3 +339,20 @@ of its highest span, a ray up from below its keel, so the colliders are tested
 as the game will use them (headless physics is real physics). About twenty
 seconds; it quits by itself and needs no timeout. Run it after touching
 anything under `scripts/terrain/`.
+
+## The Domains bench — `domains_bench.tscn`
+
+```
+godot --path . scenes/dev/domains_bench.tscn -- domains=20 seed=1337 seconds=6
+```
+
+Windowed, since a frame rate needs a screen. Lays out that many Domains on
+consecutive seeds in a grid a quarter footprint apart, frames them all (the far
+plane pushed to 100 km, so the count is of everything and not of what the
+frustum kept), and after the seconds prints the frame rate, the render thread's
+CPU time, draw calls, primitives and memory, then quits. Vsync is off; the GPU
+time reads 0 on Metal, so the frame time is the measure and the display's
+refresh is a floor on it. Past 150 Domains no colliders are built, since Jolt's
+default cap of 10,240 bodies is 160 Domains of 64 chunk bodies (the chunk nodes
+are bodies with or without a shape, so the engine still logs the cap). The
+numbers it found on the Mac are in `CLAUDE.md` under Rendering.

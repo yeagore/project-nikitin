@@ -3,14 +3,6 @@ using ProjectNikitin.Generation;
 
 namespace ProjectNikitin.Meshing;
 
-/// <summary>Which side of a slab a face is.</summary>
-public enum FaceKind : byte
-{
-    Top = 0,
-    Side = 1,
-    Bottom = 2,
-}
-
 /// <summary>
 /// How the mesher colours what it builds: a colour per ground face from the column,
 /// its span and the face's kind, and one per flooded column for the water. The
