@@ -1,4 +1,4 @@
-# Island Generation — appendix
+﻿# Island Generation — appendix
 
 The reasoning behind [island-generation.md](island-generation.md): why each
 mechanism is the way it is, what was tried and removed, how the audit and the
@@ -522,6 +522,195 @@ field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
 one soft cell in a hundred — put building stone on a Domain with no rock
 landform, material only.
 
+### The magick layer is grown, not sampled
+
+The density byte was two octaves of warped simplex through a tanh. It was
+honest about being a placeholder, and it had the failing every noise field has:
+turning its knobs moves the blobs about, changes the size of the blobs, and
+never produces anything but blobs. A Domain could not be *a different kind of*
+magickal place.
+
+A Turing reaction can. The producer (the magick) makes more of itself out of an
+inhibitor it consumes; the inhibitor is fed everywhere and diffuses faster than
+the producer does, and that inequality alone — the thing Turing showed in 1952 —
+makes a flat field unstable and splits it into spots, worms, mazes, cells and
+lace. The Gray–Scott form of it was taken over Gierer–Meinhardt: the same
+producer/inhibitor structure, but numerically forgiving (explicit Euler at
+dt = 1 needs no stiff-solver care) and with a far richer parameter zoo. Six
+knobs, all Auto with the rest, and the map from knob to coefficient is where all
+the work went.
+
+**The band is narrow and it moves.** Most of the (F, k) rectangle is a dead
+field or a full one, so the knobs are mapped onto the live band rather than onto
+the coefficients. The first attempt set k as a fraction, 0.86–0.99, of the
+saddle-node curve `√F/2 − F` on the reasoning that patterns live under the curve
+where the second steady state exists. They do not live *well* under it: at 0.5
+on every knob the producer flooded 99.9% of the land, and the min–max stretch was
+drawing numerical residue as if it were country. The published recipes put the
+interesting band within a few per cent *either side* of the curve — coral at
+F = 0.0545, k = 0.062 is 0.997 of it; worms at F = 0.078, k = 0.061 is 0.990 —
+so k became a multiple of the curve centred on 1.
+
+Two corrections followed from measuring rather than reasoning:
+
+- The reproduction rate ρ scales the autocatalytic term, so it moves the curve
+  with it (`√(ρF)/2 − F`). Computing the ceiling from a ρ of 1 while running at
+  0.85 put a fourteenth of Auto seeds outside the band.
+- The band's *width* is not constant: it tightens as the feed rises. A fixed
+  reach of ±0.075 that suited a starved Domain killed a well-fed one outright,
+  which is why nine seeds in forty died at high supply. The reach now runs from
+  0.075 at no supply to 0.035 at full, and the top of the feed axis was pulled
+  back from 0.070 to 0.060 for the last two.
+
+Across sixty Auto seeds and all six knobs swept end to end, nothing fell back,
+every sweep was monotone in coverage, and the saturated share of a Domain ran
+from 2% to 86%.
+
+**And then the knobs went away.** Two faults survived all that tuning. The band
+is not a rectangle, so a slider that stayed inside it at one setting of its
+neighbours walked out at another, and the six were only jointly safe because the
+mapping kept narrowing each of them until it barely moved anything. Worse, the
+axis that actually mattered — what *kind* of magickal place a Domain is — was not
+any one slider but a corner of the joint space, so nobody could ask for a maze;
+they could only roll seeds until one came up. The six settings that pattern
+best are now named recipes (`MagickPattern`), found by sweeping F × k at three
+diffusions and looking at the result as ASCII: `Motes`, `Wells`, `Veins`,
+`Labyrinth`, `Lace`, `Hollows`. What is left as a number is the one thing that
+*is* a quantity — `MagickDensity`, how much magick the Domain holds — and it acts
+in two places, walking k a half-thousandth along the recipe's own band so the
+pattern genuinely thickens, then putting the settled field through a level curve
+so the mean lands where it was asked.
+
+That level curve started as a power bend alone, `tᵍ`, and the bend has no zero in
+it: at the bottom of the density the island still averaged 30 of 255, which is
+not "hardly any magick", it is a dim wash over everything. The fault is not the
+bend but the model — **a Turing reaction cannot give you nothing.** The producer
+is always somewhere, and the finished field is rescaled to its own range, so
+however faint the pattern the byte comes out full. Emptying a Domain therefore
+has to happen on the way out. The curve now cuts below the identity and lifts
+above it: a cut subtracts a level and stretches what survives, so a density of 0
+is an inert Domain and a density of a few hundredths is a handful of small bright
+places on dead ground, which is the right reading of "barely any" — magick is
+scarce, not everywhere and weak. The audit's magick table is the check: over all six
+patterns at three densities the mean tracks the knob, and no row falls back.
+
+**The seeding is relative.** The producer starts in the cells above a fixed
+level of a noise field — and a small landmass can sit entirely under a fixed
+level, in which case nothing is sown at all and the reaction has nothing to run
+on. Eleven of the checksum's Rhomb and Archipelago rows at one seed failed
+exactly that way, and failed silently, since the fallback field is bit-identical
+to what the layer used to be. The threshold is read against the island's own
+noise range instead.
+
+**How fast each substance carries, and the ceiling on it.** The classical form has
+the producer diffusing at half the inhibitor, and the brief was to move both — the
+magick carrying further and the aether less far. Only one of those is free. The
+whole layer stands on Turing's condition, that the inhibitor outruns the producer,
+and the closer the two are the weaker the instability that makes any pattern at
+all. So the aether's own diffusion came down by 0.85 outright, which costs nothing
+but pattern size (and pattern size is bought back on the lattice), while the
+producer's share of it went up until the pattern said stop.
+
+It says stop earlier than the arithmetic suggests. At **0.65** the reaction still
+patterns, but not into a *kind*: motes, wells and veins come out as the same
+picture, three rows of the contact sheet identical, and the naming of six patterns
+is undone without a single one of them dying. At **0.72** there is no pattern left
+at all — the field is the shape the seeding grew into, wearing a soft gradient.
+**0.60** is the last setting where all six are still themselves, and it is what
+"the magick carries further" can honestly mean here. This is the second time the
+sheets were the only instrument that would have caught it: nothing had died, no
+fallback fired, the means were all in range, and the audit's own table of patch
+counts moved less than the eye did.
+
+**The density asks its mean along a bend.** Straight put too much magick on the
+middle of the slider — half of it covered half the Domain, when what reads best is
+a Domain with magickal country *in* it. Half the slider now asks a quarter of the
+full mean. The obvious curve is a plain square, which hits that middle point and
+keeps both ends, but it takes the bottom down with it: a density of 0.05 would ask
+half a byte, which is an inert Domain wearing a different name, and the low end had
+been built deliberately to give a handful of faint places rather than none. The
+cubic `(d + 2d³)/3` passes through the same three points and still asks three bytes
+at 0.05.
+
+**The pattern was a texture, and a texture is not a place.** At one reaction cell
+to one column the magick came out three to six cells a feature, which reads at any
+distance as the same faint speckle everywhere — there was no such thing as a
+magickal *region*, so no biome or settlement rule could ever have asked whether it
+was standing in one. Making the features larger by slowing the reaction is the
+obvious route and the wrong one: feature size goes as the square root of carry
+over rate, so four times wider means sixteen times slower, and the step count goes
+from thousands to hundreds of thousands.
+
+Coarsening the lattice gets the same picture from the other side. The reaction
+runs four ground cells to the side and is enlarged back by a bilinear read, so the
+island is four times smaller in the only units the reaction knows — which makes
+the stage sixteen times *cheaper* rather than sixteen times dearer. Patches per
+island fell about fivefold and the mean patch grew about sixfold.
+
+The scale trades against the pattern, though, and six was too many. A 128² Domain
+is 22 reaction cells across at six, which is four features, and motes, wells and
+labyrinth all came out as the same three blobs — the naming exercise undone by the
+zoom. Four held the six apart at 96² and 128² but not at 64², where sixteen
+reaction cells is two or three features. **Three** is where it settled: 43 cells
+across at 128² and 22 at 64², so the six are themselves at every footprint, and a
+feature is still twenty cells and wider, which is the biome scale the coarsening
+was for. Fixing the feature size in world cells rather than in island fractions is
+the right way round for a game whose cell is a fixed size.
+
+**The lattice leaned, and then it did not.** For a while each reaction cell had a
+*leaning* — uphill by the fall of the effective surface, upwind against the one
+wind, upstream along a watercourse — with the two substances taking it opposite
+ways, so that the magick climbed the land and the aether ran down it. It was a
+stencil rather than a drift term: the nine-point weights scaled by how far each
+neighbour lay with the leaning or against it, then renormalised so the eight still
+summed to one, which keeps the thing a weighted average and leaves explicit Euler
+exactly as stable as it was even-handed.
+
+It worked, in the sense that it measured. The audit grew a table of high ground
+against low, windward against lee, headwaters against mouth, and all eighteen
+gains came out positive and worth eight to thirty bytes. It was **removed anyway**,
+on the judgement that it did not earn its place: what it bought was a gradient
+across a Domain that already varies, and what it cost was a whole mechanism, a
+knob, a table and a section of this document. That is worth writing down, because
+the two traps it took on the way are the interesting part and neither of them is
+about leaning as such:
+
+- **The sign was the opposite of the one it looked like.** A cell *takes* from its
+  neighbours, so weighting the uphill neighbour heavier makes the cell draw magick
+  *down* off the hill. The pictures looked plausible either way — a pattern that
+  leans is a pattern that leans — and it took the table to show all eighteen gains
+  sitting on the wrong side of zero. Any future field that is carried rather than
+  diffused has the same trap in it.
+- **A uniform field is not like a varying one.** Slope and channel point every
+  which way across an island and cancel in the large, so they tilt the pattern in
+  place; the wind is one direction over the whole Domain, so it is bulk transport,
+  and at half strength it swept the field downwind until it banked against the far
+  coast — a windward side sixty bytes richer than the lee, with the slope's own
+  gathering undone underneath it.
+
+And the strength was found by looking, not reasoning: at 0.35 it stopped being a
+lean and became advection, the motes smearing into worms and the wells collapsing
+to a streak, which is the pattern — the thing the naming exercise exists to make
+askable — ceasing to be recognisable.
+
+**The coast is a no-flux wall** — a neighbour off the land is the cell itself,
+so neither substance crosses into the aether — and the producer therefore banks
+up against it, which gives many Domains a bright rim. Nobody wrote that rule; it
+is what the boundary condition does. It was left alone because `RimDistance`
+already makes the rim the Domain's strange edge and essencecoral country, so
+magick pooling there reads as intent rather than as an artefact.
+
+**What it costs.** The reaction is the one stage whose cost is steps × cells.
+Under the six knobs, at 400–2600 steps, the checksum's 446 islands went from 38
+to 64 seconds, about 58 ms an island. The named recipes run longer — 3000 to
+3500 steps, which is what each regime needs to grow out of the sown patches and
+cover the island rather than be caught half-finished. Under the named recipes on
+the ground lattice the checksum's 456 islands took 142 seconds, and 165 once the
+lattice leaned; coarsening it to three cells a side brought that down to **56**,
+because the island is sixteen times smaller in reaction cells and the step count
+did not have to move. It is the cheap end of the pipeline, and
+being able to name the pattern is worth the seconds.
+
 ### The mesh is the exposed faces, and a bench says so
 
 The renderer (spec §4) could have been checked by looking. It is checked by
@@ -563,6 +752,9 @@ The cost of a Domain will be its features, not its ground.
 | **Craters and the `Volcanic` character** | Either messy or indistinguishable from a mesa-and-basin pair, and a large share of unreachable ground. The sculpt mechanism is the same one the others use, so a caldera can come back if the biome layer wants one. |
 | **A two-cell-wide fall sheet** | Centred on one cell, half of it poured out of solid rock. Each cell of a navigable pair emits its own sheet. |
 | **Overhangs anywhere with an 8-slab face** | A lip off a two-cell karst tower reads as a hole punched through it. Undercuts need backing. |
+| **Magick as a noise field** | Two octaves of warped simplex through a tanh. Its knobs could only move and resize blobs; a Domain could not be a different *kind* of magickal place. Replaced by the Turing reaction (§B). |
+| **Six knobs on the reaction** | Feed, removal, the two diffusions, the autocatalytic rate and the settling, each a 0–1 slider mapped onto the live band. Two faults. The band is not a rectangle, so a slider that stays inside it at one setting of its neighbours walks out at another, and the knobs were only jointly safe because the mapping kept narrowing them. And the axis that mattered — what *kind* of place a Domain is — was not any one slider but a corner of the joint space, so no one could ask for a maze. Replaced by six named recipes (`MagickPattern`) and one density (§B). |
+| **k as a fraction under the saddle-node curve** | 0.86–0.99 of `√F/2 − F`, on the reasoning that patterns need the second steady state to exist. That whole range floods: at the middle of every knob the producer covered 99.9% of the land. The band straddles the curve, so k is a multiple of it centred on 1. |
 | **Streams fordable everywhere** | A watercourse that costs nothing to cross anywhere is a line on the map, and roads walked down the bed. The crossing is now a place. |
 | **A berth wherever the domino fits** | Thousands per audit, nearly all on water you could walk round. Berths are pruned against a ferry-less reach flood. |
 | **A pad bigger than the Domain** | Clamping a lobe's centre to `[r + 3, n − 1 − r − 3]` is an empty range once a lobe is wider than half the map, and `Math.Clamp` throws. The pad is capped at half the footprint. |
@@ -620,7 +812,7 @@ measured a fixed preset are kept where they still say something.
 | the sun and the hollows | warmth on slopes turned to the sun 141.6, turned away 133.5 (n≈18.8k each); basin floors 147.0 against an island median of 154 |
 | rivers after the terminal lakes and deltas | 7876 river cells (from 7812), 3565 navigable, 778 falls; 8 lakes swallow a river on 8 islands, fed by 16 channel cells; 17 deltas on 12 islands, 70 cells of fan; 218 springs, none on a navigable cell; fords per 100 stream cells 11.2 on flat ground and 6.1 on broken; every island's rivers still reach the rim |
 | districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
-| the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick mean 106–141, median 130, and a range of 195–222 within one island (no plateaus) |
+| the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick per-island mean 1–183, median 98, and a saturated share of 0–92% of the land, median 40% — the mean is the density knob's own claim, so it spans nearly the whole byte across rolled seeds, and the saturated share is what the pattern and the level make of it; a run where the share stops moving is a run where the reaction has fallen out of its band |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
 | the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
 | the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 tundra 77%, tundra 68%, steppe 68%, dust 66%, sand 77%; at 0.5 tundra 70%, heath 55%, meadow 58%, savanna 32% with meadow 27%, sand 52%; at 1.0 tundra 52% with bog 14%, moorland 50% with grass 14% and bog 13%, grass 74%, grass 63% with floodplain 10%, verdure 64% with floodplain 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |

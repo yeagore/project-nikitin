@@ -23,8 +23,9 @@ Windows machine's locale prints decimals with a comma, which breaks patterns
 looking for `\.`; and the headless runs are independent processes, so the
 checksum, the audit and a collage can run at once.
 
-The preset leaves the ten 0–1 knobs (relief, hilliness, mix, rivers, lakes,
-valleys, moisture, warmth, wind, overhangs) on **Auto**, so every seed rolls its own;
+The preset leaves the eleven 0–1 knobs (relief, hilliness, mix, rivers, lakes,
+valleys, moisture, warmth, wind, overhangs, magick density) and the magick
+pattern on **Auto**, so every seed rolls its own;
 a sweep that sets a knob pins it for every seed it builds, and the others still
 roll — the same way for every step of the sweep, since the roll is the seed's.
 
@@ -56,9 +57,26 @@ the slider is greyed, and once the island is built it sits at what the seed
 rolled and the caption says so (`Warmth   auto -> 0.71`), so the slider's
 position is always true to the island shown. Untick the box to keep that value
 and set it yourself; tick it again to hand the knob back to the seed, or press
-**All knobs to auto** for all nine at once. The readout's `settings:` line
-lists all ten, a star on each rolled one. **H** and **M** step their knob
-through auto, 0, 0.25 … 1.
+**All knobs to auto** for all of them at once. The readout's `settings:` line
+lists them all over two lines, a star on each rolled one. **H** and **M** step
+their knob through auto, 0, 0.25 … 1.
+
+The two under **magicks** are the whole of the layer the Turing reaction grows;
+watch them on the `magick` view (**C**). **Magick pattern** is what shape it
+takes — `motes` a fine dusting of points, `wells` round wells standing well
+apart, `veins` worms winding across the country, `labyrinth` those veins joined
+into one convoluted corridor, `lace` an open fine-strutted net, `hollows` the
+inverse, a saturated Domain with inert hollows punched through it. It is a
+dropdown and not a slider because each is a named point on the reaction's plane
+and the country between two of them mostly grows nothing at all. **Magick
+density** is how much magick the Domain holds on average, and 0 means none — the
+whole Domain inert, the view flat at the ramp's dark end. A few hundredths leaves
+only the crowns of the strongest wells standing on dead ground. It thickens what
+the pattern draws and then cuts or lifts the level the byte is read at, and never
+changes the pattern's kind or its scale. Its slider asks a bend, so the middle of
+it is a quarter of the full mean and not half. The reaction is the one stage that costs real time
+on a rebuild — it is steps × cells, and the patterns run three to three and a
+half thousand steps.
 
 The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
 one of the three footprints and the caption says which. **Goo may roll** is the
@@ -84,7 +102,7 @@ lake bed, goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
 Gate landing, ferry quay, summit; a sea stack is a dark column in the aether in
 every view), the six habitat axes as ramps: `moisture`, `warmth`, `rugged`,
 `exposure`, `rim`, `water` (the walk cost to fresh water), and the `magick`
-layer. Water is coloured by kind (ford, stream, navigable reach, lake; hot
+layer (the Turing reaction's spots, worms, mazes and lace). Water is coloured by kind (ford, stream, navigable reach, lake; hot
 water orange) and goo is violet in every view. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face
@@ -166,7 +184,9 @@ accept the current numbers as the new reference.
 The opt-in sweeps are `[Export]` flags on `GenerationAudit` (each documented on
 its property): silhouettes and waterways as ASCII, close-ups of the sculpted
 landforms, every arrangement × character, every Gate request, the four-hanging-
-Gates matrix, the knob sweeps (how you check a slider does anything), the
+Gates matrix, the knob sweeps (how you check a slider does anything, and where
+the magick table lives), one contact sheet of the magick layer — every pattern
+down the page, `MagickSheetDensities` across it, `MagickSheet=<dir>` — the
 material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all three sizes (`Sizes`, with the share of
 snow and how many mountainous islands carry any — the snow line has to exist at

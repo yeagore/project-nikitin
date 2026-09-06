@@ -1,4 +1,4 @@
-# Project Nikitin
+﻿# Project Nikitin
 
 A single-player economic/exploration strategy game built in **Godot 4.7**. The
 player is a merchant-pioneer running a trading company across the **Ecumene**, a
@@ -132,18 +132,20 @@ under `scripts/generation/`, in the order they run:
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
 | Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
-| Magicks | `Magicks` | The magickal density byte: for now pure noise in soft waves, read by nothing. |
+| Magicks | `Magicks` | The magickal density byte, grown rather than sampled: a Turing reaction (Gray–Scott) between the magick, which makes more of itself, and the inhibitor it feeds on, which is replenished everywhere and spreads faster — so the field breaks into spots, worms, mazes or lace instead of settling flat. Its coefficients are not knobs: the settings that pattern at all are islands in a sea of dead and flooded ones, so six of them are named as `MagickPattern` (motes, wells, veins, labyrinth, lace, hollows) and the stage shows two parameters — which pattern, and `MagickDensity`, how much magick the Domain holds. The reaction runs on its own lattice, three ground cells to the side, and is enlarged back onto the columns, so a feature is three cells across for every cell it would have been — magick is a place, not a texture. Read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The ten 0–1 knobs in `IslandParams` (relief, hilliness, mix,
-rivers, lakes, valleys, moisture, warmth, wind, overhang density) accept
-`IslandParams.Auto` (any negative value); `Roster.ResolveKnobs` then rolls
-them from the seed before anything runs, and the values used are
-`IslandData.Settings`. The preset leaves all ten on Auto, so the audit's
-default seeds sample the whole knob space; a sweep pins the knob it sweeps.
+**Auto knobs.** The eleven 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick density)
+accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
+then rolls them from the seed before anything runs, and the values used are
+`IslandData.Settings`. `MagickPattern` is resolved there too, `Auto` picking one
+of the six evenly — it is a named point on the reaction's plane, not a number to
+roll over a range. The preset leaves all of them on Auto, so the audit's default
+seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
 `IslandData` for 446 islands against `docs/checksum-baseline.txt`: a change
@@ -256,7 +258,8 @@ scripts/
                                The read-back analysis and its value types.
     Passage.cs, Works.cs       The roads between the Gates.
     Gate.cs, GatePlacement.cs, GateSites.cs
-    Habitat.cs, Magicks.cs, Surfaces.cs, SurfaceMaterial.cs, Names.cs, Overhangs.cs
+    Habitat.cs, Magicks.cs, MagickPattern.cs, Surfaces.cs, SurfaceMaterial.cs,
+    Names.cs, Overhangs.cs
     IslandData.cs, IslandParams.cs, Span.cs, Terrain.cs
     LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
     FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs
@@ -359,8 +362,10 @@ ratio, and the three supported footprints (the Ecumene page still says 16³–64
   is at `yeagore/project-nikitin`.
 - **Render an island**, branch `island-generation`, merged in PRs
   [#1](https://github.com/yeagore/project-nikitin/pull/1),
-  [#3](https://github.com/yeagore/project-nikitin/pull/3) and
-  [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
+  [#3](https://github.com/yeagore/project-nikitin/pull/3),
+  [#4](https://github.com/yeagore/project-nikitin/pull/4),
+  [#5](https://github.com/yeagore/project-nikitin/pull/5) (the magick layer) and
+  [#7](https://github.com/yeagore/project-nikitin/pull/7). Every generation
   stage is done and audited at all three footprints.
 - **The mesher**, branch `mesher`, PR
   [#6](https://github.com/yeagore/project-nikitin/pull/6): the chunked

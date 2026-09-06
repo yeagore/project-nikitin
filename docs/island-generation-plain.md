@@ -593,9 +593,24 @@ from, kept whole to 255 for the settlement and biome layers, whose first
 question about a site is whether water is near.
 
 Beside these, and not part of the climate, every column has a **magickal
-density**: for now pure noise in soft waves about forty cells long, read by
-nothing, so that the lab, the audit and the collages carry the layer from the
-start.
+density**, and it is grown rather than sampled. Two substances live on the land:
+the magick itself, which makes more of itself wherever there is already some,
+and the aether it feeds on, which is topped up everywhere and spreads faster
+than the magick does. A thing that makes more of itself locally while starving
+its own surroundings at a distance cannot settle flat — it breaks into spots,
+worms, mazes and lace, the same instability that puts the spots on a leopard.
+
+The reaction has six coefficients and none of them is a dial, because the
+settings that make a pattern at all are islands in a sea of settings that make a
+dead field or a full one. Six good ones are named instead — **motes** (a fine
+dusting of points), **wells** (round wells standing apart), **veins** (worms
+winding across the country), **labyrinth** (those veins joined into one
+convoluted corridor), **lace** (an open fine-strutted net), **hollows** (the
+inverse: saturated, with inert holes punched through it) — and the seed picks
+one. What stays a dial is the one thing that is really a quantity: how much
+magick the Domain holds, from none at all through a handful of small bright
+places on dead ground to a Domain steeped in it. Read by nothing yet, so that
+the lab, the audit and the collages carry the layer from the start.
 
 ### Stage 12: surfaces and anchors
 

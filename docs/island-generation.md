@@ -1,4 +1,4 @@
-# Island Generation — the spec
+﻿# Island Generation — the spec
 
 How a Domain is generated, in the order it happens: the model, each stage's
 rules and the class that owns them, the parameters, the rendering handoff. **The
@@ -519,13 +519,161 @@ gorge floors wet by about 40 and the lee warms by about 15, while the open
 ground does not move.
 
 **The magickal density** (`Magicks.Measure`, `IslandData.Magick`) is a seventh
-byte and a layer of its own, not a habitat axis. For now it is noise and
-nothing else: two octaves of warped simplex at a wavelength of about forty
-cells, pushed through a tanh so the byte uses most of its range (about 200 of
-255 within one island) without the flat plateaus a hard clip made — soft waves
-with nothing behind them, read by nothing. What the Magicks system makes of it
-is design to come; the byte exists so the lab, the audit and the collages carry
-it from the first.
+byte and a layer of its own, not a habitat axis. It is **grown, not sampled**:
+a Turing reaction between two substances on the land, in the Gray–Scott form,
+integrated with explicit Euler at dt = 1 on the cell lattice.
+
+- The **producer** is the magick itself, and it is autocatalytic: where there is
+  some, more is made, at the cost of the substance it feeds on.
+- The **inhibitor** is that substance. It is replenished everywhere, and it
+  spreads faster than the producer does.
+
+That last clause is Turing's condition and the whole trick. A substance that
+makes more of itself locally while starving its own surroundings at a distance
+cannot settle into a flat field; it breaks into spots, worms, mazes, cells and
+lace — the instability that puts the spots on a leopard. So consecutive seeds do
+not merely shift a noise field about, they give a Domain of a *different kind*:
+scattered magickal wells, one veined with filaments, one almost saturated with
+inert holes punched through it.
+
+The land is compacted to a flat list of cells, each carrying its eight
+neighbours; a neighbour off the land is the cell itself, which makes the coast a
+**no-flux wall** — neither substance crosses into the aether. That wall is why
+many Domains carry a bright rim: with nowhere to diffuse to, the producer banks
+up against the coast. It is the model's own behaviour rather than a rule anyone
+wrote, and it sits well enough with `RimDistance` — the rim is already the
+Domain's strange edge — that it was left alone. The producer is sown in the
+cells above 55% of a warped noise field's *own range over that island* (roughly
+the top third, in a few broad irregular patches) at `u = 0.5, v = 0.25`, the rest
+of the land starting inert at `u = 1, v = 0`. The share is read against the
+island's own range and not a fixed level because a small landmass can sit
+entirely under a fixed one, in which case nothing is sown and there is no
+reaction to run.
+
+**Two parameters** are all the layer shows, and neither of them is a coefficient
+of the reaction. The settings that pattern at all are islands in a sea of dead
+and flooded ones; which island you are standing on decides the *kind* of thing
+the Domain grows rather than its degree, and sliding between two of them mostly
+passes through country that grows nothing. So the interesting points are named,
+one `Recipe` each, as `MagickPattern`:
+
+| Pattern | F | k | Dᵤ | Steps | What it looks like |
+|---|---|---|---|---|---|
+| `Motes` | 0.018 | 0.0530 | 0.125 | 3500 | The smallest of the six: a scatter of points, half the width of a well |
+| `Wells` | 0.030 | 0.0610 | 0.21 | 3500 | Round wells standing well apart, each a landmark |
+| `Veins` | 0.030 | 0.0590 | 0.17 | 3500 | Worms winding across the country, mostly unjoined |
+| `Labyrinth` | 0.030 | 0.0570 | 0.17 | 3000 | The veins joined into one convoluted corridor with inert walls |
+| `Lace` | 0.024 | 0.0530 | 0.11 | 3500 | An open fine-strutted net with inert cells caught in its mesh |
+| `Hollows` | 0.030 | 0.0556 | 0.17 | 3000 | The inverse: saturated, with inert hollows punched through it |
+
+Dᵥ is **0.60 of** Dᵤ throughout, and every recipe's Dᵤ is scaled by 0.85 — the
+magick carries further and the aether less far than the classical form has them.
+That 0.60 is a ceiling and it was measured, not chosen: Turing's condition is that
+the inhibitor outruns the producer, and the closer the two get the weaker the
+instability. At 0.65 it is too weak to hold a *kind*, and motes, wells and veins
+come out as the same picture — the six named patterns collapse into one. At 0.72
+there is no pattern left at all, only the shape the seeding grew into. 0.60 is the
+last setting where all six are still themselves. ρ is 1, the classical form. Dᵤ is what sets the *scale* — how far apart two wells can
+stand and still starve each other — which is why lace and motes are quoted at a
+smaller one rather than at a different F. The step counts are what each regime
+needs to grow out of the sown patches and cover the island; the slower-growing
+kinds are given longer rather than left half-finished, and the reaction is still
+the one stage whose cost is steps × cells.
+
+`MagickDensity` is the other parameter: how much magick the Domain holds on
+average, **0 meaning none at all**, Auto like the rest. It does two things and
+neither of them changes what the pattern is.
+
+1. **In the reaction**, it walks k along the pattern's own band, `k ± reach`, so
+   that a denser Domain grows a genuinely thicker pattern rather than a brighter
+   one. The reach is a half-thousandth to a thousandth, quoted per pattern
+   because the live band round each point is that narrow, and **signed**: which
+   way thickens the pattern is not the same at every feed, and at the low feed
+   the motes sit at it is the other way about.
+2. **On the byte**, it puts the settled field through a one-parameter level curve
+   until the island's mean magick lands on `0.83 × (d + 2d³) / 3`. The
+   level is found by halving through a 512-bin histogram, so the search costs
+   bins and not land, and the curve is monotone in both the field and the level,
+   so the pattern is emptied, thinned or fattened and never rearranged — nowhere
+   becomes more magickal than a place that outranked it.
+
+The mean is asked along a bend and not a straight line, because straight put too
+much magick on the middle of the slider — half of it covered half the Domain. The
+cubic `(d + 2d³)/3` is the flattest curve through the three points that matter:
+nothing at 0, **a quarter** of the full mean at a half, everything at 1. A plain
+square hits that middle point too and is the obvious choice, but it drags the
+bottom of the slider down with it — a density of 0.05 would ask half a byte, which
+is an inert Domain wearing a different name. The cubic still asks three bytes
+there, which is a handful of faint places.
+
+The level curve itself has a cut at one end and a lift at the other, meeting at the
+identity:
+
+| Level | Curve | What it does |
+|---|---|---|
+| 0 | everything to nothing | An inert Domain, a flat zero byte |
+| 0 … 1 | `clamp((t − (1 − level)) / level)` | **Cuts**: what is under the cut goes to nothing, what is over it is stretched back over the byte |
+| 1 | `t` | The pattern as the reaction left it |
+| 1 … 2 | `t^g`, g falling 1 → 0.15 | **Lifts**: the ground between the pattern's arms comes up |
+
+The cut is the half that matters, and it is why the emptying is done here rather
+than asked of the reaction. **A Turing reaction cannot give you nothing.** The
+producer is always somewhere, and a pattern rescaled to its own range fills the
+byte however little of it there was, so a Domain with no magick in it has to be
+made by subtracting a level. At a density of 0 the cut takes everything; just
+above it, only the crowns of the strongest wells stand above the cut, which reads
+as a handful of small bright places on dead ground rather than as a dim wash over
+the whole island. Where the lift runs into its bound at the other end the Domain
+comes out a little short of the mean asked for, which beats drawing the numerical
+difference between two inert cells as if it were country.
+
+**The reaction runs on its own lattice**, three ground cells to the side, and the
+settled field is enlarged back onto the columns by a bilinear read. A feature of
+the pattern is therefore about three cells across for every cell it would have
+been, which is the difference between a texture and a place: at one cell to one
+column the magick was the same everywhere at any distance and no biome could have
+been drawn from it, and a Domain now has magickal country and inert country
+instead.
+
+It is done by coarsening rather than by slowing the reaction because the two are
+the same picture at very different prices. A pattern's size is set by how far a
+substance carries against how fast it reacts, so the same enlargement on the
+ground lattice would mean a reaction slower by the square of it — a step count in
+the hundreds of thousands. Coarsening makes the island smaller in the only units
+the reaction knows, so it costs the square *less* rather than more: the stage got
+cheaper, and the checksum's 456 islands with it.
+
+One detail the coarsening needs: every reaction cell off the land takes the value
+of the nearest one on it before the enlargement, or a column near the shore would
+interpolate against a zero meaning "no reaction ran here" rather than "no magick
+here", and every island would wear a dark rind a few cells deep.
+
+**Three, and why not more.** The scale trades against the pattern: an island is
+only so many reaction cells across, and the six kinds need enough of them to be
+six kinds. At six cells to the feature a 128² Domain is 22 reaction cells wide,
+which is about four features, and motes, wells and labyrinth all come out as the
+same three blobs. Three leaves 43 across at 128² and 22 at 64², which is room for
+the six to be themselves at every footprint, and features still twenty cells and
+wider — biome-sized, which is the point of coarsening at all.
+
+The producer never uses more than a third of 0–1, so the finished field is
+stretched to the island's own range before the level. If it comes back with no
+peak (`< 0.05`, the reaction died) or no range under the peak (`< 0.02`, it
+flooded), the layer **falls back** to the seeding field alone, tanh-stretched —
+the soft waves the layer used to be — and the density's level is applied to that
+instead, so the byte is never a flat mid-grey (a density of 0 still empties it,
+as it empties everything). Numerical residue stretched over a byte would
+be drawn as if it were country, so the two tests catch both failures rather than
+only the dead one. The audit's magick table sweeps all six patterns at four
+densities, 0 and 0.05 among them and reports the mean, the saturated share, and how many separate
+saturated patches and inert holes each leaves: the mean is the density's claim
+and climbs down every column, the patch counts are the pattern's claim and tell
+the six apart, and a pattern that has quietly become the next one along, or
+fallen back, shows up there.
+
+Nothing reads the byte yet. What the Magicks system makes of it is design to
+come; the byte exists so the lab, the audit and the collages carry it from the
+first.
 
 **Every geometric question is asked of the effective surface**
 (`EffectiveLevel`), because habitat and anchors describe what a place *looks
