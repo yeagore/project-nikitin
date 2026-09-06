@@ -9,6 +9,9 @@ in-fiction Age of Exploration driven by opening links between Domains.
 **Documentation split:** the **Notion wiki is the design overview** (premise,
 concepts, glossary, decisions); see **Design source of truth** below. **Technical
 detail lives in this repo**: this file for orientation, `docs/*.md` for specs.
+`docs/island-generation-plain.md` is a plain-language retelling for Maxim: not
+a source for you, but a document you owe an update to whenever a change alters
+what the spec or the dev-scenes manual say.
 When a task needs a design fact that is not written down, ask rather than
 invent, and offer to log the answer in the Notion Decision Log.
 
@@ -192,6 +195,10 @@ resources/island_default.tres  The IslandParams preset all three dev scenes load
 docs/
   island-generation.md         The generation spec.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
+  island-generation-plain.md   The spec, appendix and manual retold in plain words,
+                               for Maxim. Do not read it for orientation (the spec
+                               is the source); do keep it true when the generator
+                               or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit and checksum manual.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
@@ -273,8 +280,10 @@ ratio, and the three supported footprints (the Ecumene page still says 16³–64
 
 - **Prototype 0**: dev environment (git, Godot, Claude, VS Code). Done; the repo
   is at `yeagore/project-nikitin`.
-- **Render an island**, branch `island-generation`, PR
-  [#2](https://github.com/yeagore/project-nikitin/pull/2). Every generation
+- **Render an island**, branch `island-generation`, merged in PRs
+  [#1](https://github.com/yeagore/project-nikitin/pull/1),
+  [#3](https://github.com/yeagore/project-nikitin/pull/3) and
+  [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
   stage is done and audited at all three footprints. What is next, in rough
   order, is in `docs/island-generation.md` §6: the chunked span-aware mesher and
   colliders (the only thing that will answer the performance question), settlement

@@ -134,6 +134,9 @@ internal static class Habitat
     private const float HotBloom = 90f, HotFalloff = 4f;
     private const int HotReach = 24;
 
+    /// <summary>The warmest the bloom can lift a cell to: the temperate band, so a hot spring makes a meadow in the tundra and never a floodplain.</summary>
+    private const float HotBloomCap = 160f;
+
     /// <summary>Cells upwind a cell looks for cover.</summary>
     private const int WindScan = 10;
 
@@ -329,8 +332,9 @@ internal static class Habitat
     /// colder; the frost hollows, a basin floor or a sinkhole's pit colder than its
     /// rung; the lee a little warmer; the rim a little colder; the bloom of any
     /// hot water (<see cref="FindHotWater"/>), <see cref="HotBloom"/> at the source
-    /// decaying over <see cref="HotFalloff"/> cells of walk cost, so a frigid Domain
-    /// keeps a meadow round its hot spring; and wet ground pulled toward
+    /// decaying over <see cref="HotFalloff"/> cells of walk cost and never past
+    /// <see cref="HotBloomCap"/>, so a frigid Domain keeps a meadow round its hot
+    /// spring and no hot ground appears in a cold country; and wet ground pulled toward
     /// <see cref="Temperate"/> from either side. No land leaves it all zero.
     /// </summary>
     private static void MeasureWarmth(int seed, IslandParams p, IslandData d)
@@ -379,7 +383,8 @@ internal static class Habitat
             if (Hollow(d, eff, land, n, x, z)) warmth -= HollowChill;
             warmth += LeeWarmth * gust * (1f - d.Exposure[x, z] / 255f);
             warmth -= RimChill * (1f - Math.Min((int)d.RimDistance[x, z], RimChillReach) / (float)RimChillReach);
-            if (hot != null && hot[x, z] >= 0) warmth += HotBloom * MathF.Exp(-hot[x, z] / HotFalloff);
+            if (hot != null && hot[x, z] >= 0)
+                warmth = Math.Max(warmth, Math.Min(HotBloomCap, warmth + HotBloom * MathF.Exp(-hot[x, z] / HotFalloff)));
             warmth = Temperate + (warmth - Temperate) * (1f - MoistTemper * d.Moisture[x, z] / 255f);
 
             d.Warmth[x, z] = (byte)Mathf.Clamp(Mathf.RoundToInt(warmth), 0, 255);

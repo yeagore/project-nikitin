@@ -24,6 +24,28 @@ internal static class DevPalette
         Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
     };
 
+    /// <summary>The landform view's colours: plains green, hills darker, mountain grey, mesa rust, basin blue, the sculpted ones their own.</summary>
+    public static Color Landform(LandformType type) => type switch
+    {
+        LandformType.Plain => new Color(0.45f, 0.60f, 0.28f),
+        LandformType.Hills => new Color(0.30f, 0.44f, 0.20f),
+        LandformType.Mountain => new Color(0.52f, 0.50f, 0.55f),
+        LandformType.Mesa => new Color(0.68f, 0.45f, 0.26f),
+        LandformType.Basin => new Color(0.28f, 0.40f, 0.52f),
+        LandformType.Badlands => new Color(0.72f, 0.56f, 0.34f),
+        LandformType.Karst => new Color(0.58f, 0.66f, 0.62f),
+        LandformType.Massif => new Color(0.62f, 0.42f, 0.48f),
+        LandformType.Dunes => new Color(0.80f, 0.74f, 0.46f),
+        LandformType.Sinkholes => new Color(0.50f, 0.58f, 0.44f),
+        _ => new Color(0.5f, 0.5f, 0.5f),
+    };
+
+    /// <summary>The walk view's greens and greys: the mainland, a hue per other district, one grey for broken ground.</summary>
+    public static readonly Color Mainland = new(0.42f, 0.62f, 0.28f);
+    public static readonly Color Broken = new(0.34f, 0.34f, 0.36f);
+    public static readonly Color WalkWater = new(0.16f, 0.34f, 0.52f);
+    public static Color District(int id) => Color.FromHsv((0.08f + id * 0.61803399f) % 1f, 0.62f, 0.88f);
+
     /// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
     public static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
     public static readonly Color HeightMid = new(0.30f, 0.42f, 0.18f);

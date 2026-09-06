@@ -226,6 +226,64 @@ godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateSco
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=7046 ClimateGrid=C:/tmp/climate
 ```
 
+### The climate chart — `ClimateChart`
+
+`ClimateChart=<dir>` writes `climate_chart.png`: the climate grid as an area
+chart, warmth across and moisture down, every byte pair coloured with the
+ground it gives. Two panels, open ground away from water and flat ground
+beside it (where the floodplain and the marsh can be); the band lines drawn on
+the axes with their bytes; the range a warmth knob reaches on open lowland
+(60 to 240) bracketed, with the knob's quarters ticked on both axes; and the
+patches (bog, marsh) as a checker of their colour over the ground they sit in,
+since a noise field decides them cell by cell. It is drawn from
+`Surfaces.Climate`, the rule the surface stage itself uses, so it cannot drift
+from the code. No seed is involved; `Seeds=1` keeps the run short.
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateChart=C:/tmp/chart
+```
+
+### The surface statistics — `ClimateStats`
+
+`ClimateStats=<dir>` counts two things and draws each. `surface_shares.png`
+is the knob grid again, but each tile is the mean share of dry land every
+material takes at that pair of moisture and warmth, over `StatsSeeds` (30)
+seeds with everything else rolled: a stacked bar and the figures beside it.
+`surface_cooccurrence.png` is a matrix over `StatsIslands` (500) rolled
+seeds: row A, column B, the share of islands that have A which also have B,
+with a first column for how many islands have A at all; present means twenty
+cells or more of dry land, a district's worth, so a tor does not make stone
+"present". Both tables are printed as text as well. About four minutes at
+128².
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateStats=C:/tmp/stats
+```
+
+### The design page's sheets — `ArrangementSheet`, `KnobSheet`, `StageSheet`
+
+Three more one-shot sheets, drawn for the Notion page. `ArrangementSheet=<dir>`
+puts `FirstSeed` through every layout at `ArrangementSize`² (64), six to a row,
+each captioned. `KnobSheet=<dir>` draws `FirstSeed` at `KnobSize`² (96) with a
+row per 0–1 knob — mix, relief, hilliness, rivers, lakes, valleys in the
+height-and-water view, wind in the moisture view — the knob at 0, ¼, ½, ¾, 1
+across and everything else rolled by the seed; a row's height ramp is on one
+scale, since per-island scaling hid the relief knob, and every height view
+carries a hillshade (a rise toward the south-east is brighter), so a one-slab
+step shows where a bare ramp hid it. `StageSheet=<dir>` draws
+`FirstSeed` at `StageSize`² (96) after every stage of the pipeline — the mask,
+regions and landforms, relief, lakes, the settled surface with its beaches,
+rivers, walk areas and Gates, roads, warmth, surfaces — as one sheet and as a
+captioned tile per stage (`stage_NN_<name>.png`), each with its own key. It
+reads the generator's
+`OnStage` hook, a dev-only callback that hands each stage's live state out to
+be drawn; the hook is null in play and changes nothing, and the checksum says so.
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=9005 Character=Highlands StageSheet=C:/tmp/sheets KnobSheet=C:/tmp/sheets
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=7046 ArrangementSheet=C:/tmp/sheets
+```
+
 The labels are pixels: headless Godot has no rendering device, so `TinyFont` draws
 a 5 × 7 bitmap alphabet straight into the `Image`.
 

@@ -37,7 +37,7 @@ internal static class Surfaces
     // warmth range, marsh on the warm-to-hot half — and sand and snow past the ends.
 
     /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its tundra.</summary>
-    private const int SnowBelow = 35;
+    internal const int SnowBelow = 35;
 
     // The bands are placed on the knob: warmth is 60 + 180 × the knob on open
     // lowland, so frigid is a knob under about 0.14, cold under about 0.3, hot one
@@ -241,7 +241,8 @@ internal static class Surfaces
     /// snow; then rock — a tall face bares stone at its brink and drops scree at its
     /// foot whatever the landform, and a rock landform shows stone and scree
     /// wherever it is broken, so a mountain is stone up to its snow; then the dunes
-    /// and the sculpted rock; then a delta's fan, floodplain in any climate; then
+    /// and the sculpted rock (a dune field is sand only where it is not cold); then
+    /// a delta's fan, the wet ground of its row; then
     /// the tors, small outcrops of stone in soft country; then the water in excess
     /// — marsh on warm-to-hot ground, bog on cold-to-cool — and then the climate
     /// grid, warmth against moisture. A beach is ground like any other — nothing
@@ -270,35 +271,53 @@ internal static class Surfaces
         if (rocky && rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;
 
-        if (form == LandformType.Dunes) return SurfaceMaterial.Sand;
+        // A dune field is sand where it is warm enough to be one; in the cold band and
+        // under it the ridges stay and wear the climate's ground, a frozen dune field
+        // under tundra rather than a pile of sand in it.
+        if (form == LandformType.Dunes && warmth >= ColdBelow) return SurfaceMaterial.Sand;
         // Broken rock, not a desert: dust here put a hot-band ground in cold country.
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Scree;
 
-        // A delta's fan is the river's own floodplain, whatever the climate says.
-        if (d.Delta[x, z]) return SurfaceMaterial.Floodplain;
+        // A delta's fan is the river's own wet ground: the wet cell of its row (a
+        // floodplain on a hot Domain, grass on a temperate, moorland on a cold,
+        // tundra where it is frigid), never a hot ground in a cold country.
+        if (d.Delta[x, z])
+            return Climate(warmth, Math.Max(d.Moisture[x, z], (byte)WetFrom), 1, rugged, 0f, 0f);
 
         // A tor: building stone in soft country, where no rock landform is.
         if (form is LandformType.Plain or LandformType.Hills && tor.At(x, z) > TorBar)
             return SurfaceMaterial.Stone;
 
-        // Water in excess, in patches: marsh on the warm-to-hot half, bog on the
-        // cold-to-cool half, and neither is the rule. A marsh wants extreme moisture
-        // — a high background and the water's strip both — on flat ground beside the
-        // water; a bog only asks for the excess, so there are more bogs than marshes.
-        byte moist = d.Moisture[x, z];
+        // The climate grid, for the ground that is not rock.
+        return Climate(warmth, d.Moisture[x, z], near, rugged, bog.At(x, z), marsh.At(x, z));
+    }
+
+    /// <summary>
+    /// The living ground for one climate: warmth against moisture, with
+    /// <paramref name="near"/> cells to fresh water (<c>int.MaxValue</c> for none)
+    /// and the ruggedness for the marsh's flatness, and the two noise values that
+    /// gate the patches of water in excess. Marsh first on the warm-to-hot half and
+    /// bog on the cold-to-cool half, since neither is the rule — a marsh wants
+    /// extreme moisture, a high background and the water's strip both, on flat
+    /// ground beside the water; a bog only asks for the excess, so there are more
+    /// bogs than marshes. Then the bands: frigid ground is tundra whatever the
+    /// moisture; the cold band splits tundra, heath, moorland; the floodplain lies
+    /// along hot water; and the hot row's verdure beats the sand as the floodplain
+    /// does. The chart the audit draws (<c>ClimateChart</c>) is this function.
+    /// </summary>
+    internal static SurfaceMaterial Climate(byte warmth, byte moist, int near, byte rugged,
+                                            float bogNoise, float marshNoise)
+    {
         bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
         if (warmth >= WarmFrom)
         {
             if (moist >= MarshFrom && near <= MarshReach && rugged <= MarshFlat
-                && marsh.At(x, z) > MarshBar)
+                && marshNoise > MarshBar)
                 return SurfaceMaterial.Marsh;
         }
-        else if (moist >= BogFrom && bog.At(x, z) > BogBar) return SurfaceMaterial.Bog;
+        else if (moist >= BogFrom && bogNoise > BogBar) return SurfaceMaterial.Bog;
 
-        // The climate grid. A mountain is stone and scree up to its snow; the cold
-        // bands are for the ground that is not rock. Frigid ground is tundra
-        // whatever the moisture; the cold band splits tundra, heath, moorland.
         if (warmth < FrigidBelow) return SurfaceMaterial.Tundra;
         if (warmth < ColdBelow)
         {
@@ -309,7 +328,6 @@ internal static class Surfaces
         if (wet && near <= FloodplainReach && warmth >= FloodplainFrom) return SurfaceMaterial.Floodplain;
         if (warmth >= HotFrom)
         {
-            // Hot and wet enough: verdure, the hot row's grass, and it beats the sand as the floodplain does.
             if (moist >= HotWetFrom) return SurfaceMaterial.Verdure;
             if (warmth >= SandFrom) return SurfaceMaterial.Sand;
             return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
@@ -317,4 +335,20 @@ internal static class Surfaces
         if (wet) return SurfaceMaterial.Grass;
         return dryGround ? SurfaceMaterial.Steppe : SurfaceMaterial.Meadow;
     }
+
+    /// <summary>The warmth byte the open lowland reads at a warmth knob of 0 and of 1: what the chart brackets as the knob's own range.</summary>
+    internal const int LowlandWarmthAt0 = 60, LowlandWarmthAt1 = 240;
+
+    /// <summary>The band lines on the warmth axis, for the chart: name and byte.</summary>
+    internal static readonly (string Name, int At)[] WarmthLines =
+    {
+        ("SNOW", SnowBelow), ("FRIGID", FrigidBelow), ("COLD", ColdBelow), ("BOG/MARSH", WarmFrom),
+        ("HOT", HotFrom), ("SAND", SandFrom),
+    };
+
+    /// <summary>The band lines on the moisture axis, for the chart: name and byte.</summary>
+    internal static readonly (string Name, int At)[] MoistureLines =
+    {
+        ("DRY", DryBelow), ("WET", WetFrom), ("BOG", BogFrom), ("VERDURE", HotWetFrom), ("MARSH", MarshFrom),
+    };
 }
