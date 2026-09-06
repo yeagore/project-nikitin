@@ -153,7 +153,8 @@ its property): silhouettes and waterways as ASCII, close-ups of the sculpted
 landforms, every arrangement × character, every Gate request, the four-hanging-
 Gates matrix, the knob sweeps (how you check a slider does anything, and where
 the magick table and the lean table live), one contact sheet of the magick layer — every pattern
-down the page, `MagickSheetDensities` across it, `MagickSheet=<dir>` — the
+down the page, `MagickSheetDensities` across it, at `MagickSheetSize` (0 takes
+the preset's), `MagickSheet=<dir>` — the
 material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all three sizes (`Sizes`, with the share of
 snow and how many mountainous islands carry any — the snow line has to exist at

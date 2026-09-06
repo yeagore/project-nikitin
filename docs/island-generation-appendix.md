@@ -602,6 +602,30 @@ exactly that way, and failed silently, since the fallback field is bit-identical
 to what the layer used to be. The threshold is read against the island's own
 noise range instead.
 
+**The pattern was a texture, and a texture is not a place.** At one reaction cell
+to one column the magick came out three to six cells a feature, which reads at any
+distance as the same faint speckle everywhere — there was no such thing as a
+magickal *region*, so no biome or settlement rule could ever have asked whether it
+was standing in one. Making the features larger by slowing the reaction is the
+obvious route and the wrong one: feature size goes as the square root of carry
+over rate, so four times wider means sixteen times slower, and the step count goes
+from thousands to hundreds of thousands.
+
+Coarsening the lattice gets the same picture from the other side. The reaction
+runs four ground cells to the side and is enlarged back by a bilinear read, so the
+island is four times smaller in the only units the reaction knows — which makes
+the stage sixteen times *cheaper* rather than sixteen times dearer. Patches per
+island fell about fivefold and the mean patch grew about sixfold.
+
+The scale trades against the pattern, though, and six was too many. A 128² Domain
+is 22 reaction cells across at six, which is four features, and motes, wells and
+labyrinth all came out as the same three blobs — the naming exercise undone by the
+zoom. Four keeps the six apart at 96² and 128². At 64² it does not, and that is
+left as it is: sixteen reaction cells is two or three features, so a small Domain
+simply has a magickal end and an inert end. Fixing the feature size in world cells
+rather than in island fractions is the right way round for a game whose cell is a
+fixed size, and this is the price of it.
+
 **The lattice leans, and both of its traps were found by measuring.** The
 even-handed lattice made a pattern that owed nothing to the ground under it — the
 same wells whether the cell was a summit or a shore. Each cell now has a leaning,
@@ -640,8 +664,11 @@ magick pooling there reads as intent rather than as an artefact.
 Under the six knobs, at 400–2600 steps, the checksum's 446 islands went from 38
 to 64 seconds, about 58 ms an island. The named recipes run longer — 3000 to
 3500 steps, which is what each regime needs to grow out of the sown patches and
-cover the island rather than be caught half-finished — and the checksum's 456
-islands now take 142 seconds. It is still the cheap end of the pipeline, and
+cover the island rather than be caught half-finished. Under the named recipes on
+the ground lattice the checksum's 456 islands took 142 seconds, and 165 once the
+lattice leaned; coarsening it to four cells a side brought that down to **56**,
+because the island is sixteen times smaller in reaction cells and the step count
+did not have to move. It is the cheap end of the pipeline, and
 being able to name the pattern is worth the seconds.
 
 ## C. Tried and removed

@@ -612,6 +612,42 @@ the whole island. Where the lift runs into its bound at the other end the Domain
 comes out a little short of the mean asked for, which beats drawing the numerical
 difference between two inert cells as if it were country.
 
+**The reaction runs on its own lattice**, four ground cells to the side, and the
+settled field is enlarged back onto the columns by a bilinear read. A feature of
+the pattern is therefore about four cells across for every cell it would have
+been, which is the difference between a texture and a place: at one cell to one
+column the magick was the same everywhere at any distance and no biome could have
+been drawn from it, and a Domain now has magickal country and inert country
+instead.
+
+It is done by coarsening rather than by slowing the reaction because the two are
+the same picture at very different prices. A pattern's size is set by how far a
+substance carries against how fast it reacts, so the same enlargement on the
+ground lattice would mean a reaction slower by the square of it — a step count in
+the hundreds of thousands. Coarsening makes the island smaller in the only units
+the reaction knows, so it costs the square *less* rather than more: the stage got
+cheaper, and the checksum's 456 islands with it.
+
+Two details the coarsening needs. Every reaction cell off the land takes the value
+of the nearest one on it before the enlargement, or a column near the shore would
+interpolate against a zero meaning "no reaction ran here" rather than "no magick
+here", and every island would wear a dark rind a few cells deep. And the leaning
+below is asked of the reaction lattice, not the ground — the fall between one
+reaction cell's mean height and the next — because the pattern's features are four
+cells and wider, so what should lean them is the shape of the country and not the
+roughness of one column.
+
+**Four and not six.** The scale trades against the pattern: an island is only so
+many reaction cells across, and the six kinds need enough of them to be six kinds.
+At six cells to the feature a 128² Domain is 22 reaction cells wide, which is
+about four features, and motes, wells and labyrinth all come out as the same three
+blobs. Four keeps them apart at 96² and 128². At **64² it does not** — sixteen
+reaction cells is two or three features, and every pattern reads as one or two
+magickal regions. That is the honest cost of fixing the feature size in world
+cells rather than in island fractions, which is the right way round for a game
+where a cell is a fixed size, and a small Domain having one magickal region is a
+fair answer in itself.
+
 **The lattice leans.** Every cell has a leaning — uphill by the fall of the
 effective surface, upwind against the Domain's one wind, upstream along a
 watercourse — and the two substances take it opposite ways. The magick climbs it;
