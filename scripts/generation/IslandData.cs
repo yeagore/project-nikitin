@@ -92,8 +92,9 @@ public sealed class IslandData
     public bool[,] Beach { get; }
 
     /// <summary>
-    /// Body-of-water id per flooded column, or <c>-1</c>. Two columns share an id
-    /// exactly when a hull could go between them: a waterfall cuts a body in two.
+    /// Body-of-water id per sailable column (standing water and navigable reaches), or
+    /// <c>-1</c>. Two columns share an id exactly when a hull could go between them: a
+    /// waterfall cuts a body in two. What the water names are given to.
     /// </summary>
     public int[,] WaterBody { get; }
 
@@ -110,15 +111,6 @@ public sealed class IslandData
 
     /// <summary>Cells of gap one bridge may span on this Domain, from <see cref="IslandParams.Crossings"/>.</summary>
     public int BridgeSpan { get; internal set; } = Traversal.DefaultBridgeSpan;
-
-    /// <summary>Ferry berths that survived pruning: a quay cell and the water in front of it.</summary>
-    public List<FerryBerth> Berths { get; } = new();
-
-    /// <summary>The quay cell of every berth, for the lab overlay and the audit.</summary>
-    public bool[,] Ferry { get; }
-
-    /// <summary>Berth sites found before pruning. Diagnostic: with <see cref="Berths"/>, says whether the pruning is too hungry.</summary>
-    public int BerthSites { get; internal set; }
 
     // ---- traversal ----
 
@@ -325,7 +317,6 @@ public sealed class IslandData
         River = new bool[size, size];
         Navigable = new bool[size, size];
         Landings = new bool[size, size];
-        Ferry = new bool[size, size];
         Ford = new bool[size, size];
         Beach = new bool[size, size];
         Delta = new bool[size, size];

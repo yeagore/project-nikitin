@@ -46,7 +46,7 @@ mesh bench, and the Domains bench. The two commands that matter after touching
 the generator, and the two after touching the renderer:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 446 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 456 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
 godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
@@ -128,7 +128,7 @@ under `scripts/generation/`, in the order they run:
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
 | Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river, and a delta where a navigable river meets a gentle coast. |
 | Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built), water bodies, ferry berths. Shelves are gone. |
+| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
 | Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
@@ -148,7 +148,7 @@ roll over a range. The preset leaves all of them on Auto, so the audit's default
 seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 446 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 456 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against
@@ -159,6 +159,11 @@ insertion order. When in doubt, run the checksum.
 
 Newer content ships behind a toggle that takes it out of `Auto`'s dice without
 taking it out of the code (`NewArrangements`, `NewLandforms`).
+
+**The knob matrix.** `generation_audit.tscn -- Seeds=1 KnobMatrix` steps every
+0–1 knob over the same seeds against twenty-six outcomes, paired per seed, and
+prints what each knob moves, whether it reverses and what else it moves. Run it
+after touching a knob; the 2026-09-07 reading is in the appendix.
 
 ---
 
@@ -254,7 +259,7 @@ scripts/
     Roster.cs                  The terrain stages (see the table above).
     Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,
                                deltas and springs, the lake that swallows a river.
-    Traversal*.cs, WalkArea.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
+    Traversal*.cs, WalkArea.cs, Crossing.cs, BridgeEase.cs
                                The read-back analysis and its value types.
     Passage.cs, Works.cs       The roads between the Gates.
     Gate.cs, GatePlacement.cs, GateSites.cs

@@ -28,22 +28,17 @@ public static partial class Traversal
     /// <summary>Slabs a bridge's two ends may differ by: one free step onto a level deck and one off it.</summary>
     public const int MaxBridgeRise = 2;
 
-    /// <summary>Widest gap a bridge spans over water, in cells: a deck over water has piers, and past three the thing you build is a ferry.</summary>
+    /// <summary>Widest gap a bridge spans over water, in cells: a deck over water has piers, and past three the water is not crossed.</summary>
     private const int WaterBridgeSpan = 3;
 
     /// <summary>Ground this many slabs or more below a deck is a chasm, and spans like aether.</summary>
     private const int ChasmDrop = 5;
 
-    /// <summary>Slabs a quay may stand above its water; higher is a cliff, not a landing.</summary>
-    public const int MaxQuayRise = 2;
-
-    /// <summary>Fills walk areas, water bodies, ferry berths and reach areas on <paramref name="d"/>, in that order.</summary>
+    /// <summary>Fills walk areas, water bodies and reach areas on <paramref name="d"/>, in that order.</summary>
     public static void Analyse(IslandData d)
     {
         BuildWalkAreas(d);
         BuildWaterBodies(d);
-        BuildBerths(d);
-        PruneBerths(d);
         BuildReachAreas(d);
     }
 
@@ -88,7 +83,7 @@ public static partial class Traversal
         return d.SurfaceLevel(x, z);
     }
 
-    /// <summary>Water a ferry works on: standing water or a navigable river, never goo. A stream is forded for free.</summary>
+    /// <summary>Water a hull could sit on: standing water or a navigable river, never goo. A stream is forded, not sailed. What <see cref="IslandData.WaterBody"/> labels.</summary>
     public static bool Sailable(IslandData d, int x, int z)
     {
         int n = d.Size;

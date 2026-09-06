@@ -10,9 +10,6 @@ public enum WorksKind
 
     /// <summary>A level deck across aether, water or a chasm — see <see cref="Crossing"/>.</summary>
     Bridge = 1,
-
-    /// <summary>A ferry between two quays on one body of water — see <see cref="FerryBerth"/>.</summary>
-    Ferry = 2,
 }
 
 /// <summary>One work on a route: its kind, the cell you leave and the cell you arrive at.</summary>

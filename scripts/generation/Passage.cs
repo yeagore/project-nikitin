@@ -7,7 +7,7 @@ namespace ProjectNikitin.Generation;
 
 /// <summary>
 /// The least-infrastructure road from the Entry Gate to one Exit: walking is free,
-/// every stair, bridge or ferry is one point, so <see cref="Cost"/> is the count of
+/// every stair or bridge is one point, so <see cref="Cost"/> is the count of
 /// <see cref="Built"/>. <c>GatePlacement</c> puts no Exit the Entry cannot reach, so
 /// a Domain has one of these per Exit.
 /// </summary>
@@ -76,8 +76,7 @@ internal static class Passages
         int n = d.Size;
         int span = Mathf.Max(1, d.BridgeSpan);
         bool[,] reserved = ReservedGround(d);
-        var berths = new Traversal.BerthIndex(d);
-        Route route = BuildRoute(d, start, span, reserved, berths);
+        Route route = BuildRoute(d, start, span, reserved);
 
         for (int i = 0; i < d.Gates.Count; i++)
         {
@@ -92,14 +91,14 @@ internal static class Passages
         }
     }
 
-    /// <summary>Ground something is already built on — quays, landing strips, bridge banks, the column under each Gate — which a stair may not take for its footing.</summary>
+    /// <summary>Ground something is already built on — landing strips, bridge banks, the column under each Gate — which a stair may not take for its footing.</summary>
     private static bool[,] ReservedGround(IslandData d)
     {
         int n = d.Size;
         var reserved = new bool[n, n];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            reserved[x, z] = d.Ferry[x, z] || d.Landings[x, z];
+            reserved[x, z] = d.Landings[x, z];
         foreach (Crossing bank in d.Bridges)
         foreach (Vector2I cell in new[] { bank.A, bank.B })
             if (InBounds(n, cell.X, cell.Y))
@@ -115,10 +114,9 @@ internal static class Passages
 
     /// <summary>
     /// The Dijkstra sweep from <paramref name="start"/>: a free step 0, a bridge 1, a stair 1
-    /// unless either end is reserved, and every quay on a body once the first quay is reached.
+    /// unless either end is reserved.
     /// </summary>
-    private static Route BuildRoute(IslandData d, Vector2I start, int span,
-                                    bool[,] reserved, Traversal.BerthIndex berths)
+    private static Route BuildRoute(IslandData d, Vector2I start, int span, bool[,] reserved)
     {
         int n = d.Size;
         var route = new Route(n);
@@ -189,12 +187,6 @@ internal static class Passages
                 if (!Traversal.DiagonalOpen(d, c.X, c.Y, Dx8[k], Dz8[k])) continue;
                 Offer(new Vector2I(nx, nz), 0, WorksKind.Stair, Slant);
             }
-
-            if (!d.Ferry[c.X, c.Y]) continue;
-            List<Vector2I>? quays = berths.Open(c);
-            if (quays == null) continue;
-            foreach (Vector2I quay in quays)
-                if (quay != c) Offer(quay, 1, WorksKind.Ferry);
         }
         return route;
     }

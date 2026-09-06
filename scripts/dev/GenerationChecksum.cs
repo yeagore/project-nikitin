@@ -170,7 +170,7 @@ public partial class GenerationChecksum : Node
             h.Add(d.Land[x, z]); h.Add(d.Region[x, z]); h.Add(d.Material[x, z]);
             h.Add(d.Landform[x, z]); h.Add(d.WaterLevel[x, z]); h.Add(d.Fluid[x, z]);
             h.Add(d.Canyon[x, z]); h.Add(d.Pass[x, z]); h.Add(d.Landings[x, z]);
-            h.Add(d.WaterBody[x, z]); h.Add(d.Ferry[x, z]); h.Add(d.Beach[x, z]);
+            h.Add(d.WaterBody[x, z]); h.Add(d.Beach[x, z]);
             h.Add(d.Ford[x, z]); h.Add(d.River[x, z]); h.Add(d.Navigable[x, z]);
             h.Add(d.Flow[x, z]); h.Add(d.Walk[x, z]); h.Add(d.Reach[x, z]);
             h.Add(d.Delta[x, z]); h.Add(d.Hot[x, z]); h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
@@ -187,7 +187,7 @@ public partial class GenerationChecksum : Node
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);
         }
-        h.AddAll(d.Geysers); h.AddAll(d.Bridges); h.AddAll(d.Berths); h.AddAll(d.Falls);
+        h.AddAll(d.Geysers); h.AddAll(d.Bridges); h.AddAll(d.Falls);
         h.AddAll(d.Areas); h.AddAll(d.Reaches); h.AddAll(d.Gates);
         h.Add(d.Passages.Count);
         foreach (Passage p in d.Passages)
@@ -199,7 +199,7 @@ public partial class GenerationChecksum : Node
         }
         h.Add(d.Name);
         h.AddAll(d.Districts); h.AddAll(d.WaterNames);
-        h.Add(d.DuneGrain); h.Add(d.Sun); h.Add(d.BridgeSpan); h.Add(d.WaterBodies); h.Add(d.BerthSites);
+        h.Add(d.DuneGrain); h.Add(d.Sun); h.Add(d.BridgeSpan); h.Add(d.WaterBodies);
         h.Add(d.Mainland); h.Add(d.Heartland); h.Add((int)d.Style); h.Add((int)d.Arrangement);
         h.Add((int)d.Character); h.Add(d.Attempts); h.Add(d.Unmet); h.Add(d.Rough);
         return h.Value;

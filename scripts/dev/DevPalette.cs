@@ -13,14 +13,14 @@ internal static class DevPalette
     public static readonly Color Goo = new(0.52f, 0.14f, 0.72f, 0.9f);
 
     public const int Coast = 1, Brink = 2, Overhang = 3, Beach = 4, Ford = 5,
-                     Landing = 6, Quay = 7, CliffFoot = 8, Bank = 9, Summit = 10,
+                     Landing = 6, CliffFoot = 8, Bank = 9, Summit = 10,
                      RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
                      Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18;
 
     /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
-        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, HotSpring, FallLip, Ford, Quay,
+        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, HotSpring, FallLip, Ford,
         Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
     };
 
@@ -140,7 +140,6 @@ internal static class DevPalette
         Beach => new Color(0.94f, 0.87f, 0.62f),
         Ford => new Color(0.88f, 1.00f, 0.45f),
         Landing => new Color(0.98f, 0.78f, 0.15f),
-        Quay => new Color(0.30f, 0.50f, 1.00f),
         CliffFoot => new Color(0.96f, 0.58f, 0.16f),
         Bank => new Color(0.38f, 0.80f, 0.36f),
         Summit => new Color(1f, 1f, 1f),
@@ -164,7 +163,6 @@ internal static class DevPalette
         Beach => "beach",
         Ford => "ford",
         Landing => "gate landing",
-        Quay => "ferry quay",
         CliffFoot => "cliff foot",
         Bank => "bank",
         Summit => "summit",

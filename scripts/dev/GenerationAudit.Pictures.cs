@@ -522,7 +522,6 @@ public partial class GenerationAudit
         MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
         MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));
         MarkMask(d.Landings, DevPalette.Anchor(DevPalette.Landing));
-        MarkMask(d.Ferry, DevPalette.Anchor(DevPalette.Quay));
         Mark(d.Overhangs, DevPalette.Anchor(DevPalette.Overhang));
         Mark(d.Summits, DevPalette.Anchor(DevPalette.Summit));
         Mark(d.SeaStacks, DevPalette.Anchor(DevPalette.SeaStack));

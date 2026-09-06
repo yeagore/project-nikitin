@@ -43,7 +43,7 @@ write the same `Params`:
 | **H** / **M** / **L** | hilliness / mix / plateau rungs |
 | **U** | toggle the newer shapes in Auto's pool |
 | **T** / **Y** | entry Gate kind / bridge ease |
-| **B J K O P X** | overlays: bridge sites, Gate landings, ferry berths, fords, roads, compass |
+| **B J O P X** | overlays: bridge sites, Gate landings, fords, roads, compass |
 | **I** | liquid on or off: water, goo and falls; off shows the beds |
 | **Z** | the ground as the game's mesh, or as the old box per span |
 | **F2** | screenshot |
@@ -99,7 +99,7 @@ tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
 the ground round it, not sand), `anchors` (what the content layer attaches to:
 coast, cliff brink, cliff foot, a ledge where a cell is both, bank, river bed,
 lake bed, goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
-Gate landing, ferry quay, summit; a sea stack is a dark column in the aether in
+Gate landing, summit; a sea stack is a dark column in the aether in
 every view), the six habitat axes as ramps: `moisture`, `warmth`, `rugged`,
 `exposure`, `rim`, `water` (the walk cost to fresh water), and the `magick`
 layer (the Turing reaction's spots, worms, mazes and lace). Water is coloured by kind (ford, stream, navigable reach, lake; hot
@@ -114,9 +114,9 @@ overhang is magenta, and the ground under it is whatever it is — a river bed,
 a cliff foot. Turn the liquid off (**I**) to see the beds.
 
 Overlays (bridge sites, landings, roads, fords and the compass are on when the lab
-opens): **B** bridge sites; **J** each Gate's 1 × 3 landing strip; **K** ferry
-berths; **O** fords; **P** the roads between the Gates (pale yellow walk; red
-stair, gold bridge, cyan ferry); **X** the compass, each Gate's landward vector,
+opens): **B** bridge sites; **J** each Gate's 1 × 3 landing strip; **O** fords;
+**P** the roads between the Gates (pale yellow walk; red stair, gold bridge);
+**X** the compass, each Gate's landward vector,
 the Domain's wind — a run of orange arrows standing off the upwind edge with
 its name, whether or not there are dunes, plus its grain along each dune field —
 the sun, a gold disc off the edge it shines from with its name (the warmth
@@ -142,8 +142,8 @@ thing to use the colliders, and the way to ask "what is that cell".
 
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
-reach shares, districts (and how many the heartland holds), berths, rivers,
-springs, any lake that swallows a river, deltas, the wind and the sun, Gates,
+reach shares, districts (and how many the heartland holds), bodies of water,
+rivers, springs, any lake that swallows a river, deltas, the wind and the sun, Gates,
 and what each road out costs.
 `ROUGH GOING` means a road climbs five elevators in fifteen cells; `COAST WOULD
 NOT` means a Gate you asked for is not the Gate you got.
@@ -173,8 +173,8 @@ godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
 ```
 
 Runs the real generator over 60 seeds at 128² and prints the measured
-guarantees: the step grammar, patches, landforms, lakes and goo, rivers, ferries,
-surfaces and habitat, roads, Gates, crossings, continuity. Run it after any
+guarantees: the step grammar, patches, landforms, lakes and goo, rivers and the
+bodies of water, surfaces and habitat, roads, Gates, crossings, continuity. Run it after any
 change to the generator. A `want 0` that is not 0 names its seed as it happens
 (a crossing whose banks disagree prints the seed, the banks, the deck and what
 is under each bank), so it can be built in the lab. It ends by diffing thirty headline numbers against
@@ -259,6 +259,31 @@ godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 ClimateSco
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 FirstSeed=7046 ClimateGrid=C:/tmp/climate
 ```
 
+### The knob matrix — `KnobMatrix`
+
+```
+godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 KnobMatrix SweepSeeds=16
+```
+
+Every 0–1 knob (mix, relief, hilliness, rivers, lakes, valleys, moisture,
+warmth, wind, overhangs, magick density) at 0, ¼, ½, ¾ and 1 over the same
+`SweepSeeds` seeds, the other knobs rolled by each seed as the preset rolls
+them, and twenty-six outcomes measured on every island: land share, high-ground
+share, altitude spread, mean slope, cliff and two-slab shares, hill relief,
+river, navigable, lake and ford cells, falls, springs, lake count, the valley
+rise, mean moisture, warmth and magick, the wet and snow material shares, the
+rain-shadow gap, overhang columns, the mainland and heartland shares, districts
+and attempts. The comparison is paired, each seed against itself at 0, so the
+spread the rolled knobs put between seeds cancels. For each knob it prints its
+own promised outcomes at the five steps, then what it moves: every outcome whose
+change from 0 to 1 is more than twice its standard error and at least a quarter
+of the spread between seeds, in spreads, with the knob's own promise in
+brackets and `!` where a step along the way ran against the trend (a
+reversal, or a hump). Then the whole thing as one matrix, knobs down, outcomes
+across, `·` where nothing moved. A knob that promises an outcome and does not
+move it, one that reverses, and one that moves another knob's outcome are the
+three things to read off it. About four minutes at sixteen seeds.
+
 ### The climate chart — `ClimateChart`
 
 `ClimateChart=<dir>` writes `climate_chart.png`: the climate grid as an area
@@ -326,11 +351,11 @@ a 5 × 7 bitmap alphabet straight into the `Image`.
 godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-Hashes every field of `IslandData` for 446 islands — 60 default seeds, every
+Hashes every field of `IslandData` for 456 islands — 60 default seeds, every
 arrangement × character at 64², all three sizes, every Gate request, every bridge
 ease, both ends of every knob — and diffs the hashes against
 `docs/checksum-baseline.txt`. A change meant to leave generation alone must
-report `0 of 446 islands moved`; a change meant to alter it re-baselines with
+report `0 of 456 islands moved`; a change meant to alter it re-baselines with
 `-- accept` on the command line and says so in its commit. This is the
 bit-for-bit gate; the audit is the readable one.
 

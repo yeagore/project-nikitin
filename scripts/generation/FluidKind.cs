@@ -2,7 +2,7 @@ namespace ProjectNikitin.Generation;
 
 /// <summary>
 /// What a flooded column holds, per column. Water is the default and the only fluid that
-/// behaves (rivers, ferries, fords); fluids never touch, even diagonally.
+/// behaves (rivers, fords, the named bodies of water); fluids never touch, even diagonally.
 /// </summary>
 public enum FluidKind : byte
 {

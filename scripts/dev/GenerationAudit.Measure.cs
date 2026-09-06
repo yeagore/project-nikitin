@@ -76,12 +76,12 @@ public partial class GenerationAudit
         public readonly List<int> StraightRuns = new();
         public int ReachCells => RiverStraight + RiverBends;
         public int TerminalLakes, TerminalInflows, TerminalIslands;
-        public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable;
+        public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable, SpringsForded;
         public long FordsFlat, StreamFlat, FordsRugged, StreamRugged;
 
-        // ---- ferries, surfaces, anchors, habitat
+        // ---- water bodies, surfaces, anchors, habitat
         public const int RuggedBins = 7;
-        public int Berths, WaterBodies, IslandsWithBerth, BadQuay, BerthSites;
+        public int WaterBodies;
         public readonly long[] MaterialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
         public long CoastAnchors, CliffAnchors, BeachCells, FordCells, LandingCells;
         public long CliffFootAnchors, BankAnchors, SummitAnchors, RiverBedAnchors, LakeBedAnchors;
@@ -104,7 +104,6 @@ public partial class GenerationAudit
         /// has fallen out of its band.
         /// </summary>
         public readonly List<int> MagickCover = new();
-        public readonly List<int> QuayRise = new();
         public long SunnyWarmth, SunnyCells, ShadedWarmth, ShadedCells;
         public long LeeMoisture, LeeWarmth, LeeCells, OpenMoisture, OpenWarmth, OpenCells;
         public long DampMoisture, DampCells;
@@ -119,7 +118,7 @@ public partial class GenerationAudit
 
         // ---- roads
         public int ExitsWithoutRoad, RoadsFree, RoadJumps, RoughIslands, Flights;
-        public int RoadStairs, RoadBridges, RoadFerries;
+        public int RoadStairs, RoadBridges;
         public readonly List<int> RoadCosts = new();
         public readonly List<int> RoadLengths = new();
 
@@ -205,7 +204,7 @@ public partial class GenerationAudit
             MeasureStraightness(v);
             MeasureEyots(v);
             MeasureOverhangs(v);
-            MeasureFerries(v);
+            MeasureWaterBodies(v);
             MeasureSurfaces(v);
             MeasureRoads(v);
             MeasureSculpts(v);
@@ -617,7 +616,11 @@ public partial class GenerationAudit
             Deltas += d.Deltas.Count;
             if (d.Deltas.Count > 0) DeltaIslands++;
             Springs += d.Springs.Count;
-            foreach (Vector2I c in d.Springs) if (d.Navigable[c.X, c.Y]) SpringsOnNavigable++;
+            foreach (Vector2I c in d.Springs)
+            {
+                if (d.Navigable[c.X, c.Y]) SpringsOnNavigable++;
+                if (d.Ford[c.X, c.Y]) SpringsForded++;
+            }
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -692,21 +695,7 @@ public partial class GenerationAudit
             }
         }
 
-        private void MeasureFerries(Island v)
-        {
-            IslandData d = v.D;
-            Berths += d.Berths.Count;
-            BerthSites += d.BerthSites;
-            WaterBodies += d.WaterBodies;
-            if (d.Berths.Count > 0) IslandsWithBerth++;
-            foreach (FerryBerth berth in d.Berths)
-            {
-                int rise = v.Cross(berth.Land.X, berth.Land.Y) - berth.Level;
-                if (rise < 0 || rise > Traversal.MaxQuayRise) BadQuay++;
-                if (!Traversal.Sailable(d, berth.Water.X, berth.Water.Y)) BadQuay++;
-                QuayRise.Add(rise);
-            }
-        }
+        private void MeasureWaterBodies(Island v) => WaterBodies += v.D.WaterBodies;
 
         /// <summary>The anchor lists, the material tally and the habitat means: what the biome layer will read.</summary>
         private void MeasureSurfaces(Island v)
@@ -842,21 +831,14 @@ public partial class GenerationAudit
                 foreach (Works w in road.Built)
                 {
                     if (w.Kind == WorksKind.Stair) RoadStairs++;
-                    else if (w.Kind == WorksKind.Bridge) RoadBridges++;
-                    else RoadFerries++;
+                    else RoadBridges++;
                 }
-                // A ferry is the one hop that may cover any distance, so hops are checked
-                // against the Works the passage recorded, not guessed from the geometry.
-                var sailed = new HashSet<(Vector2I, Vector2I)>();
-                foreach (Works w in road.Built)
-                    if (w.Kind == WorksKind.Ferry) sailed.Add((w.From, w.To));
 
                 // A road walks by king's moves, so a one-cell diagonal is a step; works
                 // stay cardinal, so anything longer must be straight and within a bridge.
                 for (int hop = 1; hop < road.Path.Count; hop++)
                 {
                     Vector2I a = road.Path[hop - 1], b = road.Path[hop];
-                    if (sailed.Contains((a, b))) continue;
                     int dx = Math.Abs(a.X - b.X), dz = Math.Abs(a.Y - b.Y);
                     int reach = Math.Max(dx, dz);
                     bool diagonal = dx != 0 && dz != 0;

@@ -74,6 +74,7 @@ public partial class GenerationAudit
         GD.Print($"  islands whose rivers reach the rim: {t.RiverIslandsReachingRim}"
             + $" of {t.IslandsWithRiver}   (there is no sea; they must)");
         GD.Print($"  falls: {t.FallCells}, of which {t.RimFalls} pour off the rim");
+        GD.Print($"  bodies of sailable water (standing water and navigable reaches; a fall parts one): {t.WaterBodies}");
         GD.Print($"  channel not cut below its own water (want 0): {t.RiverDry}");
         GD.Print($"  water running uphill (want 0):                {t.RiverUphill}");
 
@@ -86,24 +87,13 @@ public partial class GenerationAudit
         GD.Print($"  lakes that swallow a river: {t.TerminalLakes} on {t.TerminalIslands} of {Seeds} islands, "
             + $"fed by {t.TerminalInflows} channel cells   (the one exception to reaching the rim)");
         GD.Print($"  deltas: {t.Deltas} on {t.DeltaIslands} of {Seeds} islands, {t.DeltaFanCells} cells of fan");
-        GD.Print($"  springs: {t.Springs}   on a navigable cell (want 0): {t.SpringsOnNavigable}");
+        GD.Print($"  springs: {t.Springs}   on a navigable cell (want 0): {t.SpringsOnNavigable}"
+            + $"   under a ford (want 0): {t.SpringsForded}");
         GD.Print("  fords per 100 stream cells: flat ground "
             + (t.StreamFlat > 0 ? $"{100.0 * t.FordsFlat / t.StreamFlat:0.0}" : "-")
             + $" (n={t.StreamFlat}), broken ground (4+ slabs within two cells) "
             + (t.StreamRugged > 0 ? $"{100.0 * t.FordsRugged / t.StreamRugged:0.0}" : "-")
             + $" (n={t.StreamRugged})\n");
-    }
-
-    /// <summary>Berths against the sites the domino rule found: a low share is the pruning working unless the sites are low too.</summary>
-    private void PrintFerries(Tally t)
-    {
-        GD.Print($"ferries: {t.Berths} berths on {t.WaterBodies} bodies of water, "
-            + $"over {t.IslandsWithBerth} of {Seeds} islands");
-        GD.Print($"  of {t.BerthSites} sites the domino rule found "
-            + $"({(t.BerthSites > 0 ? 100 * t.Berths / t.BerthSites : 0)}% load-bearing)");
-        GD.Print($"  islands with water a bridge cannot span: {t.IslandsWithBerth} of {Seeds}");
-        Report("  quay above the water", t.QuayRise, "slabs");
-        GD.Print($"  berth that is not a quay on sailable water (want 0): {t.BadQuay}\n");
     }
 
     private void PrintOverhangs(Tally t)
@@ -135,7 +125,7 @@ public partial class GenerationAudit
             + $"{t.CliffFootAnchors} cliff foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
             + $"{t.OverhangCells} overhang, {t.BeachCells} beach, {t.FordCells} ford, "
             + $"{t.Springs} spring, {t.FallCells} fall, "
-            + $"{t.LandingCells} gate landing, {t.Berths} quay, "
+            + $"{t.LandingCells} gate landing, "
             + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed, "
             + $"{t.SeaStackCells} sea stack cells on {t.SeaStackIslands} of {Seeds} islands");
         GD.Print($"  tors (stone on plains and hills): {t.TorCells} cells on {t.TorIslands} of {Seeds} islands");
@@ -331,9 +321,8 @@ public partial class GenerationAudit
         Report("  works to build on one road", t.RoadCosts, "crossings");
         Report("  length of one road", t.RoadLengths, "cells");
         GD.Print($"  roads you can simply walk: {t.RoadsFree} of {t.RoadCosts.Count}");
-        GD.Print($"  what they need built: {t.RoadStairs} stairs, {t.RoadBridges} bridges, "
-            + $"{t.RoadFerries} ferries");
-        GD.Print($"  a road hop no step, bridge or ferry explains (want 0): {t.RoadJumps}");
+        GD.Print($"  what they need built: {t.RoadStairs} stairs, {t.RoadBridges} bridges");
+        GD.Print($"  a road hop no step or bridge explains (want 0): {t.RoadJumps}");
         GD.Print($"  flights of five-plus elevators: {t.Flights}, on {t.RoughIslands} of {Seeds} "
             + "islands (marked Rough — hard country, not a fault)\n");
     }
@@ -388,7 +377,7 @@ public partial class GenerationAudit
             ["gorgeSealed"] = t.GorgeSealed,
             ["gateOutOfBox"] = t.GateOutOfBox,
             ["altOverCap"] = t.AltOverCap,
-            ["berths"] = t.Berths,
+            ["waterBodies"] = t.WaterBodies,
             ["overhangColumns"] = t.OverhangCells,
             ["mainland%"] = Math.Round(100.0 * t.WalkMainland / t.WalkLand, 1),
             ["heartland%"] = Math.Round(100.0 * t.ReachHeartland / t.WalkLand, 1),
@@ -397,6 +386,7 @@ public partial class GenerationAudit
             ["terminalLakes"] = t.TerminalLakes,
             ["deltas"] = t.Deltas,
             ["springs"] = t.Springs,
+            ["springsForded"] = t.SpringsForded,
             ["seaStackCells"] = t.SeaStackCells,
             ["hotWaterCells"] = t.HotWaterCells,
             ["fords"] = t.FordCells,

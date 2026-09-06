@@ -89,7 +89,7 @@ Its two cells are one surface, and three passes could move one without the
 other. `LevelPairs` brings the higher cell down to the lower; the valley cuts
 the pair once, both cells taking the smaller want; and `FlattenReaches` makes a
 barge river a stair of pools, dead level between falls, which is also what a
-reach is to a ferry. `Settle` cycles these against `Descend` until all hold;
+reach is to a hull. `Settle` cycles these against `Descend` until all hold;
 each only lowers, so it terminates.
 
 ### Water pours every way it plausibly can
@@ -100,16 +100,48 @@ ways and the level partner of a navigable pair pours beside its axis. Sheets
 land only on water or in aether, never on dry ground: a sheet onto dry land
 would be a course the drainage never routed, so nothing new gets wet. The
 lab's sub-fall cataract sheets are renderer-side only; the falls list stays the
-falls, because `Traversal` cuts ferry bodies at falls.
+falls, because `Traversal` cuts the bodies of water at falls.
 
-### Wide rivers, and the idle ferries
+### Wide rivers, and the ferries that went
 
 A course turns navigable below its first real confluence (`NavigableShare`),
 where a barge would in fact get in; tuned any stricter, a median island had one
-short reach and read as having none. In the audited sample every body of water
-can be bridged, so berth pruning keeps none and `berths` is 0 in the baseline:
-the ferry machinery is intact and idle, and earns its keep on low-`Crossings`
-Domains where a two-cell river is already past the span.
+short reach and read as having none.
+
+Ferries were a third kind of work: a domino rule found every quay (a walkable
+shore cell within two slabs of sailable water with a yard behind it), the reach
+flood was run once without ferries, and a body of water kept its quays only if
+they landed in two or more pieces of that answer. The reasoning was sound and
+the machinery was idle. A bridge spans three cells of water and a navigable
+river is two cells wide, so no river ever needs a ferry, and a lake sits inside
+its patch's rim, so it is walked round. The 2026-09-07 audit found 5,326 quay
+sites over sixty islands of which 90 survived pruning, all on one island, and
+no road out of 180 ever used one. Making them occur would have meant widening
+rivers past the span or narrowing the span, which is changing the world to
+justify a tool. The berths, the pruning, the ferry hop in the reach flood and
+on the roads, the lab overlay and the audit section were removed that day; the
+water bodies stay, since the names read them and vessels, when the economy has
+them, will too. Removing the hop changed no island's playability: the one
+island with berths kept its heartland.
+
+### Fords start at the source, and never on it
+
+The ford marker walked each course in breadth-first order from whichever
+stream cell the scan met first and let that cell "qualify at once", so a course
+got a ford wherever the scan happened to enter it, and since a spring is one
+cell of water with dry land round it, that was the spring about as often as
+not: 103 of the audit's 218 springs were fords, and the anchors view showed
+fords where springs should have been. A course is now ordered from its springs
+downstream (a course with none, a lake's outflow or a delta's arm, keeps the
+scan order), the spacing counts from the source, and the spring itself is never
+a ford. The head ford stays, one cell below the spring: dropping it altogether
+was tried first and cost the mainland walk share two points (42.5% to 40.7%)
+and five of the 68 roads that need nothing built, because at some heads the
+spring was the only crossable cell and the ground round it does not walk. With
+the head ford kept below the spring the share is 41.9% and 66 roads walk free;
+fords per hundred stream cells went from 11.2 to 10.2 on the flat and 6.1 to
+5.8 in broken ground, the head fords that were springs now one cell down. The
+audit's `springsForded` is 0 and stays in the baseline as a want-0.
 
 ### Lakes that are not one big lake
 
@@ -332,8 +364,7 @@ pins the knob it sweeps, and the checksum's knob cases pin theirs.
 The outer two cells of a gentle coast step down one slab, which is free-step
 ground. A graduated two-slab beach spends the whole tolerance a landing strip
 has, and hanging Gates fell to a quarter when it was tried. A beach is the
-normal coast rather than a special one, so it is a weak anchor; berth placement
-does not read it.
+normal coast rather than a special one, so it is a weak anchor.
 
 ### Four hanging Gates, chosen as a set
 
@@ -793,10 +824,79 @@ test: numbers are expected to move when the generator changes, and the point is
 to see them move and decide whether you meant it.
 
 **The checksum** (`docs/checksum-baseline.txt`) hashes every field of
-`IslandData` for 442 islands across the parameter matrix. It is the bit-for-bit
-gate: a change meant to leave generation alone reports `0 of 442 islands moved`;
+`IslandData` for 456 islands across the parameter matrix. It is the bit-for-bit
+gate: a change meant to leave generation alone reports `0 of 456 islands moved`;
 a change meant to alter it re-baselines with `-- accept` and says so in its
 commit. `docs/dev-scenes.md` has both scenes in detail.
+
+### The knob matrix: what each knob moves, and what else
+
+`KnobMatrix` (2026-09-07) is the answer to three questions asked of every 0–1
+knob at once: does it move what it promises, in one direction; does anything
+reverse along its travel; and what else does it move. Every knob is stepped
+0, ¼, ½, ¾, 1 over the same sixteen seeds with the other knobs rolled by the
+seed, twenty-six outcomes are measured on every island, and each seed is
+compared with itself at 0, so the spread the rolled knobs put between seeds
+cancels; effects are read in units of that spread. 880 islands, three minutes.
+
+What it found, on the first run:
+
+- **Every knob moves its own promise, monotonically.** Mix takes high ground
+  from 3% to 23% of land; relief the crest-to-floor spread from 21 to 25 slabs
+  and the mean step from 0.4 to 0.7; hilliness the step inside the Hills from
+  0.1 to 0.4; rivers 0 to 244 river cells and 0 to 139 navigable; lakes 0 to
+  262 lake cells and 0 to 5 lakes; moisture the mean byte 35 to 251; warmth
+  76 to 216 with snow 1.7% to 0.2%; wind the flat lee from 22 wetter than open
+  ground to 3 drier; overhangs 0 to 21 columns; magick density 0 to 193 (a
+  convex ramp by design: half the slider is a quarter of the mean).
+- **No reversal worth the name.** Every `!` the matrix flags sits on an effect
+  of 0.2 spreads or less, a single noise-sized step against a flat trend.
+- **Nothing touches playability.** Land share, the cliff and two-slab shares,
+  the mainland and heartland shares, districts and attempts are `·` for all
+  eleven knobs: a knob changes the country, never whether it can be played.
+- **The cross-effects are consequences, not couplings.** Rivers carry springs,
+  falls, fords and valleys with them (+3.7, +3.5, +2.7, +0.7 spreads) and water
+  the land a little (moisture +0.4): a wetter island has more of everything a
+  river makes. Lakes cost springs (−0.9): a stream that begins at a lake's
+  shore is an outflow, not a spring, by definition, and the more lakes the more
+  heads are shores. Lakes do *not* cost rivers (river cells −0.1, within noise):
+  more lakes means fewer springs, not less river. Relief scales the Hills'
+  relief and the valleys (+1.1, +0.6), since it is the exaggeration of every
+  landform, and spaces fords wider (−0.3) because fords space by ruggedness.
+  Mix adds slope (+0.5) and takes a lake or so (−0.3), since high ground is not
+  flat. Moisture widens the rain-shadow gap (+1.0): the lee dries by a share of
+  what there is to dry. Warmth moves the wet-material share non-monotonically
+  (+0.5!), which is the climate grid's rows having different wet thresholds,
+  an artefact of summing "wet" across rows and not a fault.
+- **One soft knob.** Valleys reads flat over its lower half: the mean rise from
+  one cell off a river to five is 0.9 slabs at 0, ¼ and ½, then 1.1 and 1.5.
+  The mapping is `carve = 3s − 2·rank` with `s = Valleys / 2` and a hashed rank
+  per basin, so at ½ only the best-ranked 37% of basins are cut at all and
+  none fully; the average over rivers does not move until the window has
+  opened. The fix is a square root on the knob before the window
+  (`s = √Valleys / 2`): the top end is untouched, so 1 is still "the most
+  valley worth having", and the low end opens at once. It is the next section.
+
+The matrix is the check to rerun after any knob is touched: its cost is three
+minutes and its reading is a glance down one column.
+
+### The valleys knob wakes from a quarter up
+
+`CutValleys` maps the knob to a window strength of `Valleys / 2` (the top half
+of the raw range was all trenches) and each basin cuts `3 × strength − 2 ×
+rank` of a full valley, so below a strength of a third only the best-ranked
+basins are touched and none fully. Over the paired matrix the mean rise from
+one cell off a river to five read 0.9, 0.9, 0.9, 1.1, 1.5 slabs at the five
+steps: half the slider did nothing on average. A square root on the knob
+before the window (`√Valleys / 2`) leaves 1 where it was and opens the window
+sooner; the same matrix now reads 0.9, 0.9, 1.1, 1.3, 1.5, and the `Knobs`
+sweep's per-river rise 0.59, 0.64, 0.88, 1.05, 1.30 with 23, 23, 32, 35, 40 of
+83 courses valleyed. The first quarter is still flat in the mean: at ¼ the
+window admits the best-ranked 37% of basins at three quarters of a valley at
+most, which the average over every river barely sees. A cube root would open
+it further at the cost of crowding most of the range near the top; the root
+is where it stands, and the flat first quarter is a known softness rather than
+a dead knob.
 
 ### What the baseline does not carry
 
@@ -833,12 +933,24 @@ measured a fixed preset are kept where they still say something.
 | roads | one per Exit; median one work; roughly a third can simply be walked |
 | requests | `GateRequests` and `GateMatrix` report every edge, kind and count delivered on every seed, and four hanging Gates on every arrangement × character |
 
-### Feasibility
+### Feasibility, and how often a seed re-rolls
 
 `Feasibility` runs every arrangement against every character. `ThousandIsles`
 is the hard one (the most attempts; a piece the linker cannot always nudge into
 range; `BrokenFractal` was the other until it was removed); everything else
 runs at one attempt with most of the island reachable.
+
+Measured on 2026-09-07 (`Sizes`, `Strain`, `Debut`, twelve seeds a cell, and
+the sixty default seeds): at 128² and 96² no seed of the sixty, and none of
+the twelve per arrangement, needed a second attempt, except `NShape` at 128²
+at 1.08 (one seed in twelve). At 64² the mean is 1.17 attempts: the four
+broken layouts (`BrokenRing`, `BrokenL`, `BrokenT`, `BrokenCross`) re-roll one
+seed in six, `Archipelago` and `ThousandIsles` one in twelve, the other
+twenty-four never. No seed anywhere gave up: `unmet` is 0 in every cell, so
+the four-attempt budget has never been spent and the "best failure ships"
+branch has never run in an audited seed. Re-rolling is a 64² phenomenon of
+the fragmented shapes, where a piece that the linker leaves a bridge span off
+its neighbour is a larger share of a smaller island.
 
 ### Open gaps
 
@@ -858,14 +970,14 @@ runs at one attempt with most of the island reachable.
 
 ## E. Ideas not taken yet
 
-1. **Settlement placement.** Everything it needs exists: districts, berths,
+1. **Settlement placement.** Everything it needs exists: districts, water bodies,
    roads, Gate aprons, the water-distance byte. It will want a stricter reading
    of level ground within a district than "walk-connected" — that is where the
    old shelf idea belongs, if anywhere. It is the first thing that would show whether the terrain rules
    make good play rather than good pictures.
 2. **A real cost model for works.** Every work costs one point today, so
-   `Passage.Cost` means "how many projects". Pricing by span, climb and ferry
-   distance turns it into a budget the settlement layer will want.
+   `Passage.Cost` means "how many projects". Pricing by span and climb
+   turns it into a budget the settlement layer will want.
 3. **The world-tree.** `EntryEdge` and `EntryGate` exist so a Domain can be
    generated to match the one that sent you. Missing is the layer above: which
    Domains exist, their characters and arrangements, and how difficulty moves

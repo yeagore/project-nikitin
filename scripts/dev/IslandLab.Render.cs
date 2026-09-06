@@ -400,7 +400,6 @@ public partial class IslandLab
 		if (_showBridges) DrawBridges(d, m);
 		if (_showLandings) DrawLandings(d, m);
 		if (_showFords) DrawFords(d, m);
-		if (_showFerries) DrawFerries(d, m);
 		if (_showRoutes) DrawRoads(d, m);
 		if (_showCompass)
 		{
@@ -522,21 +521,6 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>Each ferry berth as a domino: the quay and the hull on the water before it.</summary>
-	private static void DrawFerries(IslandData d, MarkList m)
-	{
-		const float sh = Terrain.SlabHeight;
-		const float cs = Terrain.CellSize;
-		foreach (FerryBerth berth in d.Berths)
-		{
-			m.Add(berth.Land.X,
-				  (Traversal.CrossLevel(d, berth.Land.X, berth.Land.Y) + 1) * sh + sh * 0.25f,
-				  berth.Land.Y, new Vector3(cs * 0.55f, sh * 0.5f, cs * 0.55f), QuayTint);
-			m.Add(berth.Water.X, (berth.Level + 1) * sh + sh * 0.1f, berth.Water.Y,
-				  new Vector3(cs * 0.4f, sh * 0.3f, cs * 0.4f), HullTint);
-		}
-	}
-
 	/// <summary>The roads between the Gates: the walk, and every work on it in its kind's colour.</summary>
 	private static void DrawRoads(IslandData d, MarkList m)
 	{
@@ -550,12 +534,7 @@ public partial class IslandLab
 
 			foreach (Works works in road.Built)
 			{
-				Color tint = works.Kind switch
-				{
-					WorksKind.Stair => StairTint,
-					WorksKind.Bridge => SpanTint,
-					_ => CrossingTint,
-				};
+				Color tint = works.Kind == WorksKind.Bridge ? SpanTint : StairTint;
 				foreach (Vector2I cell in new[] { works.From, works.To })
 					m.Add(cell.X,
 						  (Traversal.CrossLevel(d, cell.X, cell.Y) + 1) * sh + sh * 0.55f,

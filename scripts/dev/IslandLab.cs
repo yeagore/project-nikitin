@@ -48,7 +48,6 @@ public partial class IslandLab : Node3D
 
 	private bool _showBridges = true;
 	private bool _showLandings = true;
-	private bool _showFerries;
 	private bool _showRoutes = true;
 	private bool _showFords = true;
 	private bool _showCompass = true;
@@ -219,7 +218,6 @@ public partial class IslandLab : Node3D
 			case Key.U: CycleNewShapes(); break;
 			case Key.B: _showBridges = !_showBridges; Redraw(); break;
 			case Key.J: _showLandings = !_showLandings; Redraw(); break;
-			case Key.K: _showFerries = !_showFerries; Redraw(); break;
 			case Key.P: _showRoutes = !_showRoutes; Redraw(); break;
 			// O, not D: the rig polls D every frame for strafe.
 			case Key.O: _showFords = !_showFords; Redraw(); break;

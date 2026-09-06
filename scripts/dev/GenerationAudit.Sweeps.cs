@@ -879,18 +879,17 @@ public partial class GenerationAudit
     private void PrintValleysSweep(float[] steps)
     {
         GD.Print($"\n  {"valleys",7} {"rise 1->5",10} {"valleyed",12} {"deepest",8} "
-            + $"{"2-slab",7} {"walk%",7} {"berths",7}");
+            + $"{"2-slab",7} {"walk%",7}");
         foreach (float v in steps)
         {
             IslandParams p = Variant(q => q.Valleys = v);
             double total = 0;
             int counted = 0;
-            long steep = 0, berths = 0, walk = 0, dry = 0;
+            long steep = 0, walk = 0, dry = 0;
             var each = new List<double>();
             foreach (IslandData d in Sweep(p, SweepSeeds))
             {
                 if (ValleyRise(d, out double rise, each)) { total += rise; counted++; }
-                berths += d.Berths.Count;
 
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
@@ -917,8 +916,7 @@ public partial class GenerationAudit
 
             GD.Print($"  {v,7:0.00} {(counted > 0 ? total / counted : 0),10:0.00} "
                 + $"{$"{withValley}/{each.Count}",12} {deepest,8:0.0} "
-                + $"{steep / (float)SweepSeeds,7:0.0} {(dry > 0 ? 100.0 * walk / dry : 0),7:0.0} "
-                + $"{berths / (float)SweepSeeds,7:0.0}");
+                + $"{steep / (float)SweepSeeds,7:0.0} {(dry > 0 ? 100.0 * walk / dry : 0),7:0.0}");
         }
     }
 }

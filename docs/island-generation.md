@@ -7,9 +7,9 @@ yet taken are in [island-generation-appendix.md](island-generation-appendix.md)*
 the lab and audit manuals, the repository layout and the glossary are in
 `CLAUDE.md`. History is in git.
 
-Status (2026-09-05): every stage below is implemented in `scripts/generation/`,
+Status (2026-09-07): every stage below is implemented in `scripts/generation/`,
 three footprints — 64², 96², 128² — are supported and audited, and the
-chunked mesher is the next piece of work.
+chunked mesher of §4 draws the result.
 
 ---
 
@@ -252,7 +252,7 @@ approved, so fragmented islands are untouched while broad flat country comes
 out wetter and more varied.
 
 **Fluids.** `IslandData.Fluid` is per column. Water is the default and the only
-fluid that behaves: rivers, ferries and fords are water's alone. **Goo** —
+fluid that behaves: rivers, fords and the named bodies of water are water's alone. **Goo** —
 violet puddles placed like small tarns in dry flat patches, one to three on
 about 30% of islands — makes no rivers (the routing treats it as not-land) and
 **never touches water, even diagonally**: no water may stand within a king's
@@ -270,8 +270,7 @@ picked by one low-frequency noise field (`BeachBar`), so a beach is a strand
 along part of a coast rather than a shelf ringing the island. It is the
 difference between land that stops and land that *meets* the aether, and it
 gives the content layer a shoreline anchor (`IslandData.Beach`). Steep coasts,
-mesa rims, basin walls and anything under water are left alone; berth placement
-does not read it.
+mesa rims, basin walls and anything under water are left alone.
 
 **Bridgeheads.** `LevelBridgeheads` brings the two ends of every crossing to
 one level, because a bridge is a run of slabs at one level — it does not climb.
@@ -301,11 +300,16 @@ the upstream area a channel needs before it counts as a river.
 - **A river has a bed**: the channel is cut two slabs down and filled to one
   below the ground, so the banks stand proud and the course reads as a channel.
   The banks are cut to match, so no two-slab step is left behind.
-- **A stream is crossed at a ford** — one every ~11 cells on flat ground,
-  stretching to ~33 through broken ground (the relief within two cells, the
-  same measure ruggedness is made of, read before ruggedness exists), where
+- **A stream is crossed at a ford** — one at the head of each course, the first
+  crossable cell below its spring, then one every ~11 cells of water on flat
+  ground, stretching to ~33 through broken ground (the relief within two cells,
+  the same measure ruggedness is made of, read before ruggedness exists), where
   both banks are dry and within a slab of the water — and is an obstacle
-  everywhere else. The head of every course gets one whatever the ground.
+  everywhere else. A course is walked from its springs downstream, so the
+  spacing is measured from the source; a course with no spring of its own (a
+  lake's outflow, a delta's arm) is walked in scan order. **Never on the spring
+  itself**: the source is the content layer's cell (the audit's
+  `springsForded`, want 0). A short course still gets one ford.
 - **A navigable river** is two cells across, three slabs deep, not fordable,
   and a course earns it below its first real confluence, where a barge would in
   fact get in. It occasionally splits round an **eyot**. **It is a stair of
@@ -321,7 +325,10 @@ the upstream area a channel needs before it counts as a river.
   bridgehead — does not come down, and no cell may sink past such a neighbour
   by more than the free step. **`Valleys` acts per watercourse**: each drainage
   (a 4-connected component of the channel network) draws a rank, and the knob
-  slides a window across the ranks (`3 × strength − 2 × rank`), the rank
+  slides a window across the ranks (`3 × strength − 2 × rank`, with
+  `strength = √Valleys / 2`: the root, added 2026-09-07, opens the window from
+  the knob's low end, since the plain `Valleys / 2` read flat over its lower
+  half in the knob matrix, and leaves 1 where it was), the rank
   tilted by the course's own descent so that at mid-slider valleys go to the
   courses that came down through uneven country while a river crossing a plain
   keeps its bare incision. 0 cuts nothing; 1 cuts steep courses in full and
@@ -385,24 +392,23 @@ playable.
   are one on foot. Works stay cardinal: nothing is built diagonally. Water is
   not ground; a stream is crossed at a ford. `Areas` lists the walk areas
   largest first, and `Mainland` is the largest.
-- **`Reach`** — what connects once you build, with three kinds of works.
+- **`Reach`** — what connects once you build, with two kinds of works.
   `Reaches` and `Heartland` are the same reading of it.
 
 | works | rule |
 |---|---|
-| **stair / hoist** | a face of at most 8 slabs. Stands on two cells, neither of which may be a quay, a bridgehead or a Gate's ground |
+| **stair / hoist** | a face of at most 8 slabs. Stands on two cells, neither of which may be a bridgehead, a landing strip or a Gate's ground |
 | **bridge** | land facing land, cardinally, across at most `Crossings` cells of **aether**, 3 cells of **water**, or a **chasm** — ground 5 slabs or more below the deck, which is how one cliff top is bridged to another. A deck is level; its banks are levelled to within a slab of it |
-| **ferry** | between two quays on one body of water, however far apart |
 
-- **Water bodies** are 4-connected over standing fluid, and **a waterfall cuts
-  a body in two** — nothing sails up one.
-- **Ferry berths** are a domino: a walkable quay within two slabs of sailable
-  water, with somewhere to unload behind it. Berths are then **pruned**: the
-  reach flood is run once without ferries, and a body keeps its berths only if
-  they land in two or more different pieces of that answer, so what survives is
-  the crossings that exist because the water is genuinely in the way. In the
-  audited sample every body can be bridged and no berth survives (`berths` in
-  the baseline), so the ferry machinery is currently idle.
+- Water wider than a deck is not crossed. There was a third work, the **ferry**
+  between two quays on one body of water, with a domino rule for the quays and a
+  pruning to the load-bearing ones; over sixty audited islands one had any and
+  no road ever used one, and it was removed on 2026-09-07 (appendix). Vessels,
+  when they come, are the biome and economy layers' to add, with the water
+  bodies below as their map.
+- **Water bodies** (`WaterBody`, `WaterBodies`) are 4-connected over sailable
+  water — standing water and navigable reaches, never goo — and **a waterfall
+  cuts a body in two**: nothing sails up one. The names read them.
 - **Districts** — a walk area of `MinDistrictArea` cells or more is a district,
   and a district is **somewhere to build**: walk-connected ground, no works.
   `WalkArea.Seat` is one cell of it, so the reach area holding the whole set
@@ -691,7 +697,7 @@ columns, split by whether a watercourse runs over them; a goo puddle is neither,
 `Fluid` says where it is); `Summits` (the highest dry cells of genuinely high
 country — at least half the mountain cap above the lowest ground, so a flat
 island honestly has none — spaced apart); and `Overhangs`; alongside `Beach`,
-`Ford`, `Landings` and `Ferry`. The lists overlap freely — a bench on a
+`Ford` and `Landings`. The lists overlap freely — a bench on a
 mountainside is a brink over one neighbour and a foot under another, and a
 brink can be a bank or a summit — and only the lab's flattened view has to pick
 one. A forest goes "on flat well-watered ground away
@@ -947,7 +953,7 @@ the renderer's under **Rendering**.
 
 ## 6. What is next
 
-1. **Settlement placement** — everything it needs exists: districts, berths,
+1. **Settlement placement** — everything it needs exists: districts, water bodies,
    roads, Gate aprons, the water-distance byte, and now a collider to click.
 2. **The biome layer** above the habitat vector — the living things as opposed
    to the ground; the vector and the anchor lists are its inputs, the

@@ -70,7 +70,7 @@ public partial class IslandLab
 			+ $"({onHeart} on the heartland: somewhere to build)   "
 			+ $"reach {100f * heart / land:0}%   "
 			+ $"passes {d.Passes.Count}   bridges {d.Bridges.Count}   "
-			+ $"ferry berths {d.Berths.Count} on {d.WaterBodies} bodies   "
+			+ $"bodies of water {d.WaterBodies}   "
 			+ $"rivers {RiverCells(d)} cells, {d.Falls.Count} falls ({rim} off the rim), "
 			+ $"{d.Springs.Count} springs"
 			+ (d.HotWater.Count > 0 ? $"   hot water {d.HotWater.Count} cells" : "")
@@ -114,7 +114,7 @@ public partial class IslandLab
 			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "
 			+ $"{CellCount(d.Beach)} beach, {CellCount(d.Ford)} ford, "
 			+ $"{d.Springs.Count} spring, {d.Falls.Count} fall, "
-			+ $"{CellCount(d.Landings)} gate landing, {d.Berths.Count} quay, "
+			+ $"{CellCount(d.Landings)} gate landing, "
 			+ $"{d.SeaStacks.Count} sea stack cells";
 	}
 
@@ -169,16 +169,15 @@ public partial class IslandLab
 		var bits = new List<string>();
 		foreach (Passage road in d.Passages)
 		{
-			int stairs = 0, spans = 0, ferries = 0;
+			int stairs = 0, spans = 0;
 			foreach (Works w in road.Built)
 			{
 				if (w.Kind == WorksKind.Stair) stairs++;
-				else if (w.Kind == WorksKind.Bridge) spans++;
-				else ferries++;
+				else spans++;
 			}
 			Gate exit = d.Gates[road.Exit];
 			bits.Add($"{exit.Facing} cost {road.Cost}"
-				+ (road.Cost > 0 ? $" ({stairs}s {spans}b {ferries}f)" : ""));
+				+ (road.Cost > 0 ? $" ({stairs}s {spans}b)" : ""));
 		}
 		return "roads from the entry: " + string.Join(",   ", bits);
 	}

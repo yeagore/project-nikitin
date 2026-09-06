@@ -118,20 +118,28 @@ internal static partial class Rivers
     }
 
     /// <summary>
-    /// Marks where a stream can be crossed on foot: a ford at the head of each
-    /// course and one every <see cref="FordSpacing"/> cells along it on the plain,
-    /// up to three times that through broken ground (<see cref="FordSpacingAt"/>),
-    /// sliding past any cell that will not take one; a short course still gets
-    /// one. A ford has both banks across the flow dry, walkable and within a slab
-    /// of the water. Runs on the finished columns; read by <see cref="Traversal"/>.
+    /// Marks where a stream can be crossed on foot: a ford at the head of each course,
+    /// the first crossable cell below its spring, and one every <see cref="FordSpacing"/>
+    /// cells of water from there on the plain, up to three times that through broken
+    /// ground (<see cref="FordSpacingAt"/>), sliding past any cell that will not take
+    /// one; a short course still gets one. Never on the spring itself: the source is
+    /// the content layer's to stand something on. A ford has both banks across the flow
+    /// dry, walkable and within a slab of the water. Runs on the finished columns,
+    /// after the springs are found; read by <see cref="Traversal"/>.
     /// </summary>
     public static void MarkFords(IslandData d)
     {
         int n = d.Size;
 
+        var spring = new bool[n, n];
+        foreach (Vector2I c in d.Springs) spring[c.X, c.Y] = true;
+
         var seen = new bool[n, n];
+        var placed = new int[n, n];                 // which course's ordering has reached a cell, 1-based
         var queue = new Queue<Vector2I>();
+        var course = new List<Vector2I>();
         var order = new List<Vector2I>();
+        int courses = 0;
 
         bool Stream(int x, int z)
             => InBounds(n, x, z) && d.River[x, z] && !d.Navigable[x, z];
@@ -161,14 +169,17 @@ internal static partial class Rivers
         {
             if (!Stream(sx, sz) || seen[sx, sz]) continue;
 
-            // One course at a time, in breadth-first order, so the spacing is measured along the water.
-            order.Clear();
+            // One course at a time: its cells, then the same cells again in breadth-first
+            // order from its springs, so the spacing is measured along the water from the
+            // source. A course with no spring of its own (a lake's outflow, a delta's arm)
+            // keeps the order the scan found it in.
+            course.Clear();
             seen[sx, sz] = true;
             queue.Enqueue(new Vector2I(sx, sz));
             while (queue.Count > 0)
             {
                 Vector2I c = queue.Dequeue();
-                order.Add(c);
+                course.Add(c);
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = c.X + Dx[k], nz = c.Y + Dz[k];
@@ -178,11 +189,32 @@ internal static partial class Rivers
                 }
             }
 
-            int since = FordSpacing + FordGorgeExtra;       // the head qualifies at once
+            courses++;
+            order.Clear();
+            foreach (Vector2I c in course)
+                if (spring[c.X, c.Y]) { placed[c.X, c.Y] = courses; queue.Enqueue(c); }
+            if (queue.Count == 0) order.AddRange(course);
+            while (queue.Count > 0)
+            {
+                Vector2I c = queue.Dequeue();
+                order.Add(c);
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = c.X + Dx[k], nz = c.Y + Dz[k];
+                    if (!Stream(nx, nz) || placed[nx, nz] == courses) continue;
+                    placed[nx, nz] = courses;
+                    queue.Enqueue(new Vector2I(nx, nz));
+                }
+            }
+
+            // The head qualifies at once: the first crossable cell below the spring is a
+            // ford, since at some heads it is the only crossing there is.
+            int since = FordSpacing + FordGorgeExtra;
             bool any = false;
             foreach (Vector2I c in order)
             {
                 since++;
+                if (spring[c.X, c.Y]) continue;
                 if (since < FordSpacingAt(d, c.X, c.Y)) continue;
                 if (!Crossable(c.X, c.Y)) continue;
                 d.Ford[c.X, c.Y] = true;
@@ -192,7 +224,7 @@ internal static partial class Rivers
             if (any) continue;
 
             foreach (Vector2I c in order)
-                if (Crossable(c.X, c.Y)) { d.Ford[c.X, c.Y] = true; break; }
+                if (!spring[c.X, c.Y] && Crossable(c.X, c.Y)) { d.Ford[c.X, c.Y] = true; break; }
         }
     }
 }

@@ -28,7 +28,7 @@ public partial class IslandLab
 	private Label _sizeCaption = null!, _poolNote = null!;
 	private CheckBox _gooBox = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
-	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
+	private CheckBox _roadBox = null!, _compassBox = null!, _fordBox = null!;
 	private CheckBox _liquidBox = null!, _meshBox = null!;
 	private Label _fps = null!;
 	private LineEdit _seedField = null!;
@@ -251,16 +251,13 @@ public partial class IslandLab
 		_stripBox = Check(rows, "Gate landings  (J)",
 			() => _showLandings, on => { _showLandings = on; Redraw(); },
 			"The 1 × 3 strip running inland from each Gate, levelled for it.");
-		_ferryBox = Check(rows, "Ferry berths  (K)",
-			() => _showFerries, on => { _showFerries = on; Redraw(); },
-			"Each berth as a pair: the quay on land, the hull on the water in front of it.");
 		_roadBox = Check(rows, "Roads between gates  (P)",
 			() => _showRoutes, on => { _showRoutes = on; Redraw(); },
 			"The least-works road from the Entry to each Exit: pale yellow walk, red stair, "
-			+ "gold bridge, cyan ferry.");
+			+ "gold bridge.");
 		_fordBox = Check(rows, "Fords  (O)",
 			() => _showFords, on => { _showFords = on; Redraw(); },
-			"Stream cells crossable on foot: one at the head of each course and one every "
+			"Stream cells crossable on foot: one every "
 			+ "11 cells along it. A stream is an obstacle everywhere else.");
 		_compassBox = Check(rows, "Compass, wind and gate vectors  (X)",
 			() => _showCompass, on => { _showCompass = on; Redraw(); },
@@ -410,7 +407,6 @@ public partial class IslandLab
 		_poolNote.Text = PoolNote();
 		_bridgeBox.ButtonPressed = _showBridges;
 		_stripBox.ButtonPressed = _showLandings;
-		_ferryBox.ButtonPressed = _showFerries;
 		_roadBox.ButtonPressed = _showRoutes;
 		_compassBox.ButtonPressed = _showCompass;
 		_fordBox.ButtonPressed = _showFords;

@@ -64,20 +64,16 @@ public static partial class Traversal
 
     /// <summary>
     /// The same flood for a player who can build: a face of at most
-    /// <see cref="InfrastructureStep"/> slabs, a level deck <see cref="DeckFits"/> allows
-    /// within <see cref="MaxBridgeRise"/>, and every quay on a body of water once one of
-    /// them is reached. With <paramref name="into"/> it is a scratch pass: ranked the same
-    /// way, but <see cref="IslandData.Reaches"/> and Heartland are left alone.
+    /// <see cref="InfrastructureStep"/> slabs, and a level deck <see cref="DeckFits"/>
+    /// allows within <see cref="MaxBridgeRise"/>. Water wider than a deck is not crossed.
     /// </summary>
-    private static void BuildReachAreas(IslandData d, bool ferries = true,
-                                        int[,]? into = null)
+    private static void BuildReachAreas(IslandData d)
     {
         int n = d.Size;
         int span = Math.Max(1, d.BridgeSpan);
-        int[,] label = into ?? d.Reach;
+        int[,] label = d.Reach;
         var areas = new List<WalkArea>();
         var queue = new Queue<(int X, int Z)>();
-        var berths = new BerthIndex(d, ferries);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -137,23 +133,11 @@ public static partial class Traversal
                     label[nx, nz] = id;
                     queue.Enqueue((nx, nz));
                 }
-
-                if (!d.Ferry[x, z]) continue;
-                List<Vector2I>? far = berths.Open(new Vector2I(x, z));
-                if (far == null) continue;
-
-                foreach (Vector2I quay in far)
-                {
-                    if (label[quay.X, quay.Y] != -1) continue;
-                    label[quay.X, quay.Y] = id;
-                    queue.Enqueue((quay.X, quay.Y));
-                }
             }
             areas.Add(new WalkArea(id, area, low, high, min, max, new Vector2I(sx, sz)));
         }
 
         List<WalkArea> order = RankByArea(areas, label, n);
-        if (into != null) return;
 
         d.Reaches.Clear();
         for (int i = 0; i < order.Count; i++) d.Reaches.Add(order[i] with { Id = i });

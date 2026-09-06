@@ -70,7 +70,7 @@ built, a stair or a hoist. The whole surface is built so that walking costs
 nothing by default, and every cliff on the island is there because some rule
 put it there on purpose. Walking includes diagonal moves, except where both
 cells beside the diagonal are cliffs, since then there is no corner to cut.
-Built things (bridges, stairs, quays) stay on the straight axes.
+Built things (bridges, stairs) stay on the straight axes.
 
 A step of exactly two slabs is the worst kind: too tall to walk, too short to
 read as a cliff. The generator hunts these down and removes them.
@@ -115,7 +115,7 @@ remembers the values it was actually built with, and the lab shows them.
 | Hilliness | what hills do: 0 gentle swells, 1 steep mounds (still one slab at a time); also how jagged the surface noise is |
 | Rivers | how wet the island is: the amount of upstream land a channel needs before it counts as a river |
 | Lakes | how readily standing water collects: 0 none, 1 a lake in every flat patch that could hold one |
-| Valleys | how far the ground falls toward a river: 0 a bare cut, 1 five cells of valley either side |
+| Valleys | how far the ground falls toward a river: 0 a bare cut, 1 five cells of valley either side; the dial is curved so that its lower half already does something |
 | Moisture | the background dampness of the ground before any water adds to it: about 0.15 is dry country, 0.45 balanced, 0.75 wet |
 | Warmth | the warmth of open flat lowland: under about 0.3 is cold country, 0.5 temperate, over about 0.7 hot, the last twentieth desert. Even 0 keeps the lowland above the snow |
 | Wind | how hard the island's one wind blows: 0 still air, where shelter changes nothing; 0.5 the normal effects; 1 twice them |
@@ -327,7 +327,7 @@ round a dry islet of its own floor, a crescent, a ragged cross, or a tarn
 cropped small. Every shape is a subset of the pool the rim already approved.
 
 **Goo.** Each column records what fluid stands in it. Water is the default and
-the only fluid that behaves: rivers, ferries and fords are water's alone. About
+the only fluid that behaves: rivers, fords and named bodies of water are water's alone. About
 three islands in ten roll one to three **goo** puddles instead, placed like small
 tarns in dry flat patches. Goo makes no rivers, and no water may stand within a
 king's move of it, not even diagonally; the placement guarantees this, the river
@@ -430,10 +430,14 @@ the surface stage gives it the wet ground of its climate.
 drains into, not beside a lake and not a delta's arm.
 
 **Fords.** A stream is crossed on foot only at a ford: one at the head of each
-course and one every 11 cells along it on flat ground, stretching to every 33
-through broken ground (the same measure of local relief the climate uses), where
-both banks are dry and within a slab of the water. Everywhere else a stream is
-an obstacle. A short course still gets one.
+course, on the first crossable cell below its spring, then one every 11 cells
+of water on flat ground, stretching to every 33 through broken ground (the same
+measure of local relief the climate uses), where both banks are dry and within
+a slab of the water. Everywhere else a stream is an obstacle. A short course
+still gets one. A ford is never put on the spring itself: the source is a place
+the living layer will stand something on. (Until September 2026 the first cell
+of a course got the ford whatever it was, and for 103 of the audit's 218
+springs that cell was the spring.)
 
 ### Stage 7: the keel, and packing
 
@@ -459,24 +463,27 @@ be a separate idea, shelves, patches of level ground with a measured width. It
 never read as a place and was removed; everything that used it now reads
 districts.)
 
-**Reach areas**: what connects once the player can build, with three kinds of
+**Reach areas**: what connects once the player can build, with two kinds of
 works. A **stair or hoist** climbs a face of up to 8 slabs, enough for a mesa or
-basin rim, not a mountain flank; it stands on two cells that may not be a quay,
-a bridgehead or a Gate's ground. A **bridge** joins land to land on a straight
-line across at most the crossings span of aether, 3 cells of water, or a chasm
-(ground 5 slabs or more below the deck, which is how one cliff top is bridged to
-another); a deck is level and its banks within a slab of it. A **ferry** runs
-between two quays on one body of water, however far apart. Diagonals are
-walked, never built across. The largest reach area is the **heartland**.
+basin rim, not a mountain flank; it stands on two cells that may not be a
+bridgehead, a landing strip or a Gate's ground. A **bridge** joins land to land
+on a straight line across at most the crossings span of aether, 3 cells of
+water, or a chasm (ground 5 slabs or more below the deck, which is how one cliff
+top is bridged to another); a deck is level and its banks within a slab of it.
+Water wider than that is simply not crossed. Diagonals are walked, never built
+across. The largest reach area is the **heartland**.
 
-**Water bodies** are connected sheets of standing fluid, and a waterfall cuts a
-body in two, since nothing sails up one. **Ferry berths** are found by a domino
-rule (a walkable quay within two slabs of sailable water, with somewhere to
-unload behind it) and then pruned: the reach flood is run once without ferries,
-and a body keeps its berths only if they land in two or more different pieces of
-that answer, so the berths that survive exist because the water is genuinely in
-the way. In practice every body can be bridged and no berth survives, so the
-ferry machinery is idle today.
+There used to be a third work, the **ferry**, between two quays on one body of
+water, with a rule for finding quays and a pruning that kept only the ones the
+land genuinely needed. Over sixty audited islands exactly one kept any, and no
+road ever used one: with a bridge spanning three cells of water and rivers two
+cells wide, there is nothing a ferry is for. It was removed in September 2026.
+When boats come to the game they will be the living layer's to add, and the
+bodies of water below are their map.
+
+**Water bodies** are connected sheets of water a hull could sit on (standing
+water and navigable reaches, never goo), and a waterfall cuts a body in two,
+since nothing sails up one. They are what the water names are given to.
 
 **The mainland is where you land.** Once the Gates are placed, the mainland and
 heartland are re-pointed to the ground under the Entry's landing, because
@@ -527,7 +534,7 @@ applied directly and checked at the end.
 ### Stage 10: roads
 
 From the Entry's apron to each Exit's, the road that needs the least building:
-walking is free, and every stair, bridge or ferry costs one. Cost is compared
+walking is free, and every stair or bridge costs one. Cost is compared
 works first, then length, so among equally cheap roads the shortest wins; a
 ford costs eight cells of length, so a road crosses a stream rather than walking
 down it. About a third of roads can simply be walked. Five elevators inside
@@ -621,7 +628,7 @@ and cliff feet; banks (the walkable wet margin, at most a slab over the water);
 river beds and lake beds; summits (the highest dry cells of genuinely high
 country, at least half the mountain cap above the lowest ground, spaced apart,
 so a flat island honestly has none); overhang lips; beaches, fords, Gate
-landings, ferry quays; springs, falls, hot water; sea stacks; the lakes that
+landings; springs, falls, hot water; sea stacks; the lakes that
 swallowed a river and the deltas. The lists overlap freely; only the lab's
 flattened view has to pick one colour per cell.
 
@@ -746,12 +753,12 @@ the human end.
 
 ### The checksum
 
-`generation_checksum.tscn` builds 446 islands across the whole settings matrix
+`generation_checksum.tscn` builds 456 islands across the whole settings matrix
 (60 default seeds; every arrangement against every character at 64²; all three
 sizes; every Gate request; every crossings setting; both ends of every dial and
 of every whole-number setting; the older layouts and landforms with the newer
 ones switched off) and hashes every field of every island. A change meant to
-leave generation alone must report "0 of 446 islands moved". A change meant to
+leave generation alone must report "0 of 456 islands moved". A change meant to
 alter it records the new hashes with `-- accept` and says so in its commit. It
 is the bit-for-bit gate. Determinism hangs on details a refactor can break
 silently: hash salts, noise seed offsets, the order of floating-point
@@ -768,8 +775,9 @@ where the cliffs fall by landform pair); patch sizes; mesa clearance and basin
 drop; hill relief; the sculpted landforms' wall heights; mountain rise and step
 profile; rivers (cells, navigable cells, falls, water running uphill, courses
 reaching the rim, straightness, eyots, lakes that swallow a river, deltas,
-springs, fords per hundred stream cells on flat and broken ground); ferries;
-overhangs; material shares and anchor counts (with tors and hot water); the
+springs and whether any sits under a ford, fords per hundred stream cells on
+flat and broken ground, bodies of water); overhangs; material shares and
+anchor counts (with tors and hot water); the
 per-island means of every climate axis, plus what the sun, the wind and the
 hollows did; lakes and goo (leaks, water touching the void, goo touching water,
 all "want 0"); altitude against the box; gorges and sealed gorges; what each
@@ -832,7 +840,7 @@ a control panel that writes the same settings the audit measures. Fourteen
 views (height, landform, region, walk, reach, surface, anchors, and the seven
 fields: moisture, warmth, ruggedness, exposure, rim, water distance, magick),
 each with a legend in its actual colours; overlays for bridge sites, landings,
-ferries, roads, fords, and the compass with the wind, the sun, the dune grain
+roads, fords, and the compass with the wind, the sun, the dune grain
 and the two boxes; a liquid toggle that shows the beds; a seed field; a
 frame-rate counter; a line naming the cell under the mouse (found by casting a
 ray at the mesh's physics shape) with everything the pipeline said about it;
@@ -864,21 +872,35 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   riverbanks or beside landforms whose height is the point), 6.3% cliffs.
 - **Rivers** on every island; every island's rivers reach the rim; 0 channels
   uncut and 0 water running uphill; 8 lakes swallow a river on 8 islands; 17
-  deltas on 12 islands; 218 springs; fords at 11 per hundred stream cells on
-  flat ground and 6 on broken.
+  deltas on 12 islands; 218 springs, none under a ford; fords at 10 per hundred
+  stream cells on flat ground and 6 on broken; 252 bodies of water.
 - **Ground**: grass 21.5%, stone 11.2%, meadow 9.8%, dust 8.4%, tundra 8.2%,
   scree 5.7%, sand 5.3%, silt 4.7%, heath 4.5%, moorland 4.4%, steppe 4.4%,
   savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, snow 0.8%, marsh 0.4%.
-- **Walkability**: 42.6% of land on the mainland on foot; 94.8% on the
-  heartland once built; 47 of 60 islands one reachable whole; 455 districts on
+- **Walkability**: 41.9% of land on the mainland on foot; 94.8% on the
+  heartland once built; 47 of 60 islands one reachable whole; 459 districts on
   the heartland, every island with at least one.
 - **Gates**: every island one Entry and three Exits, none on a shared edge, off
   the heartland, outside the box or short of a level strip; a road to every
-  Exit, 68 of 180 walkable with nothing built.
+  Exit, 66 of 180 walkable with nothing built.
 - **Climate**: sunny slopes 8 warmer than shaded; from still air to a gale the
   flat lee dries by 32 while open ground holds; 109 cells of hot water on 11
   of the 20 cold islands.
-- **Re-rolls**: every seed built in one attempt, none unplayable.
+- **Re-rolls**: every one of the sixty built in one attempt, none unplayable.
+  Across the size and layout sweeps, no seed at 96² or 128² needed a second
+  try either (one layout, the N, once in twelve); at 64² about one seed in six
+  needs a second try, all on the four broken layouts, the archipelago and the
+  thousand isles, and none anywhere has ever needed a third or given up.
+- **The knobs** (the knob matrix, sixteen seeds, every dial at five positions):
+  every dial moves what it promises, in one direction, and none changes
+  whether the island can be played. What one dial does to another's outcome is
+  a consequence, not a fight: more rivers bring more springs, falls, fords and
+  valleys and slightly wetter ground; more lakes bring fewer springs (a stream
+  that starts at a lake shore is an outflow, not a spring) and no fewer
+  rivers; more relief makes the hills hillier, the valleys deeper and the
+  fords rarer. The valleys dial was found asleep over its lower half; a curve
+  on the dial wakes it from a quarter of the way up, and the first quarter is
+  still soft.
 - **Drawing** (the mesh bench, three seeds a footprint): a 128² island is about
   50,000 ground and 600 water triangles, 62% of what the boxes drew, meshed in
   9 ms with another 40 ms for the meshes, colliders and tiles, about 6 MB; the
@@ -913,8 +935,8 @@ walkable by design.
 - **Walk area**, **district**, **reach area**, **mainland**, **heartland**: what
   connects on foot; a walk area big enough to build on; what connects once
   built; the walk area under the Entry; the reach area under the Entry.
-- **Works**: stairs, bridges, ferries. **Apron**: the district a Gate's landing
-  opens onto.
+- **Works**: stairs and bridges (ferries were a third, and went). **Apron**: the
+  district a Gate's landing opens onto.
 - **Anchor**: a list of cells of one kind the content layer will read.
 - **Knob** or **dial**: a 0-to-1 setting; **Auto** lets the seed roll it.
 - **Seed**: the number that, with the settings, determines the whole island.

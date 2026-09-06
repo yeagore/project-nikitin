@@ -167,13 +167,9 @@ public partial class IslandLab
 	private static readonly Color BankTint = new(0.99f, 0.94f, 0.55f);
 	private static readonly Color StripUsedTint = new(1f, 0.55f, 0.85f);
 
-	private static readonly Color QuayTint = new(0.98f, 0.45f, 0.30f);
-	private static readonly Color HullTint = new(0.55f, 0.85f, 0.98f, 0.9f);
-
 	private static readonly Color RoadTint = new(0.98f, 0.95f, 0.62f, 0.8f);
 	private static readonly Color StairTint = new(1f, 0.45f, 0.25f);
 	private static readonly Color SpanTint = new(1f, 0.80f, 0.20f);
-	private static readonly Color CrossingTint = new(0.30f, 0.95f, 0.85f);
 
 	private static readonly Color FordTint = new(0.85f, 0.95f, 0.60f);
 	private static readonly Color WindTint = new(0.98f, 0.62f, 0.30f);
@@ -210,7 +206,6 @@ public partial class IslandLab
 			if (d.Hot[x, z]) grid[x, z] = DevPalette.HotSpring;
 			if (d.Ford[x, z]) grid[x, z] = DevPalette.Ford;
 			if (d.Landings[x, z]) grid[x, z] = DevPalette.Landing;
-			if (d.Ferry[x, z]) grid[x, z] = DevPalette.Quay;
 		}
 
 		foreach (Vector2I c in d.Summits) grid[c.X, c.Y] = DevPalette.Summit;
