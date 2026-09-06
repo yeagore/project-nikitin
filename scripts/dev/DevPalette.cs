@@ -103,27 +103,7 @@ internal static class DevPalette
     /// yellow-green, green and a blue-green marsh; the hot row red-brown, gold, a
     /// deep verdure and the emerald floodplain. Sand pale, snow white, silt brown.
     /// </summary>
-    public static Color Material(SurfaceMaterial m) => m switch
-    {
-        SurfaceMaterial.Stone => new Color(0.40f, 0.40f, 0.46f),      // dark cool grey
-        SurfaceMaterial.Scree => new Color(0.80f, 0.68f, 0.54f),      // warm beige
-        SurfaceMaterial.Snow => new Color(0.95f, 0.96f, 0.98f),
-        SurfaceMaterial.Sand => new Color(0.95f, 0.90f, 0.66f),
-        SurfaceMaterial.Silt => new Color(0.44f, 0.32f, 0.20f),
-        SurfaceMaterial.Tundra => new Color(0.58f, 0.80f, 0.74f),     // pale mint, nothing like rock
-        SurfaceMaterial.Moorland => new Color(0.62f, 0.44f, 0.64f),
-        SurfaceMaterial.Bog => new Color(0.26f, 0.36f, 0.32f),
-        SurfaceMaterial.Steppe => new Color(0.76f, 0.68f, 0.40f),
-        SurfaceMaterial.Meadow => new Color(0.66f, 0.82f, 0.34f),
-        SurfaceMaterial.Grass => new Color(0.28f, 0.62f, 0.22f),
-        SurfaceMaterial.Dust => new Color(0.78f, 0.48f, 0.30f),
-        SurfaceMaterial.Savanna => new Color(0.90f, 0.72f, 0.22f),
-        SurfaceMaterial.Floodplain => new Color(0.16f, 0.74f, 0.46f),
-        SurfaceMaterial.Marsh => new Color(0.30f, 0.52f, 0.50f),        // blue-green, duller than grass, lighter than bog
-        SurfaceMaterial.Heath => new Color(0.58f, 0.42f, 0.40f),        // heather-brown, between the mint and the mauve
-        SurfaceMaterial.Verdure => new Color(0.08f, 0.42f, 0.20f),      // the deepest green: darker than grass, purer than bog
-        _ => new Color(1f, 0f, 1f),                    // an unmapped member: make it shout
-    };
+    public static Color Material(SurfaceMaterial m) => Meshing.SurfacePalette.Of(m);
 
     /// <summary>
     /// Warmth as a colour with a stop at each band line: ice white below the snow

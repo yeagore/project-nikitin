@@ -29,7 +29,8 @@ public partial class IslandLab
 	private CheckBox _gooBox = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
 	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
-	private CheckBox _liquidBox = null!;
+	private CheckBox _liquidBox = null!, _meshBox = null!;
+	private Label _fps = null!;
 	private LineEdit _seedField = null!;
 	private bool _syncing;
 
@@ -269,6 +270,13 @@ public partial class IslandLab
 			() => _showLiquid, on => { _showLiquid = on; Redraw(); },
 			"Off shows the beds under the water: the columns are always drawn.");
 
+		Heading(rows, "ground");
+		_meshBox = Check(rows, "Mesh, not boxes  (Z)",
+			() => _showMesh, ToggleMesh,
+			"The game's renderer: only the faces that touch air, in tiles of sixteen by "
+			+ "sixteen columns with a collider each; its water stands in for the sheets, falls "
+			+ "included. Off, the old box per span, which also draws the sea stacks.");
+
 		Heading(rows, "camera");
 		var keys = new Label
 		{
@@ -291,6 +299,14 @@ public partial class IslandLab
 
 		// Both plates at the top: the editor's chrome hides the bottom of the embedded game.
 		_legend = PanelledRich(right, new Color(0.82f, 0.92f, 1f));
+		// The frame rate, refreshed by _Process: with the mesh on, the one number the renderer is for.
+		_fps = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Right,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_fps.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.78f));
+		right.AddChild(_fps);
 		_status = Panelled(right, Control.SizeFlags.ExpandFill, new Color(1f, 0.93f, 0.72f));
 		right.AddChild(new Control
 		{
@@ -399,6 +415,7 @@ public partial class IslandLab
 		_compassBox.ButtonPressed = _showCompass;
 		_fordBox.ButtonPressed = _showFords;
 		_liquidBox.ButtonPressed = _showLiquid;
+		_meshBox.ButtonPressed = _showMesh;
 
 		_syncing = false;
 	}

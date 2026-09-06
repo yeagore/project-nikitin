@@ -891,39 +891,69 @@ varied any of them would change what a cliff *means*.
 
 ---
 
-## 4. Rendering handoff
+## 4. Rendering
 
-`IslandData` feeds the terrain renderer; it does **not** spawn per-slab nodes.
+`IslandData` feeds the terrain renderer, `IslandRenderer` under `scripts/terrain/`
+(namespace `ProjectNikitin.Meshing`); it does **not** spawn per-slab nodes.
 
-- **Faces**, per column per span: top at `Top + 1`, bottom at `Bottom` (the gap
-  under a higher span is the overhang's underside), sides wherever the
-  neighbouring column's spans do not cover that slab range.
-- **Chunks** of 16 × 16 columns → one `ArrayMesh` + one trimesh collider each,
-  so an edit re-meshes one chunk.
-- **Water** is a separate translucent surface at `WaterLevel + 1`; only its top
-  face and the faces against air need geometry.
-- The dev lab does none of this — it draws one scaled `MultiMesh` box per span,
-  which is why it costs what it costs. The mesher is the next piece of work.
+- **Faces**, per column per span: the top at `Top + 1`, the underside at `Bottom`
+  (under a higher span it is the overhang's roof; under the lowest span, the
+  keel), and sides wherever the neighbouring column's spans do not cover that
+  slab range, one quad per uncovered range so a four-slab cliff is one face.
+  Nothing buried is emitted: `mesh_bench.tscn`'s voxel oracle counts every slab
+  face touching air and finds the mesh's area equal to it.
+- **Chunks** of 16 × 16 columns (`ChunkMesher.ChunkSize`), each a `TerrainChunk`:
+  one `ArrayMesh` for the ground, one for the liquid, one trimesh collider over
+  the ground. `IslandRenderer.RebuildAround(x, z)` remeshes the chunk holding a
+  column and any neighbour the column borders, since a side face depends on the
+  column across it; that is the hook an edit calls. A ray against the collider
+  gives a point on a face; a step of 0.02 back along the hit normal and a round
+  to the cell gives the column (the lab's cursor pick; the bench casts at every
+  third column and expects the top and the keel).
+- **Water** is its own translucent surface at `WaterLevel + 1`: the top, and a
+  wall wherever the water range meets what is neither solid nor the same fluid —
+  a lower neighbour's water (a cataract), dry ground below the level, the aether
+  at the rim (the fall). Goo is a third surface with its own material. Beds are
+  the ground's tops, drawn once.
+- **Vertices** are flat-shaded quads: position, normal, a UV in metres (a texture
+  tiles per cell), UV2 = (material or fluid byte, `FaceKind` top/side/bottom) for
+  a shader to read later, and a colour from an `IslandTint`, two callbacks: one
+  per ground face from the column, span and face kind, one per flooded column.
+  The game's `IslandTint.Default` paints the column's `SurfaceMaterial` through
+  `SurfacePalette`, stone on a lip and every underside; the lab swaps in a tint
+  per view. Front faces wind clockwise, Godot's rule; `MeshBuffer` orients every
+  quad to it, and the bench's probe reads a `BoxMesh` to confirm the rule.
+- **Cost**, measured by the bench at 128²: about 50,000 ground and 600 liquid
+  triangles (62% of the twelve per span the lab's boxes drew; greedy merging of
+  coplanar faces is not done and not needed), 9 ms to mesh, 40 ms more for the
+  meshes, colliders and nodes, 6 MB. Triangles were never going to be the cost of
+  a Domain; the biome layer's features will be. Twenty whole Domains in view at
+  once (800,000 triangles, 1,100 draw calls) and forty (1.5 million, 2,100) both
+  hold the display's 120 Hz on the Mac; `domains_bench.tscn` is the measurement
+  (CLAUDE.md → Rendering).
+- The lab draws through the renderer (Z for the old box per span, the only mode
+  that draws the sea stacks); the game scene `main.tscn` shows one generated
+  Domain through it.
 
 ---
 
 ## 5. File layout
 
 The tree, with one line per file, is under **Repository layout** in
-`CLAUDE.md`; the generation classes are the ones named in the headings of §2.
+`CLAUDE.md`; the generation classes are the ones named in the headings of §2,
+the renderer's under **Rendering**.
 
 ---
 
 ## 6. What is next
 
-1. **The chunked span-aware mesher + colliders** — the biggest piece left, and
-   the only thing that will answer the performance question for real.
-2. **Settlement placement** — everything it needs exists: districts, berths,
-   roads, Gate aprons, the water-distance byte.
-3. **The biome layer** above the habitat vector — the living things as opposed
+1. **Settlement placement** — everything it needs exists: districts, berths,
+   roads, Gate aprons, the water-distance byte, and now a collider to click.
+2. **The biome layer** above the habitat vector — the living things as opposed
    to the ground; the vector and the anchor lists are its inputs, the
-   provisional `Material` mapping is its to replace.
-4. **Span-aware pathing**, which is what would make an overhang walkable.
+   provisional `Material` mapping is its to replace, and with it the flat
+   colours the renderer paints (UV2 carries the material byte for a shader).
+3. **Span-aware pathing**, which is what would make an overhang walkable.
 
 The appendix lists the ideas logged and not taken, and the gaps the last audit
 found.
