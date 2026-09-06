@@ -13,3 +13,7 @@ obj/
 *.userprefs
 .idea/
 .vs/
+
+# The documentation's contact sheets are pictures for a reader, not game assets;
+# .gdignore keeps the editor from importing them and leaving .import sidecars.
+docs/images/*.import
