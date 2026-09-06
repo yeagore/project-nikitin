@@ -630,6 +630,7 @@ public partial class GenerationAudit
         PrintValleysSweep(steps);
         PrintWindSweep(steps);
         PrintMagickSweep();
+        PrintMagickLean();
     }
 
     /// <summary>
@@ -676,6 +677,84 @@ public partial class GenerationAudit
                     + $"{(patches > 0 ? hot / (double)patches : 0),7:0.0} "
                     + $"{holes / (double)SweepSeeds,6:0.0}");
             }
+        }
+    }
+
+    /// <summary>
+    /// Whether the magick actually leans the way the reaction is told to lean it, at
+    /// a middling density where there is something to compare. Three pairs, each the
+    /// mean byte on one side against the other: the top third of the island's height
+    /// against the bottom third; the windward half against the lee, split at the
+    /// island's own centre along the wind; and, on the watercourses alone, the cells
+    /// carrying the least drainage against those carrying the most — the headwaters
+    /// against the mouth. Every left column should stand above its right, and by more
+    /// than a byte or two, or the lean is decoration.
+    /// </summary>
+    private void PrintMagickLean()
+    {
+        GD.Print($"\n  === which way the magick leans (density 0.50, {SweepSeeds} seeds each) ===");
+        GD.Print($"  {"pattern",-10} {"high",6} {"low",6} {"gain",6}   {"windward",9} {"lee",6} {"gain",6}   "
+            + $"{"head",6} {"mouth",6} {"gain",6}");
+        foreach (MagickPattern kind in Enum.GetValues<MagickPattern>())
+        {
+            if (kind == MagickPattern.Auto) continue;
+            IslandParams p = Variant(q => { q.MagickPattern = kind; q.MagickDensity = 0.5f; });
+            double high = 0, low = 0, windward = 0, lee = 0, head = 0, mouth = 0;
+            long highN = 0, lowN = 0, windN = 0, leeN = 0, headN = 0, mouthN = 0;
+
+            foreach (IslandData d in Sweep(p, SweepSeeds))
+            {
+                // The island's own height range, its centre, and the wind it was given.
+                short top = short.MinValue, foot = short.MaxValue;
+                double cx = 0, cz = 0;
+                long land = 0;
+                var flows = new List<int>();
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    short level = d.EffectiveLevel(x, z);
+                    if (level > top) top = level;
+                    if (level < foot) foot = level;
+                    cx += x; cz += z; land++;
+                    if (d.River[x, z]) flows.Add(d.Flow[x, z]);
+                }
+                if (land == 0 || top <= foot) continue;
+                cx /= land; cz /= land;
+                int grain = d.DuneGrain & 7;
+                double windX = Dx8[grain], windZ = Dz8[grain];
+                // The median, not the mean: drainage accumulation is wildly skewed —
+                // one trunk carries thousands where every headwater carries one — so a
+                // mean puts nearly the whole channel on the headwater side of itself.
+                flows.Sort();
+                double midFlow = flows.Count > 0 ? flows[flows.Count / 2] : 0;
+
+                for (int x = 0; x < d.Size; x++)
+                for (int z = 0; z < d.Size; z++)
+                {
+                    if (!d.HasLand(x, z)) continue;
+                    byte magick = d.Magick[x, z];
+                    double up = (d.EffectiveLevel(x, z) - foot) / (double)(top - foot);
+                    if (up >= 2.0 / 3.0) { high += magick; highN++; }
+                    else if (up <= 1.0 / 3.0) { low += magick; lowN++; }
+
+                    // Downwind of the centre is the lee; into the wind is the windward side.
+                    double along = (x - cx) * windX + (z - cz) * windZ;
+                    if (along < 0) { windward += magick; windN++; }
+                    else { lee += magick; leeN++; }
+
+                    if (!d.River[x, z] || midFlow <= 0) continue;
+                    if (d.Flow[x, z] < midFlow) { head += magick; headN++; }
+                    else { mouth += magick; mouthN++; }
+                }
+            }
+
+            double Mean(double sum, long n) => n > 0 ? sum / n : 0;
+            double h = Mean(high, highN), l = Mean(low, lowN);
+            double w = Mean(windward, windN), e = Mean(lee, leeN);
+            double a = Mean(head, headN), m = Mean(mouth, mouthN);
+            GD.Print($"  {kind.ToString().ToLowerInvariant(),-10} {h,6:0.0} {l,6:0.0} {h - l,6:+0.0;-0.0} "
+                + $"  {w,9:0.0} {e,6:0.0} {w - e,6:+0.0;-0.0}   {a,6:0.0} {m,6:0.0} {a - m,6:+0.0;-0.0}");
         }
     }
 

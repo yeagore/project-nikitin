@@ -612,6 +612,56 @@ the whole island. Where the lift runs into its bound at the other end the Domain
 comes out a little short of the mean asked for, which beats drawing the numerical
 difference between two inert cells as if it were country.
 
+**The lattice leans.** Every cell has a leaning — uphill by the fall of the
+effective surface, upwind against the Domain's one wind, upstream along a
+watercourse — and the two substances take it opposite ways. The magick climbs it;
+the aether it feeds on runs down it. The three are added and capped at a unit
+vector rather than normalised, so flat sheltered ground away from water leans
+hardly at all and its neighbourhood stays even-handed, which is the honest answer
+for ground with nothing to say. The slope is scaled by its own steepness up to a
+fall of two slabs a cell, so a mountainside is led by its fall and flat country by
+the wind. Upstream is read off the drainage accumulation, which rises down a
+channel, because a navigable reach is a stair of pools whose surface is flat for
+cells at a time — exactly where the channel still has a direction and the ground
+has none.
+
+It is done as a **stencil, not a drift term**: the nine-point weights are scaled by
+how far each neighbour lies with the leaning or against it, then renormalised so
+the eight still sum to one. Renormalising is what keeps it a weighted average of
+the neighbourhood rather than a source or a drain, so the substance is carried and
+never made, and explicit Euler stays exactly as stable as it was even-handed. The
+lean is 0.12 of each neighbour's weight; the three terms are quoted 1.0 slope,
+0.3 wind, 0.9 channel.
+
+Two traps, both of which the audit caught rather than the eye:
+
+- **The sign is the opposite of the one it looks like.** A cell *takes* from its
+  neighbours, so weighting the uphill neighbour heavier makes that cell draw
+  magick *down* off the hill. To carry a substance up the leaning, the stencil
+  that climbs is the one that leans away.
+- **The wind is not like the other two.** Slope and channel point every which way
+  across an island and cancel in the large; the wind is one direction over the
+  whole Domain, so it does not tilt the pattern, it sweeps the field downwind
+  until it banks against the far coast. At 0.5 it left a Domain's windward side
+  sixty bytes richer than its lee and undid the slope's own gathering. At 0.3 it
+  leans the pattern instead.
+
+The audit's lean table is the check, and every pair should show the left column
+above the right:
+
+| Pattern | high − low | windward − lee | head − mouth |
+|---|---|---|---|
+| `Motes` | +11.6 | +11.0 | +21.6 |
+| `Wells` | +17.6 | +29.0 | +24.4 |
+| `Veins` | +14.3 | +11.1 | +32.7 |
+| `Labyrinth` | +11.0 | +7.0 | +26.1 |
+| `Lace` | +9.0 | +6.0 | +17.6 |
+| `Hollows` | +8.0 | +7.5 | +23.7 |
+
+(Mean byte, density 0.50, eight seeds each; the height thirds of the island, the
+halves either side of its centre along the wind, and the channel cells under and
+over the median drainage.)
+
 The producer never uses more than a third of 0–1, so the finished field is
 stretched to the island's own range before the level. If it comes back with no
 peak (`< 0.05`, the reaction died) or no range under the peak (`< 0.02`, it

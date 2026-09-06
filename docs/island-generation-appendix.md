@@ -602,6 +602,33 @@ exactly that way, and failed silently, since the fallback field is bit-identical
 to what the layer used to be. The threshold is read against the island's own
 noise range instead.
 
+**The lattice leans, and both of its traps were found by measuring.** The
+even-handed lattice made a pattern that owed nothing to the ground under it — the
+same wells whether the cell was a summit or a shore. Each cell now has a leaning,
+uphill and upwind and upstream, and the two substances take it opposite ways.
+
+The first trap was the sign, and it is the sort a picture will not settle. Leaning
+the magick's stencil *toward* the uphill neighbour looks right and is backwards: a
+cell takes from its neighbours, so weighting the uphill one heavier makes the cell
+draw magick down off the hill. The images looked plausible either way — a pattern
+that leans is a pattern that leans — and it took a table of high ground against
+low, windward against lee, headwaters against mouth to show every one of the
+eighteen gains sitting on the wrong side of zero. The stencil that climbs is the
+one that leans away.
+
+The second was the wind. Slope and channel point every which way across an island
+and cancel in the large, so they tilt the pattern in place; the wind is one
+direction over the whole Domain, so it is bulk transport, and at 0.5 it swept the
+field downwind until it banked against the far coast — a windward side sixty bytes
+richer than the lee, and the slope's own gathering undone underneath it, wells
+coming out with *less* magick high than low. At 0.3 it leans rather than sweeps.
+
+The lean itself was found the same way. At 0.35 it stopped being a lean and became
+advection: the motes smeared into worms, the wells collapsed to a single streak,
+and the pattern — the thing the whole naming exercise exists to make askable —
+stopped being recognisable. At 0.12 the six kinds survive and the gains are still
+worth eight to thirty bytes.
+
 **The coast is a no-flux wall** — a neighbour off the land is the cell itself,
 so neither substance crosses into the aether — and the producer therefore banks
 up against it, which gives many Domains a bright rim. Nobody wrote that rule; it
