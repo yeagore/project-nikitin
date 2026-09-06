@@ -629,6 +629,89 @@ public partial class GenerationAudit
         PrintCrossingsSweep();
         PrintValleysSweep(steps);
         PrintWindSweep(steps);
+        PrintMagickSweep();
+    }
+
+    /// <summary>
+    /// The magick layer's two parameters, which is all of it: every
+    /// <see cref="MagickPattern"/> at three densities. Mean is what the density knob
+    /// promises and should climb with it in every row; saturated share, the count of
+    /// distinct saturated patches and their mean size are what the pattern promises,
+    /// and should tell the six apart — hundreds of tiny patches for motes, one patch
+    /// riddled with holes for hollows — while a pattern changing kind down its own
+    /// column is the density reaching too far along its band. A patch count of one
+    /// with no holes at every density is the reaction having died back to its
+    /// fallback field, which is the failure this table is here to catch.
+    /// </summary>
+    private void PrintMagickSweep()
+    {
+        GD.Print($"\n  === the magick layer ({SweepSeeds} seeds each) ===");
+        GD.Print($"  {"pattern",-10} {"density",8} {"mean",6} {"sat%",6} {"patches",8} "
+            + $"{"patch",7} {"holes",6}   (mean climbs with density; the shape is the pattern's)");
+        foreach (MagickPattern kind in Enum.GetValues<MagickPattern>())
+        {
+            if (kind == MagickPattern.Auto) continue;
+            foreach (float density in new[] { 0f, 0.05f, 0.5f, 1f })
+            {
+                IslandParams p = Variant(q => { q.MagickPattern = kind; q.MagickDensity = density; });
+                long land = 0, sum = 0, hot = 0;
+                int patches = 0, holes = 0;
+                foreach (IslandData d in Sweep(p, SweepSeeds))
+                {
+                    for (int x = 0; x < d.Size; x++)
+                    for (int z = 0; z < d.Size; z++)
+                    {
+                        if (!d.HasLand(x, z)) continue;
+                        land++;
+                        sum += d.Magick[x, z];
+                        if (d.Magick[x, z] > 127) hot++;
+                    }
+                    patches += MagickPatches(d, true);
+                    holes += MagickPatches(d, false);
+                }
+                GD.Print($"  {kind.ToString().ToLowerInvariant(),-10} {density,8:0.00} "
+                    + $"{sum / (double)Math.Max(1, land),6:0.0} "
+                    + $"{100.0 * hot / Math.Max(1, land),6:0.0} "
+                    + $"{patches / (double)SweepSeeds,8:0.0} "
+                    + $"{(patches > 0 ? hot / (double)patches : 0),7:0.0} "
+                    + $"{holes / (double)SweepSeeds,6:0.0}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cardinally-connected runs of saturated land (<paramref name="saturated"/>) or
+    /// of inert land within it: how many separate wells, worms or hollows the
+    /// pattern left. Counted here rather than measured in the generator, because
+    /// nothing in the game needs it — only the audit does.
+    /// </summary>
+    private static int MagickPatches(IslandData d, bool saturated)
+    {
+        var seen = new bool[d.Size, d.Size];
+        var stack = new Stack<(int X, int Z)>();
+        int found = 0;
+        for (int sx = 0; sx < d.Size; sx++)
+        for (int sz = 0; sz < d.Size; sz++)
+        {
+            if (seen[sx, sz] || !d.HasLand(sx, sz) || d.Magick[sx, sz] > 127 != saturated) continue;
+            found++;
+            seen[sx, sz] = true;
+            stack.Push((sx, sz));
+            while (stack.Count > 0)
+            {
+                var (x, z) = stack.Pop();
+                for (int k = 0; k < 4; k++)
+                {
+                    int ax = x + Dx[k], az = z + Dz[k];
+                    if (ax < 0 || ax >= d.Size || az < 0 || az >= d.Size) continue;
+                    if (seen[ax, az] || !d.HasLand(ax, az)) continue;
+                    if (d.Magick[ax, az] > 127 != saturated) continue;
+                    seen[ax, az] = true;
+                    stack.Push((ax, az));
+                }
+            }
+        }
+        return found;
     }
 
     /// <summary>

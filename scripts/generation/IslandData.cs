@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 using Godot;
 
@@ -187,8 +187,9 @@ public sealed class IslandData
 
     /// <summary>
     /// Magickal density, 0 inert … 255 saturated: a layer of its own beside the
-    /// habitat, and for now pure noise — soft, low-frequency waves with nothing
-    /// behind them. See <c>Magicks</c>.
+    /// habitat, grown by a Turing reaction between a self-reproducing producer and
+    /// the inhibitor it consumes, so the field breaks into spots, worms, mazes or
+    /// lace rather than settling flat. Read by nothing yet. See <c>Magicks</c>.
     /// </summary>
     public byte[,] Magick { get; }
 

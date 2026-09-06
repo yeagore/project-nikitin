@@ -122,6 +122,35 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Wind { get; set; } = Auto;
 
+    // ---- magicks ------------------------------------------------------------
+    // The magickal density layer is grown by a Turing reaction: a producer that
+    // makes more of itself where there is already some, and an inhibitor it
+    // consumes, replenished everywhere and spreading faster than the producer.
+    // Its six coefficients are not knobs. What a Domain's magick looks like is a
+    // matter of where on the reaction's plane it sits, and the interesting points
+    // there are islands in a sea of dead and flooded settings, so they are named
+    // rather than interpolated: the pattern below picks one, and the density says
+    // how much magick the Domain ends up holding. See the Magicks class.
+
+    /// <summary>
+    /// The shape the magick settles into: motes, wells, veins, a labyrinth, lace,
+    /// or a saturated Domain with inert hollows in it. <c>Auto</c> picks one per
+    /// seed, evenly.
+    /// </summary>
+    [Export] public MagickPattern MagickPattern { get; set; } = MagickPattern.Auto;
+
+    /// <summary>
+    /// How much magick the Domain holds on average: <b>0 is none at all</b>, an
+    /// inert Domain with a flat zero byte; a few hundredths leaves only the crowns
+    /// of the strongest wells standing on dead ground; 1 is a Domain steeped in it.
+    /// It does not change the pattern's kind or its scale — it thickens or thins
+    /// what the pattern draws, and then cuts or lifts the level the byte is read at,
+    /// so the island's mean magick tracks the knob. The zero is done on the way out
+    /// and not asked of the reaction, which always leaves producer somewhere. Auto
+    /// rolls it per seed.
+    /// </summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickDensity { get; set; } = Auto;
+
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>

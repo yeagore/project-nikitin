@@ -19,9 +19,10 @@ public partial class IslandLab
 	private PanelContainer _panel = null!;
 	private OptionButton _viewPick = null!, _arrangePick = null!, _characterPick = null!;
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
-	private OptionButton _exitKind = null!;
+	private OptionButton _exitKind = null!, _magickPattern = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
+	private HSlider _magickDensity = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
@@ -201,6 +202,22 @@ public partial class IslandLab
 			"How far exposure moves the climate: 0 still air, where shelter changes nothing; "
 			+ "0.5 the nominal rain shadow, milder lee and damp gorge floors; 1 twice them. "
 			+ "The exposure view itself is geometry and does not move.");
+		Heading(rows, "magicks");
+		_magickPattern = Choice<MagickPattern>(rows, "Magick pattern",
+			() => Params.MagickPattern, v => Params.MagickPattern = v,
+			"The shape the magick grows into, on the magick view (C): motes, round wells, "
+			+ "winding veins, a labyrinth, an open lace, or a saturated Domain with inert "
+			+ "hollows in it. Each is a named point on the reaction's plane rather than a "
+			+ "setting between two others, and Auto picks one per seed.");
+		_magickDensity = Slide(rows, "Magick density", 0f, 1f, 0.05f,
+			() => Params.MagickDensity, v => Params.MagickDensity = v, q => q.MagickDensity,
+			"How much magick the Domain holds on average: 0 none at all, a flat inert byte; "
+			+ "a few hundredths only the crowns of the strongest wells on dead ground; 1 a "
+			+ "Domain steeped in it. It thickens what the pattern draws and then cuts or "
+			+ "lifts the level it is read at; it never changes the pattern's kind or its "
+			+ "scale. The slider asks its mean along a square, so the middle of it is a "
+			+ "quarter of the full mean, not half.");
+
 		AddButton(rows, "All knobs to auto", AllKnobsAuto);
 
 		Heading(rows, "gates and crossings");

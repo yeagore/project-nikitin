@@ -42,6 +42,18 @@ public partial class GenerationAudit : Node
     /// </summary>
     [Export] public string Gallery { get; set; } = "";
 
+    /// <summary>
+    /// Directory for one contact sheet of the magick layer — every
+    /// <c>MagickPattern</c> down the page, <c>MagickSheetDensities</c> across it, one
+    /// island each — or empty for none. The two parameters of that layer are exactly
+    /// what a picture shows and a number does not.
+    /// </summary>
+    [Export] public string MagickSheet { get; set; } = "";
+
+    /// <summary>Comma-separated densities the magick sheet draws a column for.</summary>
+    [Export] public string MagickSheetDensities { get; set; } = "0,0.05,0.25,0.5,1";
+
+
     /// <summary>Comma-separated arrangements the gallery draws, or empty for all of them.</summary>
     [Export] public string GalleryShapes { get; set; } = "";
 
@@ -220,6 +232,8 @@ public partial class GenerationAudit : Node
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
                 case nameof(Gallery): Gallery = value; break;
+                case nameof(MagickSheet): MagickSheet = value; break;
+                case nameof(MagickSheetDensities): MagickSheetDensities = value; break;
                 case nameof(GalleryShapes): GalleryShapes = value; break;
                 case nameof(GallerySeeds): GallerySeeds = int.Parse(value); break;
                 case nameof(GallerySize): GallerySize = int.Parse(value); break;
@@ -258,6 +272,7 @@ public partial class GenerationAudit : Node
         if (ArrangementSheet.Length > 0) WriteArrangementSheet();
         if (KnobSheet.Length > 0) WriteKnobSheet();
         if (StageSheet.Length > 0) WriteStageSheet();
+        if (MagickSheet.Length > 0) WriteMagickSheet();
     }
 
     /// <summary>The last accepted headline numbers — a diff, not a test; AcceptBaseline rewrites it.</summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Godot;
 using static ProjectNikitin.Generation.Grid;
@@ -454,7 +454,7 @@ public static class IslandGenerator
         Passages.Find(data);
         Packed("roads", data);
         Habitat.Measure(seed, p, data);
-        Magicks.Measure(seed, data);
+        Magicks.Measure(seed, p, data);
         Packed("climate", data);
         Surfaces.Classify(seed, data);
         Names.Give(seed, data);
