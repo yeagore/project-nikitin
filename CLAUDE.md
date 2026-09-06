@@ -362,10 +362,11 @@ ratio, and the three supported footprints (the Ecumene page still says 16³–64
   [#3](https://github.com/yeagore/project-nikitin/pull/3) and
   [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
   stage is done and audited at all three footprints.
-- **The mesher**, branch `mesher` (from 2026-09-06): the chunked span-aware
-  renderer with colliders, drawing the main scene and the lab, with its bench
-  and the lab's cursor pick as the colliders' first reader. Built, measured and
-  checked; the performance question is answered.
+- **The mesher**, branch `mesher`, PR
+  [#6](https://github.com/yeagore/project-nikitin/pull/6): the chunked
+  span-aware renderer with colliders, drawing the main scene and the lab, with
+  its two benches and the lab's cursor pick as the colliders' first reader.
+  Built, measured and checked; the performance question is answered.
 - What comes after, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.
