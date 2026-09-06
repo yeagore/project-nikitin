@@ -29,6 +29,7 @@ Warmth = -1.0
 Wind = -1.0
 MagickPattern = 0
 MagickDensity = -1.0
+MagickLean = 0.4
 Crossings = 3
 EntryGate = 2
 EntryEdge = 0

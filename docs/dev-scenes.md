@@ -24,7 +24,8 @@ checksum, the audit and a collage can run at once.
 
 The preset leaves the eleven 0–1 knobs (relief, hilliness, mix, rivers, lakes,
 valleys, moisture, warmth, wind, overhangs, magick density) and the magick
-pattern on **Auto**, so every seed rolls its own;
+pattern on **Auto**, so every seed rolls its own; the magick lean is pinned at
+0.40, since it is a dial to look at rather than one to roll;
 a sweep that sets a knob pins it for every seed it builds, and the others still
 roll — the same way for every step of the sweep, since the roll is the seed's.
 
@@ -71,7 +72,11 @@ density** is how much magick the Domain holds on average, and 0 means none — t
 whole Domain inert, the view flat at the ramp's dark end. A few hundredths leaves
 only the crowns of the strongest wells standing on dead ground. It thickens what
 the pattern draws and then cuts or lifts the level the byte is read at, and never
-changes the pattern's kind or its scale. The reaction is the one stage that costs real time
+changes the pattern's kind or its scale. Its slider asks a bend, so the middle of
+it is a quarter of the full mean and not half. **Magick lean** is how far the land
+tilts the magick — 0 an even-handed reaction owing nothing to the ground under it,
+1 the furthest the pattern will take, and far up the tilt stops leaning the pattern
+and starts carrying it, so the motes smear into worms. 0.40 is the preset. The reaction is the one stage that costs real time
 on a rebuild — it is steps × cells, and the patterns run three to three and a
 half thousand steps.
 

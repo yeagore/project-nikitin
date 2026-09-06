@@ -131,9 +131,9 @@ under `scripts/generation/`, in the order they run:
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The eleven 0–1 knobs in `IslandParams` (relief, hilliness, mix,
-rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick
-density) accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
+**Auto knobs.** The twelve 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick density,
+magick lean) accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
 then rolls them from the seed before anything runs, and the values used are
 `IslandData.Settings`. `MagickPattern` is resolved there too, `Auto` picking one
 of the six evenly — it is a named point on the reaction's plane, not a number to

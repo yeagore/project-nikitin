@@ -602,6 +602,43 @@ exactly that way, and failed silently, since the fallback field is bit-identical
 to what the layer used to be. The threshold is read against the island's own
 noise range instead.
 
+**How fast each substance carries, and the ceiling on it.** The classical form has
+the producer diffusing at half the inhibitor, and the brief was to move both — the
+magick carrying further and the aether less far. Only one of those is free. The
+whole layer stands on Turing's condition, that the inhibitor outruns the producer,
+and the closer the two are the weaker the instability that makes any pattern at
+all. So the aether's own diffusion came down by 0.85 outright, which costs nothing
+but pattern size (and pattern size is bought back on the lattice), while the
+producer's share of it went up until the pattern said stop.
+
+It says stop earlier than the arithmetic suggests. At **0.65** the reaction still
+patterns, but not into a *kind*: motes, wells and veins come out as the same
+picture, three rows of the contact sheet identical, and the naming of six patterns
+is undone without a single one of them dying. At **0.72** there is no pattern left
+at all — the field is the shape the seeding grew into, wearing a soft gradient.
+**0.60** is the last setting where all six are still themselves, and it is what
+"the magick carries further" can honestly mean here. This is the second time the
+sheets were the only instrument that would have caught it: nothing had died, no
+fallback fired, the means were all in range, and the audit's own table of patch
+counts moved less than the eye did.
+
+**The density asks its mean along a bend.** Straight put too much magick on the
+middle of the slider — half of it covered half the Domain, when what reads best is
+a Domain with magickal country *in* it. Half the slider now asks a quarter of the
+full mean. The obvious curve is a plain square, which hits that middle point and
+keeps both ends, but it takes the bottom down with it: a density of 0.05 would ask
+half a byte, which is an inert Domain wearing a different name, and the low end had
+been built deliberately to give a handful of faint places rather than none. The
+cubic `(d + 2d³)/3` passes through the same three points and still asks three bytes
+at 0.05.
+
+**The lean became a knob** rather than a constant, because how far the land should
+tilt the magick is a matter of taste and the only way to settle it is to look at
+several. It maps 0 to the even-handed reaction and 1 to a lean of 0.3, which is
+past the sweet spot on purpose — the top of the slider is where the tilt stops
+leaning the pattern and starts carrying it, and the motes smear into worms. The
+preset sits at 0.4.
+
 **The pattern was a texture, and a texture is not a place.** At one reaction cell
 to one column the magick came out three to six cells a feature, which reads at any
 distance as the same faint speckle everywhere — there was no such thing as a

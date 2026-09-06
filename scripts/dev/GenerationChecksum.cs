@@ -68,6 +68,7 @@ public partial class GenerationChecksum : Node
             ("Radius", (p, v) => p.Radius = v * 24f),
             ("Moisture", (p, v) => p.Moisture = v), ("Warmth", (p, v) => p.Warmth = v),
             ("Wind", (p, v) => p.Wind = v), ("MagickDensity", (p, v) => p.MagickDensity = v),
+            ("MagickLean", (p, v) => p.MagickLean = v),
         };
         foreach (var (name, set) in floats)
             foreach (float v in new[] { 0f, 1f })

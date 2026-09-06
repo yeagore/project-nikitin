@@ -81,13 +81,15 @@ internal static class Magicks
     // rivers, which pulls the starving with it and sharpens the same slope.
 
     /// <summary>
-    /// How far the neighbourhood may lean, as a share of each neighbour's weight.
-    /// The weights are renormalised after leaning, so the stencil stays a weighted
-    /// average and the scheme stays as stable as the even-handed one; at 1 a cell
-    /// directly downhill would contribute nothing at all, which is a wall and not a
-    /// slope, so the lean is kept well under it.
+    /// The furthest the neighbourhood may lean, at a <see cref="IslandParams.MagickLean"/>
+    /// of 1, as a share of each neighbour's weight. The weights are renormalised
+    /// after leaning, so the stencil stays a weighted average and the scheme stays as
+    /// stable as the even-handed one; at 1 a cell directly downhill would contribute
+    /// nothing at all, which is a wall and not a slope, so the reach stops well under
+    /// it. Past about a third the lean stops tilting the pattern and starts carrying
+    /// it: the motes smear into worms and the wells collapse to a streak.
     /// </summary>
-    private const float Lean = 0.12f;
+    private const float LeanMost = 0.3f;
 
     /// <summary>
     /// What the leaning is made of, before it is capped at a unit vector: the fall
@@ -149,11 +151,30 @@ internal static class Magicks
     };
 
     /// <summary>
-    /// The producer's diffusion, as a fraction of the inhibitor's. Never 1: the
-    /// inhibitor must outrun the producer or there is no Turing instability and the
-    /// field settles flat, so this is a share and not a figure of its own.
+    /// The producer's diffusion, as a fraction of the inhibitor's. <b>Never 1</b>:
+    /// the inhibitor must outrun the producer or there is no Turing instability and
+    /// the field settles flat, so this is a share and not a figure of its own, and
+    /// the whole layer lives or dies on it being under one.
+    ///
+    /// <para>It is as high as the pattern will take, and the ceiling was measured
+    /// rather than reasoned: at 0.65 the instability is too weak to hold a kind, and
+    /// motes, wells and veins come out as the same picture — the six named patterns
+    /// collapse into one. At 0.72 there is no pattern left at all, only the shape the
+    /// seeding grew into. 0.60 is the last setting where all six are still
+    /// themselves, and it is what "the magick carries further and the aether less
+    /// far" can honestly mean inside a reaction that only patterns while the aether
+    /// still outruns it.</para>
     /// </summary>
-    private const float ProducerShare = 0.5f;
+    private const float ProducerShare = 0.60f;
+
+    /// <summary>
+    /// A scale on every recipe's <see cref="Recipe.Spread"/>, which is the aether's.
+    /// Under one it makes the consuming substance carry less far in its own right,
+    /// rather than only relative to the magick. Both diffusions shrink the pattern
+    /// as they fall, so this is paid for in <see cref="Coarse"/> and not in the
+    /// pattern's size on the ground.
+    /// </summary>
+    private const float ConsumerShare = 0.85f;
 
     /// <summary>Scale on the autocatalytic term; 1 is the classical form, and every recipe is quoted against it.</summary>
     private const float Reproduction = 1f;
@@ -169,6 +190,23 @@ internal static class Magicks
     /// is done here, on the way out, and not asked of the reaction.
     /// </summary>
     private const float MeanFull = 0.72f;
+
+    /// <summary>
+    /// The curve the density asks its mean along, <c>(d + 2d³) / 3</c>, before
+    /// <see cref="MeanFull"/> scales it. Bent and not straight, so that the middle of
+    /// the slider is a Domain with magickal country in it rather than one mostly
+    /// covered: half the slider asks a quarter of the full mean, which is where the
+    /// layer reads best.
+    ///
+    /// <para>A plain square would put that quarter at the halfway point too, and it
+    /// is the obvious curve, but it takes the bottom of the slider down with it — a
+    /// density of 0.05 would ask half a byte, which is an inert Domain wearing a
+    /// different name. This cubic is the flattest curve through all three points that
+    /// matter: nothing at 0, a quarter of the mean at a half, everything at 1, and
+    /// still three bytes at 0.05, which is a handful of faint places rather than
+    /// none.</para>
+    /// </summary>
+    private static float Filling(float density) => (density + 2f * density * density * density) / 3f;
 
     /// <summary>
     /// The strongest lift the level may apply, as the exponent of its power curve.
@@ -315,9 +353,10 @@ internal static class Magicks
         // pattern and not merely a brighter one. The reach is small enough that the
         // pattern thickens rather than turning into the next one along.
         float removal = how.Removal + how.Reach * (1f - 2f * density);
-        float spreadU = how.Spread;
+        float spreadU = how.Spread * ConsumerShare;
         var (leanX, leanZ) = Leanings(d, at, cells, cn, height, wet, flow);
-        var (toward, against) = Stencils(leanX, leanZ, cells);
+        var (toward, against) = Stencils(leanX, leanZ, cells,
+                                         LeanMost * Mathf.Clamp(p.MagickLean, 0f, 1f));
         (u, v) = React(u, v, near, toward, against, cells, how.Steps,
                        spreadU, spreadU * ProducerShare, how.Supply, removal);
 
@@ -468,7 +507,8 @@ internal static class Magicks
     /// and read every step, which is why they are stencils and not a dot product in
     /// the inner loop.</para>
     /// </summary>
-    private static (float[] Toward, float[] Against) Stencils(float[] leanX, float[] leanZ, int cells)
+    private static (float[] Toward, float[] Against) Stencils(
+        float[] leanX, float[] leanZ, int cells, float lean)
     {
         var toward = new float[cells * 8];
         var against = new float[cells * 8];
@@ -499,8 +539,8 @@ internal static class Magicks
                 // draw magick *down* off the hill. To carry a substance up the leaning,
                 // the cell must draw it from the low side - so the stencil that climbs
                 // is the one that leans away.
-                toward[b + k] = weight * (1f - Lean * with);
-                against[b + k] = weight * (1f + Lean * with);
+                toward[b + k] = weight * (1f - lean * with);
+                against[b + k] = weight * (1f + lean * with);
                 sumT += toward[b + k];
                 sumA += against[b + k];
             }
@@ -631,7 +671,7 @@ internal static class Magicks
     /// </summary>
     private static void Paint(float[] field, IslandData d, float density)
     {
-        float target = MeanFull * density;
+        float target = MeanFull * Filling(density);
         if (target <= 0f) return;       // Magick starts zeroed: an inert Domain is already written.
 
         int n = d.Size;

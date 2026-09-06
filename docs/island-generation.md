@@ -566,8 +566,14 @@ one `Recipe` each, as `MagickPattern`:
 | `Lace` | 0.024 | 0.0530 | 0.11 | 3500 | An open fine-strutted net with inert cells caught in its mesh |
 | `Hollows` | 0.030 | 0.0556 | 0.17 | 3000 | The inverse: saturated, with inert hollows punched through it |
 
-Dᵥ is half Dᵤ throughout, so Turing's condition holds at every recipe, and ρ is
-1, the classical form. Dᵤ is what sets the *scale* — how far apart two wells can
+Dᵥ is **0.60 of** Dᵤ throughout, and every recipe's Dᵤ is scaled by 0.85 — the
+magick carries further and the aether less far than the classical form has them.
+That 0.60 is a ceiling and it was measured, not chosen: Turing's condition is that
+the inhibitor outruns the producer, and the closer the two get the weaker the
+instability. At 0.65 it is too weak to hold a *kind*, and motes, wells and veins
+come out as the same picture — the six named patterns collapse into one. At 0.72
+there is no pattern left at all, only the shape the seeding grew into. 0.60 is the
+last setting where all six are still themselves. ρ is 1, the classical form. Dᵤ is what sets the *scale* — how far apart two wells can
 stand and still starve each other — which is why lace and motes are quoted at a
 smaller one rather than at a different F. The step counts are what each regime
 needs to grow out of the sown patches and cover the island; the slower-growing
@@ -585,13 +591,22 @@ neither of them changes what the pattern is.
    way thickens the pattern is not the same at every feed, and at the low feed
    the motes sit at it is the other way about.
 2. **On the byte**, it puts the settled field through a one-parameter level curve
-   until the island's mean magick lands on `density × 0.72` of the byte. The
+   until the island's mean magick lands on `0.72 × (d + 2d³) / 3`. The
    level is found by halving through a 512-bin histogram, so the search costs
    bins and not land, and the curve is monotone in both the field and the level,
    so the pattern is emptied, thinned or fattened and never rearranged — nowhere
    becomes more magickal than a place that outranked it.
 
-The level curve has a cut at one end and a lift at the other, meeting at the
+The mean is asked along a bend and not a straight line, because straight put too
+much magick on the middle of the slider — half of it covered half the Domain. The
+cubic `(d + 2d³)/3` is the flattest curve through the three points that matter:
+nothing at 0, **a quarter** of the full mean at a half, everything at 1. A plain
+square hits that middle point too and is the obvious choice, but it drags the
+bottom of the slider down with it — a density of 0.05 would ask half a byte, which
+is an inert Domain wearing a different name. The cubic still asks three bytes
+there, which is a handful of faint places.
+
+The level curve itself has a cut at one end and a lift at the other, meeting at the
 identity:
 
 | Level | Curve | What it does |
@@ -665,9 +680,13 @@ It is done as a **stencil, not a drift term**: the nine-point weights are scaled
 how far each neighbour lies with the leaning or against it, then renormalised so
 the eight still sum to one. Renormalising is what keeps it a weighted average of
 the neighbourhood rather than a source or a drain, so the substance is carried and
-never made, and explicit Euler stays exactly as stable as it was even-handed. The
-lean is 0.12 of each neighbour's weight; the three terms are quoted 1.0 slope,
-0.3 wind, 0.9 channel.
+never made, and explicit Euler stays exactly as stable as it was even-handed. How far
+it leans is `MagickLean`, a knob like the rest: 0 is the even-handed
+reaction that owes nothing to the ground under it, 1 is 0.3 of each neighbour's
+weight. The three terms are quoted 1.0 slope, 0.3 wind, 0.9 channel. The top of
+the slider is deliberately past the sweet spot — far up, the tilt stops leaning
+the pattern and starts carrying it, and the motes smear into worms — so the preset
+sits at 0.4.
 
 Two traps, both of which the audit caught rather than the eye:
 
