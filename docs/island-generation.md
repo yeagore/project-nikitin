@@ -550,31 +550,82 @@ island's own range and not a fixed level because a small landmass can sit
 entirely under a fixed one, in which case nothing is sown and there is no
 reaction to run.
 
-**Six knobs** on `IslandParams` steer it, all Auto like the rest: `MagickSupply`
-(the feed F), `MagickDecay` (the removal k), `MagickInhibitorSpread` and
-`MagickProducerSpread` (the two diffusions), `MagickReproduction` (the
-autocatalytic rate ρ) and `MagickSettling` (400 to 2600 steps). They are mapped
-onto the *live band* of the reaction and not onto its raw coefficients, because
-almost all of the rectangle around that band is a dead field or a full one:
+**Two parameters** are all the layer shows, and neither of them is a coefficient
+of the reaction. The settings that pattern at all are islands in a sea of dead
+and flooded ones; which island you are standing on decides the *kind* of thing
+the Domain grows rather than its degree, and sliding between two of them mostly
+passes through country that grows nothing. So the interesting points are named,
+one `Recipe` each, as `MagickPattern`:
 
-| Mapped | How |
-|---|---|
-| `MagickSupply` | F over 0.014 … 0.060 |
-| `MagickDecay` | k as a **multiple of the saddle-node curve** `√(ρF)/2 − F` — the line under which the reaction has a second, live steady state. The multiple runs 1 ± a reach, and the reach itself narrows from 0.075 at no supply to 0.035 at full supply, because the live band round the curve tightens as the feed rises: a width that suits a starved Domain kills a well-fed one outright. Expressing k relative to the curve is what lets the supply knob range over the whole feed axis without walking out of the band |
-| `MagickInhibitorSpread` | Dᵤ over 0.14 … 0.21, which is the pattern's scale: how far apart two wells can stand and still starve each other |
-| `MagickProducerSpread` | Dᵥ as 0.40 … 0.55 **of** Dᵤ. Relative, never absolute and never 1, so Turing's condition holds at every setting |
-| `MagickReproduction` | ρ over 0.85 … 1.20, and it moves the saddle-node curve with it, so the decay ceiling is computed from the ρ actually used |
-| `MagickSettling` | 400 … 2600 steps. The one stage whose cost is steps × cells: about 58 ms an island, which is most of what the reaction costs |
+| Pattern | F | k | Dᵤ | Steps | What it looks like |
+|---|---|---|---|---|---|
+| `Motes` | 0.018 | 0.0530 | 0.14 | 3500 | A fine dusting of points, a few cells each, hundreds of them |
+| `Wells` | 0.030 | 0.0610 | 0.21 | 3500 | Round wells standing well apart, each a landmark |
+| `Veins` | 0.030 | 0.0590 | 0.17 | 3500 | Worms winding across the country, mostly unjoined |
+| `Labyrinth` | 0.030 | 0.0570 | 0.17 | 3000 | The veins joined into one convoluted corridor with inert walls |
+| `Lace` | 0.024 | 0.0530 | 0.11 | 3500 | An open fine-strutted net with inert cells caught in its mesh |
+| `Hollows` | 0.030 | 0.0556 | 0.17 | 3000 | The inverse: saturated, with inert hollows punched through it |
 
-The producer rarely uses more than a third of 0–1, so the finished field is
-stretched to the island's own range before it becomes the byte. If it comes back
-with no peak (`< 0.05`, the reaction died) or no range under the peak
-(`< 0.02`, it flooded), the layer **falls back** to the seeding field alone,
-tanh-stretched — the soft waves the layer used to be. Numerical residue stretched
-over a byte would be drawn as if it were country, so the two tests catch both
-failures rather than only the dead one. Across sixty Auto seeds and every knob
-swept end to end, the fallback does not currently fire; it is there because the
-band is tuned, not proved.
+Dᵥ is half Dᵤ throughout, so Turing's condition holds at every recipe, and ρ is
+1, the classical form. Dᵤ is what sets the *scale* — how far apart two wells can
+stand and still starve each other — which is why lace and motes are quoted at a
+smaller one rather than at a different F. The step counts are what each regime
+needs to grow out of the sown patches and cover the island; the slower-growing
+kinds are given longer rather than left half-finished, and the reaction is still
+the one stage whose cost is steps × cells.
+
+`MagickDensity` is the other parameter: how much magick the Domain holds on
+average, **0 meaning none at all**, Auto like the rest. It does two things and
+neither of them changes what the pattern is.
+
+1. **In the reaction**, it walks k along the pattern's own band, `k ± reach`, so
+   that a denser Domain grows a genuinely thicker pattern rather than a brighter
+   one. The reach is a half-thousandth to a thousandth, quoted per pattern
+   because the live band round each point is that narrow, and **signed**: which
+   way thickens the pattern is not the same at every feed, and at the low feed
+   the motes sit at it is the other way about.
+2. **On the byte**, it puts the settled field through a one-parameter level curve
+   until the island's mean magick lands on `density × 0.72` of the byte. The
+   level is found by halving through a 512-bin histogram, so the search costs
+   bins and not land, and the curve is monotone in both the field and the level,
+   so the pattern is emptied, thinned or fattened and never rearranged — nowhere
+   becomes more magickal than a place that outranked it.
+
+The level curve has a cut at one end and a lift at the other, meeting at the
+identity:
+
+| Level | Curve | What it does |
+|---|---|---|
+| 0 | everything to nothing | An inert Domain, a flat zero byte |
+| 0 … 1 | `clamp((t − (1 − level)) / level)` | **Cuts**: what is under the cut goes to nothing, what is over it is stretched back over the byte |
+| 1 | `t` | The pattern as the reaction left it |
+| 1 … 2 | `t^g`, g falling 1 → 0.15 | **Lifts**: the ground between the pattern's arms comes up |
+
+The cut is the half that matters, and it is why the emptying is done here rather
+than asked of the reaction. **A Turing reaction cannot give you nothing.** The
+producer is always somewhere, and a pattern rescaled to its own range fills the
+byte however little of it there was, so a Domain with no magick in it has to be
+made by subtracting a level. At a density of 0 the cut takes everything; just
+above it, only the crowns of the strongest wells stand above the cut, which reads
+as a handful of small bright places on dead ground rather than as a dim wash over
+the whole island. Where the lift runs into its bound at the other end the Domain
+comes out a little short of the mean asked for, which beats drawing the numerical
+difference between two inert cells as if it were country.
+
+The producer never uses more than a third of 0–1, so the finished field is
+stretched to the island's own range before the level. If it comes back with no
+peak (`< 0.05`, the reaction died) or no range under the peak (`< 0.02`, it
+flooded), the layer **falls back** to the seeding field alone, tanh-stretched —
+the soft waves the layer used to be — and the density's level is applied to that
+instead, so the byte is never a flat mid-grey (a density of 0 still empties it,
+as it empties everything). Numerical residue stretched over a byte would
+be drawn as if it were country, so the two tests catch both failures rather than
+only the dead one. The audit's magick table sweeps all six patterns at four
+densities, 0 and 0.05 among them and reports the mean, the saturated share, and how many separate
+saturated patches and inert holes each leaves: the mean is the density's claim
+and climbs down every column, the patch counts are the pattern's claim and tell
+the six apart, and a pattern that has quietly become the next one along, or
+fallen back, shows up there.
 
 Nothing reads the byte yet. What the Magicks system makes of it is design to
 come; the byte exists so the lab, the audit and the collages carry it from the

@@ -336,6 +336,81 @@ public partial class GenerationAudit
         GD.Print($"field maps: {wrote} written to {FieldMaps}");
     }
 
+    /// <summary>
+    /// One sheet of the whole magick layer: every <see cref="MagickPattern"/> down the
+    /// page at one seed, the densities of <c>MagickSheetDensities</c> across it, each
+    /// tile the magick byte on its own ramp with the land's outline under it. The two
+    /// parameters of the layer are exactly the thing a picture settles and a mean does
+    /// not — whether a pattern is still that pattern at another density, and what
+    /// "hardly any magick" actually looks like on the ground.
+    /// </summary>
+    private void WriteMagickSheet()
+    {
+        DirAccess.MakeDirRecursiveAbsolute(MagickSheet);
+        float[] densities = MagickSheetDensities.Split(',')
+            .Select(s => float.Parse(s.Trim(), System.Globalization.CultureInfo.InvariantCulture))
+            .ToArray();
+        MagickPattern[] kinds = Enum.GetValues<MagickPattern>()
+            .Where(k => k != MagickPattern.Auto).ToArray();
+
+        const int scale = 2, gap = 6, font = 2;
+        int n = Params.Size > 0 ? Params.Size : 96;
+        int tile = n * scale;
+        int label = TinyFont.Width("labyrinth", font) + 10;   // the widest pattern name
+        int caption = TinyFont.Height(font) + 6;
+        int titleH = TinyFont.Height(3) + 8;
+        int width = gap + label + densities.Length * (tile + gap);
+        int height = titleH + gap + caption + kinds.Length * (tile + gap);
+
+        var sheet = Image.CreateEmpty(width, height, false, Image.Format.Rgb8);
+        sheet.Fill(new Color(0.12f, 0.12f, 0.14f));
+        var ink = new Color(0.9f, 0.9f, 0.85f);
+        TinyFont.Draw(sheet, $"MAGICK {n} SEED {FirstSeed}", gap, 4, 3, ink);
+
+        for (int c = 0; c < densities.Length; c++)
+            TinyFont.Draw(sheet, $"density {densities[c]:0.00}",
+                          gap + label + c * (tile + gap), titleH + gap, font, ink);
+
+        for (int r = 0; r < kinds.Length; r++)
+        {
+            int pz = titleH + gap + caption + r * (tile + gap);
+            TinyFont.Draw(sheet, kinds[r].ToString().ToLowerInvariant(),
+                          gap, pz + tile / 2, font, ink);
+
+            for (int c = 0; c < densities.Length; c++)
+            {
+                IslandParams p = Variant(q =>
+                {
+                    q.MagickPattern = kinds[r];
+                    q.MagickDensity = densities[c];
+                    q.Size = n;
+                });
+                IslandData d = IslandGenerator.Generate(FirstSeed, p);
+                Image img = MagickPortrait(d);
+                img.Resize(tile, tile, Image.Interpolation.Nearest);
+                sheet.BlitRect(img, new Rect2I(0, 0, tile, tile),
+                               new Vector2I(gap + label + c * (tile + gap), pz));
+            }
+        }
+
+        sheet.SavePng($"{MagickSheet}/magick_{n}_{FirstSeed}.png");
+        GD.Print($"magick sheet: {kinds.Length} x {densities.Length} islands "
+            + $"written to {MagickSheet}/magick_{n}_{FirstSeed}.png");
+    }
+
+    /// <summary>One island's magick byte on the lab's own ramp, the aether around it.</summary>
+    private static Image MagickPortrait(IslandData d)
+    {
+        int n = d.Size;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgb8);
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+            img.SetPixel(x, z, d.HasLand(x, z)
+                ? DevPalette.MagickRamp.Lo.Lerp(DevPalette.MagickRamp.Hi, d.Magick[x, z] / 255f)
+                : DevPalette.Aether);
+        return img;
+    }
+
     /// <summary>The six habitat axes and the magick layer as two-colour ramps side by side; rim distance clamps at 40 cells, water distance at 60.</summary>
     private static void SaveHabitat(IslandData d, string path)
     {

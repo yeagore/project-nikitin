@@ -126,57 +126,30 @@ public partial class IslandParams : Resource
     // The magickal density layer is grown by a Turing reaction: a producer that
     // makes more of itself where there is already some, and an inhibitor it
     // consumes, replenished everywhere and spreading faster than the producer.
-    // The knobs below are mapped onto the live band of that reaction, not onto
-    // its raw coefficients, so that every setting patterns rather than dying flat
-    // or flooding; see the Magicks class for the mapping. All are Auto-able.
+    // Its six coefficients are not knobs. What a Domain's magick looks like is a
+    // matter of where on the reaction's plane it sits, and the interesting points
+    // there are islands in a sea of dead and flooded settings, so they are named
+    // rather than interpolated: the pattern below picks one, and the density says
+    // how much magick the Domain ends up holding. See the Magicks class.
 
     /// <summary>
-    /// How far the producer — the magick itself — creeps per step, read as a
-    /// fraction of how far the inhibitor goes. Low makes small, tight, sharply
-    /// bounded wells; high makes broad soft ones. It can never reach the
-    /// inhibitor's spread: Turing's condition is that the inhibitor outruns the
-    /// producer, and a field where it does not settles flat. Auto rolls it per seed.
+    /// The shape the magick settles into: motes, wells, veins, a labyrinth, lace,
+    /// or a saturated Domain with inert hollows in it. <c>Auto</c> picks one per
+    /// seed, evenly.
     /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickProducerSpread { get; set; } = Auto;
+    [Export] public MagickPattern MagickPattern { get; set; } = MagickPattern.Auto;
 
     /// <summary>
-    /// How far the inhibitor carries per step: the scale of the whole pattern, since
-    /// it sets how far apart two wells of magick can stand and still starve each
-    /// other. Low gives a fine lace, high a coarse one. Auto rolls it per seed.
+    /// How much magick the Domain holds on average: <b>0 is none at all</b>, an
+    /// inert Domain with a flat zero byte; a few hundredths leaves only the crowns
+    /// of the strongest wells standing on dead ground; 1 is a Domain steeped in it.
+    /// It does not change the pattern's kind or its scale — it thickens or thins
+    /// what the pattern draws, and then cuts or lifts the level the byte is read at,
+    /// so the island's mean magick tracks the knob. The zero is done on the way out
+    /// and not asked of the reaction, which always leaves producer somewhere. Auto
+    /// rolls it per seed.
     /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickInhibitorSpread { get; set; } = Auto;
-
-    /// <summary>
-    /// How fast the producer makes more of itself out of the inhibitor: the
-    /// autocatalytic rate. It decides how hard the pattern's edges are — slow
-    /// reproduction blurs the boundary between saturated and inert. Auto rolls it per seed.
-    /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickReproduction { get; set; } = Auto;
-
-    /// <summary>
-    /// How fast the inhibitor is replenished — the reaction's feed. With
-    /// <see cref="MagickDecay"/> it picks the pattern's <em>kind</em>: scattered
-    /// spots, worms, a maze, a saturated field with inert holes punched through it.
-    /// This is the knob that changes what a Domain's magick looks like, rather than
-    /// its size. Auto rolls it per seed.
-    /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickSupply { get; set; } = Auto;
-
-    /// <summary>
-    /// How fast the producer is removed, as a fraction of the rate above which the
-    /// reaction has no pattern to settle into at all. Low floods the island with
-    /// magick, high starves it back to scattered points; the whole 0–1 stays inside
-    /// the live band. Auto rolls it per seed.
-    /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickDecay { get; set; } = Auto;
-
-    /// <summary>
-    /// How long the reaction is left to run, 400 steps to 2600. A young pattern still
-    /// shows the patches it was seeded from; a settled one has forgotten them. The
-    /// most expensive knob in the generator — the reaction is the one stage whose
-    /// cost is steps × cells. Auto rolls it per seed.
-    /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickSettling { get; set; } = Auto;
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickDensity { get; set; } = Auto;
 
     // ---- crossings ----------------------------------------------------------
 

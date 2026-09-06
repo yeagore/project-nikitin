@@ -544,9 +544,37 @@ Two corrections followed from measuring rather than reasoning:
   0.075 at no supply to 0.035 at full, and the top of the feed axis was pulled
   back from 0.070 to 0.060 for the last two.
 
-Across sixty Auto seeds and all six knobs swept end to end, nothing now falls
-back, every sweep is monotone in coverage, and the saturated share of a Domain
-runs from 2% to 86%.
+Across sixty Auto seeds and all six knobs swept end to end, nothing fell back,
+every sweep was monotone in coverage, and the saturated share of a Domain ran
+from 2% to 86%.
+
+**And then the knobs went away.** Two faults survived all that tuning. The band
+is not a rectangle, so a slider that stayed inside it at one setting of its
+neighbours walked out at another, and the six were only jointly safe because the
+mapping kept narrowing each of them until it barely moved anything. Worse, the
+axis that actually mattered — what *kind* of magickal place a Domain is — was not
+any one slider but a corner of the joint space, so nobody could ask for a maze;
+they could only roll seeds until one came up. The six settings that pattern
+best are now named recipes (`MagickPattern`), found by sweeping F × k at three
+diffusions and looking at the result as ASCII: `Motes`, `Wells`, `Veins`,
+`Labyrinth`, `Lace`, `Hollows`. What is left as a number is the one thing that
+*is* a quantity — `MagickDensity`, how much magick the Domain holds — and it acts
+in two places, walking k a half-thousandth along the recipe's own band so the
+pattern genuinely thickens, then putting the settled field through a level curve
+so the mean lands where it was asked.
+
+That level curve started as a power bend alone, `tᵍ`, and the bend has no zero in
+it: at the bottom of the density the island still averaged 30 of 255, which is
+not "hardly any magick", it is a dim wash over everything. The fault is not the
+bend but the model — **a Turing reaction cannot give you nothing.** The producer
+is always somewhere, and the finished field is rescaled to its own range, so
+however faint the pattern the byte comes out full. Emptying a Domain therefore
+has to happen on the way out. The curve now cuts below the identity and lifts
+above it: a cut subtracts a level and stretches what survives, so a density of 0
+is an inert Domain and a density of a few hundredths is a handful of small bright
+places on dead ground, which is the right reading of "barely any" — magick is
+scarce, not everywhere and weak. The audit's magick table is the check: over all six
+patterns at three densities the mean tracks the knob, and no row falls back.
 
 **The seeding is relative.** The producer starts in the cells above a fixed
 level of a noise field — and a small landmass can sit entirely under a fixed
@@ -563,10 +591,13 @@ is what the boundary condition does. It was left alone because `RimDistance`
 already makes the rim the Domain's strange edge and essencecoral country, so
 magick pooling there reads as intent rather than as an artefact.
 
-**What it costs.** The reaction is the one stage whose cost is steps × cells:
-the checksum's 446 islands went from 38 to 64 seconds, about 58 ms an island.
-That is cheap enough that the settling knob was left at a full 400–2600 steps
-rather than trimmed.
+**What it costs.** The reaction is the one stage whose cost is steps × cells.
+Under the six knobs, at 400–2600 steps, the checksum's 446 islands went from 38
+to 64 seconds, about 58 ms an island. The named recipes run longer — 3000 to
+3500 steps, which is what each regime needs to grow out of the sown patches and
+cover the island rather than be caught half-finished — and the checksum's 456
+islands now take 142 seconds. It is still the cheap end of the pipeline, and
+being able to name the pattern is worth the seconds.
 
 ## C. Tried and removed
 
@@ -592,6 +623,7 @@ rather than trimmed.
 | **A two-cell-wide fall sheet** | Centred on one cell, half of it poured out of solid rock. Each cell of a navigable pair emits its own sheet. |
 | **Overhangs anywhere with an 8-slab face** | A lip off a two-cell karst tower reads as a hole punched through it. Undercuts need backing. |
 | **Magick as a noise field** | Two octaves of warped simplex through a tanh. Its knobs could only move and resize blobs; a Domain could not be a different *kind* of magickal place. Replaced by the Turing reaction (§B). |
+| **Six knobs on the reaction** | Feed, removal, the two diffusions, the autocatalytic rate and the settling, each a 0–1 slider mapped onto the live band. Two faults. The band is not a rectangle, so a slider that stays inside it at one setting of its neighbours walks out at another, and the knobs were only jointly safe because the mapping kept narrowing them. And the axis that mattered — what *kind* of place a Domain is — was not any one slider but a corner of the joint space, so no one could ask for a maze. Replaced by six named recipes (`MagickPattern`) and one density (§B). |
 | **k as a fraction under the saddle-node curve** | 0.86–0.99 of `√F/2 − F`, on the reasoning that patterns need the second steady state to exist. That whole range floods: at the middle of every knob the producer covered 99.9% of the land. The band straddles the curve, so k is a multiple of it centred on 1. |
 | **Streams fordable everywhere** | A watercourse that costs nothing to cross anywhere is a line on the map, and roads walked down the bed. The crossing is now a place. |
 | **A berth wherever the domino fits** | Thousands per audit, nearly all on water you could walk round. Berths are pruned against a ferry-less reach flood. |

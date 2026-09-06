@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
@@ -19,11 +19,10 @@ public partial class IslandLab
 	private PanelContainer _panel = null!;
 	private OptionButton _viewPick = null!, _arrangePick = null!, _characterPick = null!;
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
-	private OptionButton _exitKind = null!;
+	private OptionButton _exitKind = null!, _magickPattern = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
-	private HSlider _magickSupply = null!, _magickDecay = null!, _magickSettling = null!;
-	private HSlider _magickProducer = null!, _magickInhibitor = null!, _magickReproduction = null!;
+	private HSlider _magickDensity = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
@@ -204,40 +203,18 @@ public partial class IslandLab
 			+ "0.5 the nominal rain shadow, milder lee and damp gorge floors; 1 twice them. "
 			+ "The exposure view itself is geometry and does not move.");
 		Heading(rows, "magicks");
-		_magickSupply = Slide(rows, "Inhibitor supply", 0f, 1f, 0.05f,
-			() => Params.MagickSupply, v => Params.MagickSupply = v, q => q.MagickSupply,
-			"How fast the inhibitor the magick feeds on is replenished. With the decay "
-			+ "below it picks the pattern's kind rather than its size: scattered wells, "
-			+ "worms, a maze, or a saturated Domain with inert holes punched through it. "
-			+ "Watch it on the magick view (C).");
-		_magickDecay = Slide(rows, "Producer decay", 0f, 1f, 0.05f,
-			() => Params.MagickDecay, v => Params.MagickDecay = v, q => q.MagickDecay,
-			"How fast the magick is removed. Low floods the island with it, high starves "
-			+ "it back to scattered points; the whole slider stays inside the band where "
-			+ "the reaction patterns rather than dying flat or filling everything.");
-		_magickInhibitor = Slide(rows, "Inhibitor spread", 0f, 1f, 0.05f,
-			() => Params.MagickInhibitorSpread, v => Params.MagickInhibitorSpread = v,
-			q => q.MagickInhibitorSpread,
-			"How far the inhibitor carries: the scale of the whole pattern, since it sets "
-			+ "how far apart two wells of magick can stand and still starve each other. "
-			+ "Low is a fine lace, high a coarse one.");
-		_magickProducer = Slide(rows, "Producer spread", 0f, 1f, 0.05f,
-			() => Params.MagickProducerSpread, v => Params.MagickProducerSpread = v,
-			q => q.MagickProducerSpread,
-			"How far the magick itself creeps, read as a fraction of how far the inhibitor "
-			+ "goes. It can never reach it: Turing's condition is that the inhibitor "
-			+ "outruns the producer, and a field where it does not settles flat.");
-		_magickReproduction = Slide(rows, "Reproduction", 0f, 1f, 0.05f,
-			() => Params.MagickReproduction, v => Params.MagickReproduction = v,
-			q => q.MagickReproduction,
-			"How fast the magick makes more of itself out of the inhibitor. It decides how "
-			+ "hard the pattern's edges are: slow reproduction blurs the boundary between "
-			+ "saturated and inert.");
-		_magickSettling = Slide(rows, "Settling", 0f, 1f, 0.05f,
-			() => Params.MagickSettling, v => Params.MagickSettling = v, q => q.MagickSettling,
-			"How long the reaction is left to run, 400 steps to 2600. A young pattern still "
-			+ "shows the patches it was seeded from; a settled one has forgotten them. The "
-			+ "most expensive knob here — a rebuild at 128 is noticeably slower at 1.00.");
+		_magickPattern = Choice<MagickPattern>(rows, "Magick pattern",
+			() => Params.MagickPattern, v => Params.MagickPattern = v,
+			"The shape the magick grows into, on the magick view (C): motes, round wells, "
+			+ "winding veins, a labyrinth, an open lace, or a saturated Domain with inert "
+			+ "hollows in it. Each is a named point on the reaction's plane rather than a "
+			+ "setting between two others, and Auto picks one per seed.");
+		_magickDensity = Slide(rows, "Magick density", 0f, 1f, 0.05f,
+			() => Params.MagickDensity, v => Params.MagickDensity = v, q => q.MagickDensity,
+			"How much magick the Domain holds on average: 0 a nearly inert country with the "
+			+ "pattern barely showing, 1 one steeped in it. It thickens what the pattern "
+			+ "draws and then sets the level it is read at; it never changes the pattern's "
+			+ "kind or its scale.");
 
 		AddButton(rows, "All knobs to auto", AllKnobsAuto);
 

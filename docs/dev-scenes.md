@@ -22,10 +22,9 @@ Windows machine's locale prints decimals with a comma, which breaks patterns
 looking for `\.`; and the headless runs are independent processes, so the
 checksum, the audit and a collage can run at once.
 
-The preset leaves the sixteen 0–1 knobs (relief, hilliness, mix, rivers, lakes,
-valleys, moisture, warmth, wind, overhangs, and the six magicks knobs: supply,
-decay, inhibitor spread, producer spread, reproduction, settling) on **Auto**,
-so every seed rolls its own;
+The preset leaves the eleven 0–1 knobs (relief, hilliness, mix, rivers, lakes,
+valleys, moisture, warmth, wind, overhangs, magick density) and the magick
+pattern on **Auto**, so every seed rolls its own;
 a sweep that sets a knob pins it for every seed it builds, and the others still
 roll — the same way for every step of the sweep, since the roll is the seed's.
 
@@ -57,16 +56,24 @@ rolled and the caption says so (`Warmth   auto -> 0.71`), so the slider's
 position is always true to the island shown. Untick the box to keep that value
 and set it yourself; tick it again to hand the knob back to the seed, or press
 **All knobs to auto** for all of them at once. The readout's `settings:` line
-lists all sixteen over two lines, a star on each rolled one. **H** and **M** step
+lists them all over two lines, a star on each rolled one. **H** and **M** step
 their knob through auto, 0, 0.25 … 1.
 
-The six under **magicks** steer the Turing reaction the magick layer is grown by;
-watch them on the `magick` view (**C**). *Supply* and *decay* between them pick
-what kind of pattern it is — scattered wells, worms, a maze, a saturated Domain
-with inert holes in it — *inhibitor spread* its scale, *producer spread* and
-*reproduction* how hard its edges are, and *settling* how far it has got. Settling
-is the one slider that costs real time on a rebuild: it is steps × cells, about
-58 ms an island at 128² on average and roughly twice that at 1.00.
+The two under **magicks** are the whole of the layer the Turing reaction grows;
+watch them on the `magick` view (**C**). **Magick pattern** is what shape it
+takes — `motes` a fine dusting of points, `wells` round wells standing well
+apart, `veins` worms winding across the country, `labyrinth` those veins joined
+into one convoluted corridor, `lace` an open fine-strutted net, `hollows` the
+inverse, a saturated Domain with inert hollows punched through it. It is a
+dropdown and not a slider because each is a named point on the reaction's plane
+and the country between two of them mostly grows nothing at all. **Magick
+density** is how much magick the Domain holds on average, and 0 means none — the
+whole Domain inert, the view flat at the ramp's dark end. A few hundredths leaves
+only the crowns of the strongest wells standing on dead ground. It thickens what
+the pattern draws and then cuts or lifts the level the byte is read at, and never
+changes the pattern's kind or its scale. The reaction is the one stage that costs real time
+on a rebuild — it is steps × cells, and the patterns run three to three and a
+half thousand steps.
 
 The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
 one of the three footprints and the caption says which. **Goo may roll** is the
@@ -144,7 +151,9 @@ accept the current numbers as the new reference.
 The opt-in sweeps are `[Export]` flags on `GenerationAudit` (each documented on
 its property): silhouettes and waterways as ASCII, close-ups of the sculpted
 landforms, every arrangement × character, every Gate request, the four-hanging-
-Gates matrix, the knob sweeps (how you check a slider does anything), the
+Gates matrix, the knob sweeps (how you check a slider does anything, and where
+the magick table lives), one contact sheet of the magick layer — every pattern
+down the page, `MagickSheetDensities` across it, `MagickSheet=<dir>` — the
 material shares at the four climate corners (`Climate`), land share
 per arrangement, the guarantee set at all three sizes (`Sizes`, with the share of
 snow and how many mountainous islands carry any — the snow line has to exist at

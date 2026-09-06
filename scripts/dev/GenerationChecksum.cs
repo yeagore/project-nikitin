@@ -67,7 +67,7 @@ public partial class GenerationChecksum : Node
             ("KeelRoughness", (p, v) => p.KeelRoughness = v), ("OverhangDensity", (p, v) => p.OverhangDensity = v),
             ("Radius", (p, v) => p.Radius = v * 24f),
             ("Moisture", (p, v) => p.Moisture = v), ("Warmth", (p, v) => p.Warmth = v),
-            ("Wind", (p, v) => p.Wind = v),
+            ("Wind", (p, v) => p.Wind = v), ("MagickDensity", (p, v) => p.MagickDensity = v),
         };
         foreach (var (name, set) in floats)
             foreach (float v in new[] { 0f, 1f })
@@ -84,6 +84,12 @@ public partial class GenerationChecksum : Node
         foreach (var (name, lo, hi, set) in ints)
             foreach (int v in new[] { lo, hi })
                 for (int i = 0; i < 2; i++) Case($"{name}{v}", Seed(i + 5), At(64, p => set(p, v)));
+
+        // The magick pattern is the one parameter that is neither a knob nor a
+        // number: each recipe is its own reaction, so each is hashed.
+        foreach (MagickPattern kind in Enum.GetValues<MagickPattern>())
+            if (kind != MagickPattern.Auto)
+                Case($"magick{kind}", Seed(4), At(64, p => p.MagickPattern = kind));
 
         for (int i = 0; i < 4; i++) Case("oldArrangements", Seed(i + 7), At(96, p => p.NewArrangements = false));
         for (int i = 0; i < 4; i++) Case("oldLandforms", Seed(i + 7), At(96, p => p.NewLandforms = false));

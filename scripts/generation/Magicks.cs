@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Godot;
 
 namespace ProjectNikitin.Generation;
@@ -18,12 +18,16 @@ namespace ProjectNikitin.Generation;
 /// Gray–Scott form of the reaction, integrated with explicit Euler on the cell
 /// lattice, the coast a no-flux wall (the aether takes nothing away).</para>
 ///
-/// <para>Six knobs on <see cref="IslandParams"/> steer it, all Auto-able, and the
-/// interesting thing about the model is that they do not steer it smoothly: the
-/// pattern <em>kind</em> changes across the parameter plane, so consecutive seeds
-/// give a Domain of scattered magickal wells, one veined with filaments, or one
-/// almost saturated with inert holes punched through it. Nothing reads the byte
-/// yet; what the Magicks system makes of it is design to come.</para>
+/// <para>The reaction has six coefficients and <b>none of them is a knob</b>. The
+/// settings that pattern at all are islands in a sea of dead and flooded ones, and
+/// which island you are standing on decides the <em>kind</em> of thing the Domain
+/// grows rather than its degree; sliding between two of them mostly passes through
+/// country that grows nothing. So the interesting points are named instead —
+/// <see cref="MagickPattern"/>, one <see cref="Recipe"/> apiece — and the layer
+/// shows two parameters to the rest of the game: <b>which pattern</b>, and
+/// <see cref="IslandParams.MagickDensity"/>, <b>how much magick</b> the Domain ends
+/// up holding. Nothing reads the byte yet; what the Magicks system makes of it is
+/// design to come.</para>
 /// </summary>
 internal static class Magicks
 {
@@ -37,51 +41,78 @@ internal static class Magicks
     /// </summary>
     private const float Cardinal = 0.2f, Diagonal = 0.05f;
 
-    // ---- what the knobs map onto --------------------------------------------
-    // The live band of the Gray-Scott plane is narrow and oddly shaped, and most
-    // of the rectangle around it is a dead field (the producer dies out) or a
-    // full one (it fills everything). The knobs are therefore mapped onto the
-    // band rather than onto the raw coefficients, so that every Domain patterns.
-
-    /// <summary>How fast the inhibitor is replenished: Gray–Scott's feed rate F.</summary>
-    private const float SupplyLow = 0.014f, SupplyHigh = 0.060f;
+    // ---- the named points ---------------------------------------------------
 
     /// <summary>
-    /// The producer's removal rate k is set as a multiple of the saddle-node curve
-    /// <c>√(ρF) / 2 − F</c> — the line under which the reaction has a second, live
-    /// steady state, and which the reproduction rate ρ moves, so a slower
-    /// reproduction lowers it with itself. The pattern-forming band straddles that
-    /// line narrowly: well under it the producer floods the whole island, well over
-    /// it the producer dies out, and everything worth looking at is within a few
-    /// per cent either side. Expressing k as a multiple of the curve rather than
-    /// absolutely is what lets the supply knob range over the whole feed axis
-    /// without walking out of the band.
+    /// One place to stand on the Gray–Scott plane, and how long it takes to get
+    /// there. <paramref name="Supply"/> is the feed F, the rate the inhibitor is
+    /// replenished at. <paramref name="Removal"/> is k, the rate the producer is
+    /// taken off at over the feed. <paramref name="Reach"/> is how far the density
+    /// may walk k either side of that without the pattern changing kind — the live
+    /// band round each point is a thousandth or two wide, so the reach is quoted per
+    /// pattern; it is <b>signed</b>, because which way thickens the pattern is not
+    /// the same at every feed, and at the low feed the motes sit at it is the other
+    /// way about. <paramref name="Spread"/> is the inhibitor's diffusion Dᵤ, which
+    /// sets the pattern's <em>scale</em>: how far apart two wells of magick can
+    /// stand and still starve each other.
     /// </summary>
-    private const float DecayCentre = 1.0f;
+    private readonly record struct Recipe(float Supply, float Removal, float Reach, float Spread, int Steps);
 
     /// <summary>
-    /// How far either side of <see cref="DecayCentre"/> the decay knob reaches, at
-    /// no supply and at full supply. The band is not a fixed width: the faster the
-    /// inhibitor is fed the narrower the live band round the curve gets, and a
-    /// width that suits a starved Domain kills a well-fed one outright.
+    /// Where each pattern lives. The six were found by sweeping the plane and
+    /// looking: F and k pick the kind, Dᵤ the coarseness, and the step count is what
+    /// that regime needs to grow out from the sown patches and cover the island —
+    /// the slower-growing kinds are given longer rather than left half-finished.
     /// </summary>
-    private const float DecayReachLow = 0.075f, DecayReachHigh = 0.035f;
-
-    /// <summary>The inhibitor's diffusion. Bounded so that explicit Euler at dt = 1 stays stable.</summary>
-    private const float InhibitorLow = 0.14f, InhibitorHigh = 0.21f;
+    private static Recipe RecipeFor(MagickPattern pattern) => pattern switch
+    {
+        MagickPattern.Motes     => new Recipe(0.018f, 0.0530f, -0.0007f, 0.14f, 3500),
+        MagickPattern.Wells     => new Recipe(0.030f, 0.0610f,  0.0009f, 0.21f, 3500),
+        MagickPattern.Veins     => new Recipe(0.030f, 0.0590f,  0.0008f, 0.17f, 3500),
+        MagickPattern.Labyrinth => new Recipe(0.030f, 0.0570f,  0.0005f, 0.17f, 3000),
+        MagickPattern.Lace      => new Recipe(0.024f, 0.0530f,  0.0006f, 0.11f, 3500),
+        MagickPattern.Hollows   => new Recipe(0.030f, 0.0556f,  0.0005f, 0.17f, 3000),
+        _                       => new Recipe(0.030f, 0.0590f,  0.0008f, 0.17f, 3500),
+    };
 
     /// <summary>
     /// The producer's diffusion, as a fraction of the inhibitor's. Never 1: the
-    /// inhibitor must outrun the producer or there is no Turing instability and
-    /// the field settles flat, so this is expressed relative rather than absolute.
+    /// inhibitor must outrun the producer or there is no Turing instability and the
+    /// field settles flat, so this is a share and not a figure of its own.
     /// </summary>
-    private const float ProducerLow = 0.40f, ProducerHigh = 0.55f;
+    private const float ProducerShare = 0.5f;
 
-    /// <summary>Scale on the autocatalytic term. Kept near 1, which is the classical form.</summary>
-    private const float ReproductionLow = 0.85f, ReproductionHigh = 1.20f;
+    /// <summary>Scale on the autocatalytic term; 1 is the classical form, and every recipe is quoted against it.</summary>
+    private const float Reproduction = 1f;
 
-    /// <summary>Steps of the reaction. Too few and the seeding still shows through.</summary>
-    private const int SettleLow = 400, SettleHigh = 2600;
+    // ---- how much magick ----------------------------------------------------
+
+    /// <summary>
+    /// What <see cref="IslandParams.MagickDensity"/> asks the island's mean magick
+    /// to come to, as a share of the byte, at a density of 1; the ask runs down to a
+    /// flat 0, and 0 means <em>none</em>. A Turing reaction cannot give you that on
+    /// its own — the producer is always somewhere, and a pattern rescaled to its own
+    /// range always fills the byte however little of it there was — so the emptying
+    /// is done here, on the way out, and not asked of the reaction.
+    /// </summary>
+    private const float MeanFull = 0.72f;
+
+    /// <summary>
+    /// The strongest lift the level may apply, as the exponent of its power curve.
+    /// Past this the curve starts drawing the difference between two nearly inert
+    /// cells as if it were country.
+    /// </summary>
+    private const float LiftMost = 0.15f;
+
+    /// <summary>
+    /// The level's one parameter, over which the mean rises from nothing to
+    /// everything: 0 is an empty island, 1 the pattern as the reaction left it, and
+    /// <see cref="LevelMost"/> the hardest lift. See <see cref="Shape"/>.
+    /// </summary>
+    private const float LevelNone = 0f, LevelMost = 2f;
+
+    /// <summary>Bins the level's search reads the field through, and how many halvings it takes.</summary>
+    private const int LevelBins = 512, LevelSteps = 24;
 
     // ---- the seeding --------------------------------------------------------
 
@@ -105,13 +136,13 @@ internal static class Magicks
     private const float WarpAmplitude = 14f, WarpFrequency = 0.02f;
 
     /// <summary>
-    /// What the producer must have come to for the field to be worth stretching: a
-    /// peak this high, and a range this wide under it. A settled pattern peaks
-    /// around 0.3 with inert ground at 0 beneath it. Both tests are needed and both
-    /// catch a real failure — a reaction that died leaves no peak, and one that
-    /// flooded leaves a high peak with no range under it, whose residue stretched
-    /// over the byte would be numerical noise drawn as if it were country. Either
-    /// way the layer falls back to the seeding field, so the byte is never flat.
+    /// What the producer must have come to for the field to be worth reading as a
+    /// pattern: a peak this high, and a range this wide under it. A settled pattern
+    /// peaks around 0.3 with inert ground at 0 beneath it. Both tests are needed and
+    /// both catch a real failure — a reaction that died leaves no peak, and one that
+    /// flooded leaves a high peak with no range under it, whose residue spread over
+    /// the byte would be numerical noise drawn as if it were country. Either way the
+    /// layer falls back to the seeding field, so the byte is never flat.
     /// </summary>
     private const float LivePeak = 0.05f, LiveRange = 0.02f;
 
@@ -176,46 +207,48 @@ internal static class Magicks
             v[i] = sown ? SeedProducer : 0f;
         }
 
-        float supply = Lerp(SupplyLow, SupplyHigh, p.MagickSupply);
-        float reproduction = Lerp(ReproductionLow, ReproductionHigh, p.MagickReproduction);
-        float ceiling = MathF.Sqrt(reproduction * supply) * 0.5f - supply;
-        float reach = Lerp(DecayReachLow, DecayReachHigh, p.MagickSupply);
-        float decay = ceiling * (DecayCentre + reach * (2f * Mathf.Clamp(p.MagickDecay, 0f, 1f) - 1f));
-        float spreadU = Lerp(InhibitorLow, InhibitorHigh, p.MagickInhibitorSpread);
-        float spreadV = spreadU * Lerp(ProducerLow, ProducerHigh, p.MagickProducerSpread);
-        int steps = SettleLow
-                  + Mathf.RoundToInt((SettleHigh - SettleLow) * Mathf.Clamp(p.MagickSettling, 0f, 1f));
+        float density = Mathf.Clamp(p.MagickDensity, 0f, 1f);
+        Recipe how = RecipeFor(p.MagickPattern);
 
-        (u, v) = React(u, v, near, cells, steps, spreadU, spreadV, reproduction, supply, decay);
+        // The one thing the density does inside the reaction: walk the removal rate
+        // along the pattern's own band, so that a denser Domain grows a thicker
+        // pattern and not merely a brighter one. The reach is small enough that the
+        // pattern thickens rather than turning into the next one along.
+        float removal = how.Removal + how.Reach * (1f - 2f * density);
+        float spreadU = how.Spread;
+        (u, v) = React(u, v, near, cells, how.Steps,
+                       spreadU, spreadU * ProducerShare, how.Supply, removal);
 
-        // The producer rarely uses more than a third of 0–1, and how much it uses
-        // depends on the knobs; stretched to the island's own range, the byte reads
-        // as the pattern rather than as the settings.
         float lo = float.MaxValue, hi = float.MinValue;
         for (int i = 0; i < cells; i++)
         {
             lo = MathF.Min(lo, v[i]);
             hi = MathF.Max(hi, v[i]);
         }
-        if (hi < LivePeak || hi - lo < LiveRange)
-        {
-            Waves(seeding, d);
-            return;
-        }
 
-        float span = hi - lo;
-        for (int i = 0; i < cells; i++)
-            d.Magick[at[i] / n, at[i] % n] =
-                (byte)Mathf.Clamp(Mathf.RoundToInt((v[i] - lo) / span * 255f), 0, 255);
+        // The producer never uses more than a third of 0–1, and how much it uses
+        // depends on the recipe; stretched to the island's own range, the field
+        // reads as the pattern rather than as the settings. A dead or flooded
+        // reaction leaves the seeding field itself, tanh-stretched: soft waves,
+        // with nothing behind them, rather than a flat byte.
+        var field = new float[cells];
+        if (hi < LivePeak || hi - lo < LiveRange)
+            for (int i = 0; i < cells; i++)
+                field[i] = 0.5f + 0.5f * MathF.Tanh((sowing[i] - 0.5f) * FallbackStretch);
+        else
+            for (int i = 0; i < cells; i++)
+                field[i] = (v[i] - lo) / (hi - lo);
+
+        Paint(field, at, n, d, density);
     }
 
     /// <summary>
     /// The reaction itself, stepped with explicit Euler at dt = 1. The producer
     /// eats the inhibitor autocatalytically (<c>u v²</c>: it takes two of itself to
     /// make a third), the inhibitor is fed back toward 1 everywhere, and the
-    /// producer is removed at <paramref name="decay"/> over the feed. Both are held
-    /// in 0–1: the clamp never bites in the live band, and stops a knob pushed to
-    /// its edge from running away into infinities.
+    /// producer is taken off at <paramref name="removal"/> over the feed. Both are
+    /// held in 0–1: the clamp never bites at a named recipe, and stops a density
+    /// pushed to its edge from running away into infinities.
     ///
     /// <para>Each step reads one pair of fields and writes the other, so the two
     /// are swapped rather than copied; which pair the answer ends up in depends on
@@ -223,11 +256,11 @@ internal static class Magicks
     /// </summary>
     private static (float[] U, float[] V) React(
         float[] u, float[] v, int[] near, int cells, int steps,
-        float spreadU, float spreadV, float reproduction, float supply, float decay)
+        float spreadU, float spreadV, float supply, float removal)
     {
         var nextU = new float[cells];
         var nextV = new float[cells];
-        float removal = supply + decay;
+        float loss = supply + removal;
 
         for (int step = 0; step < steps; step++)
         {
@@ -244,9 +277,9 @@ internal static class Magicks
                 float lapV = (v[e] + v[s] + v[w] + v[nn]) * Cardinal
                            + (v[se] + v[sw] + v[nw] + v[ne]) * Diagonal - vi;
 
-                float reacted = reproduction * ui * vi * vi;
+                float reacted = Reproduction * ui * vi * vi;
                 nextU[i] = Math.Clamp(ui + spreadU * lapU - reacted + supply * (1f - ui), 0f, 1f);
-                nextV[i] = Math.Clamp(vi + spreadV * lapV + reacted - removal * vi, 0f, 1f);
+                nextV[i] = Math.Clamp(vi + spreadV * lapV + reacted - loss * vi, 0f, 1f);
             }
 
             (u, nextU) = (nextU, u);
@@ -257,21 +290,67 @@ internal static class Magicks
     }
 
     /// <summary>
-    /// What the layer was before the reaction, and what it falls back to when the
-    /// reaction leaves no contrast: the seeding field itself, stretched about its
-    /// middle so the byte uses most of its range. Soft waves, with nothing behind them.
+    /// The settled field, already stretched to 0–1, written out as the byte at the
+    /// level the density asked for. A Domain of scattered wells and one of hollows
+    /// draw their pattern at wildly different means, and the density is a promise
+    /// about how much magick the place holds, so the field is put through
+    /// <see cref="Shape"/> until its mean lands on <c>density × MeanFull</c>.
+    /// Halving finds the level through a histogram rather than through the cells, so
+    /// the search costs bins and not land.
+    ///
+    /// <para>The two ends are the point of the shape. Below 1 it <b>cuts</b>, and a
+    /// cut is the only thing that makes a real zero: the reaction always leaves
+    /// producer somewhere, and stretching what it left to the island's own range
+    /// fills the byte however faint the pattern was, so an empty Domain has to be
+    /// made by subtracting a level and not by asking the reaction for less. At a
+    /// density of 0 the cut takes everything and the island is inert; just above it,
+    /// only the crowns of the strongest wells stand above the cut, which reads as a
+    /// handful of small bright places on dead ground rather than as a dim wash.
+    /// Above 1 it lifts instead, which is what a Domain steeped in magick wants.</para>
     /// </summary>
-    private static void Waves(Noise seeding, IslandData d)
+    private static void Paint(float[] field, int[] at, int n, IslandData d, float density)
     {
-        int n = d.Size;
-        for (int x = 0; x < n; x++)
-        for (int z = 0; z < n; z++)
+        float target = MeanFull * density;
+        if (target <= 0f) return;       // Magick starts zeroed: an inert Domain is already written.
+
+        int cells = field.Length;
+        var bins = new int[LevelBins];
+        foreach (float t in field)
+            bins[Math.Clamp((int)(t * LevelBins), 0, LevelBins - 1)]++;
+
+        float lo = LevelNone, hi = LevelMost;
+        for (int step = 0; step < LevelSteps; step++)
         {
-            if (!d.HasLand(x, z)) continue;
-            float value = 0.5f + 0.5f * MathF.Tanh((seeding.At(x, z) - 0.5f) * FallbackStretch);
-            d.Magick[x, z] = (byte)Mathf.Clamp(Mathf.RoundToInt(value * 255f), 0, 255);
+            float mid = 0.5f * (lo + hi);
+            double sum = 0;
+            for (int b = 0; b < LevelBins; b++)
+                if (bins[b] > 0) sum += bins[b] * Shape((b + 0.5f) / LevelBins, mid);
+            // The mean rises with the level, so a mean under the target wants more.
+            if (sum / cells < target) lo = mid; else hi = mid;
         }
+
+        float level = 0.5f * (lo + hi);
+        for (int i = 0; i < cells; i++)
+            d.Magick[at[i] / n, at[i] % n] =
+                (byte)Mathf.Clamp(Mathf.RoundToInt(Shape(field[i], level) * 255f), 0, 255);
     }
 
-    private static float Lerp(float lo, float hi, float knob) => lo + (hi - lo) * Mathf.Clamp(knob, 0f, 1f);
+    /// <summary>
+    /// The level curve: one parameter, monotone in both <c>t</c> and the level, so
+    /// the pattern is emptied, thinned or fattened and never rearranged — nowhere
+    /// becomes more magickal than a place that outranked it.
+    ///
+    /// <para>Under 1 the level is a <b>cut</b>: everything below <c>1 − level</c>
+    /// goes to nothing and what is left is stretched back over the byte, so 0 is an
+    /// inert island and a small level leaves only the tips of the pattern. Over 1 it
+    /// is a <b>lift</b>, the power curve <c>t^g</c> with g falling from 1 to
+    /// <see cref="LiftMost"/>. The two meet at 1, where the curve is the identity
+    /// and the byte is the pattern as the reaction left it.</para>
+    /// </summary>
+    private static float Shape(float t, float level)
+    {
+        if (level >= 1f)
+            return MathF.Pow(t, 1f / (1f + (level - 1f) * (1f / LiftMost - 1f)));
+        return level <= 0f ? 0f : Math.Clamp((t - (1f - level)) / level, 0f, 1f);
+    }
 }
