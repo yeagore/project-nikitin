@@ -387,7 +387,7 @@ public partial class GenerationAudit
             .Where(k => k != MagickPattern.Auto).ToArray();
 
         const int scale = 2, gap = 6, font = 2;
-        int n = MagickSheetSize > 0 ? MagickSheetSize : Params.Size > 0 ? Params.Size : 96;
+        int n = Params.Size > 0 ? Params.Size : 96;
         int tile = n * scale;
         int label = TinyFont.Width("labyrinth", font) + 10;   // the widest pattern name
         int caption = TinyFont.Height(font) + 6;
@@ -402,8 +402,8 @@ public partial class GenerationAudit
 
         for (int c = 0; c < densities.Length; c++)
         {
-            // A 64-cell tile is narrower than the spelled-out caption, and two of
-            // them run into each other; the number alone always fits.
+            // At the smallest footprint the tile is narrower than the spelled-out
+            // caption and two of them run into each other; the number alone fits.
             string text = $"density {densities[c]:0.00}";
             if (TinyFont.Width(text, font) > tile) text = $"{densities[c]:0.00}";
             TinyFont.Draw(sheet, text, gap + label + c * (tile + gap), titleH + gap, font, ink);

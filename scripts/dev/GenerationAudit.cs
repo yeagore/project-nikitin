@@ -53,8 +53,6 @@ public partial class GenerationAudit : Node
     /// <summary>Comma-separated densities the magick sheet draws a column for.</summary>
     [Export] public string MagickSheetDensities { get; set; } = "0,0.05,0.25,0.5,1";
 
-    /// <summary>Footprint the magick sheet builds at; 0 takes the preset's.</summary>
-    [Export] public int MagickSheetSize { get; set; } = 0;
 
     /// <summary>Comma-separated arrangements the gallery draws, or empty for all of them.</summary>
     [Export] public string GalleryShapes { get; set; } = "";
@@ -236,7 +234,6 @@ public partial class GenerationAudit : Node
                 case nameof(Gallery): Gallery = value; break;
                 case nameof(MagickSheet): MagickSheet = value; break;
                 case nameof(MagickSheetDensities): MagickSheetDensities = value; break;
-                case nameof(MagickSheetSize): MagickSheetSize = int.Parse(value); break;
                 case nameof(GalleryShapes): GalleryShapes = value; break;
                 case nameof(GallerySeeds): GallerySeeds = int.Parse(value); break;
                 case nameof(GallerySize): GallerySize = int.Parse(value); break;
