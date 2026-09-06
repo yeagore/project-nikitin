@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/DomainsBench.cs" id="1_bench"]
+[ext_resource type="Script" path="res://scripts/CameraRig.cs" id="2_rig"]
+[ext_resource type="Resource" path="res://resources/island_default.tres" id="3_params"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+
+[sub_resource type="Sky" id="Sky_bench"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_bench"]
+background_mode = 2
+sky = SubResource("Sky_bench")
+ambient_light_source = 1
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.3
+tonemap_mode = 0
+
+[node name="DomainsBench" type="Node3D"]
+script = ExtResource("1_bench")
+Params = ExtResource("3_params")
+Domains = 20
+FirstSeed = 1337
+Seconds = 6.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_bench")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+light_energy = 0.75
+shadow_enabled = true
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("2_rig")
+PanSpeed = 30.0
+MinZoomDistance = 20.0
+MaxZoomDistance = 900.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.70710678, 0.70710678, 0, -0.70710678, 0.70710678, 0, 141.421, 141.421)
+current = true
+fov = 50.0

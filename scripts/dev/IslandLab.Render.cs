@@ -2,32 +2,14 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Generation;
+using ProjectNikitin.Meshing;
 using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
 
-/// <summary>The MultiMesh layers, the compass and the materials.</summary>
+/// <summary>The MultiMesh layers, the mesh, the compass and the materials.</summary>
 public partial class IslandLab
 {
-	private static StandardMaterial3D WaterMaterial(float alpha) => new()
-	{
-		AlbedoColor = new Color(0.16f, 0.42f, 0.62f, alpha),
-		Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-		// Visible from underneath too, since the lab can tilt below the island.
-		CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-		Roughness = 0.12f,
-		Metallic = 0.1f,
-	};
-
-	private static StandardMaterial3D GooMaterial() => new()
-	{
-		AlbedoColor = new Color(0.52f, 0.14f, 0.72f, 0.9f),
-		Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-		CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-		Roughness = 0.05f,
-		Metallic = 0.2f,
-	};
-
 	private static StandardMaterial3D GateMaterial() => new()
 	{
 		VertexColorUseAsAlbedo = true,
@@ -79,17 +61,41 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>One box per span, coloured by the current view; returns the instance count.</summary>
-	private int RenderSpans(IslandData d)
+	/// <summary>
+	/// The ground, as the game's mesh or as one box per span, whichever is on; the
+	/// other is hidden and left stale until it is next shown. Returns what was drawn:
+	/// triangles for the mesh, instances for the boxes.
+	/// </summary>
+	private int RenderTerrain(IslandData d)
+	{
+		_terrain.Visible = !_showMesh;
+		_mesh.Visible = _showMesh;
+		if (!_showMesh) return RenderSpans(d);
+
+		// The renderer's origin is its corner column; the boxes centre the island on the lab's.
+		const float cs = Terrain.CellSize;
+		_mesh.Position = new Vector3(-d.Size * 0.5f * cs, 0f, -d.Size * 0.5f * cs);
+		_mesh.Tint = ViewTint(d);
+		_mesh.Show(d);
+		_islandCenter = _mesh.Position + _mesh.Center;
+		_islandRadius = _mesh.Radius;
+		return _mesh.GroundTriangles + _mesh.LiquidTriangles;
+	}
+
+	/// <summary>The current view as a tint for the mesh: every face of a span in the span's colour, water by kind.</summary>
+	private IslandTint ViewTint(IslandData d)
+	{
+		(int topMin, float tintSpan) = TintRange(d);
+		byte[,]? anchor = _view == View.Anchors ? AnchorGrid(d) : null;
+		return new IslandTint(
+			(dd, x, z, i, face) => ViewColor(dd, x, z, i, anchor, topMin, tintSpan),
+			WaterColor);
+	}
+
+	/// <summary>The lowest and the spread of span tops, for the height view's ramp.</summary>
+	private static (int TopMin, float TintSpan) TintRange(IslandData d)
 	{
 		int n = d.Size;
-		float half = n * 0.5f;
-		const float sh = Terrain.SlabHeight;
-		const float cs = Terrain.CellSize;
-
-		var xf = new List<Transform3D>();
-		var col = new List<Color>();
-
 		int topMax = 1, topMin = 0;
 		for (int x = 0; x < n; x++)
 		for (int z = 0; z < n; z++)
@@ -102,8 +108,63 @@ public partial class IslandLab
 				topMin = Math.Min(topMin, s.Top);
 			}
 		}
-		float tintSpan = Math.Max(1, topMax - topMin);
+		return (topMin, Math.Max(1, topMax - topMin));
+	}
 
+	/// <summary>The colour of span <paramref name="i"/> of a column in the current view: its box, or every face of it.</summary>
+	private Color ViewColor(IslandData d, int x, int z, int i, byte[,]? anchor, int topMin, float tintSpan)
+	{
+		switch (_view)
+		{
+			case View.Landform:
+				return d.Pass[x, z]
+					? LandformColor((LandformType)d.Landform[x, z]).Lerp(PassTint, 0.55f)
+					: LandformColor((LandformType)d.Landform[x, z]);
+			case View.Region:
+				return OnRegionBorder(d, x, z)
+					? RegionColor(d.Region[x, z]).Darkened(0.55f)
+					: RegionColor(d.Region[x, z]);
+			case View.Walk:
+				return WalkColor(d, d.Walk[x, z]);
+			case View.Reach:
+				return ReachColor(d, d.Reach[x, z]);
+			case View.Surface:
+				// Material is the ground's; a lip is a rock roof.
+				return MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]);
+			case View.Anchors:
+				return AnchorColor(x, z, i, anchor);
+			case View.Moisture:
+				return FieldColor(d.Moisture[x, z], DevPalette.MoistureRamp);
+			case View.Warmth:
+				return DevPalette.WarmthTint(d.Warmth[x, z]);
+			case View.Rugged:
+				return FieldColor(d.Ruggedness[x, z], DevPalette.RuggedRamp);
+			case View.Exposure:
+				return FieldColor(d.Exposure[x, z], DevPalette.ExposureRamp);
+			case View.Rim:
+				return FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp);
+			case View.Water:
+				return FieldColor((byte)Math.Min(255, d.WaterDistance[x, z] * 4), DevPalette.WaterRamp);
+			case View.Magick:
+				return FieldColor(d.Magick[x, z], DevPalette.MagickRamp);
+			default:
+				float t = Mathf.Clamp((d.Spans[x, z][i].Top - topMin) / tintSpan, 0f, 1f);
+				return DevPalette.Height(t);
+		}
+	}
+
+	/// <summary>One box per span, coloured by the current view; returns the instance count.</summary>
+	private int RenderSpans(IslandData d)
+	{
+		int n = d.Size;
+		float half = n * 0.5f;
+		const float sh = Terrain.SlabHeight;
+		const float cs = Terrain.CellSize;
+
+		var xf = new List<Transform3D>();
+		var col = new List<Color>();
+
+		(int topMin, float tintSpan) = TintRange(d);
 		// Built once, not searched per column.
 		byte[,]? anchor = _view == View.Anchors ? AnchorGrid(d) : null;
 
@@ -126,58 +187,7 @@ public partial class IslandLab
 
 				xf.Add(new Transform3D(
 					Basis.Identity.Scaled(new Vector3(cs, hWorld, cs)), origin));
-
-				switch (_view)
-				{
-					case View.Landform:
-						col.Add(d.Pass[x, z]
-							? LandformColor((LandformType)d.Landform[x, z]).Lerp(PassTint, 0.55f)
-							: LandformColor((LandformType)d.Landform[x, z]));
-						break;
-					case View.Region:
-						col.Add(OnRegionBorder(d, x, z)
-							? RegionColor(d.Region[x, z]).Darkened(0.55f)
-							: RegionColor(d.Region[x, z]));
-						break;
-					case View.Walk:
-						col.Add(WalkColor(d, d.Walk[x, z]));
-						break;
-					case View.Reach:
-						col.Add(ReachColor(d, d.Reach[x, z]));
-						break;
-					case View.Surface:
-						// Material is the ground's; a lip is a rock roof.
-						col.Add(MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]));
-						break;
-					case View.Anchors:
-						col.Add(AnchorColor(x, z, i, anchor));
-						break;
-					case View.Moisture:
-						col.Add(FieldColor(d.Moisture[x, z], DevPalette.MoistureRamp));
-						break;
-					case View.Warmth:
-						col.Add(DevPalette.WarmthTint(d.Warmth[x, z]));
-						break;
-					case View.Rugged:
-						col.Add(FieldColor(d.Ruggedness[x, z], DevPalette.RuggedRamp));
-						break;
-					case View.Exposure:
-						col.Add(FieldColor(d.Exposure[x, z], DevPalette.ExposureRamp));
-						break;
-					case View.Rim:
-						col.Add(FieldColor((byte)Math.Min(255, d.RimDistance[x, z] * 6), DevPalette.RimRamp));
-						break;
-					case View.Water:
-						col.Add(FieldColor((byte)Math.Min(255, d.WaterDistance[x, z] * 4), DevPalette.WaterRamp));
-						break;
-					case View.Magick:
-						col.Add(FieldColor(d.Magick[x, z], DevPalette.MagickRamp));
-						break;
-					default:
-						float t = Mathf.Clamp((s.Top - topMin) / tintSpan, 0f, 1f);
-						col.Add(DevPalette.Height(t));
-						break;
-				}
+				col.Add(ViewColor(d, x, z, i, anchor, topMin, tintSpan));
 
 				var ext = new Vector3(cs * 0.5f, hWorld * 0.5f, cs * 0.5f);
 				bbMin = bbMin.Min(origin - ext);

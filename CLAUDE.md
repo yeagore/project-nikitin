@@ -41,20 +41,27 @@ D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   #
 
 It runs headless, so the dev scenes can be executed from a shell and their
 output read without a window. **`docs/dev-scenes.md`** is the manual for the
-three of them: the island lab (F6 in the editor), the audit, and the checksum.
-The two commands that matter after touching the generator:
+five of them: the island lab (F6 in the editor), the audit, the checksum, the
+mesh bench, and the Domains bench. The two commands that matter after touching
+the generator, and the two after touching the renderer:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 442 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 446 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
+godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
+godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
 ```
 
-Run both under a timeout (headless Godot does not always exit; macOS has no
-`timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`), and note the
-Windows machine prints decimals with a comma. The headless runs are separate
+Run the first two under a timeout (headless Godot does not always exit; macOS
+has no `timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`), and note
+the Windows machine prints decimals with a comma. The headless runs are separate
 processes and can run at once. To *look* at a shape headless, the audit's
 `Gallery=<dir> GalleryShapes=Isthmus,Quarters` writes a contact sheet of sixteen
-seeds per arrangement, captioned with the landmass count.
+seeds per arrangement, captioned with the landmass count. To look at the
+*rendered* island without a hand on the keys, the lab takes a screenshot from a
+shell and quits: `godot --path . scenes/dev/island_lab.tscn -- shot nopanel
+zoom=4` (windowed, since a screenshot needs a viewport; a window opens for a
+few seconds on the machine it runs on).
 
 ---
 
@@ -139,7 +146,7 @@ them from the seed before anything runs, and the values used are
 default seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 442 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 446 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against
@@ -153,19 +160,91 @@ taking it out of the code (`NewArrangements`, `NewLandforms`).
 
 ---
 
+## Rendering
+
+Spec: **`docs/island-generation.md` §4**. Code under `scripts/terrain/`,
+namespace **`ProjectNikitin.Meshing`**, not `.Terrain`: a namespace of that name
+would shadow the `Terrain` constants class for every file under
+`ProjectNikitin`.
+
+`IslandRenderer` is the terrain renderer: a `Node3D` that draws an `IslandData`
+as `TerrainChunk`s of 16 × 16 columns, each a `StaticBody3D` holding a ground
+`ArrayMesh`, a liquid `ArrayMesh` (water and goo as two surfaces) and a trimesh
+collider over the ground. `ChunkMesher` is the pure part: per column per span it
+emits the top at `Top + 1`, the underside at `Bottom` and a side wherever the
+neighbouring column's spans do not fill that slab range, merged over the range
+so a cliff is one quad; water gets its top at `WaterLevel + 1` and a wall
+wherever it meets anything that is neither solid nor the same water, which is
+what a fall and a cataract are. Nothing buried is emitted, and the bench's voxel
+oracle checks that to 0.000 m². Vertices are flat-shaded quads with a normal, a
+UV in metres, UV2 = (material or fluid byte, `FaceKind`) for a shader to read,
+and a colour from an `IslandTint`: two callbacks the lab swaps per view and the
+game leaves at `IslandTint.Default` (the column's `SurfaceMaterial` through
+`SurfacePalette`, stone for a lip and every underside). `TerrainMaterials` holds
+the three materials; the lab's boxes use the same factories. In the renderer's
+local space cell (x, z) is centred on `(x · CellSize, ·, z · CellSize)`, the grid
+→ world rule above. `Show(data)` builds everything; `RebuildAround(x, z)`
+remeshes the chunk holding a column and the neighbours its border faces depend
+on, the hook a build or a terraform will call.
+
+Measured by `mesh_bench.tscn` on the Mac: a 128² island is about 50,000 ground
+triangles (62% of what the boxes drew) meshed in 9 ms, with meshes, colliders
+and nodes in another 40 ms, about 6 MB. Triangles were never the cost; the
+performance question the mesher was to answer is answered, yes with room to
+spare. Greedy merging of coplanar faces is not done and not needed. `main.tscn`
+(F5) shows one generated Domain through the renderer (`Main.cs`: N for a new
+seed, F to frame); the lab draws through it too, Z for the old boxes, and reads
+the column under the cursor off the colliders with a ray (`IslandLab.Pick.cs`),
+the pattern a settlement placer's cell pick will follow. The bench casts rays
+at every third column from above and below and expects the top and the keel.
+
+**Many Domains.** `godot --path . scenes/dev/domains_bench.tscn -- domains=20`
+(windowed) lays out N Domains on consecutive seeds in a grid a quarter footprint
+apart, frames them all, and after six seconds with vsync off prints the frame
+rate, draw calls, primitives, the render thread's CPU time and memory, then
+quits (the GPU time
+reads 0 on Metal; past 150 Domains it builds no colliders, since Jolt's default
+cap of 10,240 bodies is 160 Domains × 64 chunk bodies, a project setting).
+Measured on the Mac (M2, 16 GB, a 4K display) on 2026-09-06 with every Domain
+in view: 1, 20, 40 and 80 Domains all hold the display's 120 Hz; 80 is 4,173
+draw calls and 3.0 million triangles. The knee is between 80 and 160: 160
+Domains (8,300 draw calls, 6.1 million triangles) run at 65 fps, 320 at 33,
+640 at 17, the frame time growing about 0.1 ms per Domain in view with draw
+submission about 0.65 µs a call. Per Domain: about 52 draw calls, 50,000
+triangles, 3.5 MB of video memory, 1 MB of data and 2 MB of collider, over a
+170 MB engine baseline. Rendering the terrain of twenty Domains is not the
+constraint; generating them is 3.3 s for twenty on one thread at load, and
+`Generate` is pure, so that parallelises. The budget the biome layer inherits
+with one Domain in view is some 4 million triangles a frame at 120 Hz on this
+machine, on two conditions: features are drawn by instancing (`MultiMesh`),
+never a node or a draw call per tree, and the directional shadow's cascades,
+which multiply geometry cost, are the first knob if it is ever needed.
+
+---
+
 ## Repository layout
 
 ```
 project.godot                  Engine config. run/main_scene points at main.tscn.
 Project Nikitin.csproj / .sln   .NET project (Godot.NET.Sdk 4.7.2, net8.0).
 scenes/
-  main/main.tscn               Single-slab viewer: environment, sun, camera rig, one slab.
-  terrain/grass_block.tscn     Prototype terrain slab (1 × 0.25 × 1).
+  main/main.tscn               The game scene: one generated Domain through IslandRenderer.
   dev/island_lab.tscn          Island generation harness (see docs/dev-scenes.md).
   dev/generation_audit.tscn    Headless guarantee audit.
   dev/generation_checksum.tscn Headless bit-for-bit checksum.
+  dev/mesh_bench.tscn          Headless mesher measure: triangles, times, winding probe, voxel oracle, colliders.
+  dev/domains_bench.tscn       Windowed: N Domains in view, the frame rate.
 scripts/
+  Main.cs                      The game scene's script: generate, show, frame.
   CameraRig.cs                 Strategy camera: pan / yaw / pitch / zoom, LookAt-aimed.
+  terrain/                     Namespace ProjectNikitin.Meshing (see Rendering)
+    IslandRenderer.cs          The terrain renderer: the chunk grid; Show and RebuildAround.
+    TerrainChunk.cs            One 16 × 16 tile: ground mesh, liquid mesh, trimesh collider.
+    ChunkMesher.cs             The pure mesher: the exposed faces of one chunk.
+    MeshBuffer.cs              Quads into ArrayMesh arrays and collider faces; the winding rule.
+    IslandTint.cs, FaceKind.cs, SurfacePalette.cs, TerrainMaterials.cs
+                               Colour per face, which side a face is, the provisional
+                               material palette, the materials.
   generation/                  Namespace ProjectNikitin.Generation
     IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
     Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
@@ -186,25 +265,26 @@ scripts/
     IslandLab*.cs              The lab.
     GenerationAudit*.cs        The audit.
     GenerationChecksum.cs      The checksum.
+    MeshBench*.cs, DomainsBench.cs
+                               The mesh bench and the Domains bench.
     DevPalette.cs, TinyFont.cs The shared colours, and a 5x7 bitmap font so a
                                headless PNG can carry its own labels.
-resources/island_default.tres  The IslandParams preset all three dev scenes load.
+resources/island_default.tres  The IslandParams preset every dev scene and the game scene load.
 docs/
-  island-generation.md         The generation spec.
+  island-generation.md         The generation spec, and the renderer in §4.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
   island-generation-plain.md   The spec, appendix and manual retold in plain words,
                                for Maxim. Do not read it for orientation (the spec
                                is the source); do keep it true when the generator
                                or the audit changes, in the same plain register.
-  dev-scenes.md                The lab, audit and checksum manual.
+  dev-scenes.md                The lab, audit, checksum and mesh bench manual.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
 CLAUDE.md                      This file.
 ```
 
-Planned, create as needed and keep the tree shallow: `scripts/terrain/` for the
-chunked span-aware mesher, `resources/` for biome, archetype and goods data,
-`addons/` for plugins.
+Planned, create as needed and keep the tree shallow: `resources/` for biome,
+archetype and goods data, `addons/` for plugins.
 
 ### Naming
 
@@ -281,10 +361,15 @@ ratio, and the three supported footprints (the Ecumene page still says 16³–64
   [#1](https://github.com/yeagore/project-nikitin/pull/1),
   [#3](https://github.com/yeagore/project-nikitin/pull/3) and
   [#4](https://github.com/yeagore/project-nikitin/pull/4). Every generation
-  stage is done and audited at all three footprints. What is next, in rough
-  order, is in `docs/island-generation.md` §6: the chunked span-aware mesher and
-  colliders (the only thing that will answer the performance question), settlement
-  placement, the biome layer above `Material`, and span-aware pathing.
+  stage is done and audited at all three footprints.
+- **The mesher**, branch `mesher`, PR
+  [#6](https://github.com/yeagore/project-nikitin/pull/6): the chunked
+  span-aware renderer with colliders, drawing the main scene and the lab, with
+  its two benches and the lab's cursor pick as the colliders' first reader.
+  Built, measured and checked; the performance question is answered.
+- What comes after, in rough order, is in `docs/island-generation.md` §6:
+  settlement placement, the biome layer above `Material` (which is also where
+  the ground gets a look beyond flat colours), and span-aware pathing.
 
 ---
 
@@ -295,7 +380,9 @@ Flagged so they are not silently hard-coded:
 1. **Essence as currency.** Provisional; expect grades of Essence or per-Polity
    currencies later.
 2. **Domains loaded at once.** Whether only the active Domain is simulated and
-   rendered, or several. Drives the streaming and LOD approach.
+   rendered, or several. Drives the streaming and LOD approach. The renderer
+   does not constrain it: forty 128² Domains in view hold 120 Hz (see
+   Rendering); generation time and the simulation are what would.
 3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
    `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
    bounds, an InputMap.

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Godot;
 using ProjectNikitin;
 using ProjectNikitin.Generation;
+using ProjectNikitin.Meshing;
 using static ProjectNikitin.Generation.Grid;
 
 namespace ProjectNikitin.Dev;
@@ -11,13 +12,15 @@ namespace ProjectNikitin.Dev;
 /// Dev harness for island generation (<c>scenes/dev/island_lab.tscn</c>, run with F6).
 /// Rebuilds whenever <see cref="Seed"/> or a <see cref="Params"/> field changes, so
 /// remote-inspector edits take effect live. NOT a <c>[Tool]</c> script: generating
-/// in-editor bakes the MultiMesh buffer into the scene file.
+/// in-editor bakes the MultiMesh buffer into the scene file. The ground is drawn by
+/// the game's <see cref="IslandRenderer"/>, or (Z) as the old box per span.
 /// </summary>
 public partial class IslandLab : Node3D
 {
 	[Export] public int Seed { get; set; } = 1337;
 	[Export] public IslandParams Params { get; set; } = null!;
 
+	private IslandRenderer _mesh = null!;
 	private MultiMeshInstance3D _terrain = null!;
 	private MultiMeshInstance3D _water = null!;
 	private MultiMeshInstance3D _goo = null!;
@@ -50,21 +53,26 @@ public partial class IslandLab : Node3D
 	private bool _showFords = true;
 	private bool _showCompass = true;
 	private bool _showLiquid = true;
+	private bool _showMesh = true;
 	private bool _showPanel = true;
+
+	/// <summary>Frame at which a shell run (<c>-- shot</c>) saves its screenshot and quits; 0 for never.</summary>
+	private ulong _shotAt;
+
+	/// <summary>How much closer than the whole island the first framing sits (<c>zoom=4</c> frames a quarter of it), and where.</summary>
+	private float _shotZoom = 1f;
+	private Vector3 _shotOffset = Vector3.Zero;
 
 	public override void _Ready()
 	{
+		ReadShellArgs();
 		_terrain = GetNode<MultiMeshInstance3D>("Terrain");
 		_rig = GetNode<CameraRig>("CameraRig");
+		// The game's renderer, and the same materials on the boxes so the two modes read alike.
+		_mesh = new IslandRenderer { Name = "Mesh" };
+		AddChild(_mesh);
 		_unitBox = new BoxMesh { Size = Vector3.One };
-		// Matte and unspecular, so a face's colour is its vertex colour times the light.
-		_unitBox.Material = new StandardMaterial3D
-		{
-			VertexColorUseAsAlbedo = true,
-			Roughness = 1f,
-			Metallic = 0f,
-			SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
-		};
+		_unitBox.Material = TerrainMaterials.GroundMaterial();
 
 		// A steep white sun over a neutral 0.3 ambient (set on the scene's Environment,
 		// with linear tonemapping): a top face reads at about the legend's colour and
@@ -80,8 +88,7 @@ public partial class IslandLab : Node3D
 			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
 			Orientation = PlaneMesh.OrientationEnum.Y,
 		};
-		_waterQuad.Material = WaterMaterial(0.66f);
-		if (_waterQuad.Material is StandardMaterial3D lit) lit.VertexColorUseAsAlbedo = true;
+		_waterQuad.Material = TerrainMaterials.WaterMaterial(0.66f);
 		_water = Sheet("Water");
 
 		// Goo gets its own material: the water material's blue albedo multiplies any
@@ -91,7 +98,7 @@ public partial class IslandLab : Node3D
 			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
 			Orientation = PlaneMesh.OrientationEnum.Y,
 		};
-		_gooQuad.Material = GooMaterial();
+		_gooQuad.Material = TerrainMaterials.GooMaterial();
 		_goo = Sheet("Goo");
 
 		_fallQuad = new PlaneMesh
@@ -99,7 +106,7 @@ public partial class IslandLab : Node3D
 			Size = Vector2.One,
 			Orientation = PlaneMesh.OrientationEnum.Z,
 		};
-		_fallQuad.Material = WaterMaterial(0.75f);
+		_fallQuad.Material = TerrainMaterials.WaterMaterial(0.75f);
 		// RenderPriority 1: both sheets sit at the world origin, so without it the
 		// falls and the water sort against each other by camera distance and pop.
 		if (_fallQuad.Material is StandardMaterial3D fallLit) fallLit.RenderPriority = 1;
@@ -118,6 +125,7 @@ public partial class IslandLab : Node3D
 
 		BuildCompass();
 		BuildOverlayUi();
+		_panel.Visible = _showPanel;
 		Rebuild();
 	}
 
@@ -137,6 +145,54 @@ public partial class IslandLab : Node3D
 	{
 		if (Signature() != _lastSignature)
 			Rebuild();
+		if (_fps != null)
+		{
+			if ((Engine.GetProcessFrames() & 31) == 0) _fpsText = $"{Engine.GetFramesPerSecond():0} fps";
+			_fps.Text = _pickText.Length > 0 ? $"{_pickText}      {_fpsText}" : _fpsText;
+		}
+		if (_shotAt != 0 && Engine.GetProcessFrames() >= _shotAt)
+		{
+			_shotAt = 0;
+			Capture();
+			GetTree().Quit();
+		}
+	}
+
+	/// <summary>
+	/// A windowed run from a shell, for a look without a hand on the keys:
+	/// <c>godot --path . scenes/dev/island_lab.tscn -- shot [boxes] [nopanel] [seed=N]
+	/// [view=NAME] [zoom=N] [at=X,Z]</c> builds the island, frames it (a quarter of it
+	/// at <c>zoom=4</c>, centred on cell X,Z if given), saves the screenshot Capture
+	/// writes a few frames in, and quits. Not headless: a screenshot needs a viewport.
+	/// </summary>
+	private void ReadShellArgs()
+	{
+		var inv = System.Globalization.CultureInfo.InvariantCulture;
+		foreach (string arg in OS.GetCmdlineUserArgs())
+		{
+			if (arg == "shot") _shotAt = 8;
+			else if (arg == "boxes") _showMesh = false;
+			else if (arg == "nopanel") _showPanel = false;
+			else if (arg.StartsWith("seed=") && int.TryParse(arg.AsSpan(5), out int seed)) Seed = seed;
+			else if (arg.StartsWith("view=") && Enum.TryParse(arg[5..], true, out View view)) _view = view;
+			else if (arg.StartsWith("zoom=") && float.TryParse(arg.AsSpan(5), System.Globalization.NumberStyles.Float, inv, out float zoom) && zoom > 0f) _shotZoom = zoom;
+			else if (arg.StartsWith("at=") && arg[3..].Split(',') is { Length: 2 } xz
+					 && int.TryParse(xz[0], out int ax) && int.TryParse(xz[1], out int az))
+				_shotOffset = new Vector3(ax, 0f, az);
+		}
+	}
+
+	/// <summary>The first framing: the whole island, or the part a shell run asked for.</summary>
+	private void FrameFirst()
+	{
+		if (_data == null) return;
+		if (_shotZoom == 1f) { _rig.Frame(_islandCenter, _islandRadius); return; }
+		const float cs = Terrain.CellSize;
+		float half = _data.Size * 0.5f;
+		Vector3 at = _shotOffset == Vector3.Zero
+			? _islandCenter
+			: new Vector3((_shotOffset.X - half) * cs, _islandCenter.Y, (_shotOffset.Z - half) * cs);
+		_rig.Frame(at, _islandRadius / _shotZoom);
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -170,6 +226,7 @@ public partial class IslandLab : Node3D
 			case Key.X: _showCompass = !_showCompass; Redraw(); break;
 			// I, not W: the rig polls W every frame for forward.
 			case Key.I: _showLiquid = !_showLiquid; Redraw(); break;
+			case Key.Z: ToggleMesh(!_showMesh); break;
 			case Key.F2: Capture(); break;
 		}
 		Sync();
@@ -313,17 +370,26 @@ public partial class IslandLab : Node3D
 
 		ulong t0 = Time.GetTicksUsec();
 		_data = IslandGenerator.Generate(Seed, Params);
-		int spans = RenderSpans(_data);
+		int drawn = RenderTerrain(_data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		int lakes = Redraw();
 		GD.Print($"[IslandLab] seed {Seed}, {_data.Size}², {_data.Character} ({_data.Style})"
-			+ $" -> {spans} spans, {lakes} lakes in {ms:0.0} ms");
+			+ $" -> {drawn} {(_showMesh ? "triangles" : "spans")}, {lakes} lakes in {ms:0.0} ms");
 
 		if (!_framedOnce)
 		{
-			_rig.Frame(_islandCenter, _islandRadius);
+			FrameFirst();
 			_framedOnce = true;
 		}
+	}
+
+	/// <summary>Mesh or boxes: redraws the ground the other way without regenerating the island.</summary>
+	private void ToggleMesh(bool mesh)
+	{
+		_showMesh = mesh;
+		if (_data == null) return;
+		RenderTerrain(_data);
+		Redraw();
 	}
 
 	/// <summary>Everything but the terrain, so toggling an overlay does not regenerate the island.</summary>
@@ -334,8 +400,10 @@ public partial class IslandLab : Node3D
 		RenderFalls(_data);
 		RenderGates(_data);
 		RenderOverlays(_data);
-		// Liquid off shows the beds; the columns are drawn already.
-		_water.Visible = _goo.Visible = _falls.Visible = _showLiquid;
+		// Liquid off shows the beds; the columns are drawn already. With the mesh on,
+		// its own water stands in for the sheets, falls included.
+		_water.Visible = _goo.Visible = _falls.Visible = _showLiquid && !_showMesh;
+		_mesh.LiquidVisible = _showLiquid;
 		UpdateText(_data, lakes);
 		return lakes;
 	}
@@ -359,7 +427,8 @@ public partial class IslandLab : Node3D
 			+ WalkSummary(d) + "\n"
 			+ GroundSummary(d) + "\n"
 			+ GateSummary(d) + "\n"
-			+ RoadSummary(d);
+			+ RoadSummary(d) + "\n"
+			+ DrawSummary();
 
 		ShowLegend(ViewLegend(_view));
 		Sync();
@@ -385,5 +454,15 @@ public partial class IslandLab : Node3D
 			+ Knob("wind", Params.Wind, s.Wind) + "  "
 			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity)
 			+ "   (* rolled from the seed)";
+	}
+
+	/// <summary>How the ground is drawn and what it cost: the mesh's triangles and chunks, or the boxes' count.</summary>
+	private string DrawSummary()
+	{
+		if (!_showMesh)
+			return $"drawn: boxes, {_terrain.Multimesh?.InstanceCount ?? 0:N0} spans (Z for the mesh)";
+		int across = _data == null ? 0 : ChunkMesher.ChunksAcross(_data.Size);
+		return $"drawn: mesh, {_mesh.GroundTriangles:N0} ground + {_mesh.LiquidTriangles:N0} liquid triangles "
+			+ $"in {across * across} chunks with colliders, built in {_mesh.LastBuildMs:0} ms (Z for boxes)";
 	}
 }

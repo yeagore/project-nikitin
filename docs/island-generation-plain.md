@@ -42,6 +42,26 @@ Three ways of reading a column are used everywhere:
   cliffs, banks) reads this one, because a river bank is a bank, not a cliff
   over the river's bed.
 
+### How the island is drawn
+
+The generator makes data, not a picture. What draws it is the **renderer**,
+which turns the columns into a skin of triangles the graphics card can show:
+only the faces that touch air. Every run of slabs gets a top, an underside (the
+island's keel, or the roof of an overhang) and a wall wherever the column next
+to it is lower or higher, one wall for the whole cliff rather than one per slab.
+Anything buried inside the ground is never drawn. Water is drawn separately as a
+see-through sheet, with a wall of its own wherever the water meets air: that is
+what a waterfall looks like, and a river tipping over the rim into the aether.
+
+The island is cut into tiles of sixteen by sixteen cells, each with its own
+mesh and an invisible physics shape over the ground, so the game can ask what
+was clicked on and, later, rebuild one tile when something is built on it. A
+bench counts every face that ought to be visible and checks the mesh matches it
+exactly; for the biggest island the mesh is about fifty thousand triangles,
+built in a few hundredths of a second, which is nothing to a graphics card. The
+game's main scene now shows one generated Domain this way, and the lab draws
+its islands the same way.
+
 ### The one rule that shapes everything
 
 **A step of one slab is free. A step of two or more slabs is a cliff.** People
@@ -706,7 +726,8 @@ terrain, shelves, and the damper lee.
 
 ## 5. How a change is trusted
 
-Two scenes run without a window, from a shell, and a third is the human end.
+Four scenes run from a shell (three of them without a window), and a fifth is
+the human end.
 
 ### The checksum
 
@@ -790,16 +811,33 @@ has no rendering device.
 
 ### The lab
 
-`island_lab.tscn` (F6 in the editor) is the human end: an island drawn as one
-box per slab-run with a control panel that writes the same settings the audit
-measures. Fourteen views (height, landform, region, walk, reach, surface,
-anchors, and the seven fields: moisture, warmth, ruggedness, exposure, rim,
-water distance, magick), each with a legend in its actual colours; overlays for
-bridge sites, landings, ferries, roads, fords, and the compass with the wind,
-the sun, the dune grain and the two boxes; a liquid toggle that shows the beds;
-a seed field; and a readout that says what the island turned out to be, down to
-what each road out costs. Every dial has an Auto box, and after a build the
-slider sits at what the seed rolled.
+`island_lab.tscn` (F6 in the editor) is the human end: an island drawn by the
+game's own renderer (or, with the Z key, as the old one box per slab-run) with
+a control panel that writes the same settings the audit measures. Fourteen
+views (height, landform, region, walk, reach, surface, anchors, and the seven
+fields: moisture, warmth, ruggedness, exposure, rim, water distance, magick),
+each with a legend in its actual colours; overlays for bridge sites, landings,
+ferries, roads, fords, and the compass with the wind, the sun, the dune grain
+and the two boxes; a liquid toggle that shows the beds; a seed field; a
+frame-rate counter; a line naming the cell under the mouse (found by casting a
+ray at the mesh's physics shape) with everything the pipeline said about it;
+and a readout that says what the island turned out to be, down to what each
+road out costs and how many triangles it took to draw. Every
+dial has an Auto box, and after a build the slider sits at what the seed rolled.
+Run from a shell with `-- shot`, the lab saves a screenshot and quits by itself,
+so a picture of the rendered island can be had without anyone at the keyboard.
+
+### The mesh bench
+
+`mesh_bench.tscn` measures the renderer rather than the generator: three seeds
+at each footprint, meshed, with the triangle counts against what the boxes
+drew, the times, and three checks that must pass — that Godot's triangles face
+the way the renderer assumes, that the mesh's area equals the count of faces
+touching air, and that a ray dropped onto a column lands on its top and one
+fired up from below lands on its keel, so the physics shapes are right too. It
+runs without a window and quits by itself. A second bench, `domains_bench.tscn`,
+opens a window with many whole Domains in view and reports the frame rate; the
+numbers in section 6 about twenty and eighty Domains come from it.
 
 ---
 
@@ -826,6 +864,14 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   flat lee dries by 32 while open ground holds; 109 cells of hot water on 11
   of the 20 cold islands.
 - **Re-rolls**: every seed built in one attempt, none unplayable.
+- **Drawing** (the mesh bench, three seeds a footprint): a 128² island is about
+  50,000 ground and 600 water triangles, 62% of what the boxes drew, meshed in
+  9 ms with another 40 ms for the meshes, colliders and tiles, about 6 MB; the
+  mesh matches the count of visible faces to 0.000 m² on every island tried.
+  Twenty whole Domains on screen at once, and forty, and eighty, still draw at
+  the Mac's full screen rate; the screen starts to slow somewhere between
+  eighty and a hundred and sixty whole Domains in view. Making twenty takes
+  about three seconds.
 
 Known gaps: a few two-slab steps where the ground the fix would cut is a
 landform, a bridgehead or standing water; one islet adrift on the most broken

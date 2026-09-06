@@ -1,7 +1,9 @@
-[gd_scene format=3 uid="uid://b6ofjuv7gna1t"]
+[gd_scene load_steps=8 format=3 uid="uid://b6ofjuv7gna1t"]
 
-[ext_resource type="PackedScene" uid="uid://c2twcqiwwojhb" path="res://scenes/terrain/grass_block.tscn" id="1_block"]
+[ext_resource type="Script" path="res://scripts/Main.cs" id="1_main"]
 [ext_resource type="Script" path="res://scripts/CameraRig.cs" id="2_camrig"]
+[ext_resource type="Script" path="res://scripts/terrain/IslandRenderer.cs" id="3_island"]
+[ext_resource type="Resource" path="res://resources/island_default.tres" id="4_params"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 
@@ -11,25 +13,33 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 2
 sky = SubResource("Sky_main")
-ambient_light_source = 3
-tonemap_mode = 2
+ambient_light_source = 1
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.3
+tonemap_mode = 0
 
-[node name="Main" type="Node3D" unique_id=1631090859]
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+Seed = 1337
+Params = ExtResource("4_params")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=146660958]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=9402165]
-transform = Transform3D(0.8192, 0, 0.5736, 0.4056, 0.7071, -0.5792, -0.4056, 0.7071, 0.5792, 0, 0, 0)
+[node name="Sun" type="DirectionalLight3D" parent="."]
+light_energy = 0.75
 shadow_enabled = true
 
-[node name="CameraRig" type="Node3D" parent="." unique_id=354075670]
-transform = Transform3D(0.7071068, 0, 0.7071068, 0, 1, 0, -0.7071068, 0, 0.7071068, 0, 0.125, 0)
+[node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_camrig")
+PanSpeed = 30.0
+MinZoomDistance = 20.0
+MaxZoomDistance = 900.0
 
-[node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=985340432]
-transform = Transform3D(1, 0, 0, 0, 0.90630776, 0.4226183, 0, -0.4226183, 0.90630776, 0.017487764, 1.5, 2.6155643)
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.70710678, 0.70710678, 0, -0.70710678, 0.70710678, 0, 141.421, 141.421)
 current = true
-fov = 45.0
+fov = 50.0
 
-[node name="GrassBlock" parent="." unique_id=211907219 instance=ExtResource("1_block")]
+[node name="Island" type="Node3D" parent="."]
+script = ExtResource("3_island")
