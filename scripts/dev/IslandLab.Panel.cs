@@ -22,7 +22,7 @@ public partial class IslandLab
 	private OptionButton _exitKind = null!, _magickPattern = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
-	private HSlider _magickDensity = null!, _magickLean = null!;
+	private HSlider _magickDensity = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
@@ -217,14 +217,6 @@ public partial class IslandLab
 			+ "lifts the level it is read at; it never changes the pattern's kind or its "
 			+ "scale. The slider asks its mean along a square, so the middle of it is a "
 			+ "quarter of the full mean, not half.");
-		_magickLean = Slide(rows, "Magick lean", 0f, 1f, 0.05f,
-			() => Params.MagickLean, v => Params.MagickLean = v, q => q.MagickLean,
-			"How far the land tilts the magick: 0 an even-handed reaction that owes nothing "
-			+ "to the ground under it, 1 the furthest the pattern will take. In between, the "
-			+ "magick spreads more readily uphill, upwind and toward the headwaters and the "
-			+ "aether the other way, so the same pattern holds more of itself on the tops "
-			+ "and the weather side. Far up, the tilt stops leaning the pattern and starts "
-			+ "carrying it: the motes smear into worms.");
 
 		AddButton(rows, "All knobs to auto", AllKnobsAuto);
 

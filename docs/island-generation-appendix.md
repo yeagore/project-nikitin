@@ -632,13 +632,6 @@ been built deliberately to give a handful of faint places rather than none. The
 cubic `(d + 2d³)/3` passes through the same three points and still asks three bytes
 at 0.05.
 
-**The lean became a knob** rather than a constant, because how far the land should
-tilt the magick is a matter of taste and the only way to settle it is to look at
-several. It maps 0 to the even-handed reaction and 1 to a lean of 0.3, which is
-past the sweet spot on purpose — the top of the slider is where the tilt stops
-leaning the pattern and starts carrying it, and the motes smear into worms. The
-preset sits at 0.4.
-
 **The pattern was a texture, and a texture is not a place.** At one reaction cell
 to one column the magick came out three to six cells a feature, which reads at any
 distance as the same faint speckle everywhere — there was no such thing as a
@@ -657,38 +650,48 @@ island fell about fivefold and the mean patch grew about sixfold.
 The scale trades against the pattern, though, and six was too many. A 128² Domain
 is 22 reaction cells across at six, which is four features, and motes, wells and
 labyrinth all came out as the same three blobs — the naming exercise undone by the
-zoom. Four keeps the six apart at 96² and 128². At 64² it does not, and that is
-left as it is: sixteen reaction cells is two or three features, so a small Domain
-simply has a magickal end and an inert end. Fixing the feature size in world cells
-rather than in island fractions is the right way round for a game whose cell is a
-fixed size, and this is the price of it.
+zoom. Four held the six apart at 96² and 128² but not at 64², where sixteen
+reaction cells is two or three features. **Three** is where it settled: 43 cells
+across at 128² and 22 at 64², so the six are themselves at every footprint, and a
+feature is still twenty cells and wider, which is the biome scale the coarsening
+was for. Fixing the feature size in world cells rather than in island fractions is
+the right way round for a game whose cell is a fixed size.
 
-**The lattice leans, and both of its traps were found by measuring.** The
-even-handed lattice made a pattern that owed nothing to the ground under it — the
-same wells whether the cell was a summit or a shore. Each cell now has a leaning,
-uphill and upwind and upstream, and the two substances take it opposite ways.
+**The lattice leaned, and then it did not.** For a while each reaction cell had a
+*leaning* — uphill by the fall of the effective surface, upwind against the one
+wind, upstream along a watercourse — with the two substances taking it opposite
+ways, so that the magick climbed the land and the aether ran down it. It was a
+stencil rather than a drift term: the nine-point weights scaled by how far each
+neighbour lay with the leaning or against it, then renormalised so the eight still
+summed to one, which keeps the thing a weighted average and leaves explicit Euler
+exactly as stable as it was even-handed.
 
-The first trap was the sign, and it is the sort a picture will not settle. Leaning
-the magick's stencil *toward* the uphill neighbour looks right and is backwards: a
-cell takes from its neighbours, so weighting the uphill one heavier makes the cell
-draw magick down off the hill. The images looked plausible either way — a pattern
-that leans is a pattern that leans — and it took a table of high ground against
-low, windward against lee, headwaters against mouth to show every one of the
-eighteen gains sitting on the wrong side of zero. The stencil that climbs is the
-one that leans away.
+It worked, in the sense that it measured. The audit grew a table of high ground
+against low, windward against lee, headwaters against mouth, and all eighteen
+gains came out positive and worth eight to thirty bytes. It was **removed anyway**,
+on the judgement that it did not earn its place: what it bought was a gradient
+across a Domain that already varies, and what it cost was a whole mechanism, a
+knob, a table and a section of this document. That is worth writing down, because
+the two traps it took on the way are the interesting part and neither of them is
+about leaning as such:
 
-The second was the wind. Slope and channel point every which way across an island
-and cancel in the large, so they tilt the pattern in place; the wind is one
-direction over the whole Domain, so it is bulk transport, and at 0.5 it swept the
-field downwind until it banked against the far coast — a windward side sixty bytes
-richer than the lee, and the slope's own gathering undone underneath it, wells
-coming out with *less* magick high than low. At 0.3 it leans rather than sweeps.
+- **The sign was the opposite of the one it looked like.** A cell *takes* from its
+  neighbours, so weighting the uphill neighbour heavier makes the cell draw magick
+  *down* off the hill. The pictures looked plausible either way — a pattern that
+  leans is a pattern that leans — and it took the table to show all eighteen gains
+  sitting on the wrong side of zero. Any future field that is carried rather than
+  diffused has the same trap in it.
+- **A uniform field is not like a varying one.** Slope and channel point every
+  which way across an island and cancel in the large, so they tilt the pattern in
+  place; the wind is one direction over the whole Domain, so it is bulk transport,
+  and at half strength it swept the field downwind until it banked against the far
+  coast — a windward side sixty bytes richer than the lee, with the slope's own
+  gathering undone underneath it.
 
-The lean itself was found the same way. At 0.35 it stopped being a lean and became
-advection: the motes smeared into worms, the wells collapsed to a single streak,
-and the pattern — the thing the whole naming exercise exists to make askable —
-stopped being recognisable. At 0.12 the six kinds survive and the gains are still
-worth eight to thirty bytes.
+And the strength was found by looking, not reasoning: at 0.35 it stopped being a
+lean and became advection, the motes smearing into worms and the wells collapsing
+to a streak, which is the pattern — the thing the naming exercise exists to make
+askable — ceasing to be recognisable.
 
 **The coast is a no-flux wall** — a neighbour off the land is the cell itself,
 so neither substance crosses into the aether — and the producer therefore banks
@@ -703,7 +706,7 @@ to 64 seconds, about 58 ms an island. The named recipes run longer — 3000 to
 3500 steps, which is what each regime needs to grow out of the sown patches and
 cover the island rather than be caught half-finished. Under the named recipes on
 the ground lattice the checksum's 456 islands took 142 seconds, and 165 once the
-lattice leaned; coarsening it to four cells a side brought that down to **56**,
+lattice leaned; coarsening it to three cells a side brought that down to **56**,
 because the island is sixteen times smaller in reaction cells and the step count
 did not have to move. It is the cheap end of the pipeline, and
 being able to name the pattern is worth the seconds.

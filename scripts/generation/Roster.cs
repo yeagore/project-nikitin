@@ -133,7 +133,6 @@ internal static class Roster
         if (p.LandformMix >= 0f && p.Relief >= 0f && p.Hilliness >= 0f && p.Rivers >= 0f
             && p.Lakes >= 0f && p.Valleys >= 0f && p.Moisture >= 0f && p.Warmth >= 0f
             && p.Wind >= 0f && p.OverhangDensity >= 0f && p.MagickDensity >= 0f
-            && p.MagickLean >= 0f
             && p.MagickPattern != MagickPattern.Auto
             && p.Size > 0)
             return p;
@@ -154,7 +153,6 @@ internal static class Roster
         if (p.OverhangDensity < 0f) r.OverhangDensity = Hash01(seed, 0x4B09u);
         if (p.Wind < 0f) r.Wind = Hash01(seed, 0x4B0Bu);
         if (p.MagickDensity < 0f) r.MagickDensity = Hash01(seed, 0x4B0Cu);
-        if (p.MagickLean < 0f) r.MagickLean = Hash01(seed, 0x4B12u);
         // The pattern is a named point on the reaction's plane, not a knob, so Auto
         // picks one of the six evenly rather than rolling a number.
         if (p.MagickPattern == MagickPattern.Auto)

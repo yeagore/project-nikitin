@@ -19,13 +19,6 @@ namespace ProjectNikitin.Generation;
 /// Gray–Scott form of the reaction, integrated with explicit Euler on the cell
 /// lattice, the coast a no-flux wall (the aether takes nothing away).</para>
 ///
-/// <para>The lattice is not even-handed. Each cell has a <b>leaning</b> — uphill,
-/// upwind, and up the watercourse — and the two substances take it opposite ways:
-/// the magick climbs it and the aether it feeds on runs down it. So the pattern is
-/// the same pattern everywhere, but there is more of it on the tops, the weather
-/// side and the headwaters, and less toward the coast, the lee and the mouth. This
-/// is the one thing in the stage that reads the land it sits on.</para>
-///
 /// <para>The reaction has six coefficients and <b>none of them is a knob</b>. The
 /// settings that pattern at all are islands in a sea of dead and flooded ones, and
 /// which island you are standing on decides the <em>kind</em> of thing the Domain
@@ -64,57 +57,11 @@ internal static class Magicks
     ///
     /// <para>What it buys is the point of the layer: at one cell to one column the
     /// pattern was a texture, the same everywhere at any distance, and no biome could
-    /// have been drawn from it. Four cells to the feature makes the magick a place -
+    /// have been drawn from it. Three cells to the feature makes the magick a place -
     /// a Domain has magickal country and inert country, and which one you are
     /// standing in is a question with an answer.</para>
     /// </summary>
-    private const int Coarse = 4;
-
-    // ---- which way the land leans -------------------------------------------
-    // The lattice above is even-handed: a substance spreads as readily one way as
-    // another, and the pattern owes nothing to the ground it sits on. It does now.
-    // Each cell has a leaning — uphill, upwind, and up the watercourse — and the
-    // two substances take it opposite ways. The magick climbs it: it spreads more
-    // readily toward high ground, into the wind and toward the headwaters, so it
-    // gathers on the tops and the weather side and thins toward the coast. The
-    // aether it feeds on runs the other way, downhill and downwind and down the
-    // rivers, which pulls the starving with it and sharpens the same slope.
-
-    /// <summary>
-    /// The furthest the neighbourhood may lean, at a <see cref="IslandParams.MagickLean"/>
-    /// of 1, as a share of each neighbour's weight. The weights are renormalised
-    /// after leaning, so the stencil stays a weighted average and the scheme stays as
-    /// stable as the even-handed one; at 1 a cell directly downhill would contribute
-    /// nothing at all, which is a wall and not a slope, so the reach stops well under
-    /// it. Past about a third the lean stops tilting the pattern and starts carrying
-    /// it: the motes smear into worms and the wells collapse to a streak.
-    /// </summary>
-    private const float LeanMost = 0.3f;
-
-    /// <summary>
-    /// What the leaning is made of, before it is capped at a unit vector: the fall
-    /// of the ground, the one wind, and the watercourse. The ground is the strongest
-    /// where there is any, but most land is flat enough that the wind is what a cell
-    /// actually leans on; the watercourse speaks only on the channel itself, and
-    /// speaks loudly there because it is one cell wide with the whole neighbourhood
-    /// diffusing against it.
-    ///
-    /// <para>The wind is the quietest of the three, for a reason the audit's lean
-    /// table made plain. The slope and the channel point every which way across an
-    /// island and cancel in the large; the wind is one direction over the whole
-    /// Domain, so it does not merely tilt the pattern, it carries the field downwind
-    /// until it banks against the far coast. At half it left a Domain's windward side
-    /// sixty bytes richer than its lee, and undid the slope's own gathering with it.
-    /// It leans the pattern now rather than sweeping it.</para>
-    /// </summary>
-    private const float SlopeLean = 1f, WindLean = 0.3f, StreamLean = 0.9f;
-
-    /// <summary>
-    /// The fall, in slabs across one cell, at which the ground's say is full. Under
-    /// it the slope leans in proportion, so flat country is led by the wind and a
-    /// mountainside by its own fall rather than both being pushed equally hard.
-    /// </summary>
-    private const float SlopeFull = 2f;
+    private const int Coarse = 3;
 
     // ---- the named points ---------------------------------------------------
 
@@ -141,7 +88,7 @@ internal static class Magicks
     /// </summary>
     private static Recipe RecipeFor(MagickPattern pattern) => pattern switch
     {
-        MagickPattern.Motes     => new Recipe(0.018f, 0.0530f, -0.0007f, 0.14f, 3500),
+        MagickPattern.Motes     => new Recipe(0.018f, 0.0530f, -0.0007f, 0.125f, 3500),
         MagickPattern.Wells     => new Recipe(0.030f, 0.0610f,  0.0009f, 0.21f, 3500),
         MagickPattern.Veins     => new Recipe(0.030f, 0.0590f,  0.0008f, 0.17f, 3500),
         MagickPattern.Labyrinth => new Recipe(0.030f, 0.0570f,  0.0005f, 0.17f, 3000),
@@ -189,7 +136,7 @@ internal static class Magicks
     /// range always fills the byte however little of it there was — so the emptying
     /// is done here, on the way out, and not asked of the reaction.
     /// </summary>
-    private const float MeanFull = 0.72f;
+    private const float MeanFull = 0.83f;
 
     /// <summary>
     /// The curve the density asks its mean along, <c>(d + 2d³) / 3</c>, before
@@ -275,25 +222,9 @@ internal static class Magicks
         // here than it is on the ground, which is the whole point.
         int cn = (n + Coarse - 1) / Coarse;
         var land = new int[cn * cn];
-        var height = new float[cn * cn];
-        var flow = new float[cn * cn];
-        var wet = new int[cn * cn];
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-        {
-            if (!d.HasLand(x, z)) continue;
-            int c = x / Coarse * cn + z / Coarse;
-            land[c]++;
-            height[c] += d.EffectiveLevel(x, z);
-            if (!d.River[x, z]) continue;
-            wet[c]++;
-            flow[c] += d.Flow[x, z];
-        }
-        for (int c = 0; c < cn * cn; c++)
-        {
-            if (land[c] > 0) height[c] /= land[c];
-            if (wet[c] > 0) flow[c] /= wet[c];
-        }
+            if (d.HasLand(x, z)) land[x / Coarse * cn + z / Coarse]++;
 
         // The land as a flat list, each cell carrying the eight neighbours it
         // exchanges with. A neighbour off the land is the cell itself, which is a
@@ -354,10 +285,7 @@ internal static class Magicks
         // pattern thickens rather than turning into the next one along.
         float removal = how.Removal + how.Reach * (1f - 2f * density);
         float spreadU = how.Spread * ConsumerShare;
-        var (leanX, leanZ) = Leanings(d, at, cells, cn, height, wet, flow);
-        var (toward, against) = Stencils(leanX, leanZ, cells,
-                                         LeanMost * Mathf.Clamp(p.MagickLean, 0f, 1f));
-        (u, v) = React(u, v, near, toward, against, cells, how.Steps,
+        (u, v) = React(u, v, near, cells, how.Steps,
                        spreadU, spreadU * ProducerShare, how.Supply, removal);
 
         float lo = float.MaxValue, hi = float.MinValue;
@@ -457,7 +385,7 @@ internal static class Magicks
     /// the parity of <paramref name="steps"/>, and is returned rather than guessed at.</para>
     /// </summary>
     private static (float[] U, float[] V) React(
-        float[] u, float[] v, int[] near, float[] toward, float[] against, int cells, int steps,
+        float[] u, float[] v, int[] near, int cells, int steps,
         float spreadU, float spreadV, float supply, float removal)
     {
         var nextU = new float[cells];
@@ -469,17 +397,15 @@ internal static class Magicks
             for (int i = 0; i < cells; i++)
             {
                 int b = i * 8;
-                float ui = u[i], vi = v[i];
-                float sumU = 0f, sumV = 0f;
-                for (int k = 0; k < 8; k++)
-                {
-                    int j = near[b + k];
-                    sumU += against[b + k] * u[j];
-                    sumV += toward[b + k] * v[j];
-                }
+                // Grid.Dx8 alternates cardinal and diagonal from its first entry.
+                int e = near[b], se = near[b + 1], s = near[b + 2], sw = near[b + 3];
+                int w = near[b + 4], nw = near[b + 5], nn = near[b + 6], ne = near[b + 7];
 
-                float lapU = sumU - ui;
-                float lapV = sumV - vi;
+                float ui = u[i], vi = v[i];
+                float lapU = (u[e] + u[s] + u[w] + u[nn]) * Cardinal
+                           + (u[se] + u[sw] + u[nw] + u[ne]) * Diagonal - ui;
+                float lapV = (v[e] + v[s] + v[w] + v[nn]) * Cardinal
+                           + (v[se] + v[sw] + v[nw] + v[ne]) * Diagonal - vi;
 
                 float reacted = Reproduction * ui * vi * vi;
                 nextU[i] = Math.Clamp(ui + spreadU * lapU - reacted + supply * (1f - ui), 0f, 1f);
@@ -491,163 +417,6 @@ internal static class Magicks
         }
 
         return (u, v);
-    }
-
-    /// <summary>
-    /// The two leaning stencils, one per substance, eight weights a reaction cell.
-    /// Each is the even-handed nine-point stencil with every neighbour's weight
-    /// scaled by how far that way lies with the cell's leaning or against it, then
-    /// renormalised so the eight still sum to one. Renormalising is what keeps this
-    /// a weighted average of the neighbourhood rather than a source or a drain: the
-    /// substance is carried, not made, and explicit Euler stays as stable as it was
-    /// even-handed.
-    ///
-    /// <para><c>Toward</c> is the magick's, carrying it the way the cell leans;
-    /// <c>Against</c> is the aether's, carrying it the other way. They are built once
-    /// and read every step, which is why they are stencils and not a dot product in
-    /// the inner loop.</para>
-    /// </summary>
-    private static (float[] Toward, float[] Against) Stencils(
-        float[] leanX, float[] leanZ, int cells, float lean)
-    {
-        var toward = new float[cells * 8];
-        var against = new float[cells * 8];
-
-        // The unit direction of each neighbour, in Grid.Dx8 order; the diagonals are
-        // a step of root two, so they are shortened to unit length before any angle
-        // is taken off them, or a corner would count as more of a direction.
-        var dirX = new float[8];
-        var dirZ = new float[8];
-        for (int k = 0; k < 8; k++)
-        {
-            float len = MathF.Sqrt(Grid.Dx8[k] * Grid.Dx8[k] + Grid.Dz8[k] * Grid.Dz8[k]);
-            dirX[k] = Grid.Dx8[k] / len;
-            dirZ[k] = Grid.Dz8[k] / len;
-        }
-
-        for (int i = 0; i < cells; i++)
-        {
-            int b = i * 8;
-            float sumT = 0f, sumA = 0f;
-            for (int k = 0; k < 8; k++)
-            {
-                float weight = (k & 1) == 0 ? Cardinal : Diagonal;
-                float with = dirX[k] * leanX[i] + dirZ[k] * leanZ[i];   // -1 against .. 1 with
-                // The sign here is the opposite of the one it looks like it should be,
-                // and the audit's lean table is what caught it. A cell takes from its
-                // neighbours, so weighting the uphill neighbour heavier makes the cell
-                // draw magick *down* off the hill. To carry a substance up the leaning,
-                // the cell must draw it from the low side - so the stencil that climbs
-                // is the one that leans away.
-                toward[b + k] = weight * (1f - lean * with);
-                against[b + k] = weight * (1f + lean * with);
-                sumT += toward[b + k];
-                sumA += against[b + k];
-            }
-            for (int k = 0; k < 8; k++)
-            {
-                toward[b + k] /= sumT;
-                against[b + k] /= sumA;
-            }
-        }
-
-        return (toward, against);
-    }
-
-    /// <summary>
-    /// Which way each reaction cell leans, as a vector no longer than a unit: uphill
-    /// by the fall of the effective surface, upwind against the Domain's one wind,
-    /// and upstream along a watercourse. The three are added and then capped rather
-    /// than normalised, so a flat, sheltered cell away from any water leans hardly at
-    /// all and its neighbourhood stays even-handed, which is the honest answer for
-    /// ground with nothing to say.
-    ///
-    /// <para>Every question is asked of the reaction lattice and not of the ground:
-    /// the fall is between one reaction cell's mean height and the next, quoted back
-    /// per ground cell so <see cref="SlopeFull"/> keeps its meaning, and a cell is on
-    /// a watercourse if any column under it is. That is the right scale to ask at -
-    /// the pattern's own features are <see cref="Coarse"/> cells and wider, so what
-    /// should lean them is the shape of the country, not the roughness of one
-    /// column.</para>
-    ///
-    /// <para>Upstream is read off the drainage accumulation, which rises down a
-    /// channel: the neighbouring reaction cell on the watercourse carrying the most
-    /// is downstream, so the way to the headwaters is away from it. The slope alone
-    /// would nearly say this - water runs downhill - but a navigable reach is a stair
-    /// of pools whose surface is flat for cells at a time, and that is exactly where
-    /// the channel still has a direction and the ground has none.</para>
-    /// </summary>
-    private static (float[] X, float[] Z) Leanings(
-        IslandData d, int[] at, int cells, int cn, float[] height, int[] wet, float[] flow)
-    {
-        var leanX = new float[cells];
-        var leanZ = new float[cells];
-
-        int grain = d.DuneGrain & 7;
-        float windLen = MathF.Sqrt(Grid.Dx8[grain] * Grid.Dx8[grain] + Grid.Dz8[grain] * Grid.Dz8[grain]);
-        float windX = WindLean * Grid.Dx8[grain] / windLen;
-        float windZ = WindLean * Grid.Dz8[grain] / windLen;
-
-        for (int i = 0; i < cells; i++)
-        {
-            int x = at[i] / cn, z = at[i] % cn;
-            float here = height[at[i]];
-            float FallAlong(int dx, int dz)
-            {
-                int ax = x + dx, az = z + dz, bx = x - dx, bz = z - dz;
-                bool aheadOn = ax >= 0 && ax < cn && az >= 0 && az < cn && height[ax * cn + az] > 0f;
-                bool behindOn = bx >= 0 && bx < cn && bz >= 0 && bz < cn && height[bx * cn + bz] > 0f;
-                float ahead = aheadOn ? height[ax * cn + az] : here;
-                float behind = behindOn ? height[bx * cn + bz] : here;
-                float fall = aheadOn && behindOn ? (ahead - behind) * 0.5f : ahead - behind;
-                return fall / Coarse;      // slabs per ground cell, so SlopeFull still reads
-            }
-
-            float slopeX = FallAlong(1, 0), slopeZ = FallAlong(0, 1);
-            float fall2 = MathF.Sqrt(slopeX * slopeX + slopeZ * slopeZ);
-            float lx = 0f, lz = 0f;
-            if (fall2 > 0.0001f)
-            {
-                // The gradient points uphill already, which is the way the magick goes.
-                float say = SlopeLean * MathF.Min(1f, fall2 / SlopeFull) / fall2;
-                lx += slopeX * say;
-                lz += slopeZ * say;
-            }
-
-            // Upwind: the wind blows along DuneGrain, so into it is the other way.
-            lx -= windX;
-            lz -= windZ;
-
-            // Upstream: away from the neighbour on the watercourse carrying the most.
-            if (wet[at[i]] > 0)
-            {
-                int downstream = -1;
-                float most = flow[at[i]];
-                for (int k = 0; k < 8; k++)
-                {
-                    int ax = x + Grid.Dx8[k], az = z + Grid.Dz8[k];
-                    if (ax < 0 || ax >= cn || az < 0 || az >= cn) continue;
-                    int j = ax * cn + az;
-                    if (wet[j] <= 0 || flow[j] <= most) continue;
-                    most = flow[j];
-                    downstream = k;
-                }
-                if (downstream >= 0)
-                {
-                    float len = MathF.Sqrt(Grid.Dx8[downstream] * Grid.Dx8[downstream]
-                                         + Grid.Dz8[downstream] * Grid.Dz8[downstream]);
-                    lx -= StreamLean * Grid.Dx8[downstream] / len;
-                    lz -= StreamLean * Grid.Dz8[downstream] / len;
-                }
-            }
-
-            float length = MathF.Sqrt(lx * lx + lz * lz);
-            if (length > 1f) { lx /= length; lz /= length; }
-            leanX[i] = lx;
-            leanZ[i] = lz;
-        }
-
-        return (leanX, leanZ);
     }
 
     /// <summary>

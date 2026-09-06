@@ -230,8 +230,6 @@ public partial class GenerationAudit : Node
                 // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
                 case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
                 case "Character": Params.Character = Enum.Parse<TerrainCharacter>(value, true); break;
-                case "MagickLean": Params.MagickLean = float.Parse(value,
-                    System.Globalization.CultureInfo.InvariantCulture); break;
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;

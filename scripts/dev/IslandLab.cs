@@ -387,8 +387,7 @@ public partial class IslandLab : Node3D
 			+ "  magicks: "
 			+ s.MagickPattern.ToString().ToLowerInvariant()
 			+ (Params.MagickPattern == MagickPattern.Auto ? "*" : "") + "  "
-			+ Knob("density", Params.MagickDensity, s.MagickDensity) + "  "
-			+ Knob("lean", Params.MagickLean, s.MagickLean)
+			+ Knob("density", Params.MagickDensity, s.MagickDensity)
 			+ "   (* rolled from the seed)";
 	}
 }

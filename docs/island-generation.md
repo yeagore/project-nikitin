@@ -559,7 +559,7 @@ one `Recipe` each, as `MagickPattern`:
 
 | Pattern | F | k | Dᵤ | Steps | What it looks like |
 |---|---|---|---|---|---|
-| `Motes` | 0.018 | 0.0530 | 0.14 | 3500 | A fine dusting of points, a few cells each, hundreds of them |
+| `Motes` | 0.018 | 0.0530 | 0.125 | 3500 | The smallest of the six: a scatter of points, half the width of a well |
 | `Wells` | 0.030 | 0.0610 | 0.21 | 3500 | Round wells standing well apart, each a landmark |
 | `Veins` | 0.030 | 0.0590 | 0.17 | 3500 | Worms winding across the country, mostly unjoined |
 | `Labyrinth` | 0.030 | 0.0570 | 0.17 | 3000 | The veins joined into one convoluted corridor with inert walls |
@@ -591,7 +591,7 @@ neither of them changes what the pattern is.
    way thickens the pattern is not the same at every feed, and at the low feed
    the motes sit at it is the other way about.
 2. **On the byte**, it puts the settled field through a one-parameter level curve
-   until the island's mean magick lands on `0.72 × (d + 2d³) / 3`. The
+   until the island's mean magick lands on `0.83 × (d + 2d³) / 3`. The
    level is found by halving through a 512-bin histogram, so the search costs
    bins and not land, and the curve is monotone in both the field and the level,
    so the pattern is emptied, thinned or fattened and never rearranged — nowhere
@@ -627,9 +627,9 @@ the whole island. Where the lift runs into its bound at the other end the Domain
 comes out a little short of the mean asked for, which beats drawing the numerical
 difference between two inert cells as if it were country.
 
-**The reaction runs on its own lattice**, four ground cells to the side, and the
+**The reaction runs on its own lattice**, three ground cells to the side, and the
 settled field is enlarged back onto the columns by a bilinear read. A feature of
-the pattern is therefore about four cells across for every cell it would have
+the pattern is therefore about three cells across for every cell it would have
 been, which is the difference between a texture and a place: at one cell to one
 column the magick was the same everywhere at any distance and no biome could have
 been drawn from it, and a Domain now has magickal country and inert country
@@ -643,79 +643,18 @@ the hundreds of thousands. Coarsening makes the island smaller in the only units
 the reaction knows, so it costs the square *less* rather than more: the stage got
 cheaper, and the checksum's 456 islands with it.
 
-Two details the coarsening needs. Every reaction cell off the land takes the value
+One detail the coarsening needs: every reaction cell off the land takes the value
 of the nearest one on it before the enlargement, or a column near the shore would
 interpolate against a zero meaning "no reaction ran here" rather than "no magick
-here", and every island would wear a dark rind a few cells deep. And the leaning
-below is asked of the reaction lattice, not the ground — the fall between one
-reaction cell's mean height and the next — because the pattern's features are four
-cells and wider, so what should lean them is the shape of the country and not the
-roughness of one column.
+here", and every island would wear a dark rind a few cells deep.
 
-**Four and not six.** The scale trades against the pattern: an island is only so
-many reaction cells across, and the six kinds need enough of them to be six kinds.
-At six cells to the feature a 128² Domain is 22 reaction cells wide, which is
-about four features, and motes, wells and labyrinth all come out as the same three
-blobs. Four keeps them apart at 96² and 128². At **64² it does not** — sixteen
-reaction cells is two or three features, and every pattern reads as one or two
-magickal regions. That is the honest cost of fixing the feature size in world
-cells rather than in island fractions, which is the right way round for a game
-where a cell is a fixed size, and a small Domain having one magickal region is a
-fair answer in itself.
-
-**The lattice leans.** Every cell has a leaning — uphill by the fall of the
-effective surface, upwind against the Domain's one wind, upstream along a
-watercourse — and the two substances take it opposite ways. The magick climbs it;
-the aether it feeds on runs down it. The three are added and capped at a unit
-vector rather than normalised, so flat sheltered ground away from water leans
-hardly at all and its neighbourhood stays even-handed, which is the honest answer
-for ground with nothing to say. The slope is scaled by its own steepness up to a
-fall of two slabs a cell, so a mountainside is led by its fall and flat country by
-the wind. Upstream is read off the drainage accumulation, which rises down a
-channel, because a navigable reach is a stair of pools whose surface is flat for
-cells at a time — exactly where the channel still has a direction and the ground
-has none.
-
-It is done as a **stencil, not a drift term**: the nine-point weights are scaled by
-how far each neighbour lies with the leaning or against it, then renormalised so
-the eight still sum to one. Renormalising is what keeps it a weighted average of
-the neighbourhood rather than a source or a drain, so the substance is carried and
-never made, and explicit Euler stays exactly as stable as it was even-handed. How far
-it leans is `MagickLean`, a knob like the rest: 0 is the even-handed
-reaction that owes nothing to the ground under it, 1 is 0.3 of each neighbour's
-weight. The three terms are quoted 1.0 slope, 0.3 wind, 0.9 channel. The top of
-the slider is deliberately past the sweet spot — far up, the tilt stops leaning
-the pattern and starts carrying it, and the motes smear into worms — so the preset
-sits at 0.4.
-
-Two traps, both of which the audit caught rather than the eye:
-
-- **The sign is the opposite of the one it looks like.** A cell *takes* from its
-  neighbours, so weighting the uphill neighbour heavier makes that cell draw
-  magick *down* off the hill. To carry a substance up the leaning, the stencil
-  that climbs is the one that leans away.
-- **The wind is not like the other two.** Slope and channel point every which way
-  across an island and cancel in the large; the wind is one direction over the
-  whole Domain, so it does not tilt the pattern, it sweeps the field downwind
-  until it banks against the far coast. At 0.5 it left a Domain's windward side
-  sixty bytes richer than its lee and undid the slope's own gathering. At 0.3 it
-  leans the pattern instead.
-
-The audit's lean table is the check, and every pair should show the left column
-above the right:
-
-| Pattern | high − low | windward − lee | head − mouth |
-|---|---|---|---|
-| `Motes` | +11.6 | +11.0 | +21.6 |
-| `Wells` | +17.6 | +29.0 | +24.4 |
-| `Veins` | +14.3 | +11.1 | +32.7 |
-| `Labyrinth` | +11.0 | +7.0 | +26.1 |
-| `Lace` | +9.0 | +6.0 | +17.6 |
-| `Hollows` | +8.0 | +7.5 | +23.7 |
-
-(Mean byte, density 0.50, eight seeds each; the height thirds of the island, the
-halves either side of its centre along the wind, and the channel cells under and
-over the median drainage.)
+**Three, and why not more.** The scale trades against the pattern: an island is
+only so many reaction cells across, and the six kinds need enough of them to be
+six kinds. At six cells to the feature a 128² Domain is 22 reaction cells wide,
+which is about four features, and motes, wells and labyrinth all come out as the
+same three blobs. Three leaves 43 across at 128² and 22 at 64², which is room for
+the six to be themselves at every footprint, and features still twenty cells and
+wider — biome-sized, which is the point of coarsening at all.
 
 The producer never uses more than a third of 0–1, so the finished field is
 stretched to the island's own range before the level. If it comes back with no

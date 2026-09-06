@@ -151,16 +151,6 @@ public partial class IslandParams : Resource
     /// </summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickDensity { get; set; } = Auto;
 
-    /// <summary>
-    /// How far the land tilts the magick: 0 an even-handed reaction that owes nothing
-    /// to the ground under it, 1 the furthest the pattern will take before the tilt
-    /// starts carrying it away rather than leaning it. In between, the magick spreads
-    /// more readily uphill, upwind and toward the headwaters, and the aether it feeds
-    /// on the other way, so the same pattern holds more of itself on the tops and the
-    /// weather side. Auto rolls it per seed.
-    /// </summary>
-    [Export(PropertyHint.Range, "-1,1,0.01")] public float MagickLean { get; set; } = Auto;
-
     // ---- crossings ----------------------------------------------------------
 
     /// <summary>
