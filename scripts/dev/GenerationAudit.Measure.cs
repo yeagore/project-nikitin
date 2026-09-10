@@ -109,6 +109,7 @@ public partial class GenerationAudit
         public long DampMoisture, DampCells;
         public long HollowWarmth, HollowCells, TorCells, SeaStackCells;
         public int TorIslands, SeaStackIslands;
+        public int Fjords, FjordIslands, FjordCells, FjordBridged;
         public long HotWaterCells;
         public int HotIslands, ColdIslands, ColdIslandsWithHot;
 
@@ -779,6 +780,11 @@ public partial class GenerationAudit
             if (torsHere > 0) TorIslands++;
             SeaStackCells += d.SeaStacks.Count;
             if (d.SeaStacks.Count > 0) SeaStackIslands++;
+            Fjords += d.Fjords.Count;
+            if (d.Fjords.Count > 0) FjordIslands++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.Fjord[x, z]) FjordCells++;
             HotWaterCells += d.HotWater.Count;
             if (d.HotWater.Count > 0) HotIslands++;
             if (d.Settings.Warmth < 0.35f)
@@ -831,7 +837,11 @@ public partial class GenerationAudit
                 foreach (Works w in road.Built)
                 {
                     if (w.Kind == WorksKind.Stair) RoadStairs++;
-                    else RoadBridges++;
+                    else
+                    {
+                        RoadBridges++;
+                        if (SpansFjord(d, w)) FjordBridged++;
+                    }
                 }
 
                 // A road walks by king's moves, so a one-cell diagonal is a step; works
@@ -1143,5 +1153,16 @@ public partial class GenerationAudit
             DiagonalWater += DiagonalOnly(n, (x, z) =>
                 InBounds(n, x, z) && d.WaterLevel[x, z] != IslandData.NoLand);
         }
+    }
+
+    /// <summary>Whether a bridge's gap holds a cell a fjord took, so a road crossing an inlet is counted.</summary>
+    private static bool SpansFjord(IslandData d, Works w)
+    {
+        var step = new Vector2I(Math.Sign(w.To.X - w.From.X), Math.Sign(w.To.Y - w.From.Y));
+        if (step == Vector2I.Zero) return false;
+        Vector2I c = w.From + step;
+        for (int i = 0; i <= d.BridgeSpan && c != w.To; i++, c += step)
+            if (InBounds(d.Size, c.X, c.Y) && d.Fjord[c.X, c.Y]) return true;
+        return false;
     }
 }

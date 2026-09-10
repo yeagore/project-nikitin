@@ -239,6 +239,9 @@ public partial class IslandLab : Node3D
 		GD.Print(err == Error.Ok
 			? $"[IslandLab] wrote {ProjectSettings.GlobalizePath(path)}"
 			: $"[IslandLab] could not write {path}: {err}");
+		// Where the fjords are, so a second shot can be aimed with at=X,Z.
+		if (_data is { } d && d.Fjords.Count > 0)
+			GD.Print($"[IslandLab] fjord mouths {Cells(d.Fjords)}");
 	}
 
 	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>
@@ -356,6 +359,7 @@ public partial class IslandLab : Node3D
 			h.Add(Params.Moisture);
 			h.Add(Params.Warmth);
 			h.Add(Params.Wind);
+			h.Add(Params.Fjords);
 		}
 		return h.ToHashCode();
 	}
@@ -450,6 +454,7 @@ public partial class IslandLab : Node3D
 			+ Knob("moisture", Params.Moisture, s.Moisture) + "  "
 			+ Knob("warmth", Params.Warmth, s.Warmth) + "  "
 			+ Knob("wind", Params.Wind, s.Wind) + "  "
+			+ Knob("fjords", Params.Fjords, s.Fjords) + "  "
 			+ Knob("overhangs", Params.OverhangDensity, s.OverhangDensity) + "\n"
 			+ "  magicks: "
 			+ s.MagickPattern.ToString().ToLowerInvariant()

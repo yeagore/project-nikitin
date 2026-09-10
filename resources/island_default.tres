@@ -27,6 +27,7 @@ Valleys = -1.0
 Moisture = -1.0
 Warmth = -1.0
 Wind = -1.0
+Rifts = -1.0
 MagickPattern = 0
 MagickDensity = -1.0
 Crossings = 3

@@ -23,7 +23,7 @@ Windows machine's locale prints decimals with a comma, which breaks patterns
 looking for `\.`; and the headless runs are independent processes, so the
 checksum, the audit and a collage can run at once.
 
-The preset leaves the eleven 0–1 knobs (relief, hilliness, mix, rivers, lakes,
+The preset leaves the twelve 0–1 knobs (fjords, relief, hilliness, mix, rivers, lakes,
 valleys, moisture, warmth, wind, overhangs, magick density) and the magick
 pattern on **Auto**, so every seed rolls its own;
 a sweep that sets a knob pins it for every seed it builds, and the others still
@@ -210,7 +210,8 @@ usually is, which is the question when a shape "often" merges or parts.
 `GalleryShapes=Isthmus,Quarters` restricts it to the shapes you are working on;
 run it at 64 and 128 as well, since a shape that only reads at 96 is a shape
 that lies. A caption too wide for its tile goes on two lines rather than into
-the next tile.
+the next tile. `Fjords=1` (or `0`) pins the fjords knob, so a sheet shows every
+tile cut, or none, the way `Arrangement=` and `Character=` pin the shape.
 
 ```
 godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 Gallery=C:/tmp/gallery GalleryShapes=Isthmus,Caldera GallerySize=64

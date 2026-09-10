@@ -742,6 +742,65 @@ because the island is sixteen times smaller in reaction cells and the step count
 did not have to move. It is the cheap end of the pipeline, and
 being able to name the pattern is worth the seconds.
 
+### Fjords: inlets along a grain
+
+The arrangements make every kind of coast but one: the long narrow inlet. And
+the works already knew how to cross a gap of aether within a bridge span and
+how to walk round a wider one, so an inlet was a barrier for free — the
+non-water version of the estuary the ferries would have wanted. `Fjords`
+(2026-09-07, reworked 2026-09-09) cuts them into the mask after the bites and
+before the islet filter, on the largest landmass only and never through it.
+One **grain** per Domain, rolled from the seed and not the wind's (fjords follow
+a structural grain; dunes follow the air). A mouth is where a line along the
+grain, offset across it within the landmass's own width, first meets the
+landmass marching in from outside; from there the inlet walks inland.
+
+The first sheets were knife cuts: straight, one width end to end, on three
+islands in four. The second were better and still, in Maxim's words, rather
+straight. What straightened them was the noise: simplex hugs the middle of its
+range, so a heading steered by the raw value wandered by a few degrees. The
+walker now pushes the noise toward its extremes, holds a curve the whole way
+(up to a radian over the length, so an inlet can hook), grows the bend with the
+length (half a radian more over the first forty cells), and ramps the bend in
+over the first eight steps so a mouth heads inland where the land ahead was
+measured — without the ramp seven islands in sixteen at 128² got no inlet at
+all, the walk having turned along the coast and run out of land before it had
+cut seven cells. The length is drawn evenly from 15% to 75% of the land ahead
+of the mouth, so one island's inlets differ; one of sixteen steps or more
+throws a side arm half the time. The half-width flares at the mouth, tapers
+toward the head and wobbles between.
+
+Two walls. The land ahead stops the walk five cells before any far coast or
+strait, so an inlet never severs on its own. The land beside it went unchecked
+at first, and a fjord running near a coast or down a peninsula could break
+through its side wall; the sliver rule then deleted what it had cut off, so the
+result was a bay with two mouths or a peninsula eaten whole. The walls are
+checked now, six steps in from the mouth, where a coast is thin by nature: the
+inlet narrows to keep three cells of land on either side, and stops where even
+a one-cell inlet would thin a wall three steps running — one bay beside it is
+coast, a run of them is a peninsula. (A stop on the first thin step killed most
+inlets at the mouth of a lobed coast.) What remains is tried on the mask: if
+what is left of the landmass is not one piece apart from slivers under islet
+size, or is no longer the largest, the cut is put back and another mouth tried,
+up to six.
+
+Rifts — the same crack opened inland, with land at both ends — shipped beside
+the fjords on 2026-09-07 and went on 2026-09-09: they read as knife cuts
+through the country whatever the bends, where a fjord reads as coast (§C).
+
+Measured on the sixty (2026-09-09): 41 fjords on 39 islands, two of them with
+two, 2,925 cells of inlet, every seed built in one attempt. Only the largest
+landmass is cut, and a mouth with under fourteen cells of land behind it is
+passed over, so satellites, islets and scatters stay whole: the archipelago and
+the thousand isles get none. The knock-on is the rivers: an inlet is rim, the
+routing flood starts from the rim, so courses that ran to the coast run into
+the inlet instead, and river cells went from 7,871 to 7,180, navigable cells
+3,565 to 3,090, water bodies 257 to 244, gorge reaches 74 to 65; the deltas
+held at 17. That is the fjord draining its hinterland, which is what a fjord
+does. And **a road bridges an inlet once in 180**: walking is free in the road
+search, so an inlet open at one end is walked round however far round is. A
+fjord is a place and not yet a challenge; making it one is the cost model (§E).
+
 ### The mesh is the exposed faces, and a bench says so
 
 The renderer (spec §4) could have been checked by looking. It is checked by
@@ -798,6 +857,7 @@ The cost of a Domain will be its features, not its ground.
 | **Dropping the Gate edge band outright** | Removing "stay near your own edge" at the relaxed rung put most of the Domain behind the player as they arrived. The band widens and never disappears. |
 | **A four-cell floor under Gate separation** | Not a relaxation of "keep your distance" but a repeal of it. The floor is a third of the footprint. |
 | **Geysers as terrain** | Jets placed where the rock was; where a jet belongs is a fact about the biome. The hook stays empty. |
+| **Rifts** | The same crack as a fjord opened inland, with land at both ends, so the keel showed through it. Read as a knife cut through the country whatever the bends, where a fjord reads as coast. Removed 2026-09-09 at Maxim's call; the walker stayed and became `Fjords`. |
 
 ---
 
@@ -879,6 +939,13 @@ What it found, on the first run:
 
 The matrix is the check to rerun after any knob is touched: its cost is three
 minutes and its reading is a glance down one column.
+
+Rerun on 2026-09-09 with the twelfth knob, fjords (720 islands at 128² over
+twelve seeds, 146 s): the knob moves the cells of inlet 0, 45, 94, 113, 148 up
+its five steps, monotonically and +1.6 spreads end to end; what else it moves
+is fords, −0.4 spreads, the hinterland draining into the inlet (§B), and a lake
+or so (−0.1, a noise-sized step the matrix flags); no other knob touches the
+inlet cells, and the playability row stays `·`.
 
 ### The valleys knob wakes from a quarter up
 
@@ -985,9 +1052,13 @@ its neighbour is a larger share of a smaller island.
 4. **Span-aware pathing**, which is what would make an overhang or an arch
    walkable, and what a natural-bridge shortcut needs to matter.
 5. **Re-levelling a sealed gorge**, per the open gaps.
-6. **Fjords.** Long narrow inlets cut into one landmass along a grain, the one
-   obvious coastline the arrangements do not produce. A mask operation, so it
-   belongs with `Footprint`.
+6. **Closing an inlet's loop.** Fjords exist (§B); a road bridges one once in
+   180, because walking is free and every inlet is open at one end. Two ways
+   to make one a barrier rather than a detour: a cost of walking against a work,
+   so a crack that saves eighty cells earns its bridge; and joining a crack's
+   head to something else you cannot walk — a cliff, a massif's foot, a lake —
+   so the two banks are different walk areas, which the traversal already
+   measures.
 7. **Size-gating the arrangement pool.** One filter on `ArrangementPool` by
    `Size`, to be wired when the ladder is chosen; `Strain` names the layouts.
 8. **Plunge pools.** A small pool dug under a fall onto dry ground, fed by it.

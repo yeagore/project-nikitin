@@ -35,6 +35,7 @@ public partial class GenerationAudit
         new("wind", (p, v) => p.Wind = v, new[] { "leegap" }),
         new("overhangs", (p, v) => p.OverhangDensity = v, new[] { "overh" }),
         new("magick", (p, v) => p.MagickDensity = v, new[] { "magick" }),
+        new("fjords", (p, v) => p.Fjords = v, new[] { "fjord" }),
     };
 
     /// <summary>The outcomes, in the order <see cref="MatrixMeasure"/> fills them.</summary>
@@ -42,7 +43,7 @@ public partial class GenerationAudit
     {
         "land%", "high%", "spread", "slope", "cliff%", "2slab%", "hillrel",
         "river", "navig", "falls", "spring", "ford", "lake", "lakes", "valley",
-        "moist", "warm", "wet%", "snow%", "leegap", "overh", "magick",
+        "moist", "warm", "wet%", "snow%", "leegap", "overh", "magick", "fjord",
         "main%", "heart%", "distr", "attempt",
     };
 
@@ -55,7 +56,7 @@ public partial class GenerationAudit
     /// neighbouring land cells, cliff and two-slab the share of such steps; hillrel
     /// the same mean step inside the Hills; the water counts are cells; valley is the
     /// audit's rise from one cell off a river to five; moist, warm and magick are
-    /// mean bytes; leegap is flat open ground's moisture over the flat lee's; main
+    /// mean bytes; fjord the cells the fjords took; leegap is flat open ground's moisture over the flat lee's; main
     /// and heart the walk and reach shares of dry land; distr the districts on the
     /// heartland; attempt how many islands the seed built.
     /// </summary>
@@ -65,7 +66,7 @@ public partial class GenerationAudit
         double land = 0, high = 0, dry = 0, main = 0, heart = 0;
         double pairs = 0, slopeSum = 0, cliff = 0, two = 0, hillPairs = 0, hillSum = 0;
         int lowest = int.MaxValue, crest = int.MinValue;
-        double river = 0, navig = 0, ford = 0, lake = 0, overh = 0;
+        double river = 0, navig = 0, ford = 0, lake = 0, overh = 0, fjord = 0;
         double moist = 0, warm = 0, magick = 0, wet = 0, snow = 0;
         double leeM = 0, leeN = 0, openM = 0, openN = 0;
         var lakeRegions = new HashSet<int>();
@@ -73,6 +74,7 @@ public partial class GenerationAudit
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
         {
+            if (d.Fjord[x, z]) fjord++;
             if (!d.HasLand(x, z)) continue;
             land++;
             var form = (LandformType)d.Landform[x, z];
@@ -140,7 +142,7 @@ public partial class GenerationAudit
             river, navig, d.Falls.Count, d.Springs.Count, ford, lake, lakeRegions.Count, valley,
             land > 0 ? moist / land : 0, land > 0 ? warm / land : 0, Pct(wet, land), Pct(snow, land),
             leeN > 0 && openN > 0 ? openM / openN - leeM / leeN : 0,
-            overh, land > 0 ? magick / land : 0,
+            overh, land > 0 ? magick / land : 0, fjord,
             Pct(main, dry), Pct(heart, dry), districts, d.Attempts,
         };
     }

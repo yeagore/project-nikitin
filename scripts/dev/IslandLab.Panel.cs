@@ -22,7 +22,7 @@ public partial class IslandLab
 	private OptionButton _exitKind = null!, _magickPattern = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
-	private HSlider _magickDensity = null!;
+	private HSlider _magickDensity = null!, _fjords = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
@@ -146,6 +146,12 @@ public partial class IslandLab
 		_poolNote.AddThemeColorOverride("font_color", new Color(0.62f, 0.78f, 0.95f));
 		_poolNote.AddThemeFontSizeOverride("font_size", 12);
 		rows.AddChild(_poolNote);
+		_fjords = Slide(rows, "Fjords", 0f, 1f, 0.05f,
+			() => Params.Fjords, v => Params.Fjords = v, q => q.Fjords,
+			"How cut about the largest landmass's coast is. 0 none; 1 an inlet on every "
+			+ "Domain with room for one and a second on about a third, all along one grain "
+			+ "per Domain. A crossing where an inlet narrows to a bridge span, a walk round "
+			+ "the head elsewhere.");
 
 		Heading(rows, "relief");
 		_hilliness = Slide(rows, "Hilliness  (H)", 0f, 1f, 0.05f,

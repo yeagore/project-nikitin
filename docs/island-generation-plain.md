@@ -103,7 +103,7 @@ tests it failed.
 
 ## 2. The settings
 
-There are ten dials that run from 0 to 1, all left on **Auto** by default. Auto
+There are twelve dials that run from 0 to 1, all left on **Auto** by default. Auto
 means the seed rolls that dial for each island, evenly across its whole range,
 so consecutive seeds differ in weather and water as well as in shape. The island
 remembers the values it was actually built with, and the lab shows them.
@@ -120,6 +120,8 @@ remembers the values it was actually built with, and the lab shows them.
 | Warmth | the warmth of open flat lowland: under about 0.3 is cold country, 0.5 temperate, over about 0.7 hot, the last twentieth desert. Even 0 keeps the lowland above the snow |
 | Wind | how hard the island's one wind blows: 0 still air, where shelter changes nothing; 0.5 the normal effects; 1 twice them |
 | Overhang density | how often a tall cliff is undercut and a short gap arched over |
+| Magick density | how much magick the island holds; the pattern it settles into is a separate named choice |
+| Fjords | how cut about the coast of the largest landmass is: 0 none; 1 an inlet on every island with room for one and a second on about a third; on Auto about two islands in three get one |
 
 Other settings are fixed numbers rather than dials:
 
@@ -198,6 +200,23 @@ along natural borders (whole patches of a draft partition deleted). Cells that
 touch only at a corner within one landmass are filled in, since a corner is not
 a join you can walk (but two islands touching at a corner are never welded).
 Pieces under 30 cells are dropped as too small to matter.
+
+**Fjords.** After the bites, one or two inlets of aether may be cut into the
+largest landmass from its coast, all running one way per island (its grain,
+which is not the wind's). An inlet is wide at the mouth and narrows toward its
+head, holds a curve the whole way so it can hook, and bends more the longer it
+is; its length is drawn from a deep notch to most of the way across, so one
+island's inlets differ, and a long one sometimes throws a side arm. It always
+leaves at least five cells of land beyond its head, keeps three cells of wall on
+either side once inside (narrowing to do so, and stopping where it cannot), and
+where it would still break off a piece of thirty cells or more it is refused and
+another mouth tried. Where an inlet narrows to a bridge's span it can be
+bridged; elsewhere it is walked round by its head. Rivers drain into an inlet as
+they drain off the coast, so a cut island has slightly shorter rivers. Only the
+largest landmass is cut, and a coast with under fourteen cells of land behind it
+is passed over, so satellites and islets stay whole. The Fjords dial says how
+many are tried. Rifts, the same crack opened inland, were tried and removed:
+they read as knife cuts through the country, where an inlet reads as coast.
 
 **Sea stacks.** Of those dropped specks, two or three (the largest, still wholly
 in the aether and not touching land on a straight side) are kept as **sea
@@ -868,17 +887,22 @@ numbers in section 6 about twenty and eighty Domains come from it.
 
 Measured on the last accepted audit (60 seeds, 128², all dials rolled):
 
-- **Steps**: 92.7% of neighbouring pairs are free steps, 1.1% two-slab (all at
+- **Steps**: 92.7% of neighbouring pairs are free steps, 1.0% two-slab (all at
   riverbanks or beside landforms whose height is the point), 6.3% cliffs.
+- **Fjords**: 41 on 39 of the 60 islands, two islands with two, 2,925 cells of
+  aether; one road in 180 bridges one, since walking is free and every inlet
+  can be walked round by its head.
 - **Rivers** on every island; every island's rivers reach the rim; 0 channels
   uncut and 0 water running uphill; 8 lakes swallow a river on 8 islands; 17
-  deltas on 12 islands; 218 springs, none under a ford; fords at 10 per hundred
-  stream cells on flat ground and 6 on broken; 252 bodies of water.
+  deltas on 12 islands; 212 springs, none under a ford; fords at 10 per hundred
+  stream cells on flat ground and 6 on broken; 244 bodies of water. The fjords
+  took about a tenth of the river cells and an eighth of the navigable ones,
+  because an inlet is new coast and the rivers now drain into it.
 - **Ground**: grass 21.5%, stone 11.2%, meadow 9.8%, dust 8.4%, tundra 8.2%,
   scree 5.7%, sand 5.3%, silt 4.7%, heath 4.5%, moorland 4.4%, steppe 4.4%,
   savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, snow 0.8%, marsh 0.4%.
-- **Walkability**: 41.9% of land on the mainland on foot; 94.8% on the
-  heartland once built; 47 of 60 islands one reachable whole; 459 districts on
+- **Walkability**: 40.9% of land on the mainland on foot; 95.0% on the
+  heartland once built; 48 of 60 islands one reachable whole; 466 districts on
   the heartland, every island with at least one.
 - **Gates**: every island one Entry and three Exits, none on a shared edge, off
   the heartland, outside the box or short of a level strip; a road to every
@@ -898,9 +922,10 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   valleys and slightly wetter ground; more lakes bring fewer springs (a stream
   that starts at a lake shore is an outflow, not a spring) and no fewer
   rivers; more relief makes the hills hillier, the valleys deeper and the
-  fords rarer. The valleys dial was found asleep over its lower half; a curve
-  on the dial wakes it from a quarter of the way up, and the first quarter is
-  still soft.
+  fords rarer; more fjords take a little river and a few fords with them, since
+  the rivers drain into the cracks. The valleys dial was found asleep over its
+  lower half; a curve on the dial wakes it from a quarter of the way up, and
+  the first quarter is still soft.
 - **Drawing** (the mesh bench, three seeds a footprint): a 128² island is about
   50,000 ground and 600 water triangles, 62% of what the boxes drew, meshed in
   9 ms with another 40 ms for the meshes, colliders and tiles, about 6 MB; the

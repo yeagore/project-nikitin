@@ -196,9 +196,9 @@ public static class IslandGenerator
 
     /// <summary>
     /// Stage 1. The landmass should cover 55–85% of the grid, measured after the
-    /// bites, the islet filter and the linker (which shrinks every scattered
-    /// layout), so the whole mask stage runs inside the fit loop. Of the specks
-    /// the filter drops on the mask that ships, two or three stay as sea stacks.
+    /// bites, the fjords, the islet filter and the linker (which shrinks every
+    /// scattered layout), so the whole mask stage runs inside the fit loop. Of the
+    /// specks the filter drops on the mask that ships, two or three stay as sea stacks.
     /// </summary>
     private static void FitFootprint(Draft d)
     {
@@ -214,6 +214,9 @@ public static class IslandGenerator
                 int[,] draft = Regions.BuildRegions(d.Seed, d.P, d.Land, out int draftCount);
                 Footprint.BiteRegions(d.Seed, d.P, d.Land, draft, draftCount);
             }
+            // Fjords: inlets along the Domain's grain, into the largest landmass
+            // only, and never through it.
+            Fjords.Cut(d.Seed, d.P, d.Land, d.Data);
             Landmasses.CloseDiagonalJoins(d.Land);
 
             // Every arrangement but Single keeps its pieces, and then has to earn

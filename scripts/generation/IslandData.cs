@@ -241,6 +241,15 @@ public sealed class IslandData
     /// <summary>Columns with more than one span: an undercut cliff or a cell of an arch.</summary>
     public List<Vector2I> Overhangs { get; } = new();
 
+    /// <summary>
+    /// Columns a fjord took: aether now, marked so a crossing of an inlet can be told
+    /// from a crossing of a strait. See <c>Fjords</c>.
+    /// </summary>
+    public bool[,] Fjord { get; }
+
+    /// <summary>The mouth of each fjord: the coast cell the inlet ran in from.</summary>
+    public List<Vector2I> Fjords { get; } = new();
+
     /// <summary>River beds: the flooded columns carrying a watercourse, stream or navigable reach.</summary>
     public List<Vector2I> RiverBedCells { get; } = new();
 
@@ -321,6 +330,7 @@ public sealed class IslandData
         Beach = new bool[size, size];
         Delta = new bool[size, size];
         Hot = new bool[size, size];
+        Fjord = new bool[size, size];
         WaterBody = new int[size, size];
         Flow = new int[size, size];
         Walk = new int[size, size];

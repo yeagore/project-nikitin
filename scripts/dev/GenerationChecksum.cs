@@ -173,7 +173,8 @@ public partial class GenerationChecksum : Node
             h.Add(d.WaterBody[x, z]); h.Add(d.Beach[x, z]);
             h.Add(d.Ford[x, z]); h.Add(d.River[x, z]); h.Add(d.Navigable[x, z]);
             h.Add(d.Flow[x, z]); h.Add(d.Walk[x, z]); h.Add(d.Reach[x, z]);
-            h.Add(d.Delta[x, z]); h.Add(d.Hot[x, z]); h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
+            h.Add(d.Delta[x, z]); h.Add(d.Hot[x, z]); h.Add(d.Fjord[x, z]);
+            h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
             h.Add(d.Ruggedness[x, z]); h.Add(d.Exposure[x, z]); h.Add(d.RimDistance[x, z]);
             h.Add(d.WaterDistance[x, z]); h.Add(d.Magick[x, z]);
             Span[] spans = d.Spans[x, z];
@@ -182,7 +183,8 @@ public partial class GenerationChecksum : Node
         }
         foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells, d.BankCells,
                                      d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells,
-                                     d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater })
+                                     d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater,
+                                     d.Fjords })
         {
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);

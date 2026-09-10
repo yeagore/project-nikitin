@@ -76,6 +76,7 @@ public partial class IslandLab
 			+ (d.HotWater.Count > 0 ? $"   hot water {d.HotWater.Count} cells" : "")
 			+ (d.TerminalLakes.Count > 0 ? $"   {d.TerminalLakes.Count} lake swallows a river" : "")
 			+ (d.Deltas.Count > 0 ? $"   deltas {d.Deltas.Count}" : "")
+			+ (d.Fjords.Count > 0 ? $"   fjords {d.Fjords.Count} (mouth at {Cells(d.Fjords)})" : "")
 			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")
 			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");
 	}
@@ -202,4 +203,8 @@ public partial class IslandLab
 				+ $"{Roster.AutoCharacters(true)} characters");
 		return "Auto draws from " + string.Join(" and ", bits) + ".";
 	}
+
+	/// <summary>Cells as "x,z" pairs, so a crack can be found with the lab's at=X,Z framing.</summary>
+	private static string Cells(List<Vector2I> cells)
+		=> string.Join(" ", cells.ConvertAll(c => $"{c.X},{c.Y}"));
 }

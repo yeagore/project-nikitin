@@ -121,7 +121,7 @@ under `scripts/generation/`, in the order they run:
 
 | Stage | Class | What it settles |
 |---|---|---|
-| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
+| Footprint | `Footprint`, `Fjords`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, cut with fjords (winding inlets of aether along one grain per Domain into the largest landmass, never through it; rifts were tried and removed), huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
 | Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
 | Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
@@ -138,7 +138,7 @@ under `scripts/generation/`, in the order they run:
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The eleven 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+**Auto knobs.** The twelve 0–1 knobs in `IslandParams` (fjords, relief, hilliness, mix,
 rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick density)
 accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
 then rolls them from the seed before anything runs, and the values used are
@@ -254,7 +254,7 @@ scripts/
                                material palette, the materials.
   generation/                  Namespace ProjectNikitin.Generation
     IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
-    Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
+    Footprint.cs, Fjords.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
     Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
     Roster.cs                  The terrain stages (see the table above).
     Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,

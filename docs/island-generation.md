@@ -115,6 +115,40 @@ one); components under `Landmasses.MinIsletCells` are dropped; and
 cardinally, across at most a bridge span (`Crossings`). Whatever the
 arrangement, the pieces are linkable, and `FindBridgeSites` records the pairs.
 
+**Fjords** (`Fjords`). After the bites, inlets of aether are cut into the
+largest landmass from its coast, along one **grain** per Domain — its own, not
+the wind's. The mouth is where a line along the grain, offset across it within
+the landmass's own width, first meets the landmass marching in from outside.
+From there the inlet walks inland on a curve it holds the whole way (up to a
+radian over its length, so it can hook), with bends on a slow noise that grow
+with its length and a quick one that roughens them, both pushed toward their
+extremes, since raw simplex hugs the middle and an inlet steered by it ran
+straight; the bend comes in over the first eight steps, so a mouth heads inland
+where the land ahead was measured. The half-width flares at the mouth, tapers
+toward the head and wobbles between, so an inlet has narrows where a deck fits
+and reaches where none does: bodies two to five cells across, mouths up to
+eight. Its length is drawn evenly from a deep notch (15% of the land ahead of
+its mouth) to most of the way across (75%), so one island's fjords differ, and
+one that walked sixteen steps or more throws a side arm half the time, at sixty
+to ninety degrees, narrower and shorter than what is left of the trunk. Three
+stops: the length; the land ahead, down to `Fjords.Neck` (5) cells before the
+far coast or a strait; and the walls — once six steps inside, the inlet narrows
+so that three cells of land stay on either side, and stops where even a
+one-cell inlet would thin a wall three steps running (one bay beside it is
+coast; a run of them is a peninsula it was about to eat). One that would still
+part a piece of `MinIsletCells` or more from the landmass is refused and another
+mouth tried, up to six; slivers under that go with the coast. Each mouth is
+listed (`IslandData.Fjords`) and the cells taken are marked
+(`IslandData.Fjord`), so the audit can tell a road bridging an inlet from one
+bridging a strait. `IslandParams.Fjords` is the knob: 0 none; 1 an inlet on
+every Domain with room for one and a second on about a third; on Auto
+(2026-09-09) 39 Domains in 60 have one, two of them two. An inlet is new rim,
+so the rivers drain into it: a cut Domain's courses are shorter and fewer reach
+navigable width (appendix). Only the largest landmass is cut, and a mouth with
+under fourteen cells of land behind it is passed over, so satellites, islets
+and scatters stay whole. Rifts — the same crack opened inland — were tried and
+removed (appendix).
+
 **Sea stacks.** Of the specks the islet filter drops, two or three — the
 largest, on the mask that ships, still wholly in the aether with no land beside
 them cardinally — are kept as `IslandData.SeaStacks`: aether cells, never land.
@@ -854,6 +888,7 @@ at the lab.
 | `NewArrangements` | bool | whether `Auto` may roll the newer layouts |
 | `Character` | enum | which landforms the island is built from |
 | `NewLandforms` | bool | whether `Auto` may roll the sculpted characters |
+| `Fjords` | 0 – 1, Auto | fjords: how cut about the largest landmass's coast is — see Footprint |
 | `LandformMix` | 0 – 1, Auto | the quota, low ground ↔ high |
 | `Relief` | 0 – 1, Auto | vertical exaggeration |
 | `Hilliness` | 0 – 1, Auto | swells ↔ mounds |
@@ -877,7 +912,7 @@ at the lab.
 
 **Auto on a 0–1 knob** (`IslandParams.Auto`, any negative value) makes the
 generator roll that knob from the seed, uniformly over its whole range, before
-anything else runs (`Roster.ResolveKnobs`); the preset leaves all ten on
+anything else runs (`Roster.ResolveKnobs`); the preset leaves all twelve on
 Auto, so consecutive seeds differ in climate, water and relief and not only in
 shape, which is also how the audit's sixty seeds now sample the knob space.
 The values used are the island's `IslandData.Settings`, which the lab prints
@@ -955,6 +990,7 @@ the renderer's under **Rendering**.
 
 1. **Settlement placement** — everything it needs exists: districts, water bodies,
    roads, Gate aprons, the water-distance byte, and now a collider to click.
+   Deferred (2026-09-07) until the biome question is settled.
 2. **The biome layer** above the habitat vector — the living things as opposed
    to the ground; the vector and the anchor lists are its inputs, the
    provisional `Material` mapping is its to replace, and with it the flat

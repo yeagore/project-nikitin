@@ -347,6 +347,8 @@ public partial class GenerationAudit
         GD.Print($"continuity: {t.Landmasses} landmasses over {Seeds} islands "
             + $"(more than one is the arrangement's doing, not a fault); "
             + $"diagonal-only joins within a landmass: land {t.DiagonalLand}, water {t.DiagonalWater}");
+        GD.Print($"  fjords: {t.Fjords} on {t.FjordIslands} of {Seeds} islands, "
+            + $"{t.FjordCells} cells of inlet; a road bridges one {t.FjordBridged} times");
     }
 
     /// <summary>
@@ -388,6 +390,8 @@ public partial class GenerationAudit
             ["springs"] = t.Springs,
             ["springsForded"] = t.SpringsForded,
             ["seaStackCells"] = t.SeaStackCells,
+            ["fjords"] = t.Fjords,
+            ["fjordBridged"] = t.FjordBridged,
             ["hotWaterCells"] = t.HotWaterCells,
             ["fords"] = t.FordCells,
             ["crossings"] = t.Crossings,

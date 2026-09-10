@@ -39,6 +39,15 @@ public partial class IslandParams : Resource
     /// <summary>Whether <c>Auto</c> may roll the sculpted characters (Badlands, Karst, Massif, Dunes). Gates Auto's dice only; naming one still builds it.</summary>
     [Export] public bool NewLandforms { get; set; } = true;
 
+    /// <summary>
+    /// Fjords: how cut about the largest landmass's coast is. 0 none; 1 an inlet on
+    /// every Domain with room for one and a second on about a third. Inlets of aether
+    /// along one grain per Domain, a crossing where they narrow to a bridge span and
+    /// walked round by the head elsewhere. A 0–1 knob like those below: Auto rolls it
+    /// per seed, and about half the Domains end up with one.
+    /// </summary>
+    [Export(PropertyHint.Range, "-1,1,0.01")] public float Fjords { get; set; } = Auto;
+
     // ---- what the island is made of -----------------------------------------
     // The 0–1 knobs below accept Auto (any value under 0): the generator then rolls
     // the knob from the seed, over its whole range, so consecutive seeds differ in
