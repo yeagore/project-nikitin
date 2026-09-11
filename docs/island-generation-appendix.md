@@ -478,6 +478,37 @@ beside the pair; an arm now needs two cells forward before the rim. Seventeen
 on sixty seeds, on twelve islands, with fans of about four cells: a navigable
 river has to meet the rim over a plain for one to exist at all.
 
+### An estuary is the reach opened, not a new kind of water
+
+Maxim's next ask after the fjords (2026-09-10) was wider rivers: estuaries and
+the like. A navigable river was two cells wide from its first confluence to the
+rim, which a deck spans anywhere, so no reach was ever a barrier and no mouth
+ever read as one. `Rivers.Estuaries` opens half the navigable mouths over
+gentle ground into a funnel: the main stem walked upstream from the rim for a
+rolled length, the land within a half-width of each axis cell stamped into the
+river, the half-width from a rolled four-to-six-cell mouth down to the pair's
+two over the length. Nothing new was taught to the profile: every cell taken
+is twinned to its axis cell, the debt `Widen` records for a partner, so
+`LevelPairs`, `CutBeds` and the valleys' `EqualisePairs` treat a funnel as a
+pair with more partners and the stair of pools runs through it a step at a
+time. Ground more than a slab above the axis is a bank the funnel narrows
+round; where under 60% of a stamp's land is that gentle the funnel ends, so a
+gorge mouth has none; an eyot in the funnel is drowned; a funnel shorter than
+three axis cells is put back. It runs between the braid and the deltas, and a
+delta's arms find the funnel's water and give up, so a mouth is one or the
+other; the chance is a coin so the deltas keep half the gentle mouths.
+
+Past three cells across no deck spans water (`WaterBridgeSpan`), whatever the
+Crossings setting, so the lower reach is crossed nowhere: a road walks round the
+funnel's head to where the river is two wide again. That is the estuary as a
+barrier, and the same objection as the fjords' applies until walking has a
+price (§E). Measured on the sixty (2026-09-10): 38 estuaries on 27 islands,
+1,579 cells of funnel; navigable cells 3,090 to 3,869 and river cells 7,180 to
+7,914, giving back a quarter of what the fjords had drained; deltas 17 to 8;
+falls 776 to 952, since every rim cell of a funnel pours its own sheet, which
+is the wide fall a mouth wanted; sealed gorge reaches 1 to 2, a funnel between
+banks that disagree by three slabs; no water uphill, every seed in one attempt.
+
 ### Sea stacks are aether
 
 The specks the islet filter dropped were simply gone. Now two or three of them
@@ -946,6 +977,12 @@ its five steps, monotonically and +1.6 spreads end to end; what else it moves
 is fords, −0.4 spreads, the hinterland draining into the inlet (§B), and a lake
 or so (−0.1, a noise-sized step the matrix flags); no other knob touches the
 inlet cells, and the playability row stays `·`.
+
+Rerun on 2026-09-10 after the estuaries (720 islands, 134 s): the rivers knob
+still moves its two promises monotonically, river cells 0 to 233 and navigable
+0 to 137 up its five steps, the navigable end a fifth higher than before since
+a funnel is navigable water; falls, springs and fords ride with it (+4.2, +4.0,
++3.1 spreads), and the playability row stays `·`.
 
 ### The valleys knob wakes from a quarter up
 

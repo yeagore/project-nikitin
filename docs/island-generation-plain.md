@@ -435,6 +435,21 @@ their downstream neighbour, the flows are summed again, nothing is traced past
 it and it has no outflow. This breaks "every course reaches the aether" on
 purpose, and the island remembers which lake did it.
 
+**Estuaries.** Half the wide rivers that reach the rim over gentle ground open
+into a funnel there: from the rim, the river's main stem is followed upstream
+for a rolled length (eight to twenty-four cells on a 96 island, scaled with the
+footprint), and at each cell the ground within a half-width is flooded into the
+river, the width from four to six cells at the mouth down to the river's own
+two at the head. Each flooded cell is paired with its cell on the axis, so the
+same rules that keep a wide river level and cut its bed handle the funnel too.
+Ground more than a slab above the river is a bank the funnel narrows round;
+where most of the ground beside the river is that high the funnel ends, so a
+gorge mouth has no estuary; a river island in the funnel is drowned; the funnel
+stops below a waterfall. Past three cells across no bridge spans it, so the
+lower reach cannot be crossed at all and is walked round by the funnel's head.
+Every cell of the funnel at the rim pours its own sheet, so the mouth is a
+wide waterfall. A mouth is an estuary or a delta, never both.
+
 **Deltas.** A navigable river that meets the rim over a gentle coast parts into
 two or three mouths. From the river's axis four cells upstream of the mouth, an
 arm leaves each side of the pair (a step sideways, two forward, and again, on
@@ -893,16 +908,18 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   aether; one road in 180 bridges one, since walking is free and every inlet
   can be walked round by its head.
 - **Rivers** on every island; every island's rivers reach the rim; 0 channels
-  uncut and 0 water running uphill; 8 lakes swallow a river on 8 islands; 17
-  deltas on 12 islands; 212 springs, none under a ford; fords at 10 per hundred
-  stream cells on flat ground and 6 on broken; 244 bodies of water. The fjords
-  took about a tenth of the river cells and an eighth of the navigable ones,
-  because an inlet is new coast and the rivers now drain into it.
+  uncut and 0 water running uphill; 8 lakes swallow a river on 8 islands; 38
+  estuaries on 27 islands, 1,579 cells of funnel; 8 deltas on 7 islands; 212
+  springs, none under a ford; fords at 10 per hundred stream cells on flat
+  ground and 6 on broken; 242 bodies of water; 952 falls, since every cell of
+  a funnel's mouth pours its own. The fjords took about a tenth of the river
+  cells, because an inlet is new coast and the rivers now drain into it; the
+  estuaries gave a quarter of the navigable cells back.
 - **Ground**: grass 21.5%, stone 11.2%, meadow 9.8%, dust 8.4%, tundra 8.2%,
   scree 5.7%, sand 5.3%, silt 4.7%, heath 4.5%, moorland 4.4%, steppe 4.4%,
   savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, snow 0.8%, marsh 0.4%.
-- **Walkability**: 40.9% of land on the mainland on foot; 95.0% on the
-  heartland once built; 48 of 60 islands one reachable whole; 466 districts on
+- **Walkability**: 40.8% of land on the mainland on foot; 94.7% on the
+  heartland once built; 48 of 60 islands one reachable whole; 467 districts on
   the heartland, every island with at least one.
 - **Gates**: every island one Entry and three Exits, none on a shared edge, off
   the heartland, outside the box or short of a level strip; a road to every

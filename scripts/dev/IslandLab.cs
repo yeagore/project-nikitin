@@ -239,9 +239,11 @@ public partial class IslandLab : Node3D
 		GD.Print(err == Error.Ok
 			? $"[IslandLab] wrote {ProjectSettings.GlobalizePath(path)}"
 			: $"[IslandLab] could not write {path}: {err}");
-		// Where the fjords are, so a second shot can be aimed with at=X,Z.
+		// Where the fjords and estuaries are, so a second shot can be aimed with at=X,Z.
 		if (_data is { } d && d.Fjords.Count > 0)
 			GD.Print($"[IslandLab] fjord mouths {Cells(d.Fjords)}");
+		if (_data is { } e && e.Estuaries.Count > 0)
+			GD.Print($"[IslandLab] estuary mouths {Cells(e.Estuaries)}");
 	}
 
 	/// <summary>Steps a 0-1 knob through quarters, so its whole range is four keypresses.</summary>

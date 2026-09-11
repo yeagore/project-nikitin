@@ -126,7 +126,7 @@ under `scripts/generation/`, in the order they run:
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
 | Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river, and a delta where a navigable river meets a gentle coast. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
 | Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
 | Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |

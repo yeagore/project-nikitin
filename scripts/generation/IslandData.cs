@@ -85,6 +85,12 @@ public sealed class IslandData
     /// <summary>The apex of each delta: the axis cell the mouths part at, a few cells upstream of the rim.</summary>
     public List<Vector2I> Deltas { get; } = new();
 
+    /// <summary>Cells of an estuary: a navigable river's lower reach opened into a funnel at the rim, wider than a deck spans. See <c>Rivers.Estuaries</c>.</summary>
+    public bool[,] Estuary { get; }
+
+    /// <summary>The mouth of each estuary: the axis cell at the rim the funnel opens from.</summary>
+    public List<Vector2I> Estuaries { get; } = new();
+
     /// <summary>Stream cells crossable on foot; a stream is an obstacle everywhere else (<see cref="Rivers.FordSpacing"/>).</summary>
     public bool[,] Ford { get; }
 
@@ -329,6 +335,7 @@ public sealed class IslandData
         Ford = new bool[size, size];
         Beach = new bool[size, size];
         Delta = new bool[size, size];
+        Estuary = new bool[size, size];
         Hot = new bool[size, size];
         Fjord = new bool[size, size];
         WaterBody = new int[size, size];

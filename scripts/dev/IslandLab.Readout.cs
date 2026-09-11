@@ -76,6 +76,7 @@ public partial class IslandLab
 			+ (d.HotWater.Count > 0 ? $"   hot water {d.HotWater.Count} cells" : "")
 			+ (d.TerminalLakes.Count > 0 ? $"   {d.TerminalLakes.Count} lake swallows a river" : "")
 			+ (d.Deltas.Count > 0 ? $"   deltas {d.Deltas.Count}" : "")
+			+ (d.Estuaries.Count > 0 ? $"   estuaries {d.Estuaries.Count} (mouth at {Cells(d.Estuaries)})" : "")
 			+ (d.Fjords.Count > 0 ? $"   fjords {d.Fjords.Count} (mouth at {Cells(d.Fjords)})" : "")
 			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")
 			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");

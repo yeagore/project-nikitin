@@ -377,6 +377,23 @@ the upstream area a channel needs before it counts as a river.
   course reaches the aether" on purpose; `IslandData.TerminalLakes` names the
   lakes and the audit counts them. Rim falls are drawn spilling past the keel
   into the aether.
+- **Estuaries.** Half the navigable mouths over gentle ground open into a
+  funnel (`Rivers.Estuaries`): from the rim, the main stem is walked upstream
+  for a rolled length (eight to twenty-four axis cells at 96², scaled by the
+  footprint), and at each axis cell the land within a half-width is stamped
+  into the river — the width from a rolled four to six cells at the mouth down
+  to the pair's own two at the head, on a curve. Each cell taken is twinned to
+  its axis cell, so the pair machinery levels and cuts it as it does a partner
+  (`Settle`, `CutBeds`, `EqualisePairs`), and the funnel is one surface a step
+  at a time like the reach it widens. Ground more than a slab above the axis is
+  a bank the funnel narrows round; where under 60% of a stamp's land is that
+  gentle the funnel ends, so a gorge mouth has none; an eyot in the funnel is
+  drowned; the funnel stops below a fall. A funnel shorter than three axis
+  cells is put back. Past three cells across, no deck spans it
+  (`Traversal.WaterBridgeSpan`), so the lower reach is crossed nowhere and
+  walked round by the head of the funnel. Every cell is marked
+  (`IslandData.Estuary`) and every mouth listed (`IslandData.Estuaries`). An
+  estuary's rim cells each pour their own sheet, so the mouth is a wide fall.
 - **Deltas.** A navigable river that meets the rim over a gentle coast parts
   into two or three mouths (`Rivers.Deltas`): from the axis cell four upstream
   of the mouth, an arm leaves each side of the pair — a step sideways, two
@@ -384,7 +401,8 @@ the upstream area a channel needs before it counts as a river.
   reaches the rim. An arm that would climb, drop more than a step, run beside
   standing water, or take a bridgehead, an eyot or a cell the river already
   holds is not cut, and one that finds no rim inside nine cells is given up, so
-  a cliff coast has no delta. Each arm's head is held to the pair cell it
+  a cliff coast has no delta, and an estuary's mouth none either, since the arms
+  find its water. Each arm's head is held to the pair cell it
   leaves (`Descend` reads the branch). The dry ground between the mouths, apex
   to rim, is the **fan** (`IslandData.Delta`): floodplain whatever the climate.
 - **Springs** are where a stream begins on dry ground: a stream cell no other

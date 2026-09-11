@@ -77,6 +77,7 @@ public partial class GenerationAudit
         public int ReachCells => RiverStraight + RiverBends;
         public int TerminalLakes, TerminalInflows, TerminalIslands;
         public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable, SpringsForded;
+        public int Estuaries, EstuaryIslands, EstuaryCells;
         public long FordsFlat, StreamFlat, FordsRugged, StreamRugged;
 
         // ---- water bodies, surfaces, anchors, habitat
@@ -616,6 +617,11 @@ public partial class GenerationAudit
 
             Deltas += d.Deltas.Count;
             if (d.Deltas.Count > 0) DeltaIslands++;
+            Estuaries += d.Estuaries.Count;
+            if (d.Estuaries.Count > 0) EstuaryIslands++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.Estuary[x, z]) EstuaryCells++;
             Springs += d.Springs.Count;
             foreach (Vector2I c in d.Springs)
             {

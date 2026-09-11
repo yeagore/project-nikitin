@@ -396,7 +396,8 @@ public static class IslandGenerator
 
         Rivers.Carve(d.Seed, d.P, d.Land, d.Surface, d.Water, d.Data.River, d.Data.Navigable,
                      d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid,
-                     d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs);
+                     d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs,
+                     d.Data.Estuary, d.Data.Estuaries);
 
         // The valley and bank passes only lower; a cell can end up under the water beside it.
         Lakes.RaiseSunkenShores(d.Land, d.Surface, d.Water);

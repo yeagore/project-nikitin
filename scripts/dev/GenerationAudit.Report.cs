@@ -87,6 +87,7 @@ public partial class GenerationAudit
         GD.Print($"  lakes that swallow a river: {t.TerminalLakes} on {t.TerminalIslands} of {Seeds} islands, "
             + $"fed by {t.TerminalInflows} channel cells   (the one exception to reaching the rim)");
         GD.Print($"  deltas: {t.Deltas} on {t.DeltaIslands} of {Seeds} islands, {t.DeltaFanCells} cells of fan");
+        GD.Print($"  estuaries: {t.Estuaries} on {t.EstuaryIslands} of {Seeds} islands, {t.EstuaryCells} cells of funnel");
         GD.Print($"  springs: {t.Springs}   on a navigable cell (want 0): {t.SpringsOnNavigable}"
             + $"   under a ford (want 0): {t.SpringsForded}");
         GD.Print("  fords per 100 stream cells: flat ground "
@@ -387,6 +388,7 @@ public partial class GenerationAudit
             ["districtsOnHeartland"] = t.DistrictsOnHeartland,
             ["terminalLakes"] = t.TerminalLakes,
             ["deltas"] = t.Deltas,
+            ["estuaries"] = t.Estuaries,
             ["springs"] = t.Springs,
             ["springsForded"] = t.SpringsForded,
             ["seaStackCells"] = t.SeaStackCells,

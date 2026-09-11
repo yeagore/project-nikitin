@@ -52,11 +52,14 @@ internal static partial class Rivers
     /// <param name="delta">Out: the fan of every delta.</param>
     /// <param name="deltas">Out: the apex of every delta.</param>
     /// <param name="springs">Out: where each stream begins.</param>
+    /// <param name="estuary">Out: every cell of an estuary's funnel, the axis and its old partner included.</param>
+    /// <param name="estuaries">Out: the mouth of every estuary.</param>
     public static void Carve(int seed, IslandParams p, bool[,] land, short[,] surface,
                              short[,] water, bool[,] river, bool[,] navigable,
                              int[,] flow, List<Fall> falls, int bridgeSpan, byte[,] form,
                              bool[,] keep, byte[,] fluid, List<Vector2I> terminal,
-                             bool[,] delta, List<Vector2I> deltas, List<Vector2I> springs)
+                             bool[,] delta, List<Vector2I> deltas, List<Vector2I> springs,
+                             bool[,] estuary, List<Vector2I> estuaries)
     {
         int n = p.Size;
         float strength = Math.Clamp(p.Rivers, 0f, 1f);
@@ -111,6 +114,10 @@ internal static partial class Rivers
 
         var eyot = new bool[n, n];
         Braid(seed, n, land, water, surface, down, channel, navigable, twin, keep, eyot);
+
+        // Some navigable mouths open into a funnel; a delta's arms find its water and give up.
+        Estuaries(seed, n, land, water, surface, down, flow, channel, navigable, twin, keep, eyot,
+                  navigableAt, estuary, estuaries);
 
         // A delta's arms branch off the pair; each arm's head is held to the cell it leaves.
         var arm = new bool[n, n];

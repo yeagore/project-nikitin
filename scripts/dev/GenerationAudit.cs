@@ -233,6 +233,7 @@ public partial class GenerationAudit : Node
                 case "Character": Params.Character = Enum.Parse<TerrainCharacter>(value, true); break;
                 // And the fjords knob, so a gallery can show every tile cut (or none).
                 case "Fjords": Params.Fjords = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
+                case "Rivers": Params.Rivers = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
