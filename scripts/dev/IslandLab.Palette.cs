@@ -68,7 +68,7 @@ public partial class IslandLab
 					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
 
 			case View.Walk:
-				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are impasses or cliffs; "
+				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are scarps or cliffs; "
 					+ $"a district ({Traversal.MinDistrictArea}+ cells) is somewhere to build   "
 					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
 					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
@@ -108,8 +108,8 @@ public partial class IslandLab
 					bits.Add(Keyed(DevPalette.Anchor(kind), DevPalette.AnchorName(kind)));
 				bits.Add(Keyed(DevPalette.Anchor(0), "unremarkable ground"));
 				return "[b]anchors[/b]   what the content layer attaches to. A cliff is a face of "
-					+ $"{Traversal.CliffFace}+ slabs, an impasse one of 2–{Traversal.CliffFace - 1}. The lists overlap; "
-					+ "here the built and rarer kinds win, a cliff anchor over an impasse one, and a cell "
+					+ $"{Traversal.CliffFace}+ slabs, a scarp one of 2–{Traversal.CliffFace - 1}. The lists overlap; "
+					+ "here the built and rarer kinds win, a cliff anchor over a scarp one, and a cell "
 					+ "that is both brink and foot of one kind of face is its ledge   " + string.Join("   ", bits)
 					+ "   Only the lip of an overhang is magenta: the ground under it is its own kind. "
 					+ "Beds show with liquid off (I). A sea stack is a dark column in the aether, in every view.";
@@ -209,12 +209,12 @@ public partial class IslandLab
 		foreach (Vector2I c in d.DeepBedCells) grid[c.X, c.Y] = DevPalette.DeepBed;
 		foreach (Vector2I c in d.Deeps) grid[c.X, c.Y] = DevPalette.Deep;
 		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = DevPalette.Coast;
-		// Impasses first, so a cell that is a cliff anchor one way and an impasse anchor
+		// Scarps first, so a cell that is a cliff anchor one way and a scarp anchor
 		// another reads as the cliff. Within one kind of face, a bench is a brink over
 		// one neighbour and a foot under another: a ledge.
-		foreach (Vector2I c in d.ImpasseFootCells) grid[c.X, c.Y] = DevPalette.ImpasseFoot;
-		foreach (Vector2I c in d.ImpasseCells)
-			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.ImpasseFoot ? DevPalette.ImpasseLedge : DevPalette.ImpasseBrink);
+		foreach (Vector2I c in d.ScarpFootCells) grid[c.X, c.Y] = DevPalette.ScarpFoot;
+		foreach (Vector2I c in d.ScarpCells)
+			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.ScarpFoot ? DevPalette.ScarpLedge : DevPalette.ScarpBrink);
 		foreach (Vector2I c in d.CliffFootCells) grid[c.X, c.Y] = DevPalette.CliffFoot;
 		foreach (Vector2I c in d.CliffCells)
 			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.CliffFoot ? DevPalette.Ledge : DevPalette.Brink);

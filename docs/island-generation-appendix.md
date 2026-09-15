@@ -529,21 +529,21 @@ the water; `gorgeReaches` 66 → 61, five borderline reaches whose wall was thre
 on one side only and is now a shore. No guarantee moved off 0, and both baselines
 were re-accepted.
 
-### Impasses: two and three slabs get a name
+### Scarps: two and three slabs get a name
 
 *2026-09-14.* The ladder of faces was free step (1), nothing (2), cliff (3+). Two
 had no list — the anchors view painted it as unremarkable ground — and the audit
-called it "ambiguous". Maxim's call: **1 a free step, 2–3 an impasse, 4+ a
-cliff.** A ladder climbs an impasse, a stair or an elevator a cliff. Both are
+called it "ambiguous". Maxim's call: **1 a free step, 2–3 a scarp, 4+ a
+cliff.** A ladder climbs a scarp, a stair or an elevator a cliff. Both are
 still walls to walking, so walk areas, districts, mainland and heartland come out
 of the flood exactly as before.
 
 What changed is what things are called, and nothing else. `Traversal.FreeStep`
 (1) and `Traversal.CliffFace` (4) hold the two lines. `Surfaces` writes two pairs
-of lists: `CliffCells` and `CliffFootCells` from four slabs, `ImpasseCells` and
-`ImpasseFootCells` for two or three — each face read on its own, so a cell over a
-cliff one way and an impasse another is both kinds of brink. The lab flattens
-them impasse first and cliff over it, a ledge within one kind. `WorksKind.Ladder`
+of lists: `CliffCells` and `CliffFootCells` from four slabs, `ScarpCells` and
+`ScarpFootCells` for two or three — each face read on its own, so a cell over a
+cliff one way and a scarp another is both kinds of brink. The lab flattens
+them scarp first and cliff over it, a ledge within one kind. `WorksKind.Ladder`
 joins `Stair` and `Bridge`; a road prices a ladder and a stair alike, so a face
 names its work without moving a road, and both count toward a flight. The rule
 that bares rock on a rocky landform keeps its old threshold of three
@@ -555,13 +555,13 @@ every anchor list but the cliff pair identical on all 180; the cliff lists moved
 on 154 and the kinds of work on 9, where a ladder appeared. The four face lists
 rebuilt from the columns alone: 0 mismatches. Every ladder on a road climbs 2–3
 and every stair 4–8: 0 exceptions. 7,596 cells have a tallest drop of exactly
-three, a cliff brink before and an impasse brink now, and of 26,235 dry cells
+three, a cliff brink before and a scarp brink now, and of 26,235 dry cells
 beside water not one is anchored to nothing. The step grammar reads free 92.8%,
-impasse of two 0.9%, of three 1.3%, cliff 5.0% (6.3% when a cliff began at
+scarp of two 0.9%, of three 1.3%, cliff 5.0% (6.3% when a cliff began at
 three). Gorges are walled by a cliff now, so on the same water and the same rims
 `gorgeReaches` went 61 → 39 and `gorgeSealed` 2 → 4.
 
-Left for the question of how rare impasses should be, since each moves terrain:
+Left for the question of how rare scarps should be, since each moves terrain:
 the mesa and basin clamps (`Math.Max(3, MesaHeight)` and `Math.Max(3,
 BasinDepth)`, which the checksum sweeps down to three), the basin-floor rule that
 keeps a cell three above a basin floor (`StepGrammar.BasinFloorNear` and its copy

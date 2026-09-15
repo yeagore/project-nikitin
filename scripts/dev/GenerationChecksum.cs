@@ -184,7 +184,7 @@ public partial class GenerationChecksum : Node
             if (spans != null) foreach (Span s in spans) { h.Add(s.Bottom); h.Add(s.Top); }
         }
         foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells,
-                                     d.ImpasseCells, d.ImpasseFootCells, d.BankCells,
+                                     d.ScarpCells, d.ScarpFootCells, d.BankCells,
                                      d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells,
                                      d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater,
                                      d.Fjords, d.Estuaries, d.Deeps, d.GreatLakes,

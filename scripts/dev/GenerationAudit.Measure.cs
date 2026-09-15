@@ -88,7 +88,7 @@ public partial class GenerationAudit
         public long CliffFootAnchors, BankAnchors, SummitAnchors, RiverBedAnchors, LakeBedAnchors;
         public long ShallowBedAnchors, MidBedAnchors, DeepBedAnchors;
         public long BrinksBesideWater, BeachedCoast;
-        public long ImpasseAnchors, ImpasseFootAnchors;
+        public long ScarpAnchors, ScarpFootAnchors;
         public int IslandsWithoutBeach;
         public readonly List<int> MoistureMeans = new();
         public readonly List<int> WarmthMeans = new();
@@ -751,8 +751,8 @@ public partial class GenerationAudit
             CoastAnchors += d.CoastCells.Count;
             CliffAnchors += d.CliffCells.Count;
             CliffFootAnchors += d.CliffFootCells.Count;
-            ImpasseAnchors += d.ImpasseCells.Count;
-            ImpasseFootAnchors += d.ImpasseFootCells.Count;
+            ScarpAnchors += d.ScarpCells.Count;
+            ScarpFootAnchors += d.ScarpFootCells.Count;
             BankAnchors += d.BankCells.Count;
             SummitAnchors += d.Summits.Count;
             RiverBedAnchors += d.RiverBedCells.Count;

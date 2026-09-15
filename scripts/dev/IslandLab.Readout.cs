@@ -168,8 +168,8 @@ public partial class IslandLab
 			+ $"   sun from {d.SunFrom}";
 		return $"ground: {string.Join(", ", parts)}{wind}"
 			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} cliff brink, "
-			+ $"{d.CliffFootCells.Count} cliff foot, {d.ImpasseCells.Count} impasse brink, "
-			+ $"{d.ImpasseFootCells.Count} impasse foot, {d.BankCells.Count} bank, "
+			+ $"{d.CliffFootCells.Count} cliff foot, {d.ScarpCells.Count} scarp brink, "
+			+ $"{d.ScarpFootCells.Count} scarp foot, {d.BankCells.Count} bank, "
 			+ $"{d.RiverBedCells.Count} river bed, {d.LakeBedCells.Count} lake bed "
 			+ $"({d.ShallowBedCells.Count} shallow, {d.MidBedCells.Count} mid, {d.DeepBedCells.Count} deep), {d.Deeps.Count} deeps, "
 			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "

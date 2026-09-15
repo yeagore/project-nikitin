@@ -7,7 +7,7 @@ using static ProjectNikitin.Generation.Grid;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Collects the feature anchors (coast, cliff and impasse brinks and feet, banks, beds, summits)
+/// Collects the feature anchors (coast, cliff and scarp brinks and feet, banks, beds, summits)
 /// and the provisional <see cref="SurfaceMaterial"/>. Everything is measured against
 /// <see cref="IslandData.EffectiveLevel"/> — the water surface where a column is
 /// flooded — otherwise every river bank reads as a cliff over its own bed. The
@@ -18,7 +18,7 @@ internal static class Surfaces
 {
     /// <summary>
     /// Slabs of face that bare the rock on a rocky landform. This was the cliff threshold
-    /// until cliffs became four (<see cref="Traversal.CliffFace"/>); a rocky impasse of
+    /// until cliffs became four (<see cref="Traversal.CliffFace"/>); a rocky scarp of
     /// three still shows stone, so the look did not move with the name.
     /// </summary>
     private const int RockFace = 3;
@@ -131,8 +131,8 @@ internal static class Surfaces
         d.CoastCells.Clear();
         d.CliffCells.Clear();
         d.CliffFootCells.Clear();
-        d.ImpasseCells.Clear();
-        d.ImpasseFootCells.Clear();
+        d.ScarpCells.Clear();
+        d.ScarpFootCells.Clear();
         d.BankCells.Clear();
         d.RiverBedCells.Clear();
         d.LakeBedCells.Clear();
@@ -162,7 +162,7 @@ internal static class Surfaces
             }
 
             bool coast = false, bank = false, gooSide = false;
-            bool impasseDown = false, impasseUp = false;
+            bool scarpDown = false, scarpUp = false;
             int drop = 0, face = 0;
             for (int k = 0; k < 4; k++)
             {
@@ -175,11 +175,11 @@ internal static class Surfaces
                 short ne = d.EffectiveLevel(nx, nz);
                 drop = Math.Max(drop, eff - ne);
                 face = Math.Max(face, ne - eff);
-                // Each face on its own: over a cliff one way and an impasse another is both
+                // Each face on its own: over a cliff one way and a scarp another is both
                 // kinds of brink, where drop and face keep only the tallest.
                 int down = eff - ne;
-                if (down > Traversal.FreeStep && down < Traversal.CliffFace) impasseDown = true;
-                if (-down > Traversal.FreeStep && -down < Traversal.CliffFace) impasseUp = true;
+                if (down > Traversal.FreeStep && down < Traversal.CliffFace) scarpDown = true;
+                if (-down > Traversal.FreeStep && -down < Traversal.CliffFace) scarpUp = true;
 
                 if (!dry || d.WaterLevel[nx, nz] == IslandData.NoLand) continue;
                 if (d.Fluid[nx, nz] == (byte)FluidKind.Goo) gooSide = true;
@@ -189,8 +189,8 @@ internal static class Surfaces
             if (coast) d.CoastCells.Add(new Vector2I(x, z));
             if (dry && drop >= Traversal.CliffFace) d.CliffCells.Add(new Vector2I(x, z));
             if (dry && face >= Traversal.CliffFace) d.CliffFootCells.Add(new Vector2I(x, z));
-            if (dry && impasseDown) d.ImpasseCells.Add(new Vector2I(x, z));
-            if (dry && impasseUp) d.ImpasseFootCells.Add(new Vector2I(x, z));
+            if (dry && scarpDown) d.ScarpCells.Add(new Vector2I(x, z));
+            if (dry && scarpUp) d.ScarpFootCells.Add(new Vector2I(x, z));
             if (bank && !d.Beach[x, z] && !d.Landings[x, z])
                 d.BankCells.Add(new Vector2I(x, z));
 

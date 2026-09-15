@@ -109,7 +109,7 @@ grass; dust, savanna, verdure, floodplain; bog and marsh for water in excess;
 tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
 the ground round it, not sand), `anchors` (what the content layer attaches to:
 coast; cliff brink, cliff foot and a ledge where a cell is both, for a face of
-4+ slabs; impasse brink, impasse foot and their ledge for a face of 2–3, a cliff
+4+ slabs; scarp brink, scarp foot and their ledge for a face of 2–3, a cliff
 anchor winning where a cell is both kinds; bank, river bed,
 lake bed, shallow lake bed (two slabs of water or fewer), mid lake bed (three to
 eight), deep lake bed (nine or more), deep (the deepest cell of a lake with a bathymetry, or the pool under a

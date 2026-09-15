@@ -16,14 +16,14 @@ internal static class DevPalette
                      Landing = 6, CliffFoot = 8, Bank = 9, Summit = 10,
                      RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
                      Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18,
-                     ImpasseBrink = 19, ImpasseFoot = 20, ImpasseLedge = 21, Deep = 22,
+                     ScarpBrink = 19, ScarpFoot = 20, ScarpLedge = 21, Deep = 22,
                      ShallowBed = 23, DeepBed = 24, MidBed = 25;
 
     /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
         Coast, Beach, Bank, RiverBed, LakeBed, ShallowBed, MidBed, DeepBed, Deep, GooBed, Spring, HotSpring, FallLip, Ford,
-        Brink, CliffFoot, Ledge, ImpasseBrink, ImpasseFoot, ImpasseLedge,
+        Brink, CliffFoot, Ledge, ScarpBrink, ScarpFoot, ScarpLedge,
         Overhang, Landing, Summit, SeaStack,
     };
 
@@ -173,9 +173,9 @@ internal static class DevPalette
         FallLip => new Color(0.80f, 0.90f, 1.00f),    // white water
         SeaStack => StackTint,
         HotSpring => new Color(1.00f, 0.50f, 0.20f),  // steam-orange
-        ImpasseBrink => new Color(0.52f, 0.38f, 0.88f),   // the cliff triplet's cool mirror: violet brink
-        ImpasseFoot => new Color(0.56f, 0.68f, 0.96f),    // periwinkle foot
-        ImpasseLedge => new Color(0.78f, 0.64f, 0.98f),   // lilac, between the two
+        ScarpBrink => new Color(0.52f, 0.38f, 0.88f),   // the cliff triplet's cool mirror: violet brink
+        ScarpFoot => new Color(0.56f, 0.68f, 0.96f),    // periwinkle foot
+        ScarpLedge => new Color(0.78f, 0.64f, 0.98f),   // lilac, between the two
         _ => new Color(0.26f, 0.26f, 0.27f),
     };
 
@@ -203,9 +203,9 @@ internal static class DevPalette
         FallLip => "fall",
         SeaStack => "sea stack (in the aether)",
         HotSpring => "hot spring or pool",
-        ImpasseBrink => "impasse brink",
-        ImpasseFoot => "impasse foot",
-        ImpasseLedge => "impasse brink and foot",
+        ScarpBrink => "scarp brink",
+        ScarpFoot => "scarp foot",
+        ScarpLedge => "scarp brink and foot",
         _ => "unremarkable",
     };
 }

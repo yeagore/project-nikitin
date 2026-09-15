@@ -75,10 +75,10 @@ few seconds on the machine it runs on).
   (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The
   ratio is decided; the Notion wiki still says a tentative "8?".
 - **Traversal:** a one-slab step (0.25 u) is free. A face of two or three slabs
-  is an **impasse**, which a ladder climbs; four or more is a **cliff**, which a
+  is an **scarp**, which a ladder climbs; four or more is a **cliff**, which a
   stair or an elevator climbs, up to 8 (`Traversal.FreeStep`, `Traversal.CliffFace`).
   Both are walls to walking. Terrain generated under a one-slab slope limit is
-  walkable by construction; every impasse and cliff is one some rule put there.
+  walkable by construction; every scarp and cliff is one some rule put there.
   Walking is by king's moves: a corner is cut unless both cardinal cells beside
   the diagonal are more than a free step off. Works, anchors and water stay cardinal.
 - **Three supported footprints: 64², 96², 128²** (128² is the stress target;
@@ -319,10 +319,10 @@ archetype and goods data, `addons/` for plugins.
   the same kind. One Gate per edge: one Entry, one to three Exits.
 - **Slab**: the terrain unit, 1 × 1 × 0.25. **Biome**: a Domain's flora, fauna
   and climate.
-- **Free step / Impasse / Cliff**: a face of one slab is walked; of two or three
-  slabs, an impasse a ladder climbs; of four or more, a cliff a stair or an
+- **Free step / Scarp / Cliff**: a face of one slab is walked; of two or three
+  slabs, a scarp a ladder climbs; of four or more, a cliff a stair or an
   elevator climbs. Two anchor triplets follow them: cliff brink, foot and ledge;
-  impasse brink, foot and ledge.
+  scarp brink, foot and ledge.
 - **Polity**: an NPC state ruling Domains. **Metropole**: the Polity the player
   answers to. **Cultural Archetype**: a people's template (Steelfolk, Lakefolk,
   Jadefolk), carrying Traits: School of Magicks, Societal Structure, Political

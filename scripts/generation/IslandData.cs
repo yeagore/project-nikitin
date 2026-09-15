@@ -229,15 +229,15 @@ public sealed class IslandData
     public List<Vector2I> CliffFootCells { get; } = new();
 
     /// <summary>
-    /// Impasse brinks: dry cells whose <see cref="EffectiveLevel"/> stands two or three
+    /// Scarp brinks: dry cells whose <see cref="EffectiveLevel"/> stands two or three
     /// slabs above a neighbour's — too tall to step down, short of a cliff; where a
     /// ladder's top would stand. Read face by face, so a cell can be a cliff brink one
-    /// way and an impasse brink another.
+    /// way and a scarp brink another.
     /// </summary>
-    public List<Vector2I> ImpasseCells { get; } = new();
+    public List<Vector2I> ScarpCells { get; } = new();
 
-    /// <summary>Impasse feet: dry cells with a neighbour's effective surface two or three slabs above them; where a ladder's foot would stand.</summary>
-    public List<Vector2I> ImpasseFootCells { get; } = new();
+    /// <summary>Scarp feet: dry cells with a neighbour's effective surface two or three slabs above them; where a ladder's foot would stand.</summary>
+    public List<Vector2I> ScarpFootCells { get; } = new();
 
     /// <summary>Banks: dry cells beside water (never goo) at most one slab above its surface — the free-step shore.</summary>
     public List<Vector2I> BankCells { get; } = new();

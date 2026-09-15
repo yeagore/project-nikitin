@@ -742,8 +742,8 @@ public partial class StepProbe : Node
         foreach (Vector2I c in d.BankCells) if (c == at) return "bank";
         foreach (Vector2I c in d.CliffCells) if (c == at) return "cliff brink";
         foreach (Vector2I c in d.CliffFootCells) if (c == at) return "cliff foot";
-        foreach (Vector2I c in d.ImpasseCells) if (c == at) return "impasse brink";
-        foreach (Vector2I c in d.ImpasseFootCells) if (c == at) return "impasse foot";
+        foreach (Vector2I c in d.ScarpCells) if (c == at) return "scarp brink";
+        foreach (Vector2I c in d.ScarpFootCells) if (c == at) return "scarp foot";
         foreach (Vector2I c in d.CoastCells) if (c == at) return "coast";
         foreach (Vector2I c in d.Summits) if (c == at) return "summit";
         return "nothing";
@@ -972,7 +972,7 @@ public partial class StepProbe : Node
         return floor;
     }
 
-    // ---- 3e. the proposed ladder: 1 free, 2-3 an impasse, 4+ a cliff ---------
+    // ---- 3e. the proposed ladder: 1 free, 2-3 a scarp, 4+ a cliff ---------
 
     /// <summary>Rough country, where multi-slab faces are the point: mountains, the sculpted landforms, canyons.</summary>
     private static bool Rough(IslandData d, int x, int z)
@@ -1615,12 +1615,12 @@ public partial class StepProbe : Node
     /// </summary>
     private void AnchorCheck()
     {
-        long wrongCliff = 0, wrongCliffFoot = 0, wrongImpasse = 0, wrongImpasseFoot = 0;
-        long cliff = 0, cliffFoot = 0, impasse = 0, impasseFoot = 0;
-        long cliffLedge = 0, impasseLedge = 0, bothBrinks = 0, bothFeet = 0, crossLedge = 0;
+        long wrongCliff = 0, wrongCliffFoot = 0, wrongScarp = 0, wrongScarpFoot = 0;
+        long cliff = 0, cliffFoot = 0, scarp = 0, scarpFoot = 0;
+        long cliffLedge = 0, scarpLedge = 0, bothBrinks = 0, bothFeet = 0, crossLedge = 0;
         long ladders = 0, stairs = 0, badLadder = 0, badStair = 0;
-        long waterside = 0, watersideImpasse = 0, watersideMissed = 0, bareWaterside = 0;
-        long oldCliffNowImpasse = 0;
+        long waterside = 0, watersideScarp = 0, watersideMissed = 0, bareWaterside = 0;
+        long oldCliffNowScarp = 0;
         int islands = 0;
         var examples = new List<string>();
 
@@ -1636,8 +1636,8 @@ public partial class StepProbe : Node
 
                 var eCliff = new List<Vector2I>();
                 var eCliffFoot = new List<Vector2I>();
-                var eImpasse = new List<Vector2I>();
-                var eImpasseFoot = new List<Vector2I>();
+                var eScarp = new List<Vector2I>();
+                var eScarpFoot = new List<Vector2I>();
 
                 int Eff(int x, int z) => d.WaterLevel[x, z] != IslandData.NoLand ? d.WaterLevel[x, z] : d.Spans[x, z][0].Top;
 
@@ -1662,13 +1662,13 @@ public partial class StepProbe : Node
                     var c = new Vector2I(x, z);
                     if (cb) eCliff.Add(c);
                     if (cf) eCliffFoot.Add(c);
-                    if (ib) eImpasse.Add(c);
-                    if (iff) eImpasseFoot.Add(c);
-                    if (maxDown == 3) oldCliffNowImpasse++;   // a brink under the old ladder, only an impasse now
+                    if (ib) eScarp.Add(c);
+                    if (iff) eScarpFoot.Add(c);
+                    if (maxDown == 3) oldCliffNowScarp++;   // a brink under the old ladder, only a scarp now
                     if (cb && ib) bothBrinks++;
                     if (cf && iff) bothFeet++;
                     if (cb && cf) cliffLedge++;
-                    if (ib && iff && !cb && !cf) impasseLedge++;
+                    if (ib && iff && !cb && !cf) scarpLedge++;
                     if ((cb && iff && !cf) || (ib && cf && !cb)) crossLedge++;
                 }
 
@@ -1682,10 +1682,10 @@ public partial class StepProbe : Node
                 }
                 wrongCliff += Diff(eCliff, d.CliffCells, "cliff brink");
                 wrongCliffFoot += Diff(eCliffFoot, d.CliffFootCells, "cliff foot");
-                wrongImpasse += Diff(eImpasse, d.ImpasseCells, "impasse brink");
-                wrongImpasseFoot += Diff(eImpasseFoot, d.ImpasseFootCells, "impasse foot");
+                wrongScarp += Diff(eScarp, d.ScarpCells, "scarp brink");
+                wrongScarpFoot += Diff(eScarpFoot, d.ScarpFootCells, "scarp foot");
                 cliff += d.CliffCells.Count; cliffFoot += d.CliffFootCells.Count;
-                impasse += d.ImpasseCells.Count; impasseFoot += d.ImpasseFootCells.Count;
+                scarp += d.ScarpCells.Count; scarpFoot += d.ScarpFootCells.Count;
 
                 foreach (Passage road in d.Passages)
                 foreach (Works w in road.Built)
@@ -1696,8 +1696,8 @@ public partial class StepProbe : Node
                     else { stairs++; if (rise < 4 || rise > Traversal.InfrastructureStep) badStair++; }
                 }
 
-                // Dry ground two or three over the water beside it: an impasse brink now, every one.
-                var impasseSet = new HashSet<Vector2I>(d.ImpasseCells);
+                // Dry ground two or three over the water beside it: a scarp brink now, every one.
+                var scarpSet = new HashSet<Vector2I>(d.ScarpCells);
                 for (int x = 0; x < n; x++)
                 for (int z = 0; z < n; z++)
                 {
@@ -1716,7 +1716,7 @@ public partial class StepProbe : Node
                     waterside++;
                     if (twoOrThree)
                     {
-                        if (impasseSet.Contains(new Vector2I(x, z))) watersideImpasse++;
+                        if (scarpSet.Contains(new Vector2I(x, z))) watersideScarp++;
                         else watersideMissed++;
                     }
                     if (AnchorOf(d, x, z) == "nothing") bareWaterside++;
@@ -1726,14 +1726,14 @@ public partial class StepProbe : Node
 
         GD.Print($"=== anchors on {islands} islands (all three footprints), recomputed from the columns ===");
         GD.Print($"  mismatches: cliff brink {wrongCliff}, cliff foot {wrongCliffFoot}, "
-            + $"impasse brink {wrongImpasse}, impasse foot {wrongImpasseFoot}");
+            + $"scarp brink {wrongScarp}, scarp foot {wrongScarpFoot}");
         if (examples.Count > 0) GD.Print("  first: " + string.Join(";  ", examples));
-        GD.Print($"  counts: {cliff} cliff brinks, {cliffFoot} cliff feet, {impasse} impasse brinks, {impasseFoot} impasse feet");
-        GD.Print($"  overlaps: {bothBrinks} cells both a cliff and an impasse brink, {bothFeet} both kinds of foot; "
-            + $"{cliffLedge} cliff ledges, {impasseLedge} impasse-only ledges, {crossLedge} a brink of one kind and a foot of the other");
-        GD.Print($"  dry cells whose tallest drop is exactly three (a cliff brink before, an impasse brink now): {oldCliffNowImpasse}");
+        GD.Print($"  counts: {cliff} cliff brinks, {cliffFoot} cliff feet, {scarp} scarp brinks, {scarpFoot} scarp feet");
+        GD.Print($"  overlaps: {bothBrinks} cells both a cliff and a scarp brink, {bothFeet} both kinds of foot; "
+            + $"{cliffLedge} cliff ledges, {scarpLedge} scarp-only ledges, {crossLedge} a brink of one kind and a foot of the other");
+        GD.Print($"  dry cells whose tallest drop is exactly three (a cliff brink before, a scarp brink now): {oldCliffNowScarp}");
         GD.Print($"  roads: {ladders} ladders ({badLadder} not climbing 2-3), {stairs} stairs ({badStair} not climbing 4-{Traversal.InfrastructureStep})");
-        GD.Print($"  waterside: {waterside} dry cells beside water; of those two or three over it, {watersideImpasse} are impasse brinks "
+        GD.Print($"  waterside: {waterside} dry cells beside water; of those two or three over it, {watersideScarp} are scarp brinks "
             + $"and {watersideMissed} are not; {bareWaterside} waterside cells anchored to nothing");
     }
 

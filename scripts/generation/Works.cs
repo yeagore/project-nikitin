@@ -11,7 +11,7 @@ public enum WorksKind
     /// <summary>A level deck across aether, water or a chasm — see <see cref="Crossing"/>.</summary>
     Bridge = 1,
 
-    /// <summary>A ladder up an impasse: a face taller than the free step and short of a cliff, two or three slabs.</summary>
+    /// <summary>A ladder up a scarp: a face taller than the free step and short of a cliff, two or three slabs.</summary>
     Ladder = 2,
 }
 

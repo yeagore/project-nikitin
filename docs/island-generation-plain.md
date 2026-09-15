@@ -64,13 +64,13 @@ its islands the same way.
 
 ### The one rule that shapes everything
 
-**A step of one slab is free. Two or three slabs is an impasse. Four or more
+**A step of one slab is free. Two or three slabs is a scarp. Four or more
 is a cliff.** People walk up and down single slabs for nothing; anything taller
-needs something built — a ladder up an impasse, a stair or an elevator up a
+needs something built — a ladder up a scarp, a stair or an elevator up a
 cliff. The whole surface is built so that walking costs nothing by default, and
-every impasse and cliff on the island is there because some rule put it there
+every scarp and cliff on the island is there because some rule put it there
 on purpose. Walking includes diagonal moves, except where both cells beside the
-diagonal are an impasse or a cliff, since then there is no corner to cut. Built
+diagonal are a scarp or a cliff, since then there is no corner to cut. Built
 things (bridges, ladders, stairs) stay on the straight axes. (Until 2026-09-14 a
 cliff started at three slabs, and two had no name at all.)
 
@@ -455,7 +455,7 @@ routing promised a downstream neighbour, not a lower one), the two cells of a
 navigable pair are held to one level, and the banks are brought down to the
 free step: a bank exactly two slabs above the water comes down one, the
 correction walking outward. A bank three or more above the water is left as it
-is — an impasse at three, a gorge wall from four — but two is different: it is
+is — a scarp at three, a gorge wall from four — but two is different: it is
 the slab the water settled down after the bed was cut, not the lie of the land,
 so the pass leaves no bank at two, and a taller bank the correction reaches at
 the water's edge comes all the way down to the free step. For the same reason
@@ -569,7 +569,7 @@ never read as a place and was removed; everything that used it now reads
 districts.)
 
 **Reach areas**: what connects once the player can build, with three kinds of
-works. A **ladder** climbs an impasse, two or three slabs; a **stair or
+works. A **ladder** climbs a scarp, two or three slabs; a **stair or
 elevator** climbs a cliff of four up to 8 slabs, enough for a mesa or basin rim,
 not a mountain flank. Either stands on two cells that may not be a bridgehead,
 a landing strip or a Gate's ground, and a road counts either as one work. A
@@ -731,7 +731,7 @@ the lab, the audit and the collages carry the layer from the start.
 **Anchors** are the lists the content layer will read instead of placing things
 at coordinates: coast cells; cliff brinks (dry cells four or more slabs above a
 neighbour's effective surface, so a gorge rim counts and a river bank does not)
-and cliff feet; impasse brinks and impasse feet, the same pair for a face of two
+and cliff feet; scarp brinks and scarp feet, the same pair for a face of two
 or three slabs, where a ladder would go (a cell can be both kinds, one face each
 way); banks (the walkable wet margin, at most a slab over the water — no dry
 cell beside water is left without some anchor);
@@ -889,7 +889,7 @@ in doubt, run the checksum.
 `generation_audit.tscn` runs the real generator over 60 seeds at 128² with every
 dial rolled, so the sixty sample the whole range, and prints the measured
 guarantees as numbers rather than re-implementing anything: the step grammar
-(what share of neighbouring cells are free steps, impasses of two and of three slabs, cliffs, and
+(what share of neighbouring cells are free steps, scarps of two and of three slabs, cliffs, and
 where the cliffs fall by landform pair); patch sizes; mesa clearance and basin
 drop; hill relief; the sculpted landforms' wall heights; mountain rise and step
 profile; rivers (cells, navigable cells, falls, water running uphill, courses
@@ -990,8 +990,8 @@ numbers in section 6 about twenty and eighty Domains come from it.
 
 Measured on the last accepted audit (60 seeds, 128², all dials rolled):
 
-- **Steps**: 92.8% of neighbouring pairs are free steps, 0.9% an impasse of two
-  and 1.3% an impasse of three (both mostly on mountains, where a multi-slab
+- **Steps**: 92.8% of neighbouring pairs are free steps, 0.9% a scarp of two
+  and 1.3% a scarp of three (both mostly on mountains, where a multi-slab
   riser is the point), 5.0% cliffs. Off the mountains there are 346 two-slab
   steps in sixty islands, down from 586 when the bank cut still backed off a
   landform (2026-09-11).
@@ -1060,7 +1060,7 @@ design.
   at each end; hanging Gates are flown through, land Gates walked through.
 - **Cell**, **column**, **slab**, **run**: the grid square, the stack of ground
   on it, the quarter-cell block it is counted in, and one solid stretch of it.
-- **Free step**: one slab, the step that costs nothing. **Impasse**: two or three slabs, climbed by a ladder. **Cliff**: four or more, climbed by a stair or an elevator.
+- **Free step**: one slab, the step that costs nothing. **Scarp**: two or three slabs, climbed by a ladder. **Cliff**: four or more, climbed by a stair or an elevator.
 - **Rung** and **ladder**: the terrace levels patches stand on.
 - **Patch** or **region**: one county of the island's patchwork, with one
   landform.

@@ -40,11 +40,11 @@ ford and the keel do.
 | `CellSize` | 1.0 | one cell, in metres. In fiction, about an orchard. |
 | `SlabHeight` | 0.25 | one slab. Terrain Y is an integer count of these. |
 | free step | **1 slab** | walk it for nothing (`Traversal.FreeStep`). |
-| impasse | **2–3 slabs** | not walked: a ladder climbs it. |
+| scarp | **2–3 slabs** | not walked: a ladder climbs it. |
 | cliff | **4+ slabs** | not walked: a stair or an elevator climbs it, up to 8 (`Traversal.CliffFace`). |
 
 **The free step is the invariant:** terrain built under a one-slab slope limit
-is walkable by construction, and every impasse and cliff on the island is one
+is walkable by construction, and every scarp and cliff on the island is one
 some rule put there on purpose. The names date from 2026-09-14; until then a
 cliff began at three slabs and two had no name.
 
@@ -258,8 +258,8 @@ its border and blurred so it joins flush. Then `StepGrammar` settles it:
   exempt (a sculpt, a canyon floor, a lake bed) are neither lowered nor used as
   a bound — taken as a bound, a lake bed drags its whole rung down into it.
 - **`ResolveAmbiguousSteps`** — removes two-slab steps outside mountains, the
-  lowest impasse. It was written when two was a height with no name, too tall to
-  walk and too short for a cliff; whether the grammar should keep impasses rare
+  lowest scarp. It was written when two was a height with no name, too tall to
+  walk and too short for a cliff; whether the grammar should keep scarps rare
   now that they have one is open.
 
 Between the first and second settle, `Sculpting` makes the deliberate
@@ -407,7 +407,7 @@ the upstream area a channel needs before it counts as a river.
   took off the water after the bed was cut, not relief, so **no cut may leave a
   bank standing two**: a taller bank the correction reaches beside the water
   comes down to the free step rather than onto two. Three or more above the
-  water is left alone — an impasse at three, a gorge wall from four. What the
+  water is left alone — a scarp at three, a gorge wall from four. What the
   pass will not touch: a bridgehead, a cell more than two above what it just cut
   (so never a taller face),
   the water beside it, and the rim that keeps a basin's escarpment facing
@@ -545,7 +545,7 @@ playable.
 
 | works | rule |
 |---|---|
-| **ladder** | an impasse: a face of 2–3 slabs. Stands on two cells, neither of which may be a bridgehead, a landing strip or a Gate's ground |
+| **ladder** | a scarp: a face of 2–3 slabs. Stands on two cells, neither of which may be a bridgehead, a landing strip or a Gate's ground |
 | **stair / elevator** | a cliff: a face of 4 up to 8 slabs, on the same footing as a ladder. A road prices a ladder and a stair alike, one work each, so the kind names the work and moves no road; both count toward a flight |
 | **bridge** | land facing land, cardinally, across at most `Crossings` cells of **aether**, 3 cells of **water**, or a **chasm** — ground 5 slabs or more below the deck, which is how one cliff top is bridged to another. A deck is level; its banks are levelled to within a slab of it |
 
@@ -840,11 +840,11 @@ footprint stages leave three more beside them: `Springs`, `Falls` — the lip
 cells — and `SeaStacks`, which are aether): `CoastCells`;
 `CliffCells` (**cliff brinks**: dry cells four or more slabs over a neighbour's
 effective surface — a gorge rim qualifies, a bank does not); `CliffFootCells`
-(the ground under those faces); `ImpasseCells` and `ImpasseFootCells` (**impasse
+(the ground under those faces); `ScarpCells` and `ScarpFootCells` (**scarp
 brinks and feet**: the same pair for a face of two or three slabs, where a
 ladder's top and foot would stand); `BankCells` (the walkable wet margin, at
 most one slab over the water). Each face is read on its own, so a cell over a
-cliff one way and an impasse another is both kinds of brink, and no dry cell
+cliff one way and a scarp another is both kinds of brink, and no dry cell
 beside water is left without an anchor; `RiverBedCells` and `LakeBedCells` (the flooded
 columns, split by whether a watercourse runs over them; a goo puddle is neither,
 `Fluid` says where it is); `ShallowBedCells`, `MidBedCells` and `DeepBedCells`
@@ -858,7 +858,7 @@ island honestly has none — spaced apart); and `Overhangs`; alongside `Beach`,
 `Ford` and `Landings`. The lists overlap freely — a bench on a
 mountainside is a brink over one neighbour and a foot under another, and a
 brink can be a bank or a summit — and only the lab's flattened view has to pick
-one, a cliff anchor over an impasse one. A forest goes "on flat well-watered ground away
+one, a cliff anchor over a scarp one. A forest goes "on flat well-watered ground away
 from the coast", not at a coordinate, so generation answers the geometric
 questions once and content reads the lists.
 

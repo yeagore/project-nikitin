@@ -92,7 +92,7 @@ internal static class StepGrammar
     }
 
     /// <summary>
-    /// Removes two-slab steps outside mountains — the lowest impasse, too tall to walk
+    /// Removes two-slab steps outside mountains — the lowest scarp, too tall to walk
     /// and kept rare. A cell is never lowered into its own lake or to within three
     /// slabs of a basin floor it looks down on.
     /// </summary>

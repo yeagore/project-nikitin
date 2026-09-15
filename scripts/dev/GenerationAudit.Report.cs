@@ -14,8 +14,8 @@ public partial class GenerationAudit
         long pairs = t.Pairs;
         GD.Print($"step grammar ({pairs} adjacent pairs)");
         GD.Print($"  free (0-1 slabs)          {100.0 * t.Free / pairs,6:0.0}%");
-        GD.Print($"  impasse, two slabs        {100.0 * t.Ambiguous / pairs,6:0.0}%");
-        GD.Print($"  impasse, three slabs      {100.0 * t.Three / pairs,6:0.0}%");
+        GD.Print($"  scarp, two slabs        {100.0 * t.Ambiguous / pairs,6:0.0}%");
+        GD.Print($"  scarp, three slabs      {100.0 * t.Three / pairs,6:0.0}%");
         GD.Print($"  cliff (4+ slabs)          {100.0 * t.Cliff / pairs,6:0.0}%");
         GD.Print($"  two-slab off mountains    {t.AmbiguousOffMountain} of {t.PairsOffMountain}");
         foreach (var (k, v) in t.AmbiguousWhere.OrderByDescending(e => e.Value))
@@ -124,8 +124,8 @@ public partial class GenerationAudit
             GD.Print("  " + string.Join(", ", parts));
         }
         GD.Print($"anchors: {t.CoastAnchors} coast, {t.CliffAnchors} cliff brink, "
-            + $"{t.CliffFootAnchors} cliff foot, {t.ImpasseAnchors} impasse brink, "
-            + $"{t.ImpasseFootAnchors} impasse foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
+            + $"{t.CliffFootAnchors} cliff foot, {t.ScarpAnchors} scarp brink, "
+            + $"{t.ScarpFootAnchors} scarp foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
             + $"{t.OverhangCells} overhang, {t.BeachCells} beach, {t.FordCells} ford, "
             + $"{t.Springs} spring, {t.FallCells} fall, "
             + $"{t.LandingCells} gate landing, "

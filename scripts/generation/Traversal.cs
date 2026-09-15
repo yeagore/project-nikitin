@@ -16,12 +16,12 @@ public static partial class Traversal
     /// <summary>Below this, a walk area is broken ground rather than a place; at it, somewhere to build.</summary>
     public const int MinDistrictArea = 20;
 
-    /// <summary>The tallest step walked for nothing. Anything taller is not walked: an impasse up to <see cref="CliffFace"/>, a cliff from it.</summary>
+    /// <summary>The tallest step walked for nothing. Anything taller is not walked: a scarp up to <see cref="CliffFace"/>, a cliff from it.</summary>
     public const int FreeStep = 1;
 
     /// <summary>
     /// The lowest face that is a cliff, in slabs. A face above the free step and short
-    /// of this — two or three slabs — is an impasse, which a ladder climbs; from this
+    /// of this — two or three slabs — is a scarp, which a ladder climbs; from this
     /// up, a cliff, which takes a stair or an elevator.
     /// </summary>
     public const int CliffFace = 4;

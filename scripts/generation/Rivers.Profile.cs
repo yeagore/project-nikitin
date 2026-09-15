@@ -128,7 +128,7 @@ internal static partial class Rivers
     /// above the water beside it comes down one slab, and the correction walks
     /// outward against the same test. Two is the slab the profile took off the water
     /// after the bed was cut, not relief, so no cut may leave a bank standing there;
-    /// three or more above the water is left alone — an impasse at three, a gorge wall
+    /// three or more above the water is left alone — a scarp at three, a gorge wall
     /// from four. The pass touches nothing else: a cell exactly two above what was just
     /// cut, never a taller face.
     /// </summary>
