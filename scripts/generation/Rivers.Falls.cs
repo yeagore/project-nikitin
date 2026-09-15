@@ -124,7 +124,8 @@ internal static partial class Rivers
     /// ground (<see cref="FordSpacingAt"/>), sliding past any cell that will not take
     /// one; a short course still gets one. Never on the spring itself: the source is
     /// the content layer's to stand something on. A ford has both banks across the flow
-    /// dry, walkable and within a slab of the water. Runs on the finished columns,
+    /// dry, walkable and within a slab of the water, and no more water than a stream is
+    /// cut to hold: a plunge pool is not waded. Runs on the finished columns,
     /// after the springs are found; read by <see cref="Traversal"/>.
     /// </summary>
     public static void MarkFords(IslandData d)
@@ -148,6 +149,8 @@ internal static partial class Rivers
         {
             short level = d.WaterLevel[x, z];
             if (level == IslandData.NoLand) return false;
+            if (d.WaterDepth(x, z) > 1) return false;          // a pool dug under a fall
+
 
             for (int axis = 0; axis < 2; axis++)
             {

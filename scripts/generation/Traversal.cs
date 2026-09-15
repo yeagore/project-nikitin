@@ -16,10 +16,20 @@ public static partial class Traversal
     /// <summary>Below this, a walk area is broken ground rather than a place; at it, somewhere to build.</summary>
     public const int MinDistrictArea = 20;
 
+    /// <summary>The tallest step walked for nothing. Anything taller is not walked: an impasse up to <see cref="CliffFace"/>, a cliff from it.</summary>
+    public const int FreeStep = 1;
+
+    /// <summary>
+    /// The lowest face that is a cliff, in slabs. A face above the free step and short
+    /// of this — two or three slabs — is an impasse, which a ladder climbs; from this
+    /// up, a cliff, which takes a stair or an elevator.
+    /// </summary>
+    public const int CliffFace = 4;
+
     /// <summary>Value in <see cref="IslandData.Walk"/> / <see cref="IslandData.Reach"/> for a flooded column.</summary>
     public const int Water = -2;
 
-    /// <summary>Tallest face a stair or hoist spans, in slabs: clears a mesa or basin rim, not a mountain flank.</summary>
+    /// <summary>Tallest face a ladder, stair or elevator spans, in slabs: clears a mesa or basin rim, not a mountain flank.</summary>
     public const int InfrastructureStep = 8;
 
     /// <summary>Bridge span when the Domain says nothing; the real figure is <see cref="IslandData.BridgeSpan"/>.</summary>

@@ -195,17 +195,17 @@ public partial class GenerationAudit
             case "relief":
                 return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("SHADED: A RISE TO THE SOUTH-EAST", heightLow.Lerp(heightHigh, 0.5f) * 0.7f) };
             case "lakes":
-                return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("LAKE", DevPalette.LakeTint), ("GOO", DevPalette.Goo) };
+                return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("LAKE", DevPalette.LakeTint), ("DEEP", DevPalette.Deepened(DevPalette.LakeTint, 9, 3)), ("GOO", DevPalette.Goo) };
             case "settled":
                 return new[] { ("LOW GROUND", heightLow), ("HIGH GROUND", heightHigh), ("BEACH (A SLAB DOWN)", beach), ("LAKE", DevPalette.LakeTint) };
             case "rivers":
-                return new[] { ("STREAM", DevPalette.StreamTint), ("NAVIGABLE", DevPalette.ReachTint), ("LAKE", DevPalette.LakeTint), ("HOT WATER", DevPalette.HotTint), ("GOO", DevPalette.Goo) };
+                return new[] { ("STREAM", DevPalette.StreamTint), ("NAVIGABLE", DevPalette.ReachTint), ("LAKE", DevPalette.LakeTint), ("DEEP", DevPalette.Deepened(DevPalette.LakeTint, 9, 3)), ("HOT WATER", DevPalette.HotTint), ("GOO", DevPalette.Goo) };
             case "traversal":
                 return new[] { ("MAINLAND (UNDER THE ENTRY)", DevPalette.Mainland), ("ANOTHER DISTRICT", DevPalette.District(1)),
                     ("BROKEN GROUND, UNDER 20 CELLS", DevPalette.Broken), ("WATER", DevPalette.WalkWater),
                     ("GATE LANDING", new Color(0.98f, 0.78f, 0.15f)), ("HANGING GATE", new Color(1f, 0.2f, 0.2f)) };
             case "roads":
-                return new[] { ("ROAD", new Color(0.98f, 0.95f, 0.62f)), ("A STAIR", new Color(1f, 0.45f, 0.25f)), ("A BRIDGE", new Color(1f, 0.80f, 0.20f)),
+                return new[] { ("ROAD", new Color(0.98f, 0.95f, 0.62f)), ("A LADDER", new Color(0.72f, 0.52f, 1f)), ("A STAIR", new Color(1f, 0.45f, 0.25f)), ("A BRIDGE", new Color(1f, 0.80f, 0.20f)),
                     ("GATE LANDING", new Color(0.95f, 0.82f, 0.25f)), ("HANGING GATE", new Color(1f, 0.2f, 0.2f)) };
             case "climate":
                 return new[] { ("FROZEN", DevPalette.WarmthTint(20)), ("COLD", DevPalette.WarmthTint(100)), ("TEMPERATE", DevPalette.WarmthTint(150)),
@@ -383,12 +383,13 @@ public partial class GenerationAudit
                 var road = new Color(0.98f, 0.95f, 0.62f);
                 var stair = new Color(1f, 0.45f, 0.25f);
                 var span = new Color(1f, 0.80f, 0.20f);
+                var ladder = new Color(0.72f, 0.52f, 1f);
                 foreach (Passage path in d.Passages)
                 {
                     foreach (Vector2I c in path.Path) img.SetPixel(c.X, c.Y, road);
                     foreach (Works w in path.Built)
                     {
-                        Color c = w.Kind == WorksKind.Stair ? stair : span;
+                        Color c = w.Kind switch { WorksKind.Stair => stair, WorksKind.Ladder => ladder, _ => span };
                         img.SetPixel(w.From.X, w.From.Y, c);
                         img.SetPixel(w.To.X, w.To.Y, c);
                     }
@@ -443,8 +444,9 @@ public partial class GenerationAudit
             bool wet = v.Water != null && v.Water[x, z] != IslandData.NoLand;
             if (wet && v.Fluid != null && v.Fluid[x, z] == (byte)FluidKind.Goo) c = DevPalette.Goo;
             else if (wet && name == "rivers" && d.River[x, z])
-                c = d.Navigable[x, z] ? DevPalette.ReachTint : DevPalette.StreamTint;
-            else if (wet) c = DevPalette.LakeTint;
+                c = DevPalette.Deepened(d.Navigable[x, z] ? DevPalette.ReachTint : DevPalette.StreamTint,
+                                        v.Water![x, z] - v.Surface[x, z], d.Navigable[x, z] ? 2 : 1);
+            else if (wet) c = DevPalette.Deepened(DevPalette.LakeTint, v.Water![x, z] - v.Surface[x, z], 3);
             else
             {
                 c = DevPalette.Height((v.Surface[x, z] - lo) / span);

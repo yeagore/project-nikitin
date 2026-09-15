@@ -17,7 +17,7 @@ namespace ProjectNikitin.Generation;
 /// <param name="Cost">Works on the route; zero means you can simply walk it.</param>
 /// <param name="Path">Every cell of the route, in order, start to end.</param>
 /// <param name="Built">The works, in order along the route.</param>
-/// <param name="Flights">Runs of five stairs inside fifteen cells: a road climbing country it should go round.</param>
+/// <param name="Flights">Runs of five climbs, ladders or stairs, inside fifteen cells: a road climbing country it should go round.</param>
 public sealed record Passage(int Exit, Vector2I From, Vector2I To, int Cost,
                              List<Vector2I> Path, List<Works> Built, int Flights);
 
@@ -37,7 +37,7 @@ internal static class Passages
     /// <summary>A cardinal step and a diagonal one, in the packed length: 2 and 3, near enough √2 to keep a road from zigzagging.</summary>
     private const long Straight = 2, Slant = 3;
 
-    /// <summary>Stairs that make a flight...</summary>
+    /// <summary>Climbs, ladders and stairs alike, that make a flight...</summary>
     private const int FlightStairs = 5;
 
     /// <summary>...inside this many cells of road.</summary>
@@ -91,7 +91,7 @@ internal static class Passages
         }
     }
 
-    /// <summary>Ground something is already built on — landing strips, bridge banks, the column under each Gate — which a stair may not take for its footing.</summary>
+    /// <summary>Ground something is already built on — landing strips, bridge banks, the column under each Gate — which a ladder or a stair may not take for its footing.</summary>
     private static bool[,] ReservedGround(IslandData d)
     {
         int n = d.Size;
@@ -113,8 +113,9 @@ internal static class Passages
     }
 
     /// <summary>
-    /// The Dijkstra sweep from <paramref name="start"/>: a free step 0, a bridge 1, a stair 1
-    /// unless either end is reserved.
+    /// The Dijkstra sweep from <paramref name="start"/>: a free step 0, a bridge 1, a ladder
+    /// or a stair 1 unless either end is reserved. A ladder and a stair cost the same, so
+    /// which one a face takes names the work and moves no road.
     /// </summary>
     private static Route BuildRoute(IslandData d, Vector2I start, int span, bool[,] reserved)
     {
@@ -171,10 +172,10 @@ internal static class Passages
 
                     var to = new Vector2I(nx, nz);
                     if (bridged) Offer(to, 1, WorksKind.Bridge);
-                    else if (rise <= 1) Offer(to, 0, WorksKind.Stair);
-                    // A stair stands on two cells, and neither may already carry a structure.
+                    else if (rise <= Traversal.FreeStep) Offer(to, 0, WorksKind.Stair);
+                    // A ladder or a stair stands on two cells, and neither may already carry a structure.
                     else if (!reserved[c.X, c.Y] && !reserved[nx, nz])
-                        Offer(to, 1, WorksKind.Stair);
+                        Offer(to, 1, rise < Traversal.CliffFace ? WorksKind.Ladder : WorksKind.Stair);
                 }
             }
 
@@ -210,7 +211,7 @@ internal static class Passages
         return new Passage(exit, start, goal, works.Count, path, works, Flights(path, works));
     }
 
-    /// <summary>Non-overlapping runs of <see cref="FlightStairs"/> stairs inside <see cref="FlightWindow"/> cells of road — a ladder pretending to be a road.</summary>
+    /// <summary>Non-overlapping runs of <see cref="FlightStairs"/> climbs, ladders and stairs alike, inside <see cref="FlightWindow"/> cells of road — a ladder pretending to be a road.</summary>
     private static int Flights(List<Vector2I> path, List<Works> works)
     {
         var at = new Dictionary<Vector2I, int>();
@@ -218,7 +219,7 @@ internal static class Passages
 
         var steps = new List<int>();
         foreach (Works w in works)
-            if (w.Kind == WorksKind.Stair && at.TryGetValue(w.To, out int where))
+            if (w.Kind != WorksKind.Bridge && at.TryGetValue(w.To, out int where))
                 steps.Add(where);
         steps.Sort();
 

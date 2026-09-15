@@ -64,13 +64,15 @@ its islands the same way.
 
 ### The one rule that shapes everything
 
-**A step of one slab is free. A step of two or more slabs is a cliff.** People
-walk up and down single slabs for nothing; anything taller needs something
-built, a stair or a hoist. The whole surface is built so that walking costs
-nothing by default, and every cliff on the island is there because some rule
-put it there on purpose. Walking includes diagonal moves, except where both
-cells beside the diagonal are cliffs, since then there is no corner to cut.
-Built things (bridges, stairs) stay on the straight axes.
+**A step of one slab is free. Two or three slabs is an impasse. Four or more
+is a cliff.** People walk up and down single slabs for nothing; anything taller
+needs something built — a ladder up an impasse, a stair or an elevator up a
+cliff. The whole surface is built so that walking costs nothing by default, and
+every impasse and cliff on the island is there because some rule put it there
+on purpose. Walking includes diagonal moves, except where both cells beside the
+diagonal are an impasse or a cliff, since then there is no corner to cut. Built
+things (bridges, ladders, stairs) stay on the straight axes. (Until 2026-09-14 a
+cliff started at three slabs, and two had no name at all.)
 
 A step of exactly two slabs is the worst kind: too tall to walk, too short to
 read as a cliff. The generator hunts these down and removes them.
@@ -333,8 +335,7 @@ needs no wall of high ground: the patch's own untouched rim is the containment.
 At least two cells of rim stay dry all round, and the shoreline wanders a few
 cells further on a noise pattern, so a lake is the patch's shape read through
 that pattern rather than a scale copy of a polygon. The step from rim to water
-is one slab, so shores are walkable; the bed drops three or four, clear of the
-ambiguous two. One lake per patch, and a patch beside one that holds water stays
+is one slab, so shores are walkable; the bed is a matter of its own, below. One lake per patch, and a patch beside one that holds water stays
 dry, because a row of pools at slightly different levels reads as flooding. The
 lakes dial scales how many; a large flat interior lifts the chance; a mesa
 rarely gets one, and then only a small tarn. A patch cut by a canyon or a pass
@@ -345,9 +346,58 @@ more often than not, else a scatter of separate pools ("thousand lakes"), a ring
 round a dry islet of its own floor, a crescent, a ragged cross, or a tarn
 cropped small. Every shape is a subset of the pool the rim already approved.
 
+**Depth.** A lake's bed is no longer one flat sheet. Each lake rolls a profile,
+drawn from how far each cell of the pool lies from the pool's edge (an islet
+counts as edge) and capped by the island's size at 10, 15 or 20 slabs on the
+three footprints — five metres of water on the largest. *Flat* is the old lake,
+two or three slabs deep, on the same roll it always had, so a flat lake is
+exactly the lake it was. A *bowl* is two slabs at the edge and falls a slab
+every half cell to a floor set by how wide the pool is, so a broad lake is deep
+and a puddle cannot be. A *shelf* is one slab of shallows on the outer ring and
+two across a shelf a few cells wide, then a sheer drop-off to a deep floor. A
+*plunge* is deep from the second cell in: a drowned pit. Noise ripples the deep
+parts, more the deeper. (The first cut capped depth at 12 and fell a slab per
+cell, and the lakes still looked flat; raised the next day.) Every lake bed cell
+is also sorted into a tier by the water over it: a *shallow bed* under two
+slabs or fewer (wading depth: the shelf and the shore ring), a *mid bed* under
+three to eight, and a *deep bed* under nine or more, which is ooze — a
+near-black mud — instead of silt. Small
+pools with no inside are always flat; of the rest two in five stay flat, three
+in ten are bowls, a little under one in five shelves and one in eight plunges;
+a tarn is a plunge half the time; a great lake is never flat. The deepest cell
+of every lake with a profile is recorded as a *deep*, an anchor for whatever
+will live in deep water; a flat lake has none. Nothing above the water changes
+— the shore, the level, the outflow, the walking all read the surface. Three
+things that read the ground under the water were told: the overhang stage (a
+lip may not dip into water, an arch must clear it), the ford (never on water
+deeper than a stream), and the underside, which simply hangs a little lower
+under a deep lake.
+
+**Great lakes.** On about one island in ten, two to five neighbouring flat
+patches on the same plateau step are flooded as one lake, since a lake was
+never allowed to be bigger than one patch and the patchwork's grain was
+capping it. The containment is the same idea as ever: the rim of the whole
+union stays dry all round, its lowest rim cell sets the level, and the
+wandering shore, the islet and the depth profile all work as for any lake. It
+happens on wet islands (the lakes dial at 0.3 or more, rising with it) and
+more readily on open country than broken: at the top of the dial a Plains
+island has one four times in five, a Tablelands or Downs island seven in ten,
+Highlands half, the sculpted rock less, a dune island almost never. The seed
+patch must be a plain or a basin with a broad interior, well inland, on a
+landmass of 3,600 cells or more — a 96 Single qualifies, no 64 island does, and
+a 128 island cut into quarters does not either. The union grows a patch at a
+time, always the largest neighbour on the same step and the same landmass,
+until it holds a rolled tenth to a fifth of the landmass. A great lake is
+always one body (the other shapes would dry most of it), has an islet more
+often and a bigger one, wins against the rule that keeps neighbouring patches
+dry, is named with a grander word (a Sea, a Deep, a Broad, a Loch), and is
+listed so the living layer can find it. A river that ran through those patches
+is a river no longer: it ends in the lake, which is the visible sign of one.
+
 **Goo.** Each column records what fluid stands in it. Water is the default and
 the only fluid that behaves: rivers, fords and named bodies of water are water's alone. About
-three islands in ten roll one to three **goo** puddles instead, placed like small
+three islands in ten roll one to three **goo** puddles instead (when the goo
+switch is on; it is off by default since 2026-09-15), placed like small
 tarns in dry flat patches. Goo makes no rivers, and no water may stand within a
 king's move of it, not even diagonally; the placement guarantees this, the river
 stage preserves it, and the audit counts it. What goo is for is the biome
@@ -404,9 +454,15 @@ navigable river is cut three deep. Every course is then forced downhill (the
 routing promised a downstream neighbour, not a lower one), the two cells of a
 navigable pair are held to one level, and the banks are brought down to the
 free step: a bank exactly two slabs above the water comes down one, the
-correction walking outward; a bank three or more above is a gorge wall, which
-the grammar allows. Ground whose height is the point of it (a mesa rim, a
-tower, a levelled bridgehead) is never cut.
+correction walking outward. A bank three or more above the water is left as it
+is — an impasse at three, a gorge wall from four — but two is different: it is
+the slab the water settled down after the bed was cut, not the lie of the land,
+so the pass leaves no bank at two, and a taller bank the correction reaches at
+the water's edge comes all the way down to the free step. For the same reason
+it cuts whatever ground the river crosses, whatever landform that is. What it
+never touches is a levelled bridgehead, the rim that keeps a basin's
+escarpment facing inward, a taller face (never more than two above what it just
+cut), or the water itself.
 
 **Valleys.** The ground either side of a course sinks toward it in whole bands,
 so the only step it makes is the one slab between bands, and the channel sinks
@@ -427,6 +483,20 @@ drop along its course) throws a sheet off every aether edge beside it and toward
 every neighbouring water a fall's depth below; a lake pours too where its
 outflow leaves well under its surface. Never onto dry ground, so nothing new
 gets wet. Rim falls are drawn spilling 16 slabs past the underside.
+
+**Plunge pools.** Under three inner waterfalls in four, the cell the water
+lands on — where that is water at the level the fall reaches: the course below,
+a lake, the river under a lake's spill — has its bed dug half the drop deeper,
+two to four slabs, and the next cell downstream half that again, so the pool
+tails off. Never under a fall off the rim, which lands in the aether. Each pool
+is a deep. Only the bed moves, never the water, so nothing the river profile
+settled is touched; a ford is never put on one.
+
+**Deep reaches.** Half the wide-river pools of eight cells or more deepen in
+the middle: every cell two or more away from the pool's ends (where it meets
+the stream it came from, the pool below its step, a lake, or the rim) goes a
+slab or two deeper. An estuary's funnel counts, so a drowned mouth is deep in
+the middle.
 
 **A lake that swallows a river.** On about three islands in ten that have a
 river-fed lake, one lake (a basin's for preference, else the one with the
@@ -467,7 +537,8 @@ drains into, not beside a lake and not a delta's arm.
 course, on the first crossable cell below its spring, then one every 11 cells
 of water on flat ground, stretching to every 33 through broken ground (the same
 measure of local relief the climate uses), where both banks are dry and within
-a slab of the water. Everywhere else a stream is an obstacle. A short course
+a slab of the water, and the water is no deeper than a stream is cut (a plunge
+pool is not waded). Everywhere else a stream is an obstacle. A short course
 still gets one. A ford is never put on the spring itself: the source is a place
 the living layer will stand something on. (Until September 2026 the first cell
 of a course got the ford whatever it was, and for 103 of the audit's 218
@@ -497,10 +568,12 @@ be a separate idea, shelves, patches of level ground with a measured width. It
 never read as a place and was removed; everything that used it now reads
 districts.)
 
-**Reach areas**: what connects once the player can build, with two kinds of
-works. A **stair or hoist** climbs a face of up to 8 slabs, enough for a mesa or
-basin rim, not a mountain flank; it stands on two cells that may not be a
-bridgehead, a landing strip or a Gate's ground. A **bridge** joins land to land
+**Reach areas**: what connects once the player can build, with three kinds of
+works. A **ladder** climbs an impasse, two or three slabs; a **stair or
+elevator** climbs a cliff of four up to 8 slabs, enough for a mesa or basin rim,
+not a mountain flank. Either stands on two cells that may not be a bridgehead,
+a landing strip or a Gate's ground, and a road counts either as one work. A
+**bridge** joins land to land
 on a straight line across at most the crossings span of aether, 3 cells of
 water, or a chasm (ground 5 slabs or more below the deck, which is how one cliff
 top is bridged to another); a deck is level and its banks within a slab of it.
@@ -656,20 +729,27 @@ the lab, the audit and the collages carry the layer from the start.
 ### Stage 12: surfaces and anchors
 
 **Anchors** are the lists the content layer will read instead of placing things
-at coordinates: coast cells; cliff brinks (dry cells three or more slabs above a
+at coordinates: coast cells; cliff brinks (dry cells four or more slabs above a
 neighbour's effective surface, so a gorge rim counts and a river bank does not)
-and cliff feet; banks (the walkable wet margin, at most a slab over the water);
-river beds and lake beds; summits (the highest dry cells of genuinely high
+and cliff feet; impasse brinks and impasse feet, the same pair for a face of two
+or three slabs, where a ladder would go (a cell can be both kinds, one face each
+way); banks (the walkable wet margin, at most a slab over the water — no dry
+cell beside water is left without some anchor);
+river beds and lake beds, the lake beds sorted again into shallow (two slabs
+of water or fewer), mid (three to eight) and deep (nine or more); deeps (the deepest cell of every
+lake with a depth profile, and the pool under every fall that dug one); summits (the highest dry
+cells of genuinely high
 country, at least half the mountain cap above the lowest ground, spaced apart,
 so a flat island honestly has none); overhang lips; beaches, fords, Gate
 landings; springs, falls, hot water; sea stacks; the lakes that
-swallowed a river and the deltas. The lists overlap freely; only the lab's
+swallowed a river, the great lakes and the deltas. The lists overlap freely; only the lab's
 flattened view has to pick one colour per cell.
 
 **Materials.** Each column gets a provisional material so the island reads as a
 place before the biome layer exists. In order of precedence:
 
-1. A river or lake bed is **silt**, and nothing else is. A goo pool's bed and
+1. A river or lake bed is **silt**, or **ooze** where nine slabs of water or more
+   stand over it, and nothing else is either. A goo pool's bed and
    shore are **stone**.
 2. Warmth under 35 is **snow**: the extreme cold, and a mountain's top.
 3. Rock is where rock is. A tall face (six slabs) bares **stone** at its brink
@@ -753,6 +833,11 @@ Nothing else is re-rolled for.
   lost.
 - **Water pours every way it plausibly can**, but never onto dry ground.
 - **Lakes that are not one big lake**: the shape roll.
+- **The bed is not one depth**: depth is the bed's, never the water's, so a
+  profile moves nothing above the surface; three readers of the bed were told.
+- **A great lake is several patches made one**: the containment never depended
+  on the patch, so a union of patches is a site like any other.
+- **Plunge pools dig the bed, not new water**: a fall lands on water already.
 - **Goo never mixes**, three ways: placement, the river mask, the audit.
 - **The cube has a lid**, and the Gates are the first thing it bites.
 - **The fit band wraps the linker**, since the linker shrinks every scattered
@@ -787,12 +872,12 @@ the human end.
 
 ### The checksum
 
-`generation_checksum.tscn` builds 456 islands across the whole settings matrix
+`generation_checksum.tscn` builds 458 islands across the whole settings matrix
 (60 default seeds; every arrangement against every character at 64²; all three
 sizes; every Gate request; every crossings setting; both ends of every dial and
 of every whole-number setting; the older layouts and landforms with the newer
 ones switched off) and hashes every field of every island. A change meant to
-leave generation alone must report "0 of 456 islands moved". A change meant to
+leave generation alone must report "0 of 458 islands moved". A change meant to
 alter it records the new hashes with `-- accept` and says so in its commit. It
 is the bit-for-bit gate. Determinism hangs on details a refactor can break
 silently: hash salts, noise seed offsets, the order of floating-point
@@ -804,7 +889,7 @@ in doubt, run the checksum.
 `generation_audit.tscn` runs the real generator over 60 seeds at 128² with every
 dial rolled, so the sixty sample the whole range, and prints the measured
 guarantees as numbers rather than re-implementing anything: the step grammar
-(what share of neighbouring cells are free steps, two-slab steps, cliffs, and
+(what share of neighbouring cells are free steps, impasses of two and of three slabs, cliffs, and
 where the cliffs fall by landform pair); patch sizes; mesa clearance and basin
 drop; hill relief; the sculpted landforms' wall heights; mountain rise and step
 profile; rivers (cells, navigable cells, falls, water running uphill, courses
@@ -814,7 +899,8 @@ flat and broken ground, bodies of water); overhangs; material shares and
 anchor counts (with tors and hot water); the
 per-island means of every climate axis, plus what the sun, the wind and the
 hollows did; lakes and goo (leaks, water touching the void, goo touching water,
-all "want 0"); altitude against the box; gorges and sealed gorges; what each
+all "want 0"), the beds (the deepest cell per lake, great lakes, deeps, river
+cells dug below their kind); altitude against the box; gorges and sealed gorges; what each
 character delivered; walkability and reach; passes; districts; crossings; every
 Gate rule; roads; arrangements; re-rolls; continuity. Any "want 0" that is not
 zero names its seed as it happens, so it can be built in the lab. It ends by
@@ -870,9 +956,11 @@ has no rendering device.
 
 `island_lab.tscn` (F6 in the editor) is the human end: an island drawn by the
 game's own renderer (or, with the Z key, as the old one box per slab-run) with
-a control panel that writes the same settings the audit measures. Fourteen
-views (height, landform, region, walk, reach, surface, anchors, and the seven
-fields: moisture, warmth, ruggedness, exposure, rim, water distance, magick),
+a control panel that writes the same settings the audit measures. Fifteen
+views (height, landform, region, walk, reach, navigable — walk's counterpart on
+the water, a colour per body a hull could get around in, with a waterfall
+cutting one body into two — surface, anchors, and the seven fields: moisture,
+warmth, ruggedness, exposure, rim, water distance, magick),
 each with a legend in its actual colours; overlays for bridge sites, landings,
 roads, fords, and the compass with the wind, the sun, the dune grain
 and the two boxes; a liquid toggle that shows the beds; a seed field; a
@@ -902,8 +990,11 @@ numbers in section 6 about twenty and eighty Domains come from it.
 
 Measured on the last accepted audit (60 seeds, 128², all dials rolled):
 
-- **Steps**: 92.7% of neighbouring pairs are free steps, 1.0% two-slab (all at
-  riverbanks or beside landforms whose height is the point), 6.3% cliffs.
+- **Steps**: 92.8% of neighbouring pairs are free steps, 0.9% an impasse of two
+  and 1.3% an impasse of three (both mostly on mountains, where a multi-slab
+  riser is the point), 5.0% cliffs. Off the mountains there are 346 two-slab
+  steps in sixty islands, down from 586 when the bank cut still backed off a
+  landform (2026-09-11).
 - **Fjords**: 41 on 39 of the 60 islands, two islands with two, 2,925 cells of
   aether; one road in 180 bridges one, since walking is free and every inlet
   can be walked round by its head.
@@ -952,11 +1043,12 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   eighty and a hundred and sixty whole Domains in view. Making twenty takes
   about three seconds.
 
-Known gaps: a few two-slab steps where the ground the fix would cut is a
-landform, a bridgehead or standing water; one islet adrift on the most broken
-layout; five sealed gorge reaches whose rims are misaligned; deltas small and
-rare; sea stacks rare because the crop seldom leaves a speck; overhangs not
-walkable by design.
+Known gaps: three waterside cells in sixty islands still standing two slabs
+above their water, where the cut is refused for a bridgehead or a basin rim;
+one islet adrift on the most broken layout; two short gorge reaches sealed by
+rims that disagree, so no bridge fits along them; deltas small and rare; sea
+stacks rare because the crop seldom leaves a speck; overhangs not walkable by
+design.
 
 ---
 
@@ -968,7 +1060,7 @@ walkable by design.
   at each end; hanging Gates are flown through, land Gates walked through.
 - **Cell**, **column**, **slab**, **run**: the grid square, the stack of ground
   on it, the quarter-cell block it is counted in, and one solid stretch of it.
-- **Free step**: one slab, the step that costs nothing. **Cliff**: two or more.
+- **Free step**: one slab, the step that costs nothing. **Impasse**: two or three slabs, climbed by a ladder. **Cliff**: four or more, climbed by a stair or an elevator.
 - **Rung** and **ladder**: the terrace levels patches stand on.
 - **Patch** or **region**: one county of the island's patchwork, with one
   landform.
@@ -977,7 +1069,7 @@ walkable by design.
 - **Walk area**, **district**, **reach area**, **mainland**, **heartland**: what
   connects on foot; a walk area big enough to build on; what connects once
   built; the walk area under the Entry; the reach area under the Entry.
-- **Works**: stairs and bridges (ferries were a third, and went). **Apron**: the
+- **Works**: ladders, stairs and bridges (ferries were once another, and went). **Apron**: the
   district a Gate's landing opens onto.
 - **Anchor**: a list of cells of one kind the content layer will read.
 - **Knob** or **dial**: a 0-to-1 setting; **Auto** lets the seed roll it.

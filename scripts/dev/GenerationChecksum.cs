@@ -93,6 +93,8 @@ public partial class GenerationChecksum : Node
 
         for (int i = 0; i < 4; i++) Case("oldArrangements", Seed(i + 7), At(96, p => p.NewArrangements = false));
         for (int i = 0; i < 4; i++) Case("oldLandforms", Seed(i + 7), At(96, p => p.NewLandforms = false));
+        // Goo is off by default; two cases keep its placement and its guards hashed.
+        for (int i = 0; i < 2; i++) Case("goo", Seed(i + 9), At(64, p => p.Goo = true));
 
         GD.Print($"checksum: {_islands} islands, {_total:x16}, {Time.GetTicksMsec() - t0} ms");
         Baseline();
@@ -181,10 +183,12 @@ public partial class GenerationChecksum : Node
             h.Add(spans?.Length ?? -1);
             if (spans != null) foreach (Span s in spans) { h.Add(s.Bottom); h.Add(s.Top); }
         }
-        foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells, d.BankCells,
+        foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells,
+                                     d.ImpasseCells, d.ImpasseFootCells, d.BankCells,
                                      d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells,
                                      d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater,
-                                     d.Fjords, d.Estuaries })
+                                     d.Fjords, d.Estuaries, d.Deeps, d.GreatLakes,
+                                     d.ShallowBedCells, d.MidBedCells, d.DeepBedCells })
         {
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);

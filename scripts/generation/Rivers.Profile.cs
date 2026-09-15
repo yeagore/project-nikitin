@@ -126,27 +126,47 @@ internal static partial class Rivers
     /// <summary>
     /// Brings the banks down to the free step: a dry cell standing exactly two
     /// above the water beside it comes down one slab, and the correction walks
-    /// outward against the same test. Only that step and only by that slab — a
-    /// bank three or more above the water is a gorge wall, which the grammar allows.
+    /// outward against the same test. Two is the slab the profile took off the water
+    /// after the bed was cut, not relief, so no cut may leave a bank standing there;
+    /// three or more above the water is left alone — an impasse at three, a gorge wall
+    /// from four. The pass touches nothing else: a cell exactly two above what was just
+    /// cut, never a taller face.
     /// </summary>
     private static void CutBanks(int n, bool[,] land, short[,] surface, short[,] water,
                                  bool[,] river, byte[,] form, bool[,] keep)
     {
         var queue = new Queue<Vector2I>();
 
-        // Cuttable ground: dry, not a bridgehead, not a landform whose height is the point of it.
+        // Cuttable ground: dry, and not a bridgehead. What landform it stands on does not
+        // come into it — the channel was cut to stand one slab proud of its water whatever
+        // ground it crossed, and it is the profile settling the water down afterwards that
+        // leaves a bank standing two.
         bool Dry(int x, int z)
         {
             if (!InBounds(n, x, z)) return false;
             if (!land[x, z] || water[x, z] != IslandData.NoLand) return false;
-            if (keep[x, z]) return false;
-            var type = (LandformType)form[x, z];
-            return type is LandformType.Plain or LandformType.Hills or LandformType.Dunes;
+            return !keep[x, z];
         }
 
-        // How low a cell may go: never into standing water beside it, never within a cliff of a basin floor.
+        // The highest water beside a cell, or NoLand: what its bank is measured against.
+        short Beside(int x, int z)
+        {
+            short level = IslandData.NoLand;
+            for (int k = 0; k < 4; k++)
+            {
+                int nx = x + Dx[k], nz = z + Dz[k];
+                if (!InBounds(n, nx, nz) || water[nx, nz] == IslandData.NoLand) continue;
+                if (level == IslandData.NoLand || water[nx, nz] > level) level = water[nx, nz];
+            }
+            return level;
+        }
+
+        // How low a cell may go: never into standing water beside it, and — unless it is
+        // basin floor itself — never within a cliff of a basin floor, so a basin keeps
+        // its escarpment facing inward.
         int Floor(int x, int z)
         {
+            bool inBasin = (LandformType)form[x, z] == LandformType.Basin;
             int floor = int.MinValue;
             for (int k = 0; k < 4; k++)
             {
@@ -154,10 +174,23 @@ internal static partial class Rivers
                 if (!InBounds(n, nx, nz)) continue;
                 if (water[nx, nz] != IslandData.NoLand)
                     floor = Math.Max(floor, water[nx, nz] + 1);
-                if ((LandformType)form[nx, nz] == LandformType.Basin)
+                if (!inBasin && (LandformType)form[nx, nz] == LandformType.Basin)
                     floor = Math.Max(floor, surface[nx, nz] + 3);
             }
             return floor;
+        }
+
+        // A slab off a cell, and a second if the first leaves it two above the water
+        // beside it: the correction must not walk a taller bank down into the two the
+        // pass exists to clear.
+        void Cut(int x, int z)
+        {
+            surface[x, z]--;
+            short beside = Beside(x, z);
+            if (beside != IslandData.NoLand && surface[x, z] - beside == 2
+                && surface[x, z] - 1 >= Floor(x, z))
+                surface[x, z]--;
+            queue.Enqueue(new Vector2I(x, z));
         }
 
         for (int x = 0; x < n; x++)
@@ -169,8 +202,7 @@ internal static partial class Rivers
                 int nx = x + Dx[k], nz = z + Dz[k];
                 if (!Dry(nx, nz) || surface[nx, nz] - water[x, z] != 2) continue;
                 if (surface[nx, nz] - 1 < Floor(nx, nz)) continue;
-                surface[nx, nz]--;
-                queue.Enqueue(new Vector2I(nx, nz));
+                Cut(nx, nz);
             }
         }
 
@@ -183,8 +215,7 @@ internal static partial class Rivers
                 if (!Dry(nx, nz)) continue;
                 if (surface[nx, nz] - surface[c.X, c.Y] != 2) continue;
                 if (surface[nx, nz] - 1 < Floor(nx, nz)) continue;
-                surface[nx, nz]--;
-                queue.Enqueue(new Vector2I(nx, nz));
+                Cut(nx, nz);
             }
         }
     }

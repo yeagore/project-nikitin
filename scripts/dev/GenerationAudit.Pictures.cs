@@ -511,7 +511,16 @@ public partial class GenerationAudit
 
         Mark(d.RiverBedCells, DevPalette.Anchor(DevPalette.RiverBed));
         Mark(d.LakeBedCells, DevPalette.Anchor(DevPalette.LakeBed));
+        Mark(d.ShallowBedCells, DevPalette.Anchor(DevPalette.ShallowBed));
+        Mark(d.MidBedCells, DevPalette.Anchor(DevPalette.MidBed));
+        Mark(d.DeepBedCells, DevPalette.Anchor(DevPalette.DeepBed));
+        Mark(d.Deeps, DevPalette.Anchor(DevPalette.Deep));
         Mark(d.CoastCells, DevPalette.Anchor(DevPalette.Coast));
+        // Impasses under cliffs, in the lab's anchor-view order.
+        Mark(d.ImpasseFootCells, DevPalette.Anchor(DevPalette.ImpasseFoot));
+        var impasseFeet = new HashSet<Vector2I>(d.ImpasseFootCells);
+        foreach (Vector2I p in d.ImpasseCells)
+            img.SetPixel(p.X, p.Y, DevPalette.Anchor(impasseFeet.Contains(p) ? DevPalette.ImpasseLedge : DevPalette.ImpasseBrink));
         Mark(d.CliffFootCells, DevPalette.Anchor(DevPalette.CliffFoot));
         var feet = new HashSet<Vector2I>(d.CliffFootCells);
         foreach (Vector2I p in d.CliffCells)

@@ -15,6 +15,7 @@ public partial class IslandLab
 		Region,
 		Walk,
 		Reach,
+		Navigable,
 		Surface,
 		Anchors,
 		Moisture,
@@ -67,7 +68,7 @@ public partial class IslandLab
 					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
 
 			case View.Walk:
-				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are cliffs; "
+				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are impasses or cliffs; "
 					+ $"a district ({Traversal.MinDistrictArea}+ cells) is somewhere to build   "
 					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
 					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
@@ -77,6 +78,19 @@ public partial class IslandLab
 					+ Keyed(MainlandTint, "heartland") + "   "
 					+ Ramp(ReachColor(0f), ReachColor(1f)) + " out of reach whatever you build, "
 					+ "warmer the smaller   " + Keyed(WaterTint, "water");
+
+			case View.Navigable:
+				return "[b]navigable[/b]   the bodies of sailable water — standing water and "
+					+ "navigable reaches, never goo and never a stream, which is forded and not "
+					+ "sailed. A hull goes anywhere within one hue and nowhere between two: "
+					+ "[b]a fall cuts a body[/b], since nothing sails up one   "
+					+ Keyed(DevPalette.Body(0), "a body") + "   " + Keyed(DevPalette.Body(1), "another")
+					+ "   " + Keyed(DevPalette.Body(2), "another") + "   "
+					+ Keyed(DevPalette.Anchor(DevPalette.FallLip), "the lip a body ends at") + "   "
+					+ Keyed(DevPalette.Unsailable, "water no hull uses") + "   "
+					+ Keyed(DevPalette.Goo, "goo") + "   " + Keyed(Unremarkable, "land")
+					+ "   The bed under a body carries its colour dimmed, so the regions still "
+					+ "read with the liquid off (I); the readout names every body and counts its cells.";
 
 			case View.Surface:
 			{
@@ -93,9 +107,10 @@ public partial class IslandLab
 				foreach (int kind in DevPalette.LegendOrder)
 					bits.Add(Keyed(DevPalette.Anchor(kind), DevPalette.AnchorName(kind)));
 				bits.Add(Keyed(DevPalette.Anchor(0), "unremarkable ground"));
-				return "[b]anchors[/b]   what the content layer attaches to. The lists overlap; "
-					+ "here the built and rarer kinds win, and a cell that is both brink and foot "
-					+ "is a ledge   " + string.Join("   ", bits)
+				return "[b]anchors[/b]   what the content layer attaches to. A cliff is a face of "
+					+ $"{Traversal.CliffFace}+ slabs, an impasse one of 2–{Traversal.CliffFace - 1}. The lists overlap; "
+					+ "here the built and rarer kinds win, a cliff anchor over an impasse one, and a cell "
+					+ "that is both brink and foot of one kind of face is its ledge   " + string.Join("   ", bits)
 					+ "   Only the lip of an overhang is magenta: the ground under it is its own kind. "
 					+ "Beds show with liquid off (I). A sea stack is a dark column in the aether, in every view.";
 			}
@@ -169,6 +184,7 @@ public partial class IslandLab
 
 	private static readonly Color RoadTint = new(0.98f, 0.95f, 0.62f, 0.8f);
 	private static readonly Color StairTint = new(1f, 0.45f, 0.25f);
+	private static readonly Color LadderTint = new(0.72f, 0.52f, 1f);
 	private static readonly Color SpanTint = new(1f, 0.80f, 0.20f);
 
 	private static readonly Color FordTint = new(0.85f, 0.95f, 0.60f);
@@ -188,9 +204,18 @@ public partial class IslandLab
 
 		foreach (Vector2I c in d.RiverBedCells) grid[c.X, c.Y] = DevPalette.RiverBed;
 		foreach (Vector2I c in d.LakeBedCells) grid[c.X, c.Y] = DevPalette.LakeBed;
+		foreach (Vector2I c in d.ShallowBedCells) grid[c.X, c.Y] = DevPalette.ShallowBed;
+		foreach (Vector2I c in d.MidBedCells) grid[c.X, c.Y] = DevPalette.MidBed;
+		foreach (Vector2I c in d.DeepBedCells) grid[c.X, c.Y] = DevPalette.DeepBed;
+		foreach (Vector2I c in d.Deeps) grid[c.X, c.Y] = DevPalette.Deep;
 		foreach (Vector2I c in d.CoastCells) grid[c.X, c.Y] = DevPalette.Coast;
+		// Impasses first, so a cell that is a cliff anchor one way and an impasse anchor
+		// another reads as the cliff. Within one kind of face, a bench is a brink over
+		// one neighbour and a foot under another: a ledge.
+		foreach (Vector2I c in d.ImpasseFootCells) grid[c.X, c.Y] = DevPalette.ImpasseFoot;
+		foreach (Vector2I c in d.ImpasseCells)
+			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.ImpasseFoot ? DevPalette.ImpasseLedge : DevPalette.ImpasseBrink);
 		foreach (Vector2I c in d.CliffFootCells) grid[c.X, c.Y] = DevPalette.CliffFoot;
-		// A bench on a mountainside is a brink over one neighbour and a foot under another.
 		foreach (Vector2I c in d.CliffCells)
 			grid[c.X, c.Y] = (byte)(grid[c.X, c.Y] == DevPalette.CliffFoot ? DevPalette.Ledge : DevPalette.Brink);
 		foreach (Vector2I c in d.BankCells) grid[c.X, c.Y] = DevPalette.Bank;
@@ -247,8 +272,22 @@ public partial class IslandLab
 	/// <summary>The out-of-reach red at a size, 0 the smallest and warmest.</summary>
 	private static Color ReachColor(float t) => new(0.86f, 0.22f + 0.26f * t, 0.18f);
 
-	/// <summary>Ford, navigable reach, stream and standing water are four colours.</summary>
-	private static Color WaterColor(IslandData d, int x, int z) => DevPalette.Water(d, x, z);
+	/// <summary>Ford, navigable reach, stream and standing water are four colours; the navigable view asks a different question of the same cells.</summary>
+	private Color WaterColor(IslandData d, int x, int z)
+		=> _view == View.Navigable ? BodyColor(d, x, z) : DevPalette.Water(d, x, z);
+
+	/// <summary>
+	/// A water cell by the body it belongs to: a hue each, white at the lip of a fall
+	/// that ends one, and the slate of water no hull uses (a stream, a goo puddle —
+	/// though goo has its own material and never reads this).
+	/// </summary>
+	private Color BodyColor(IslandData d, int x, int z)
+	{
+		int id = d.WaterBody[x, z];
+		if (id < 0) return DevPalette.Unsailable;
+		if (_fallLips.Contains(new Vector2I(x, z))) return DevPalette.Anchor(DevPalette.FallLip);
+		return DevPalette.Body(id);
+	}
 
 	private static bool OnRegionBorder(IslandData d, int x, int z)
 	{

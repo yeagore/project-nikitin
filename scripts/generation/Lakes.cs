@@ -7,11 +7,14 @@ using static ProjectNikitin.Generation.SeedHash;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Standing fluids: lakes sunk into flat patches, the shapes big pools take, and
-/// the goo puddles. A lake's containment is its patch's own dry rim, so it needs
-/// no basin: the shore steps down one slab, the bed three or four.
+/// Standing fluids: lakes sunk into flat patches, the shapes big pools take, the
+/// beds under them, and the goo puddles. A lake's containment is its patch's own
+/// dry rim, so it needs no basin: the shore steps down one slab, the bed two or
+/// three under that, or further where the lake rolled a bathymetry. The stage
+/// works per <i>site</i>: a patch, except where a great lake has made one site
+/// of several (<c>Lakes.Great</c>).
 /// </summary>
-internal static class Lakes
+internal static partial class Lakes
 {
     /// <summary>Cells of its patch's rim a lake always leaves dry, all the way round.</summary>
     private const int ShoreMargin = 2;
@@ -30,12 +33,16 @@ internal static class Lakes
 
     /// <summary>
     /// Sinks lakes into the interiors of flat patches (plain, mesa, basin) and returns the
-    /// water level per column, <see cref="IslandData.NoLand"/> where dry. One lake per patch
-    /// and none beside another, so water never reads as flooding; <c>p.Lakes</c> drives chance, size floor and shore inset.
+    /// water level per column, <see cref="IslandData.NoLand"/> where dry. One lake per site
+    /// and none beside another, so water never reads as flooding; <c>p.Lakes</c> drives chance,
+    /// size floor and shore inset, and whether a great lake is on the dice. Each lake's bed
+    /// is flat or a bathymetry (<see cref="LakeBeds"/>): the deepest cell of every lake with
+    /// one goes to <paramref name="deeps"/>, and one cell of a great lake to <paramref name="greatLakes"/>.
     /// </summary>
     internal static short[,] PlaceLakes(int seed, IslandParams p, bool[,] land, int[,] region,
                                        int count, RegionPlan[] plan, short[,] surface,
-                                       bool[,]? canyon)
+                                       bool[,]? canyon, float[,] toCoast, TerrainCharacter character,
+                                       List<Vector2I> deeps, List<Vector2I> greatLakes)
     {
         int n = p.Size;
         float wet = Math.Clamp(p.Lakes, 0f, 1f);
@@ -44,22 +51,46 @@ internal static class Lakes
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++) water[x, z] = IslandData.NoLand;
 
+        // A site is a patch, unless a great lake has made one of several; the patch
+        // measures come first, since the seed of a great lake is chosen on them.
         int[,] inset = PatchInset(land, region);
         var (interior, shore, drained) = MeasurePatches(n, land, region, count, inset, surface, canyon);
+        var site = new int[n, n];
+        int great = GreatLakeSite(seed, p, land, region, count, plan, interior, drained, toCoast,
+                                  character, wet, site);
+        if (great >= 0)
+        {
+            inset = PatchInset(land, site);
+            (interior, shore, drained) = MeasurePatches(n, land, site, count, inset, surface, canyon);
+        }
+
         var (wants, tarn) = RollLakes(seed, wet, count, plan, interior, shore, drained);
-        DropNeighbouringLakes(land, region, wants, count);
-        var (level, bed) = LakeLevels(seed, count, wants, shore);
+        if (great >= 0)
+        {
+            // Decided, not rolled — unless the union turned out to have no rim to hold it.
+            wants[great] = !drained[great] && shore[great] != int.MaxValue;
+            tarn[great] = false;
+            if (!wants[great]) great = -1;
+        }
+        DropNeighbouringLakes(land, site, wants, count, great);
+        int[] level = LakeLevels(count, wants, shore);
 
         int[,] margin = ShoreMargins(seed, n, wet);
-        bool[,] pool = LakeBody(land, region, inset, wants, count, margin);
-        CropMesaTarns(seed, n, region, count, plan, wants, inset, pool);
-        LakeStyle[] style = ShapeLakes(seed, n, region, count, plan, wants, tarn, pool);
-        bool[,] islet = AddIslets(seed, n, region, count, wants, style, inset, pool);
-        FloodPools(n, region, pool, islet, level, bed, surface, water);
+        bool[,] pool = LakeBody(land, site, inset, wants, count, margin);
+        if (great >= 0 && PoolArea(n, site, pool, great) < GreatLakeMinPool) great = -1;   // an ordinary lake after all
+        CropMesaTarns(seed, n, site, count, plan, wants, inset, pool);
+        LakeStyle[] style = ShapeLakes(seed, n, site, count, plan, wants, tarn, pool, great);
+        bool[,] islet = AddIslets(seed, n, site, count, wants, style, inset, pool, great);
+        var profile = new Bathymetry[count];
+        short[,] bed = LakeBeds(seed, n, site, count, wants, style, pool, islet, level, great, profile);
+        FloodPools(n, site, pool, islet, level, bed, surface, water);
 
-        RemoveDiagonalWater(surface, water, region, level);
+        RemoveDiagonalWater(surface, water, site, level);
         RaiseSunkenShores(land, surface, water);
         LevelShores(land, surface, water);
+
+        RecordDeeps(n, site, count, profile, water, surface, deeps);
+        if (great >= 0) greatLakes.Add(FirstCell(n, site, water, great));
         return water;
     }
 
@@ -128,18 +159,13 @@ internal static class Lakes
         return (wants, tarn);
     }
 
-    /// <summary>Surface one slab under the rim, bed two or three under that — never the ambiguous two-slab drop.</summary>
-    private static (int[] Level, int[] Bed) LakeLevels(int seed, int count, bool[] wants, int[] shore)
+    /// <summary>Surface one slab under the rim; the bed is the bathymetry's (<see cref="LakeBeds"/>).</summary>
+    private static int[] LakeLevels(int count, bool[] wants, int[] shore)
     {
         var level = new int[count];
-        var bed = new int[count];
         for (int r = 0; r < count; r++)
-        {
-            if (!wants[r]) continue;
-            level[r] = shore[r] - 1;
-            bed[r] = level[r] - (2 + (int)(Hash01(seed, 0x1A4Eu ^ (uint)r * 40503u) * 2f));
-        }
-        return (level, bed);
+            if (wants[r]) level[r] = shore[r] - 1;
+        return level;
     }
 
     /// <summary>
@@ -180,22 +206,24 @@ internal static class Lakes
 
     /// <summary>
     /// An islet in about a third of the single lakes: a wobbly disc round the deepest point,
-    /// left dry and raised above the water. Shaped lakes carry their own dry ground.
+    /// left dry and raised above the water. Shaped lakes carry their own dry ground. A
+    /// great lake has one more often, and a bigger one.
     /// </summary>
     private static bool[,] AddIslets(int seed, int n, int[,] region, int count, bool[] wants,
-                                     LakeStyle[] style, int[,] inset, bool[,] pool)
+                                     LakeStyle[] style, int[,] inset, bool[,] pool, int great)
     {
         var islet = new bool[n, n];
         var wobble = new Noise(seed + 1212, frequency: 0.45f, octaves: 2);
         for (int r = 0; r < count; r++)
         {
             if (!wants[r] || style[r] != LakeStyle.Single) continue;
-            if (Hash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > 0.35f) continue;
+            if (Hash01(seed, 0x15EDu ^ (uint)r * 2654435761u) > (r == great ? 0.6f : 0.35f)) continue;
 
             (int cx, int cz) = DeepestCell(region, inset, (i, j) => pool[i, j], r, n);
             if (cx < 0) continue;
 
             float rad = 0.9f + Hash01(seed, 0x0DDu ^ (uint)r * 40503u) * 0.9f;
+            if (r == great) rad += 0.9f;
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -210,7 +238,7 @@ internal static class Lakes
 
     /// <summary>Sinks each pool cell to its bed under its level; an islet cell rises to the free step above the water instead.</summary>
     private static void FloodPools(int n, int[,] region, bool[,] pool, bool[,] islet,
-                                   int[] level, int[] bed, short[,] surface, short[,] water)
+                                   int[] level, short[,] bed, short[,] surface, short[,] water)
     {
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
@@ -219,7 +247,7 @@ internal static class Lakes
             int r = region[x, z];
 
             if (islet[x, z]) { surface[x, z] = Terrain.SlabClamp(level[r] + 1); continue; }
-            surface[x, z] = Terrain.SlabClamp(bed[r]);
+            surface[x, z] = bed[x, z];
             water[x, z] = (short)level[r];
         }
     }
@@ -227,15 +255,16 @@ internal static class Lakes
     /// <summary>
     /// Gives a pool with room for an inside (40+ cells) a style: single more often than not,
     /// else a thousand-lakes scatter, a ring, a crescent, a ragged cross or a tarn. Every shape
-    /// is a subset of the approved pool, so the containment ring is untouched; smaller pools stay single.
+    /// is a subset of the approved pool, so the containment ring is untouched; smaller pools stay
+    /// single, and so does a great lake, since every other shape is a way of drying most of it.
     /// </summary>
     private static LakeStyle[] ShapeLakes(int seed, int n, int[,] region, int count,
                                           RegionPlan[] plan, bool[] wants, bool[] tarn,
-                                          bool[,] pool)
+                                          bool[,] pool, int great)
     {
         int[,] depth = PoolDepth(n, pool);
         var (area, sumX, sumZ, deep) = PoolStats(n, region, count, pool, depth);
-        LakeStyle[] style = RollStyles(seed, count, plan, wants, tarn, area, deep);
+        LakeStyle[] style = RollStyles(seed, count, plan, wants, tarn, area, deep, great);
         DrainByStyle(seed, n, region, count, style, pool, depth, area, sumX, sumZ);
         DropSpecks(n, region, style, pool);
         return style;
@@ -279,14 +308,14 @@ internal static class Lakes
         return (area, sumX, sumZ, deep);
     }
 
-    /// <summary>Rolls a style for each lake big enough to shape; mesa lakes stay single and rolled tarns stay tarns.</summary>
+    /// <summary>Rolls a style for each lake big enough to shape; mesa lakes and a great lake stay single, and rolled tarns stay tarns.</summary>
     private static LakeStyle[] RollStyles(int seed, int count, RegionPlan[] plan, bool[] wants,
-                                          bool[] tarn, int[] area, int[] deep)
+                                          bool[] tarn, int[] area, int[] deep, int great)
     {
         var style = new LakeStyle[count];
         for (int r = 0; r < count; r++)
         {
-            if (!wants[r] || plan[r].Type == LandformType.Mesa) continue;
+            if (!wants[r] || plan[r].Type == LandformType.Mesa || r == great) continue;
             if (tarn[r]) { style[r] = LakeStyle.Tarn; continue; }
             if (area[r] < 40) continue;
 
@@ -540,8 +569,29 @@ internal static class Lakes
         }
     }
 
-    /// <summary>Refuses a lake in any patch bordering one already kept, in ascending patch order, so lakes never chain into stepped sheets of water.</summary>
-    private static void DropNeighbouringLakes(bool[,] land, int[,] region, bool[] wants, int count)
+    /// <summary>
+    /// Refuses a lake in any site bordering one already kept, in ascending site order, so
+    /// lakes never chain into stepped sheets of water. A great lake (<paramref name="first"/>)
+    /// is kept before the scan: it is the one the others give way to.
+    /// </summary>
+    private static void DropNeighbouringLakes(bool[,] land, int[,] region, bool[] wants, int count, int first)
+    {
+        HashSet<int>[] neighbours = Neighbours(land, region, count);
+
+        var kept = new bool[count];
+        if (first >= 0 && wants[first]) kept[first] = true;
+        for (int r = 0; r < count; r++)
+        {
+            if (!wants[r] || r == first) continue;
+            bool beside = false;
+            foreach (int nb in neighbours[r]) if (kept[nb]) { beside = true; break; }
+            if (beside) wants[r] = false;
+            else kept[r] = true;
+        }
+    }
+
+    /// <summary>Which sites border which, by a shared cardinal edge on land.</summary>
+    private static HashSet<int>[] Neighbours(bool[,] land, int[,] region, int count)
     {
         int n = land.GetLength(0);
         var neighbours = new HashSet<int>[count];
@@ -560,16 +610,7 @@ internal static class Lakes
                 if (o != r) neighbours[r].Add(o);
             }
         }
-
-        var kept = new bool[count];
-        for (int r = 0; r < count; r++)
-        {
-            if (!wants[r]) continue;
-            bool beside = false;
-            foreach (int nb in neighbours[r]) if (kept[nb]) { beside = true; break; }
-            if (beside) wants[r] = false;
-            else kept[r] = true;
-        }
+        return neighbours;
     }
 
     /// <summary>

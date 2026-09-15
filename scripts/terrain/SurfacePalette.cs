@@ -30,6 +30,7 @@ public static class SurfacePalette
         SurfaceMaterial.Marsh => new Color(0.30f, 0.52f, 0.50f),      // blue-green, duller than grass, lighter than bog
         SurfaceMaterial.Heath => new Color(0.58f, 0.42f, 0.40f),      // heather-brown, between the mint and the mauve
         SurfaceMaterial.Verdure => new Color(0.08f, 0.42f, 0.20f),    // the deepest green: darker than grass, purer than bog
+        SurfaceMaterial.Ooze => new Color(0.16f, 0.14f, 0.18f),       // near-black plum: a deep floor reads dark through the water
         _ => new Color(1f, 0f, 1f),                                   // an unmapped member: loud on purpose
     };
 }

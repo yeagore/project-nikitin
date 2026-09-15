@@ -46,7 +46,7 @@ mesh bench, and the Domains bench. The two commands that matter after touching
 the generator, and the two after touching the renderer:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 456 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 458 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
 godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
@@ -74,11 +74,13 @@ few seconds on the machine it runs on).
 - The terrain unit is a **slab**: a square cell 1 wide and **1/4 as tall**
   (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The
   ratio is decided; the Notion wiki still says a tentative "8?".
-- **Traversal:** a one-slab step (0.25 u) is free; a face of two or more slabs
-  is an obstacle needing infrastructure. Terrain generated under a one-slab
-  slope limit is walkable by construction; every cliff is one some rule put there.
+- **Traversal:** a one-slab step (0.25 u) is free. A face of two or three slabs
+  is an **impasse**, which a ladder climbs; four or more is a **cliff**, which a
+  stair or an elevator climbs, up to 8 (`Traversal.FreeStep`, `Traversal.CliffFace`).
+  Both are walls to walking. Terrain generated under a one-slab slope limit is
+  walkable by construction; every impasse and cliff is one some rule put there.
   Walking is by king's moves: a corner is cut unless both cardinal cells beside
-  the diagonal are cliffs. Works, anchors and water stay cardinal.
+  the diagonal are more than a free step off. Works, anchors and water stay cardinal.
 - **Three supported footprints: 64², 96², 128²** (128² is the stress target;
   48² and 72² were dropped on 2026-09-05, 48² because the footprint constants
   measured in cells wreck the split shapes there, 72² with the ladder it sat
@@ -124,11 +126,11 @@ under `scripts/generation/`, in the order they run:
 | Footprint | `Footprint`, `Fjords`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, cut with fjords (winding inlets of aether along one grain per Domain into the largest landmass, never through it; rifts were tried and removed), huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
 | Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
-| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
+| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; each bed flat or a bathymetry (a bowl, a shelf with a drop-off, a plunge, to 20 slabs at 128²; the deepest cell a deep, the bed tiered by the water over it: shallow to two slabs, mid to eight, deep of ooze from nine); on about one Domain in ten a great lake, two to five patches on one rung flooded as one site; goo puddles that never touch water (off by default since 2026-09-15). |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; a plunge pool dug under most inner falls and a deep middle on half the long reaches (the bed, never the water); occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
 | Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
+| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by ladders, stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
 | Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
@@ -148,7 +150,7 @@ roll over a range. The preset leaves all of them on Auto, so the audit's default
 seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 456 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 458 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
 measured guarantees and diffs thirty headline numbers against
@@ -317,6 +319,10 @@ archetype and goods data, `addons/` for plugins.
   the same kind. One Gate per edge: one Entry, one to three Exits.
 - **Slab**: the terrain unit, 1 × 1 × 0.25. **Biome**: a Domain's flora, fauna
   and climate.
+- **Free step / Impasse / Cliff**: a face of one slab is walked; of two or three
+  slabs, an impasse a ladder climbs; of four or more, a cliff a stair or an
+  elevator climbs. Two anchor triplets follow them: cliff brink, foot and ledge;
+  impasse brink, foot and ledge.
 - **Polity**: an NPC state ruling Domains. **Metropole**: the Polity the player
   answers to. **Cultural Archetype**: a people's template (Steelfolk, Lakefolk,
   Jadefolk), carrying Traits: School of Magicks, Societal Structure, Political

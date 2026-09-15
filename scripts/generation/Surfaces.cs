@@ -7,7 +7,7 @@ using static ProjectNikitin.Generation.Grid;
 namespace ProjectNikitin.Generation;
 
 /// <summary>
-/// Collects the feature anchors (coast, cliff brinks and feet, banks, beds, summits)
+/// Collects the feature anchors (coast, cliff and impasse brinks and feet, banks, beds, summits)
 /// and the provisional <see cref="SurfaceMaterial"/>. Everything is measured against
 /// <see cref="IslandData.EffectiveLevel"/> — the water surface where a column is
 /// flooded — otherwise every river bank reads as a cliff over its own bed. The
@@ -16,8 +16,12 @@ namespace ProjectNikitin.Generation;
 /// </summary>
 internal static class Surfaces
 {
-    /// <summary>Slabs of visible face that make a cliff — the traversal's own "needs a hoist".</summary>
-    private const int CliffFace = 3;
+    /// <summary>
+    /// Slabs of face that bare the rock on a rocky landform. This was the cliff threshold
+    /// until cliffs became four (<see cref="Traversal.CliffFace"/>); a rocky impasse of
+    /// three still shows stone, so the look did not move with the name.
+    /// </summary>
+    private const int RockFace = 3;
 
     /// <summary>Slabs of face that bare the rock whatever the landform: a plateau rung or a mesa wall is not one, a mountain flank or a canyon is.</summary>
     private const int TallFace = 6;
@@ -104,6 +108,12 @@ internal static class Surfaces
     /// <summary>The noise bar a plain or a hillside must clear to show a tor: a small outcrop, rare.</summary>
     private const float TorBar = 0.87f;
 
+    /// <summary>Slabs of water at most over a shallow bed: wading depth, where reeds and shoals go. A mid bed lies between this and <see cref="DeepBed"/>.</summary>
+    public const int ShallowBed = 2;
+
+    /// <summary>Slabs of water at least over a deep bed: from here down the bed is ooze, and what lives there lives in the dark.</summary>
+    public const int DeepBed = 9;
+
     /// <summary>Rebuilds the anchor lists in scan order and picks every column's material.</summary>
     public static void Classify(int seed, IslandData d)
     {
@@ -121,9 +131,14 @@ internal static class Surfaces
         d.CoastCells.Clear();
         d.CliffCells.Clear();
         d.CliffFootCells.Clear();
+        d.ImpasseCells.Clear();
+        d.ImpasseFootCells.Clear();
         d.BankCells.Clear();
         d.RiverBedCells.Clear();
         d.LakeBedCells.Clear();
+        d.ShallowBedCells.Clear();
+        d.MidBedCells.Clear();
+        d.DeepBedCells.Clear();
         d.Summits.Clear();
 
         for (int x = 0; x < n; x++)
@@ -136,10 +151,18 @@ internal static class Surfaces
             if (!dry)
             {
                 if (d.River[x, z]) d.RiverBedCells.Add(new Vector2I(x, z));
-                else if (d.Fluid[x, z] == (byte)FluidKind.Water) d.LakeBedCells.Add(new Vector2I(x, z));
+                else if (d.Fluid[x, z] == (byte)FluidKind.Water)
+                {
+                    d.LakeBedCells.Add(new Vector2I(x, z));
+                    int depth = d.WaterDepth(x, z);
+                    if (depth <= ShallowBed) d.ShallowBedCells.Add(new Vector2I(x, z));
+                    else if (depth >= DeepBed) d.DeepBedCells.Add(new Vector2I(x, z));
+                    else d.MidBedCells.Add(new Vector2I(x, z));
+                }
             }
 
             bool coast = false, bank = false, gooSide = false;
+            bool impasseDown = false, impasseUp = false;
             int drop = 0, face = 0;
             for (int k = 0; k < 4; k++)
             {
@@ -152,6 +175,11 @@ internal static class Surfaces
                 short ne = d.EffectiveLevel(nx, nz);
                 drop = Math.Max(drop, eff - ne);
                 face = Math.Max(face, ne - eff);
+                // Each face on its own: over a cliff one way and an impasse another is both
+                // kinds of brink, where drop and face keep only the tallest.
+                int down = eff - ne;
+                if (down > Traversal.FreeStep && down < Traversal.CliffFace) impasseDown = true;
+                if (-down > Traversal.FreeStep && -down < Traversal.CliffFace) impasseUp = true;
 
                 if (!dry || d.WaterLevel[nx, nz] == IslandData.NoLand) continue;
                 if (d.Fluid[nx, nz] == (byte)FluidKind.Goo) gooSide = true;
@@ -159,8 +187,10 @@ internal static class Surfaces
             }
 
             if (coast) d.CoastCells.Add(new Vector2I(x, z));
-            if (dry && drop >= CliffFace) d.CliffCells.Add(new Vector2I(x, z));
-            if (dry && face >= CliffFace) d.CliffFootCells.Add(new Vector2I(x, z));
+            if (dry && drop >= Traversal.CliffFace) d.CliffCells.Add(new Vector2I(x, z));
+            if (dry && face >= Traversal.CliffFace) d.CliffFootCells.Add(new Vector2I(x, z));
+            if (dry && impasseDown) d.ImpasseCells.Add(new Vector2I(x, z));
+            if (dry && impasseUp) d.ImpasseFootCells.Add(new Vector2I(x, z));
             if (bank && !d.Beach[x, z] && !d.Landings[x, z])
                 d.BankCells.Add(new Vector2I(x, z));
 
@@ -253,7 +283,10 @@ internal static class Surfaces
                                         bool gooSide, int near, Noise bog, Noise marsh, Noise tor)
     {
         if (d.WaterLevel[x, z] != IslandData.NoLand)
-            return d.Fluid[x, z] == (byte)FluidKind.Goo ? SurfaceMaterial.Stone : SurfaceMaterial.Silt;
+        {
+            if (d.Fluid[x, z] == (byte)FluidKind.Goo) return SurfaceMaterial.Stone;
+            return d.WaterDepth(x, z) >= DeepBed ? SurfaceMaterial.Ooze : SurfaceMaterial.Silt;
+        }
         if (gooSide) return SurfaceMaterial.Stone;
 
         byte warmth = d.Warmth[x, z];
@@ -266,7 +299,7 @@ internal static class Surfaces
         if (drop >= TallFace) return SurfaceMaterial.Stone;
         if (face >= TallFace) return SurfaceMaterial.Scree;        // talus under the face
 
-        if (rocky && (drop >= CliffFace || face >= CliffFace || rugged >= RockyStoneAt))
+        if (rocky && (drop >= RockFace || face >= RockFace || rugged >= RockyStoneAt))
             return SurfaceMaterial.Stone;
         if (rocky && rugged >= RockyScreeAt) return SurfaceMaterial.Scree;
         if (rugged >= BrokenAt) return SurfaceMaterial.Scree;

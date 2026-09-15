@@ -28,7 +28,7 @@ public partial class GenerationAudit
         new("relief", (p, v) => p.Relief = v, new[] { "spread", "slope" }),
         new("hills", (p, v) => p.Hilliness = v, new[] { "hillrel" }),
         new("rivers", (p, v) => p.Rivers = v, new[] { "river", "navig" }),
-        new("lakes", (p, v) => p.Lakes = v, new[] { "lake", "lakes" }),
+        new("lakes", (p, v) => p.Lakes = v, new[] { "lake", "lakes", "great" }),
         new("valleys", (p, v) => p.Valleys = v, new[] { "valley" }),
         new("moisture", (p, v) => p.Moisture = v, new[] { "moist", "wet%" }),
         new("warmth", (p, v) => p.Warmth = v, new[] { "warm", "snow%" }),
@@ -42,7 +42,7 @@ public partial class GenerationAudit
     private static readonly string[] MatrixMetrics =
     {
         "land%", "high%", "spread", "slope", "cliff%", "2slab%", "hillrel",
-        "river", "navig", "falls", "spring", "ford", "lake", "lakes", "valley",
+        "river", "navig", "falls", "spring", "ford", "lake", "lakes", "great", "lakedeep", "valley",
         "moist", "warm", "wet%", "snow%", "leegap", "overh", "magick", "fjord",
         "main%", "heart%", "distr", "attempt",
     };
@@ -54,7 +54,8 @@ public partial class GenerationAudit
     /// One island's outcomes. Percentages are of the grid (land) or of land; spread
     /// is crest to lowest dry ground in slabs; slope is the mean step between
     /// neighbouring land cells, cliff and two-slab the share of such steps; hillrel
-    /// the same mean step inside the Hills; the water counts are cells; valley is the
+    /// the same mean step inside the Hills; the water counts are cells; great is the
+    /// great lakes and lakedeep the deepest lake cell in slabs; valley is the
     /// audit's rise from one cell off a river to five; moist, warm and magick are
     /// mean bytes; fjord the cells the fjords took; leegap is flat open ground's moisture over the flat lee's; main
     /// and heart the walk and reach shares of dry land; distr the districts on the
@@ -66,7 +67,7 @@ public partial class GenerationAudit
         double land = 0, high = 0, dry = 0, main = 0, heart = 0;
         double pairs = 0, slopeSum = 0, cliff = 0, two = 0, hillPairs = 0, hillSum = 0;
         int lowest = int.MaxValue, crest = int.MinValue;
-        double river = 0, navig = 0, ford = 0, lake = 0, overh = 0, fjord = 0;
+        double river = 0, navig = 0, ford = 0, lake = 0, lakeDeep = 0, overh = 0, fjord = 0;
         double moist = 0, warm = 0, magick = 0, wet = 0, snow = 0;
         double leeM = 0, leeN = 0, openM = 0, openN = 0;
         var lakeRegions = new HashSet<int>();
@@ -99,7 +100,12 @@ public partial class GenerationAudit
             if (water != IslandData.NoLand && water > d.SurfaceLevel(x, z))
             {
                 if (d.River[x, z]) { river++; if (d.Navigable[x, z]) navig++; }
-                else if (d.Fluid[x, z] == (byte)FluidKind.Water) { lake++; lakeRegions.Add(d.Region[x, z]); }
+                else if (d.Fluid[x, z] == (byte)FluidKind.Water)
+                {
+                    lake++;
+                    lakeRegions.Add(d.Region[x, z]);
+                    lakeDeep = Math.Max(lakeDeep, d.WaterDepth(x, z));
+                }
             }
             else
             {
@@ -118,7 +124,7 @@ public partial class GenerationAudit
                 int step = Math.Abs(d.EffectiveLevel(x, z) - d.EffectiveLevel(nx, nz));
                 pairs++;
                 slopeSum += step;
-                if (step >= 3) cliff++;
+                if (step >= Traversal.CliffFace) cliff++;
                 if (step == 2) two++;
                 if (form == LandformType.Hills && (LandformType)d.Landform[nx, nz] == LandformType.Hills)
                 {
@@ -139,7 +145,8 @@ public partial class GenerationAudit
             Pct(land, (double)n * n), Pct(high, land), land > 0 ? crest - lowest : 0,
             pairs > 0 ? slopeSum / pairs : 0, Pct(cliff, pairs), Pct(two, pairs),
             hillPairs > 0 ? hillSum / hillPairs : 0,
-            river, navig, d.Falls.Count, d.Springs.Count, ford, lake, lakeRegions.Count, valley,
+            river, navig, d.Falls.Count, d.Springs.Count, ford, lake, lakeRegions.Count,
+            d.GreatLakes.Count, lakeDeep, valley,
             land > 0 ? moist / land : 0, land > 0 ? warm / land : 0, Pct(wet, land), Pct(snow, land),
             leeN > 0 && openN > 0 ? openM / openN - leeM / leeN : 0,
             overh, land > 0 ? magick / land : 0, fjord,

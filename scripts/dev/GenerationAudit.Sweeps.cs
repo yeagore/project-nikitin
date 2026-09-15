@@ -797,12 +797,12 @@ public partial class GenerationAudit
     /// <summary>Lakes 0..1: water-only lake cells, bodies as distinct regions, the biggest.</summary>
     private void PrintLakesSweep(float[] steps)
     {
-        GD.Print($"\n  {"lakes",6} {"lake cells",11} {"lakes",7} {"biggest",8}   "
-            + "(area, not just how many)");
+        GD.Print($"\n  {"lakes",6} {"lake cells",11} {"lakes",7} {"biggest",8} {"great",6} {"deepest",8}   "
+            + "(area, not just how many; great lakes over the seeds; the deepest cell, in slabs)");
         foreach (float v in steps)
         {
             IslandParams p = Variant(q => q.Lakes = v);
-            long cells = 0, bodies = 0, biggest = 0;
+            long cells = 0, bodies = 0, biggest = 0, great = 0, deepest = 0;
             foreach (IslandData d in Sweep(p, SweepSeeds))
             {
                 var perRegion = new Dictionary<int, int>();
@@ -812,14 +812,16 @@ public partial class GenerationAudit
                     if (d.WaterLevel[x, z] == IslandData.NoLand || d.River[x, z]) continue;
                     if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;   // goo ignores this knob
                     cells++;
+                    deepest = Math.Max(deepest, d.WaterDepth(x, z));
                     int r = d.Region[x, z];
                     perRegion[r] = perRegion.GetValueOrDefault(r) + 1;
                 }
                 bodies += perRegion.Count;
+                great += d.GreatLakes.Count;
                 foreach (int area in perRegion.Values) biggest = Math.Max(biggest, area);
             }
             GD.Print($"  {v,6:0.00} {cells / (float)SweepSeeds,11:0.0} "
-                + $"{bodies / (float)SweepSeeds,7:0.0} {biggest,8}");
+                + $"{bodies / (float)SweepSeeds,7:0.0} {biggest,8} {great,6} {deepest,8}");
         }
     }
 

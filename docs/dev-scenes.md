@@ -80,7 +80,8 @@ half thousand steps.
 
 The **Size** dropdown has an **Auto** entry that works the same way: the seed picks
 one of the three footprints and the caption says which. **Goo may roll** is the
-toggle for goo puddles; off, no seed makes any. The preset's Gates are three
+toggle for goo puddles; off, no seed makes any, and off is the default since
+2026-09-15, so the audit's goo rows read 0 unless it is turned on. The preset's Gates are three
 hanging Exits and a hanging Entry; the panel can still ask for anything else.
 
 **N** rolls a seed; the **Seed** field under the buttons takes one you already
@@ -92,18 +93,35 @@ while it has focus it swallows the single-key shortcuts; the camera still polls
 
 Views: `height`, `landform`, `region`, `walk` (what connects on foot; a
 district of twenty cells is somewhere to build), `reach` (what connects once
-you build; red is out of reach whatever you build), `surface` (stone, scree,
-snow, sand, silt and the climate grid — tundra, heath, moorland; steppe, meadow,
+you build; red is out of reach whatever you build), `navigable` (walk's
+counterpart on the water: a hue per body of sailable water — standing water and
+navigable reaches, never goo and never a stream, which is forded and not sailed
+— so a hull goes anywhere within one hue and nowhere between two, since a fall
+cuts a body and nothing sails up one. The lip a body ends at is white, water no
+hull uses slate, and the bed under a body carries its colour dimmed, so the
+regions still read with the liquid off (**I**). In this view the readout gains a
+line that names every body, counts its cells and says whether they are still
+water or a reach; the water's own blue is dropped from the material there, or it
+would multiply a warm hue down to nothing), `surface` (stone, scree,
+snow, sand, silt, ooze (a bed under nine slabs of water or more) and the climate
+grid — tundra, heath, moorland; steppe, meadow,
 grass; dust, savanna, verdure, floodplain; bog and marsh for water in excess;
 tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
 the ground round it, not sand), `anchors` (what the content layer attaches to:
-coast, cliff brink, cliff foot, a ledge where a cell is both, bank, river bed,
-lake bed, goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
+coast; cliff brink, cliff foot and a ledge where a cell is both, for a face of
+4+ slabs; impasse brink, impasse foot and their ledge for a face of 2–3, a cliff
+anchor winning where a cell is both kinds; bank, river bed,
+lake bed, shallow lake bed (two slabs of water or fewer), mid lake bed (three to
+eight), deep lake bed (nine or more), deep (the deepest cell of a lake with a bathymetry, or the pool under a
+fall), goo bed, spring, hot spring or pool, fall, overhang lip, beach, ford,
 Gate landing, summit; a sea stack is a dark column in the aether in
 every view), the six habitat axes as ramps: `moisture`, `warmth`, `rugged`,
 `exposure`, `rim`, `water` (the walk cost to fresh water), and the `magick`
-layer (the Turing reaction's spots, worms, mazes and lace). Water is coloured by kind (ford, stream, navigable reach, lake; hot
-water orange) and goo is violet in every view. The
+layer (the Turing reaction's spots, worms, mazes and lace). Water is coloured by
+kind (ford, stream, navigable reach, lake; hot water orange) in every view but
+`navigable`, which colours it by body instead, and darker the deeper its bed lies
+under what its kind is cut to, so a bathymetry, a plunge pool and a deep reach
+read through the surface; goo is violet in all of them. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face
 reads at about the legend's colour: a steep white sun over a neutral ambient,
@@ -115,7 +133,7 @@ a cliff foot. Turn the liquid off (**I**) to see the beds.
 
 Overlays (bridge sites, landings, roads, fords and the compass are on when the lab
 opens): **B** bridge sites; **J** each Gate's 1 × 3 landing strip; **O** fords;
-**P** the roads between the Gates (pale yellow walk; red stair, gold bridge);
+**P** the roads between the Gates (pale yellow walk; violet ladder, red stair, gold bridge);
 **X** the compass, each Gate's landward vector,
 the Domain's wind — a run of orange arrows standing off the upwind edge with
 its name, whether or not there are dunes, plus its grain along each dune field —
@@ -143,8 +161,8 @@ thing to use the colliders, and the way to ask "what is that cell".
 The readout at the top right says what the view means, then what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
 reach shares, districts (and how many the heartland holds), bodies of water,
-rivers, springs, any lake that swallows a river, deltas, the wind and the sun, Gates,
-and what each road out costs.
+rivers, springs, any lake that swallows a river, great lakes, deeps, deltas, the
+wind and the sun, Gates, and what each road out costs.
 `ROUGH GOING` means a road climbs five elevators in fifteen cells; `COAST WOULD
 NOT` means a Gate you asked for is not the Gate you got.
 
@@ -161,7 +179,8 @@ Windowed, not headless (a screenshot needs a viewport): the lab builds the
 island, frames it, saves the screenshot **F2** would have saved
 (`user://island-<seed>-<view>.png`; the full path is printed) a few frames in,
 and quits by itself. `seed=N` picks the seed, `view=NAME` the view, `boxes` the
-box drawing, `nopanel` hides the panel, `zoom=N` frames a 1/N of the island and
+box drawing, `nopanel` hides the panel, `noliquid` the beds with the water off
+(**I** without a hand on the keys), `zoom=N` frames a 1/N of the island and
 `at=X,Z` centres that on a cell. It is the one way to look at the mesh without
 a hand on the keys; the audit's pictures are drawn from the data and never see
 the renderer.
@@ -173,8 +192,9 @@ godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn
 ```
 
 Runs the real generator over 60 seeds at 128² and prints the measured
-guarantees: the step grammar, patches, landforms, lakes and goo, rivers and the
-bodies of water, surfaces and habitat, roads, Gates, crossings, continuity. Run it after any
+guarantees: the step grammar, patches, landforms, lakes with their beds and the
+great lakes, goo, rivers and the bodies of water, surfaces and habitat, roads,
+Gates, crossings, continuity. Run it after any
 change to the generator. A `want 0` that is not 0 names its seed as it happens
 (a crossing whose banks disagree prints the seed, the banks, the deck and what
 is under each bank), so it can be built in the lab. It ends by diffing thirty headline numbers against
@@ -269,10 +289,10 @@ godot --path . --headless scenes/dev/generation_audit.tscn -- Seeds=1 KnobMatrix
 Every 0–1 knob (mix, relief, hilliness, rivers, lakes, valleys, moisture,
 warmth, wind, overhangs, magick density) at 0, ¼, ½, ¾ and 1 over the same
 `SweepSeeds` seeds, the other knobs rolled by each seed as the preset rolls
-them, and twenty-six outcomes measured on every island: land share, high-ground
+them, and twenty-eight outcomes measured on every island: land share, high-ground
 share, altitude spread, mean slope, cliff and two-slab shares, hill relief,
-river, navigable, lake and ford cells, falls, springs, lake count, the valley
-rise, mean moisture, warmth and magick, the wet and snow material shares, the
+river, navigable, lake and ford cells, falls, springs, lake count, great lakes,
+the deepest lake cell, the valley rise, mean moisture, warmth and magick, the wet and snow material shares, the
 rain-shadow gap, overhang columns, the mainland and heartland shares, districts
 and attempts. The comparison is paired, each seed against itself at 0, so the
 spread the rolled knobs put between seeds cancels. For each knob it prints its
@@ -352,11 +372,11 @@ a 5 × 7 bitmap alphabet straight into the `Image`.
 godot --path . --headless scenes/dev/generation_checksum.tscn
 ```
 
-Hashes every field of `IslandData` for 456 islands — 60 default seeds, every
+Hashes every field of `IslandData` for 458 islands — 60 default seeds, every
 arrangement × character at 64², all three sizes, every Gate request, every bridge
-ease, both ends of every knob — and diffs the hashes against
+ease, both ends of every knob, two seeds with goo on — and diffs the hashes against
 `docs/checksum-baseline.txt`. A change meant to leave generation alone must
-report `0 of 456 islands moved`; a change meant to alter it re-baselines with
+report `0 of 458 islands moved`; a change meant to alter it re-baselines with
 `-- accept` on the command line and says so in its commit. This is the
 bit-for-bit gate; the audit is the readable one.
 

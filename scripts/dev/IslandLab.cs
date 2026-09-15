@@ -34,11 +34,24 @@ public partial class IslandLab : Node3D
 	private PlaneMesh _waterQuad = null!;
 	private PlaneMesh _gooQuad = null!;
 	private PlaneMesh _fallQuad = null!;
+
+	// Water twice over: the blue every view but the navigable one draws, and the
+	// white-albedo pair that lets a body's own hue through (ApplyWaterMaterial).
+	private StandardMaterial3D _blueWater = null!;
+	private StandardMaterial3D _flatWater = null!;
+	private StandardMaterial3D _blueFall = null!;
+	private StandardMaterial3D _flatFall = null!;
+	private TerrainMaterials _blueMaterials = null!;
+	private TerrainMaterials _flatMaterials = null!;
+
 	private readonly List<Label3D> _compass = new();
 	private Label3D _windLabel = null!;
 	private Label3D _sunLabel = null!;
 	private int _lastSignature;
 	private IslandData? _data;
+
+	/// <summary>The lip of every fall that ends a body of sailable water; the navigable view marks them.</summary>
+	private HashSet<Vector2I> _fallLips = new();
 
 	private Vector3 _islandCenter = Vector3.Zero;
 	private float _islandRadius = 10f;
@@ -87,7 +100,9 @@ public partial class IslandLab : Node3D
 			Size = new Vector2(Terrain.CellSize, Terrain.CellSize),
 			Orientation = PlaneMesh.OrientationEnum.Y,
 		};
-		_waterQuad.Material = TerrainMaterials.WaterMaterial(0.66f);
+		_blueWater = TerrainMaterials.WaterMaterial(0.66f);
+		_flatWater = TerrainMaterials.WaterMaterial(0.72f, Colors.White);
+		_waterQuad.Material = _blueWater;
 		_water = Sheet("Water");
 
 		// Goo gets its own material: the water material's blue albedo multiplies any
@@ -105,10 +120,14 @@ public partial class IslandLab : Node3D
 			Size = Vector2.One,
 			Orientation = PlaneMesh.OrientationEnum.Z,
 		};
-		_fallQuad.Material = TerrainMaterials.WaterMaterial(0.75f);
+		_blueFall = TerrainMaterials.WaterMaterial(0.75f);
+		_flatFall = TerrainMaterials.WaterMaterial(0.8f, Colors.White);
 		// RenderPriority 1: both sheets sit at the world origin, so without it the
 		// falls and the water sort against each other by camera distance and pop.
-		if (_fallQuad.Material is StandardMaterial3D fallLit) fallLit.RenderPriority = 1;
+		_blueFall.RenderPriority = _flatFall.RenderPriority = 1;
+		_fallQuad.Material = _blueFall;
+		_blueMaterials = new TerrainMaterials { Water = _blueWater };
+		_flatMaterials = new TerrainMaterials { Water = _flatWater };
 		_falls = Sheet("Falls");
 
 		// A Gate is one cell by four slabs; NoDepthTest so a Gate on the far side is findable.
@@ -171,6 +190,7 @@ public partial class IslandLab : Node3D
 		{
 			if (arg == "shot") _shotAt = 8;
 			else if (arg == "boxes") _showMesh = false;
+			else if (arg == "noliquid") _showLiquid = false;   // the beds, as I does in the lab
 			else if (arg == "nopanel") _showPanel = false;
 			else if (arg.StartsWith("seed=") && int.TryParse(arg.AsSpan(5), out int seed)) Seed = seed;
 			else if (arg.StartsWith("view=") && Enum.TryParse(arg[5..], true, out View view)) _view = view;
@@ -374,6 +394,7 @@ public partial class IslandLab : Node3D
 
 		ulong t0 = Time.GetTicksUsec();
 		_data = IslandGenerator.Generate(Seed, Params);
+		_fallLips = FallLips(_data);
 		int drawn = RenderTerrain(_data);
 		float ms = (Time.GetTicksUsec() - t0) / 1000f;
 		int lakes = Redraw();
@@ -385,6 +406,19 @@ public partial class IslandLab : Node3D
 			FrameFirst();
 			_framedOnce = true;
 		}
+	}
+
+	/// <summary>
+	/// The cells a body of sailable water ends at: the lip of every fall standing on
+	/// sailable water, whether it pours into the next body or off the rim. A fall on a
+	/// stream is not one — no hull was going up it either way.
+	/// </summary>
+	private static HashSet<Vector2I> FallLips(IslandData d)
+	{
+		var lips = new HashSet<Vector2I>();
+		foreach (Fall f in d.Falls)
+			if (d.WaterBody[f.Cell.X, f.Cell.Y] >= 0) lips.Add(f.Cell);
+		return lips;
 	}
 
 	/// <summary>Mesh or boxes: redraws the ground the other way without regenerating the island.</summary>
@@ -429,6 +463,7 @@ public partial class IslandLab : Node3D
 			+ $"built in {d.Attempts} attempt{(d.Attempts == 1 ? "" : "s")}\n"
 			+ SettingsSummary(d) + "\n"
 			+ WalkSummary(d) + "\n"
+			+ (_view == View.Navigable ? WaterSummary(d) + "\n" : "")
 			+ GroundSummary(d) + "\n"
 			+ GateSummary(d) + "\n"
 			+ RoadSummary(d) + "\n"

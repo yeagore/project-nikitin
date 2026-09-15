@@ -70,6 +70,7 @@ public partial class IslandLab
 	{
 		_terrain.Visible = !_showMesh;
 		_mesh.Visible = _showMesh;
+		ApplyWaterMaterial();
 		if (!_showMesh) return RenderSpans(d);
 
 		// The renderer's origin is its corner column; the boxes centre the island on the lab's.
@@ -80,6 +81,20 @@ public partial class IslandLab
 		_islandCenter = _mesh.Position + _mesh.Center;
 		_islandRadius = _mesh.Radius;
 		return _mesh.GroundTriangles + _mesh.LiquidTriangles;
+	}
+
+	/// <summary>
+	/// Which water material the view wants: the navigable view colours the water by the
+	/// body it belongs to, and the water's own blue multiplies a warm hue down to
+	/// nothing, so that view gets water of a white albedo — the mesh's and the boxes'
+	/// alike, and the fall sheets with them.
+	/// </summary>
+	private void ApplyWaterMaterial()
+	{
+		bool flat = _view == View.Navigable;
+		_waterQuad.Material = flat ? _flatWater : _blueWater;
+		_fallQuad.Material = flat ? _flatFall : _blueFall;
+		_mesh.Materials = flat ? _flatMaterials : _blueMaterials;
 	}
 
 	/// <summary>The current view as a tint for the mesh: every face of a span in the span's colour, water by kind.</summary>
@@ -128,6 +143,12 @@ public partial class IslandLab
 				return WalkColor(d, d.Walk[x, z]);
 			case View.Reach:
 				return ReachColor(d, d.Reach[x, z]);
+			case View.Navigable:
+				// The ground is a backdrop here, but the bed under a body keeps its colour
+				// dimmed, so turning the liquid off (I) still shows the regions.
+				return i == 0 && d.WaterBody[x, z] >= 0
+					? DevPalette.Body(d.WaterBody[x, z]).Darkened(0.4f)
+					: Unremarkable;
 			case View.Surface:
 				// Material is the ground's; a lip is a rock roof.
 				return MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]);
@@ -534,7 +555,12 @@ public partial class IslandLab
 
 			foreach (Works works in road.Built)
 			{
-				Color tint = works.Kind == WorksKind.Bridge ? SpanTint : StairTint;
+				Color tint = works.Kind switch
+				{
+					WorksKind.Bridge => SpanTint,
+					WorksKind.Ladder => LadderTint,
+					_ => StairTint,
+				};
 				foreach (Vector2I cell in new[] { works.From, works.To })
 					m.Add(cell.X,
 						  (Traversal.CrossLevel(d, cell.X, cell.Y) + 1) * sh + sh * 0.55f,

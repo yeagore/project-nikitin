@@ -48,11 +48,11 @@ public partial class GenerationAudit
         public Tally(IslandParams p) { _p = p; }
 
         // ---- step grammar
-        public long Free, Ambiguous, Cliff;
+        public long Free, Ambiguous, Three, Cliff;
         public long AmbiguousOffMountain, PairsOffMountain;
         public readonly Dictionary<string, int> CliffByBorder = new();
         public readonly Dictionary<string, int> AmbiguousWhere = new();
-        public long Pairs => Free + Ambiguous + Cliff;
+        public long Pairs => Free + Ambiguous + Three + Cliff;
 
         // ---- patches, mesas and basins, hills, mountains
         public readonly List<int> PatchSizes = new();
@@ -86,7 +86,9 @@ public partial class GenerationAudit
         public readonly long[] MaterialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
         public long CoastAnchors, CliffAnchors, BeachCells, FordCells, LandingCells;
         public long CliffFootAnchors, BankAnchors, SummitAnchors, RiverBedAnchors, LakeBedAnchors;
+        public long ShallowBedAnchors, MidBedAnchors, DeepBedAnchors;
         public long BrinksBesideWater, BeachedCoast;
+        public long ImpasseAnchors, ImpasseFootAnchors;
         public int IslandsWithoutBeach;
         public readonly List<int> MoistureMeans = new();
         public readonly List<int> WarmthMeans = new();
@@ -120,7 +122,7 @@ public partial class GenerationAudit
 
         // ---- roads
         public int ExitsWithoutRoad, RoadsFree, RoadJumps, RoughIslands, Flights;
-        public int RoadStairs, RoadBridges;
+        public int RoadLadders, RoadStairs, RoadBridges;
         public readonly List<int> RoadCosts = new();
         public readonly List<int> RoadLengths = new();
 
@@ -134,6 +136,10 @@ public partial class GenerationAudit
         public int Lakes, LakeCells, Leaks, WaterAtVoid, IslandsWithLake;
         public readonly List<int> ShoreSteps = new();
         public readonly List<int> LakeBodySizes = new();
+        // The beds: the deepest cell per body, the great lakes, the deeps and the river beds dug below their kind.
+        public readonly List<int> LakeDepths = new();
+        public int LakeDeepest, GreatLakes, GreatLakeIslands, GreatLakeCells, Deeps, PlungePools, DeepRiverCells;
+        public readonly List<string> GreatLakeSeeds = new();
         public int GooCells, GooIslands, GooTouchesWater;
         public readonly List<int> AltSpans = new();
         public int AltOverCap;
@@ -234,8 +240,9 @@ public partial class GenerationAudit
                     if (!v.Ground(nx, nz)) continue;
 
                     int diff = Math.Abs(v.Cross(x, z) - v.Cross(nx, nz));
-                    if (diff <= 1) Free++;
+                    if (diff <= Traversal.FreeStep) Free++;
                     else if (diff == 2) Ambiguous++;
+                    else if (diff < Traversal.CliffFace) Three++;
                     else Cliff++;
 
                     bool mountain = v.Form(x, z) == LandformType.Mountain
@@ -255,7 +262,7 @@ public partial class GenerationAudit
                         }
                     }
 
-                    if (diff >= 3 && d.Region[x, z] != d.Region[nx, nz])
+                    if (diff >= Traversal.CliffFace && d.Region[x, z] != d.Region[nx, nz])
                     {
                         int a = (int)v.Form(x, z), b = (int)v.Form(nx, nz);
                         // Canyon walls and mountain flanks are deliberate cliffs, bucketed
@@ -437,10 +444,42 @@ public partial class GenerationAudit
             int bodies = Label(n, (x, z) => d.WaterLevel[x, z] != IslandData.NoLand && !d.River[x, z]
                                             && d.Fluid[x, z] == (byte)FluidKind.Water, bodyOf);
             var size = new int[bodies];
+            var deepest = new int[bodies];
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
-                if (bodyOf[x, z] >= 0) size[bodyOf[x, z]]++;
+            {
+                if (bodyOf[x, z] < 0) continue;
+                size[bodyOf[x, z]]++;
+                deepest[bodyOf[x, z]] = Math.Max(deepest[bodyOf[x, z]], d.WaterDepth(x, z));
+            }
             LakeBodySizes.AddRange(size);
+            LakeDepths.AddRange(deepest);
+            foreach (int depth in deepest) LakeDeepest = Math.Max(LakeDeepest, depth);
+
+            // A great lake is one lake over several patches: the headline count is per site.
+            GreatLakes += d.GreatLakes.Count;
+            if (d.GreatLakes.Count > 0)
+            {
+                GreatLakeIslands++;
+                GreatLakeSeeds.Add($"{v.Seed} ({d.Arrangement}, {d.Character}, lakes {d.Settings.Lakes:0.00})");
+            }
+            foreach (Vector2I c in d.GreatLakes)
+            {
+                int body = bodyOf[c.X, c.Y];
+                if (body < 0) continue;
+                GreatLakeCells += size[body];
+                var under = new HashSet<int>();
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                    if (bodyOf[x, z] == body) under.Add(d.Region[x, z]);
+                Lakes -= under.Count - 1;
+            }
+
+            Deeps += d.Deeps.Count;
+            foreach (Vector2I c in d.Deeps) if (d.River[c.X, c.Y]) PlungePools++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.River[x, z] && d.WaterDepth(x, z) > (d.Navigable[x, z] ? 2 : 1)) DeepRiverCells++;
         }
 
         /// <summary>Goo cells, and whether any stands within a king's move of water — it never mixes.</summary>
@@ -712,13 +751,18 @@ public partial class GenerationAudit
             CoastAnchors += d.CoastCells.Count;
             CliffAnchors += d.CliffCells.Count;
             CliffFootAnchors += d.CliffFootCells.Count;
+            ImpasseAnchors += d.ImpasseCells.Count;
+            ImpasseFootAnchors += d.ImpasseFootCells.Count;
             BankAnchors += d.BankCells.Count;
             SummitAnchors += d.Summits.Count;
             RiverBedAnchors += d.RiverBedCells.Count;
             LakeBedAnchors += d.LakeBedCells.Count;
+            ShallowBedAnchors += d.ShallowBedCells.Count;
+            MidBedAnchors += d.MidBedCells.Count;
+            DeepBedAnchors += d.DeepBedCells.Count;
             foreach (Vector2I c in d.CoastCells) if (d.Beach[c.X, c.Y]) BeachedCoast++;
 
-            // Brinks that are gorge rims: dry ground three slabs over the water itself.
+            // Brinks that are gorge rims: dry ground a cliff over the water itself.
             foreach (Vector2I c in d.CliffCells)
             {
                 for (int k = 0; k < 4; k++)
@@ -842,7 +886,8 @@ public partial class GenerationAudit
                 if (road.Cost == 0) RoadsFree++;
                 foreach (Works w in road.Built)
                 {
-                    if (w.Kind == WorksKind.Stair) RoadStairs++;
+                    if (w.Kind == WorksKind.Ladder) RoadLadders++;
+                    else if (w.Kind == WorksKind.Stair) RoadStairs++;
                     else
                     {
                         RoadBridges++;

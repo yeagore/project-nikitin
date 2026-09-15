@@ -14,8 +14,9 @@ public partial class GenerationAudit
         long pairs = t.Pairs;
         GD.Print($"step grammar ({pairs} adjacent pairs)");
         GD.Print($"  free (0-1 slabs)          {100.0 * t.Free / pairs,6:0.0}%");
-        GD.Print($"  two-slab                  {100.0 * t.Ambiguous / pairs,6:0.0}%");
-        GD.Print($"  cliff (3+ slabs)          {100.0 * t.Cliff / pairs,6:0.0}%");
+        GD.Print($"  impasse, two slabs        {100.0 * t.Ambiguous / pairs,6:0.0}%");
+        GD.Print($"  impasse, three slabs      {100.0 * t.Three / pairs,6:0.0}%");
+        GD.Print($"  cliff (4+ slabs)          {100.0 * t.Cliff / pairs,6:0.0}%");
         GD.Print($"  two-slab off mountains    {t.AmbiguousOffMountain} of {t.PairsOffMountain}");
         foreach (var (k, v) in t.AmbiguousWhere.OrderByDescending(e => e.Value))
             GD.Print($"    {k,-20} {v,6}");
@@ -123,16 +124,18 @@ public partial class GenerationAudit
             GD.Print("  " + string.Join(", ", parts));
         }
         GD.Print($"anchors: {t.CoastAnchors} coast, {t.CliffAnchors} cliff brink, "
-            + $"{t.CliffFootAnchors} cliff foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
+            + $"{t.CliffFootAnchors} cliff foot, {t.ImpasseAnchors} impasse brink, "
+            + $"{t.ImpasseFootAnchors} impasse foot, {t.BankAnchors} bank, {t.SummitAnchors} summit, "
             + $"{t.OverhangCells} overhang, {t.BeachCells} beach, {t.FordCells} ford, "
             + $"{t.Springs} spring, {t.FallCells} fall, "
             + $"{t.LandingCells} gate landing, "
-            + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed, "
+            + $"{t.RiverBedAnchors} river bed, {t.LakeBedAnchors} lake bed ({t.ShallowBedAnchors} shallow, "
+            + $"{t.MidBedAnchors} mid, {t.DeepBedAnchors} deep), {t.Deeps} deeps, "
             + $"{t.SeaStackCells} sea stack cells on {t.SeaStackIslands} of {Seeds} islands");
         GD.Print($"  tors (stone on plains and hills): {t.TorCells} cells on {t.TorIslands} of {Seeds} islands");
         GD.Print($"  hot water (springs and pools that run warm): {t.HotWaterCells} cells on {t.HotIslands} islands, "
             + $"of the {t.ColdIslands} with a warmth knob under 0.35: {t.ColdIslandsWithHot} have some");
-        GD.Print($"  brinks that are gorge rims (3+ slabs over the water itself): {t.BrinksBesideWater}");
+        GD.Print($"  brinks that are gorge rims (a cliff over the water itself): {t.BrinksBesideWater}");
         GD.Print($"  islands with no beach at all: {t.IslandsWithoutBeach} of {Seeds}");
         // Against the coast ring, not the beach's own cells: a beach is two deep, so that ratio reads 151%.
         GD.Print($"  coast that steps down onto a beach: "
@@ -191,6 +194,12 @@ public partial class GenerationAudit
         GD.Print($"  dry land BELOW a water surface (want 0): {t.Leaks}");
         GD.Print($"  water touching the void (want 0):        {t.WaterAtVoid}");
         Report("  lake bodies", t.LakeBodySizes, "cells");
+        Report("  lake depth, the deepest cell per body", t.LakeDepths, "slabs");
+        GD.Print($"  great lakes (several patches as one): {t.GreatLakes} on {t.GreatLakeIslands} of {Seeds} islands, "
+            + $"{t.GreatLakeCells} cells"
+            + (t.GreatLakeSeeds.Count > 0 ? $"   on seeds {string.Join(", ", t.GreatLakeSeeds)}" : ""));
+        GD.Print($"  deeps: {t.Deeps}, of which {t.PlungePools} plunge pools under falls; "
+            + $"river cells dug below their kind (pools and deep reaches): {t.DeepRiverCells}");
 
         GD.Print($"goo: {t.GooCells} cells of puddle on {t.GooIslands} of {Seeds} islands");
         GD.Print($"  goo within a king's move of water (want 0): {t.GooTouchesWater}\n");
@@ -201,7 +210,7 @@ public partial class GenerationAudit
 
     private void PrintGorges(Tally t)
     {
-        GD.Print($"gorges (a course walled 3+ slabs on both sides): {t.GorgeCells} cells, "
+        GD.Print($"gorges (a course walled by a cliff on both sides): {t.GorgeCells} cells, "
             + $"{t.GorgeReaches} reaches of 3+ cells, on {t.GorgeIslands} of {Seeds} islands");
         Report("  reach length", t.GorgeLengths, "cells");
         GD.Print($"  reaches a bridge could cross somewhere along them: "
@@ -234,7 +243,7 @@ public partial class GenerationAudit
         Report("  stranded off the mainland", t.StrandedShare, "%");
         GD.Print($"  broken ground               {100.0 * t.WalkBroken / t.WalkLand,6:0.0}%"
             + $"  in {t.Scraps} scraps, against {t.Districts} districts");
-        GD.Print($"\n  with stairs, hoists and bridges ("
+        GD.Print($"\n  with ladders, stairs and bridges ("
             + $"face <= {Traversal.InfrastructureStep} slabs, span <= {(int)Params.Crossings} cells)");
         GD.Print($"  land on the heartland       {100.0 * t.ReachHeartland / t.WalkLand,6:0.0}%");
         Report("  heartland share per island", t.ReachShare, "%");
@@ -322,9 +331,9 @@ public partial class GenerationAudit
         Report("  works to build on one road", t.RoadCosts, "crossings");
         Report("  length of one road", t.RoadLengths, "cells");
         GD.Print($"  roads you can simply walk: {t.RoadsFree} of {t.RoadCosts.Count}");
-        GD.Print($"  what they need built: {t.RoadStairs} stairs, {t.RoadBridges} bridges");
+        GD.Print($"  what they need built: {t.RoadLadders} ladders, {t.RoadStairs} stairs, {t.RoadBridges} bridges");
         GD.Print($"  a road hop no step or bridge explains (want 0): {t.RoadJumps}");
-        GD.Print($"  flights of five-plus elevators: {t.Flights}, on {t.RoughIslands} of {Seeds} "
+        GD.Print($"  flights of five climbs (ladders or stairs): {t.Flights}, on {t.RoughIslands} of {Seeds} "
             + "islands (marked Rough — hard country, not a fault)\n");
     }
 
@@ -364,6 +373,7 @@ public partial class GenerationAudit
         {
             ["free%"] = Math.Round(100.0 * t.Free / pairs, 1),
             ["twoSlab%"] = Math.Round(100.0 * t.Ambiguous / pairs, 1),
+            ["threeSlab%"] = Math.Round(100.0 * t.Three / pairs, 1),
             ["cliff%"] = Math.Round(100.0 * t.Cliff / pairs, 1),
             ["twoSlabOffMountain"] = t.AmbiguousOffMountain,
             ["patchesUndersized"] = t.PatchesUndersized,
@@ -372,6 +382,9 @@ public partial class GenerationAudit
             ["riverStraight%"] = reachCells > 0 ? Math.Round(100.0 * t.RiverStraight / reachCells) : 0,
             ["falls"] = t.FallCells,
             ["lakes"] = t.Lakes,
+            ["greatLakes"] = t.GreatLakes,
+            ["lakeDeepest"] = t.LakeDeepest,
+            ["plungePools"] = t.PlungePools,
             ["waterLeaks"] = t.Leaks,
             ["riverUphill"] = t.RiverUphill,
             ["gooCells"] = t.GooCells,

@@ -101,8 +101,8 @@ public partial class IslandParams : Resource
     /// <summary>How readily standing water collects: 0 no lakes, 1 one in every flat patch that could hold it. Auto rolls it per seed.</summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Lakes { get; set; } = Auto;
 
-    /// <summary>Whether an island may roll goo puddles at all. Off, no Domain has goo whatever the seed says.</summary>
-    [Export] public bool Goo { get; set; } = true;
+    /// <summary>Whether an island may roll goo puddles at all. Off, no Domain has goo whatever the seed says. Off by default since 2026-09-15; the checksum keeps a case with it on.</summary>
+    [Export] public bool Goo { get; set; } = false;
 
     /// <summary>How far the ground falls toward a watercourse: 0 a bare incision, 1 five cells of valley either side. Auto rolls it per seed.</summary>
     [Export(PropertyHint.Range, "-1,1,0.01")] public float Valleys { get; set; } = Auto;

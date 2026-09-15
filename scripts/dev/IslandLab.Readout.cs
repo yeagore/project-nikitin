@@ -75,12 +75,69 @@ public partial class IslandLab
 			+ $"{d.Springs.Count} springs"
 			+ (d.HotWater.Count > 0 ? $"   hot water {d.HotWater.Count} cells" : "")
 			+ (d.TerminalLakes.Count > 0 ? $"   {d.TerminalLakes.Count} lake swallows a river" : "")
+			+ (d.GreatLakes.Count > 0 ? $"   great lakes {d.GreatLakes.Count}" : "")
+			+ (d.Deeps.Count > 0 ? $"   deeps {d.Deeps.Count}" : "")
 			+ (d.Deltas.Count > 0 ? $"   deltas {d.Deltas.Count}" : "")
 			+ (d.Estuaries.Count > 0 ? $"   estuaries {d.Estuaries.Count} (mouth at {Cells(d.Estuaries)})" : "")
 			+ (d.Fjords.Count > 0 ? $"   fjords {d.Fjords.Count} (mouth at {Cells(d.Fjords)})" : "")
 			+ (gooCells > 0 ? $"   goo {gooCells} cells (violet)" : "")
 			+ (d.Geysers.Count > 0 ? $"   geysers {d.Geysers.Count}" : "");
 	}
+
+	/// <summary>
+	/// The bodies of sailable water, largest first: what a hull could actually get
+	/// around in, what each is made of (standing water, or a navigable reach, or a
+	/// lake with its river) and how many falls end one. The navigable view's line.
+	/// </summary>
+	private static string WaterSummary(IslandData d)
+	{
+		if (d.WaterBodies == 0) return "navigable: nothing a hull could sit on";
+
+		int n = d.Size;
+		var cells = new int[d.WaterBodies];
+		var still = new int[d.WaterBodies];
+		for (int x = 0; x < n; x++)
+		for (int z = 0; z < n; z++)
+		{
+			int id = d.WaterBody[x, z];
+			if (id < 0) continue;
+			cells[id]++;
+			if (!d.River[x, z]) still[id]++;
+		}
+
+		var order = new List<int>();
+		for (int i = 0; i < d.WaterBodies; i++) order.Add(i);
+		order.Sort((a, b) => cells[b] != cells[a] ? cells[b].CompareTo(cells[a]) : a.CompareTo(b));
+
+		int specks = 0;
+		foreach (int id in order) if (cells[id] < 2) specks++;
+
+		var bits = new List<string>();
+		foreach (int id in order)
+		{
+			if (bits.Count == 6) break;
+			if (cells[id] < 2) break;
+			int reach = cells[id] - still[id];
+			string made = still[id] == 0 ? "reach" : reach == 0 ? "still" : $"{still[id]} still, {reach} reach";
+			bits.Add($"{BodyName(d, id)} {cells[id]} ({made})");
+		}
+
+		int lips = 0;
+		foreach (Fall f in d.Falls) if (d.WaterBody[f.Cell.X, f.Cell.Y] >= 0) lips++;
+		int listed = bits.Count;
+		int rest = d.WaterBodies - listed - specks;
+
+		return $"navigable: {d.WaterBodies} bod{(d.WaterBodies == 1 ? "y" : "ies")}"
+			+ (specks > 0 ? $", {d.WaterBodies - specks} of them 2+ cells" : "")
+			+ "   " + string.Join(",   ", bits)
+			+ (rest > 0 ? $",   and {rest} smaller" : "")
+			+ (specks > 0 ? $",   {specks} of one cell" : "")
+			+ $"   {lips} fall{(lips == 1 ? " ends" : "s end")} a body";
+	}
+
+	/// <summary>A body's name (<c>Names</c> keeps them apart), or its id where the naming stage has not run. Not <c>Name</c>: that is the node's own.</summary>
+	private static string BodyName(IslandData d, int id)
+		=> id < d.WaterNames.Count ? d.WaterNames[id] : $"body {id}";
 
 	/// <summary>Material shares and anchor counts; the wind always, since exposure reads it whether or not there are dunes.</summary>
 	private static string GroundSummary(IslandData d)
@@ -110,9 +167,11 @@ public partial class IslandLab
 		string wind = $"   wind from {d.WindFrom}" + (dunes > 0 ? $", dunes run {d.DuneRun}" : "")
 			+ $"   sun from {d.SunFrom}";
 		return $"ground: {string.Join(", ", parts)}{wind}"
-			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} brink, "
-			+ $"{d.CliffFootCells.Count} foot, {d.BankCells.Count} bank, "
-			+ $"{d.RiverBedCells.Count} river bed, {d.LakeBedCells.Count} lake bed, "
+			+ $"\nanchors: {d.CoastCells.Count} coast, {d.CliffCells.Count} cliff brink, "
+			+ $"{d.CliffFootCells.Count} cliff foot, {d.ImpasseCells.Count} impasse brink, "
+			+ $"{d.ImpasseFootCells.Count} impasse foot, {d.BankCells.Count} bank, "
+			+ $"{d.RiverBedCells.Count} river bed, {d.LakeBedCells.Count} lake bed "
+			+ $"({d.ShallowBedCells.Count} shallow, {d.MidBedCells.Count} mid, {d.DeepBedCells.Count} deep), {d.Deeps.Count} deeps, "
 			+ $"{d.Summits.Count} summit, {d.Overhangs.Count} overhang, "
 			+ $"{CellCount(d.Beach)} beach, {CellCount(d.Ford)} ford, "
 			+ $"{d.Springs.Count} spring, {d.Falls.Count} fall, "
@@ -171,15 +230,16 @@ public partial class IslandLab
 		var bits = new List<string>();
 		foreach (Passage road in d.Passages)
 		{
-			int stairs = 0, spans = 0;
+			int ladders = 0, stairs = 0, spans = 0;
 			foreach (Works w in road.Built)
 			{
-				if (w.Kind == WorksKind.Stair) stairs++;
+				if (w.Kind == WorksKind.Ladder) ladders++;
+				else if (w.Kind == WorksKind.Stair) stairs++;
 				else spans++;
 			}
 			Gate exit = d.Gates[road.Exit];
 			bits.Add($"{exit.Facing} cost {road.Cost}"
-				+ (road.Cost > 0 ? $" ({stairs}s {spans}b)" : ""));
+				+ (road.Cost > 0 ? $" ({ladders}l {stairs}s {spans}b)" : ""));
 		}
 		return "roads from the entry: " + string.Join(",   ", bits);
 	}

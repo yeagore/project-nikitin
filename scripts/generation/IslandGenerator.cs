@@ -321,7 +321,8 @@ public static class IslandGenerator
     /// Stage 4a. Lakes sink into the surface after every grammar pass (which they
     /// must not undo) and before the keel measures thickness. A patch a canyon or
     /// pass cuts through would fill to the bottom of the cut and pour out, so it
-    /// holds no water. Goo comes after the lakes so it can keep its distance.
+    /// holds no water. The deeps and the great lakes are written straight onto the
+    /// data. Goo comes after the lakes so it can keep its distance.
     /// </summary>
     private static void PlaceStandingWater(Draft d)
     {
@@ -334,7 +335,8 @@ public static class IslandGenerator
             for (int z = 0; z < n; z++)
                 drains[x, z] = d.Pass[x, z] || (d.Canyon != null && d.Canyon[x, z]);
         }
-        d.Water = Lakes.PlaceLakes(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, drains);
+        d.Water = Lakes.PlaceLakes(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, drains,
+                                   d.ToCoast, d.Data.Character, d.Data.Deeps, d.Data.GreatLakes);
         d.Fluid = new byte[n, n];
         Lakes.PlaceGoo(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, d.Water, d.Fluid);
 
@@ -397,7 +399,7 @@ public static class IslandGenerator
         Rivers.Carve(d.Seed, d.P, d.Land, d.Surface, d.Water, d.Data.River, d.Data.Navigable,
                      d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid,
                      d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs,
-                     d.Data.Estuary, d.Data.Estuaries);
+                     d.Data.Estuary, d.Data.Estuaries, d.Data.Deeps);
 
         // The valley and bank passes only lower; a cell can end up under the water beside it.
         Lakes.RaiseSunkenShores(d.Land, d.Surface, d.Water);

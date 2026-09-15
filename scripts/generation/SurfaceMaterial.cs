@@ -23,7 +23,7 @@ public enum SurfaceMaterial : byte
     /// <summary>A beach, the crest of a dune, and ground in extreme heat.</summary>
     Sand = 3,
 
-    /// <summary>The bed under a river or a lake, and nothing else.</summary>
+    /// <summary>The bed under a river or a lake, and nothing else — where the water over it is shallower than <see cref="Ooze"/> asks.</summary>
     Silt = 4,
 
     /// <summary>Temperate and wet: what you farm.</summary>
@@ -61,4 +61,7 @@ public enum SurfaceMaterial : byte
 
     /// <summary>Hot and wet (moisture 200 or more, a higher bar than grass, since heat is the less forgiving side): lush ground away from the water, what savanna becomes when the wet holds.</summary>
     Verdure = 16,
+
+    /// <summary>The bed under deep water: dark ooze wherever <c>Surfaces.DeepBed</c> slabs of water or more stand over a column, lake or river, and nowhere else.</summary>
+    Ooze = 17,
 }

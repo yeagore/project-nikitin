@@ -53,7 +53,11 @@ public sealed class IslandData
 
     /// <summary>
     /// Top slab of standing water in a column, or <see cref="NoLand"/> for dry.
-    /// Water occupies <c>SurfaceLevel+1 … WaterLevel</c>: a level, not a volume.
+    /// Water occupies <c>SurfaceLevel+1 … WaterLevel</c>: a level, not a volume, and
+    /// the bed under it is the column's ground, which is one slab down on a stream,
+    /// two on a navigable river, two or three under a flat lake, and deeper where a
+    /// bed was dug — a lake's bathymetry, a plunge pool, a reach's deep middle
+    /// (<see cref="WaterDepth"/>).
     /// </summary>
     public short[,] WaterLevel { get; }
 
@@ -78,6 +82,14 @@ public sealed class IslandData
     /// the aether, on about three islands in ten that have a river-fed lake.
     /// </summary>
     public List<Vector2I> TerminalLakes { get; } = new();
+
+    /// <summary>
+    /// Great lakes: a few flat patches on one rung flooded as one, on a landmass big
+    /// enough to carry it, about one Domain in ten. One cell per great lake, the
+    /// first in scan order; the body it belongs to is read off <see cref="WaterBody"/>.
+    /// See <c>Lakes.Great</c>.
+    /// </summary>
+    public List<Vector2I> GreatLakes { get; } = new();
 
     /// <summary>Cells of a delta fan: the ground between a navigable mouth's distributaries, floodplain whatever the climate.</summary>
     public bool[,] Delta { get; }
@@ -152,7 +164,7 @@ public sealed class IslandData
     /// <summary>The least-works road from the Entry to each Exit. See <see cref="Passage"/>.</summary>
     public List<Passage> Passages { get; } = new();
 
-    /// <summary>Whether any road climbs a flight — five elevators inside fifteen cells (<see cref="Passage.Flights"/>). Hard country, not a fault.</summary>
+    /// <summary>Whether any road climbs a flight — five climbs, ladders or stairs, inside fifteen cells (<see cref="Passage.Flights"/>). Hard country, not a fault.</summary>
     public bool Rough { get; internal set; }
 
     // ---- habitat and anchors ----
@@ -210,11 +222,22 @@ public sealed class IslandData
     /// <summary>Land cells with aether beside them — the rim.</summary>
     public List<Vector2I> CoastCells { get; } = new();
 
-    /// <summary>Cliff brinks: dry cells whose <see cref="EffectiveLevel"/> stands three slabs or more above a neighbour's.</summary>
+    /// <summary>Cliff brinks: dry cells whose <see cref="EffectiveLevel"/> stands four slabs or more (<see cref="Traversal.CliffFace"/>) above a neighbour's.</summary>
     public List<Vector2I> CliffCells { get; } = new();
 
-    /// <summary>Cliff feet: dry cells with a neighbour's effective surface three slabs or more above them.</summary>
+    /// <summary>Cliff feet: dry cells with a neighbour's effective surface four slabs or more above them.</summary>
     public List<Vector2I> CliffFootCells { get; } = new();
+
+    /// <summary>
+    /// Impasse brinks: dry cells whose <see cref="EffectiveLevel"/> stands two or three
+    /// slabs above a neighbour's — too tall to step down, short of a cliff; where a
+    /// ladder's top would stand. Read face by face, so a cell can be a cliff brink one
+    /// way and an impasse brink another.
+    /// </summary>
+    public List<Vector2I> ImpasseCells { get; } = new();
+
+    /// <summary>Impasse feet: dry cells with a neighbour's effective surface two or three slabs above them; where a ladder's foot would stand.</summary>
+    public List<Vector2I> ImpasseFootCells { get; } = new();
 
     /// <summary>Banks: dry cells beside water (never goo) at most one slab above its surface — the free-step shore.</summary>
     public List<Vector2I> BankCells { get; } = new();
@@ -261,6 +284,23 @@ public sealed class IslandData
 
     /// <summary>Lake beds: the flooded columns under standing water. Goo puddles are neither; <see cref="Fluid"/> says where they are.</summary>
     public List<Vector2I> LakeBedCells { get; } = new();
+
+    /// <summary>Shallow lake beds: lake bed under <c>Surfaces.ShallowBed</c> slabs of water or fewer — wading depth, the shelf and the shore ring, where reeds and shoals go.</summary>
+    public List<Vector2I> ShallowBedCells { get; } = new();
+
+    /// <summary>Mid lake beds: lake bed under more water than a shallow bed and less than a deep one — the flank of a bowl, a flat lake's floor at three.</summary>
+    public List<Vector2I> MidBedCells { get; } = new();
+
+    /// <summary>Deep lake beds: lake bed under <c>Surfaces.DeepBed</c> slabs of water or more — the floor of a bowl, a shelf's drop-off, a plunge; ooze, and dark.</summary>
+    public List<Vector2I> DeepBedCells { get; } = new();
+
+    /// <summary>
+    /// The deeps: where the water is deepest — the lowest cell of every lake whose bed
+    /// is a bathymetry rather than flat (<c>Lakes.Bathymetry</c>), and the pool dug
+    /// under a fall where it lands (<c>Rivers.Deeps</c>). An anchor for what lives in
+    /// deep water; a flat lake and a plain stream have none.
+    /// </summary>
+    public List<Vector2I> Deeps { get; } = new();
 
     // ---- naming ----
 
@@ -374,5 +414,16 @@ public sealed class IslandData
         if (!HasLand(x, z)) return NoLand;
         short water = WaterLevel[x, z];
         return water != NoLand ? water : Spans[x, z][0].Top;
+    }
+
+    /// <summary>
+    /// Slabs of water standing in a column — <see cref="WaterLevel"/> less the
+    /// ground — or 0 where dry. One on a stream, two on a navigable river, two or
+    /// three under a flat lake; more where a bed was dug.
+    /// </summary>
+    public int WaterDepth(int x, int z)
+    {
+        if (!HasLand(x, z) || WaterLevel[x, z] == NoLand) return 0;
+        return WaterLevel[x, z] - Spans[x, z][0].Top;
     }
 }

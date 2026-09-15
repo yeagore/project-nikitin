@@ -421,6 +421,7 @@ public partial class GenerationAudit
                 Of("SNOW", SurfaceMaterial.Snow),
                 Of("SAND", SurfaceMaterial.Sand),
                 Of("SILT (BED)", SurfaceMaterial.Silt),
+                Of("OOZE (DEEP BED)", SurfaceMaterial.Ooze),
             }),
             ("WATER", new[]
             {
