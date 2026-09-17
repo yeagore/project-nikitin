@@ -63,6 +63,28 @@ shell and quits: `godot --path . scenes/dev/island_lab.tscn -- shot nopanel
 zoom=4` (windowed, since a screenshot needs a viewport; a window opens for a
 few seconds on the machine it runs on).
 
+### Delegating
+
+Not every chore needs the model in the chair. A subagent (the Agent tool)
+runs on the `model` it is given, and one given none inherits the parent's,
+the most capable and the costliest; so crude work goes out with the model
+named, and what comes back is read before it is trusted. Three tiers:
+
+| Tier | Model | What goes there |
+|---|---|---|
+| Mechanical | `haiku` | Run a command and report the verdict and the numbers (the build, the checksum, the audit, the benches); sweep the tree for every site that does something; count, list, tabulate; rename to a spec already settled. |
+| Bounded | `sonnet` | Work with a clear brief and a check on the result: a first draft of a doc passage for a change already made and understood; a refactor the checksum will police; a read-through of a stage to answer a stated question. |
+| The main model | | Design and decisions; anything that can move the checksum or the audit, or touches the determinism details listed under Island generation; the brief itself; the review of what a delegate returns; anything that needs the conversation, which a subagent does not see. |
+
+Two agents under `.claude/agents/` package the common cases and can be
+asked for by name: **`runner`** (haiku) builds, runs the dev scenes under a
+timeout and reports the verdict, not the transcript; **`scout`** (haiku)
+answers a question about the code by reading it, and changes nothing. For
+other chores, `Explore` or `general-purpose` with `model` set. A subagent
+sees this file, its own file and the brief, so the brief carries the paths,
+the seed, the command and what done looks like. Independent delegations go
+out in one message so they run at once. `docs/delegation.md` is the guide.
+
 ---
 
 ## Spatial model (from Notion → "The Ecumene")
@@ -288,9 +310,13 @@ docs/
                                is the source); do keep it true when the generator
                                or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit, checksum and mesh bench manual.
+  delegation.md                Which chores go to which sibling model, and how; a guide for a newbie.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
 CLAUDE.md                      This file.
+.claude/agents/                The subagents the main model delegates chores to (see Delegating).
+  runner.md                    haiku: builds, runs the dev scenes under a timeout, reports the verdict.
+  scout.md                     haiku: answers a question about the code by reading it; changes nothing.
 ```
 
 Planned, create as needed and keep the tree shallow: `resources/` for biome,
