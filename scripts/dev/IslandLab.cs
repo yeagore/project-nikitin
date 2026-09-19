@@ -75,6 +75,15 @@ public partial class IslandLab : Node3D
 	private float _shotZoom = 1f;
 	private Vector3 _shotOffset = Vector3.Zero;
 
+	/// <summary>A cell a shell run pins the cell readout to (<c>pick=X,Z</c>), since no cursor is over the window then; X is -1 for none.</summary>
+	private Vector2I _shotPick = new(-1, -1);
+
+	/// <summary>Degrees above the horizon a shell run's first framing looks from (<c>tilt=N</c>; <c>under</c> is -40, up at the keel); NaN leaves the rig's own.</summary>
+	private float _shotTilt = float.NaN;
+
+	/// <summary>Degrees a shell run's first framing is turned about the island (<c>yaw=N</c>; 180 looks from the north).</summary>
+	private float _shotYaw;
+
 	public override void _Ready()
 	{
 		ReadShellArgs();
@@ -126,8 +135,8 @@ public partial class IslandLab : Node3D
 		// falls and the water sort against each other by camera distance and pop.
 		_blueFall.RenderPriority = _flatFall.RenderPriority = 1;
 		_fallQuad.Material = _blueFall;
-		_blueMaterials = new TerrainMaterials { Water = _blueWater };
-		_flatMaterials = new TerrainMaterials { Water = _flatWater };
+		_blueMaterials = new TerrainMaterials { Water = _blueWater, Falls = _blueFall };
+		_flatMaterials = new TerrainMaterials { Water = _flatWater, Falls = _flatFall };
 		_falls = Sheet("Falls");
 
 		// A Gate is one cell by four slabs; NoDepthTest so a Gate on the far side is findable.
@@ -143,8 +152,16 @@ public partial class IslandLab : Node3D
 
 		BuildCompass();
 		BuildOverlayUi();
-		_panel.Visible = _showPanel;
+		ShowPlates(_showPanel);
 		Rebuild();
+	}
+
+	/// <summary>Every plate at once, for a clear look at the island: the controls, the readout, the legend and the cell.</summary>
+	private void ShowPlates(bool on)
+	{
+		_showPanel = on;
+		_panel.Visible = _statusPlate.Visible = _legendPlate.Visible = on;
+		_cellPlate.Visible = on && _showMesh;
 	}
 
 	/// <summary>A shadowless MultiMesh node, added as a child.</summary>
@@ -166,7 +183,8 @@ public partial class IslandLab : Node3D
 		if (_fps != null)
 		{
 			if ((Engine.GetProcessFrames() & 31) == 0) _fpsText = $"{Engine.GetFramesPerSecond():0} fps";
-			_fps.Text = _pickText.Length > 0 ? $"{_pickText}      {_fpsText}" : _fpsText;
+			_fps.Text = _fpsText;
+			FitPlates();
 		}
 		if (_shotAt != 0 && Engine.GetProcessFrames() >= _shotAt)
 		{
@@ -179,9 +197,10 @@ public partial class IslandLab : Node3D
 	/// <summary>
 	/// A windowed run from a shell, for a look without a hand on the keys:
 	/// <c>godot --path . scenes/dev/island_lab.tscn -- shot [boxes] [nopanel] [seed=N]
-	/// [view=NAME] [zoom=N] [at=X,Z]</c> builds the island, frames it (a quarter of it
-	/// at <c>zoom=4</c>, centred on cell X,Z if given), saves the screenshot Capture
-	/// writes a few frames in, and quits. Not headless: a screenshot needs a viewport.
+	/// [view=NAME] [zoom=N] [at=X,Z] [pick=X,Z] [tilt=DEG] [yaw=DEG] [under]</c> builds the island, frames it
+	/// (a quarter of it at <c>zoom=4</c>, centred on cell X,Z if given; from <c>tilt</c> degrees
+	/// above the horizon, or from below with <c>under</c>), pins the cell readout to a cell, saves the screenshot Capture writes
+	/// a few frames in, and quits. Not headless: a screenshot needs a viewport.
 	/// </summary>
 	private void ReadShellArgs()
 	{
@@ -192,6 +211,12 @@ public partial class IslandLab : Node3D
 			else if (arg == "boxes") _showMesh = false;
 			else if (arg == "noliquid") _showLiquid = false;   // the beds, as I does in the lab
 			else if (arg == "nopanel") _showPanel = false;
+			else if (arg == "under") _shotTilt = -40f;
+			else if (arg.StartsWith("yaw=") && float.TryParse(arg.AsSpan(4), System.Globalization.NumberStyles.Float, inv, out float yaw)) _shotYaw = yaw;
+			else if (arg.StartsWith("tilt=") && float.TryParse(arg.AsSpan(5), System.Globalization.NumberStyles.Float, inv, out float tilt)) _shotTilt = tilt;
+			else if (arg.StartsWith("pick=") && arg[5..].Split(',') is { Length: 2 } pick
+					 && int.TryParse(pick[0], out int px) && int.TryParse(pick[1], out int pz))
+				_shotPick = new Vector2I(px, pz);
 			else if (arg.StartsWith("seed=") && int.TryParse(arg.AsSpan(5), out int seed)) Seed = seed;
 			else if (arg.StartsWith("view=") && Enum.TryParse(arg[5..], true, out View view)) _view = view;
 			else if (arg.StartsWith("zoom=") && float.TryParse(arg.AsSpan(5), System.Globalization.NumberStyles.Float, inv, out float zoom) && zoom > 0f) _shotZoom = zoom;
@@ -205,6 +230,8 @@ public partial class IslandLab : Node3D
 	private void FrameFirst()
 	{
 		if (_data == null) return;
+		if (!float.IsNaN(_shotTilt)) _rig.Tilt(_shotTilt);
+		if (_shotYaw != 0f) _rig.RotateY(Mathf.DegToRad(_shotYaw));
 		if (_shotZoom == 1f) { _rig.Frame(_islandCenter, _islandRadius); return; }
 		const float cs = Terrain.CellSize;
 		float half = _data.Size * 0.5f;
@@ -221,9 +248,10 @@ public partial class IslandLab : Node3D
 		{
 			case Key.Tab:
 			case Key.F1:
-				_showPanel = !_showPanel;
-				_panel.Visible = _showPanel;
+				ShowPlates(!_showPanel);
 				return;
+			case Key.F3: OpenStatus(!_statusOpen); return;
+			case Key.F4: _legendPlate.Visible = !_legendPlate.Visible; return;
 			case Key.N: Seed = (int)(GD.Randi() & 0x7FFFFFFF); break;
 			case Key.R: Rebuild(); break;
 			case Key.F: _rig.Frame(_islandCenter, _islandRadius); break;
@@ -259,7 +287,15 @@ public partial class IslandLab : Node3D
 		GD.Print(err == Error.Ok
 			? $"[IslandLab] wrote {ProjectSettings.GlobalizePath(path)}"
 			: $"[IslandLab] could not write {path}: {err}");
-		// Where the fjords and estuaries are, so a second shot can be aimed with at=X,Z.
+		// Where the tallest inner falls, the fjords and the estuaries are, so a second shot can be aimed with at=X,Z.
+		if (_data is { } w)
+		{
+			var inner = w.Falls.FindAll(f => !f.OffRim);
+			inner.Sort((a, b) => b.Drop != a.Drop ? b.Drop.CompareTo(a.Drop) : a.Cell.X != b.Cell.X ? a.Cell.X.CompareTo(b.Cell.X) : a.Cell.Y.CompareTo(b.Cell.Y));
+			if (inner.Count > 0)
+				GD.Print("[IslandLab] inner falls (cell: drop) "
+					+ string.Join("  ", inner.GetRange(0, Math.Min(8, inner.Count)).ConvertAll(f => $"{f.Cell.X},{f.Cell.Y}: {f.Drop}")));
+		}
 		if (_data is { } d && d.Fjords.Count > 0)
 			GD.Print($"[IslandLab] fjord mouths {Cells(d.Fjords)}");
 		if (_data is { } e && e.Estuaries.Count > 0)
@@ -439,7 +475,7 @@ public partial class IslandLab : Node3D
 		RenderGates(_data);
 		RenderOverlays(_data);
 		// Liquid off shows the beds; the columns are drawn already. With the mesh on,
-		// its own water stands in for the sheets, falls included.
+		// its own water stands in for the sheets, and its own falls for the fall sheets.
 		_water.Visible = _goo.Visible = _falls.Visible = _showLiquid && !_showMesh;
 		_mesh.LiquidVisible = _showLiquid;
 		UpdateText(_data, lakes);
@@ -453,11 +489,12 @@ public partial class IslandLab : Node3D
 		string newer = Roster.IsNewerShape(d.Arrangement)
 					|| Roster.IsNewerShape(d.Character) ? " (newer shape)" : "";
 
-		_status.Text =
-			$"{d.Name}   seed {Seed}   {d.Arrangement}   {d.Character}{newer}: {Made(d)}"
-			+ $"   high ground {d.Style}"
+		_title.Text = $"{d.Name}   seed {Seed}   {d.Size}²   {d.Arrangement}   {d.Character}{newer}"
 			+ (d.Rough ? "   ROUGH GOING" : "")
-			+ (d.Unmet.Length > 0 ? $"   UNMET: {d.Unmet}" : "")
+			+ (d.Unmet.Length > 0 ? $"   UNMET: {d.Unmet}" : "");
+
+		_status.Text =
+			$"made of {Made(d)}   high ground {d.Style}"
 			+ $"\nladder {Params.PlateauLevels} rungs x {Params.CliffHeight} slabs   "
 			+ $"crossings {Params.Crossings} ({d.BridgeSpan} cells)   lakes {lakes}   "
 			+ $"built in {d.Attempts} attempt{(d.Attempts == 1 ? "" : "s")}\n"

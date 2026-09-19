@@ -326,7 +326,8 @@ that read the bed were told: the overhang stage, whose lip may not dip into
 water and whose arch must clear it (a shore beside a deep bed is a tall face by
 the bed's measure and none at all by the water's); the ford, never put on water
 deeper than a stream is cut; and the keel, which hangs below whatever the bed
-is, so a deep lake bulges the underside a little.
+is and brings the columns round the bed down with it (`Keel.Root`, below), so a
+deep lake sits in a root of rock under the island.
 
 **Great lakes** (`Lakes.Great`, 2026-09-14). The stage works per *site*, and a
 site is a patch except here: on about one Domain in ten, two to five adjacent
@@ -520,6 +521,24 @@ thickness subtracted from the surface — that would mirror the relief downward
 — and the distance field is sampled through a domain warp so the underside is
 not a surface of revolution. Every column is kept at least `EdgeThickness`
 slabs thick.
+
+**The root** (`Keel.Root`, 2026-09-19). Because the keel is a level, ground dug
+below it took only its own column down: the bed of a twenty-slab lake stood at
+−20…−17 beside a shore at −8…1, clear of the island by up to fifteen slabs, its
+water open to the aether underneath. Seed 608982959 showed it; a sweep of 300
+islands found 164 with some column hanging clear of a neighbour (a deep bed, a
+plunge pool, a canyon or sinkhole floor near a thin rim) and 110 with water open
+below. Two steps close it for good. Every column's underside is brought to at
+least `EdgeThickness` slabs under the lowest ground beside it, by king's moves,
+so the rock round a bed reaches under the bed. Then each push spreads outward
+through the land, the underside allowed to rise `RootRise` (3) slabs per cell
+away from it and half as much again on a diagonal, so a bed sits in a tapering
+root and not on a sheer plug. The pass only lowers; its result is the least of
+each column's own level and every push's level plus its walk, so the order
+cells are visited in does not matter. It moves the underside and nothing else:
+fingerprinted per concern over 180 islands, 167 changed their span bottoms and
+none changed water, walk areas, roads, works, materials or an anchor list. The
+audit holds both counts at nought (`hangingColumns`, `waterOpenBelow`).
 
 `Pack` writes one span per land column into `IslandData` with its landform,
 water level, fluid, canyon and pass flags; records the crossings as built
@@ -1087,8 +1106,21 @@ varied any of them would change what a cliff *means*.
   a lower neighbour's water (a cataract), dry ground below the level, the aether
   at the rim (the fall). Goo is a third surface with its own material. Beds are
   the ground's tops, drawn once.
+- **Falling water** is a fourth surface (2026-09-19; until then the mesh showed
+  a fall only as the slab or two of wall at its lip, and the lab hid its own fall
+  sheets whenever the mesh was on, so a mesh had no waterfalls). It is not the
+  water's volume but a sheet down the rock under a lip, standing 0.03 of a cell
+  off the face so the two do not fight for depth: one per recorded `Fall`, from
+  what it lands on (`Bottom + 1`: the pool's surface, the ground, or past the
+  keel off the rim) up to the lip's bed, where the water's own wall takes over;
+  and one wherever water stands beside the same water lying under its bed with no
+  fall recorded, which is the two-slab cataract (a one-slab step never bares the
+  bed). Tagged `FaceKind.Fall` in UV2 for the shader that will animate it, drawn
+  with `TerrainMaterials.Falls` (the water's material, denser, a render priority
+  up so a sheet and its pool do not sort against each other). The bench has a
+  second oracle for it, slab by slab off `IslandData.Falls` and the wet pairs.
 - **Vertices** are flat-shaded quads: position, normal, a UV in metres (a texture
-  tiles per cell), UV2 = (material or fluid byte, `FaceKind` top/side/bottom) for
+  tiles per cell), UV2 = (material or fluid byte, `FaceKind` top/side/bottom/fall) for
   a shader to read later, and a colour from an `IslandTint`, two callbacks: one
   per ground face from the column, span and face kind, one per flooded column.
   The game's `IslandTint.Default` paints the column's `SurfaceMaterial` through

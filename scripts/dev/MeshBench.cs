@@ -89,22 +89,26 @@ public partial class MeshBench : Node
         var g = new MeshBuffer();
         var w = new MeshBuffer();
         var o = new MeshBuffer();
+        var f = new MeshBuffer();
         int across = ChunkMesher.ChunksAcross(d.Size);
         int groundTris = 0, liquidTris = 0;
         long bytes = 0;
-        double groundArea = 0, liquidArea = 0;
+        double groundArea = 0, liquidArea = 0, fallArea = 0;
+        int fallTris = 0;
         ulong meshUs = 0;
         for (int cx = 0; cx < across; cx++)
         for (int cz = 0; cz < across; cz++)
         {
             ulong tb = Time.GetTicksUsec();
-            ChunkMesher.Build(d, cx, cz, IslandTint.Default, g, w, o);
+            ChunkMesher.Build(d, cx, cz, IslandTint.Default, g, w, o, f);
             meshUs += Time.GetTicksUsec() - tb;
             groundTris += g.Triangles;
             liquidTris += w.Triangles + o.Triangles;
-            bytes += g.Bytes + w.Bytes + o.Bytes;
+            fallTris += f.Triangles;
+            bytes += g.Bytes + w.Bytes + o.Bytes + f.Bytes;
             groundArea += g.Area();
             liquidArea += w.Area() + o.Area();
+            fallArea += f.Area();
         }
         float meshMs = meshUs / 1000f;
 
@@ -131,7 +135,9 @@ public partial class MeshBench : Node
         (double oracleGround, double oracleLiquid) = Oracle(d);
         double groundOff = groundArea - oracleGround;
         double liquidOff = liquidArea - oracleLiquid;
-        if (Math.Abs(groundOff) > 1e-3 || Math.Abs(liquidOff) > 1e-3) _failed = true;
+        // The falling water is sheets, not volume, so it has an oracle of its own.
+        double fallOff = fallArea - FallOracle(d);
+        if (Math.Abs(groundOff) > 1e-3 || Math.Abs(liquidOff) > 1e-3 || Math.Abs(fallOff) > 1e-3) _failed = true;
 
         var row = new Row(size, seed, d.Name, columns, spans, flooded, groundTris, liquidTris, boxTris,
                           genMs, meshMs, nodeMs, bytes, groundOff, liquidOff);
@@ -139,7 +145,8 @@ public partial class MeshBench : Node
             Inv($"  {size}² seed {seed} \"{d.Name}\": {columns:N0} columns, {spans:N0} spans, {flooded:N0} flooded")
             + Inv($" -> ground {groundTris:N0} tris, liquid {liquidTris:N0} tris (the boxes draw {boxTris:N0});")
             + Inv($" generated {genMs:0} ms, meshed {meshMs:0.0} ms, nodes and colliders {nodeMs:0.0} ms, {bytes / 1048576.0:0.00} MB;")
-            + Inv($" oracle off by {groundOff:0.000} m² ground, {liquidOff:0.000} m² liquid"));
+            + Inv($" oracle off by {groundOff:0.000} m² ground, {liquidOff:0.000} m² liquid,")
+            + Inv($" {fallOff:0.000} m² over {fallTris / 2:N0} sheets of falling water ({d.Falls.Count} falls)"));
         data = d;
         return row;
     }
@@ -206,6 +213,39 @@ public partial class MeshBench : Node
         }
         return (ground, liquid);
     }
+
+    /// <summary>
+    /// The falling water, slab by slab: under every recorded fall's lip the rock from
+    /// what it lands on up to the lip's bed, and the same between two waters whose step
+    /// is too small to be a fall but bares the bed of the higher.
+    /// </summary>
+    private static double FallOracle(IslandData d)
+    {
+        const double vertical = CellSize * SlabHeight;
+        double area = 0;
+        foreach (Fall f in d.Falls)
+            for (int y = f.Bottom + 1; y <= d.SurfaceLevel(f.Cell.X, f.Cell.Y); y++) area += vertical;
+
+        (int Dx, int Dz)[] sides = { (1, 0), (-1, 0), (0, 1), (0, -1) };
+        for (int x = 0; x < d.Size; x++)
+        for (int z = 0; z < d.Size; z++)
+        {
+            if (!Flooded(d, x, z)) continue;
+            foreach ((int dx, int dz) in sides)
+            {
+                int nx = x + dx, nz = z + dz;
+                if (nx < 0 || nz < 0 || nx >= d.Size || nz >= d.Size || !Flooded(d, nx, nz)) continue;
+                if (d.WaterLevel[x, z] - d.WaterLevel[nx, nz] >= ProjectNikitin.Generation.Rivers.FallDepth) continue;
+                for (int y = d.WaterLevel[nx, nz] + 1; y <= d.SurfaceLevel(x, z); y++) area += vertical;
+            }
+        }
+        return area;
+    }
+
+    /// <summary>A column with water standing in it, not goo.</summary>
+    private static bool Flooded(IslandData d, int x, int z)
+        => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
+           && d.WaterLevel[x, z] > d.SurfaceLevel(x, z) && d.Fluid[x, z] == (byte)FluidKind.Water;
 
     private static bool Solid(IslandData d, int x, int z, int y)
     {

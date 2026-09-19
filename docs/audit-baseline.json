@@ -18,6 +18,7 @@
   "gorgeReaches": 28,
   "gorgeSealed": 3,
   "greatLakes": 4,
+  "hangingColumns": 0,
   "heartland%": 94.6,
   "hotWaterCells": 48,
   "islandsOneWhole": 48,
@@ -42,5 +43,6 @@
   "twoSlabOffMountain": 344,
   "unplayable": 0,
   "waterBodies": 226,
-  "waterLeaks": 0
+  "waterLeaks": 0,
+  "waterOpenBelow": 0
 }

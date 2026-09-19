@@ -50,8 +50,12 @@ only the faces that touch air. Every run of slabs gets a top, an underside (the
 island's keel, or the roof of an overhang) and a wall wherever the column next
 to it is lower or higher, one wall for the whole cliff rather than one per slab.
 Anything buried inside the ground is never drawn. Water is drawn separately as a
-see-through sheet, with a wall of its own wherever the water meets air: that is
-what a waterfall looks like, and a river tipping over the rim into the aether.
+see-through sheet, with a wall of its own wherever the water meets air. A
+waterfall is drawn as well: a sheet of falling water down the rock from under
+the fall's lip to whatever it lands on — the pool below, or past the underside
+where a river tips over the rim into the aether — and the same on the small
+steps too short to count as falls. (Until 2026-09-19 the renderer drew only the
+slab or two of water at the lip, so its waterfalls could not be seen.)
 
 The island is cut into tiles of sixteen by sixteen cells, each with its own
 mesh and an invisible physics shape over the ground, so the game can ask what
@@ -549,7 +553,24 @@ springs that cell was the spring.)
 The underside is an absolute level, not a thickness subtracted from the surface
 (that would mirror the relief downward): thin at the coast (3 slabs), deepening
 inland to 34, sampled through a warp so it is not a surface of revolution, and
-every column at least 3 slabs thick. Then the columns are written out with their
+every column at least 3 slabs thick.
+
+**The root.** One more rule keeps the island in one piece from underneath.
+Because the underside is a level and not a thickness, ground dug deeper than
+that level — the bed of a deep lake, the pool under a waterfall, a canyon floor
+near the thin rim — used to take only its own column down with it. The columns
+beside it stayed where they hung, so the lake's floor stood clear of the island
+with its water open to the aether below: on seed 608982959 by as much as fifteen
+slabs, and in some small way on more than half of all islands. Now every
+column's underside is brought to at least three slabs under the lowest ground
+next to it (diagonals included), so the rock round a bed always reaches under
+the bed; and that push then spreads outward, the underside allowed to rise three
+slabs for each cell away, so a deep lake sits in a tapering root of rock rather
+than on a plug with sheer sides. It moves the underside and nothing else — not
+the water, the walking, the roads or any list — and the audit counts both faults
+and holds them at nought.
+
+Then the columns are written out with their
 landform, water, fluid, canyon and pass flags; the crossings are recorded as
 built (a deck halfway between the banks, so each end is a one-slab step); rim
 falls are dropped past the underside now that it is known; and the fords are
@@ -904,7 +925,7 @@ cells dug below their kind); altitude against the box; gorges and sealed gorges;
 character delivered; walkability and reach; passes; districts; crossings; every
 Gate rule; roads; arrangements; re-rolls; continuity. Any "want 0" that is not
 zero names its seed as it happens, so it can be built in the lab. It ends by
-diffing thirty-odd headline numbers against `docs/audit-baseline.json`; that is
+diffing about fifty headline numbers against `docs/audit-baseline.json`; that is
 a diff, not a test, and `AcceptBaseline` records the current numbers as the new
 reference.
 
@@ -964,10 +985,16 @@ warmth, ruggedness, exposure, rim, water distance, magick),
 each with a legend in its actual colours; overlays for bridge sites, landings,
 roads, fords, and the compass with the wind, the sun, the dune grain
 and the two boxes; a liquid toggle that shows the beds; a seed field; a
-frame-rate counter; a line naming the cell under the mouse (found by casting a
-ray at the mesh's physics shape) with everything the pipeline said about it;
+frame-rate counter; a plate naming the cell under the mouse (found by casting a
+ray at the mesh's physics shape) — what the cell is, and then what the view
+being looked at says about it: every anchor list it is on in the anchors view,
+the body of water it belongs to in the navigable one, its district in the walk
+view, its band in the warmth and moisture views;
 and a readout that says what the island turned out to be, down to what each
-road out costs and how many triangles it took to draw. Every
+road out costs and how many triangles it took to draw. The text keeps to the
+edges so the island has the middle: the controls down the left, the island's
+readout folded along the top, the legend and the cell down the right, each
+scrolling rather than growing, and Tab hides the lot. Every
 dial has an Auto box, and after a build the slider sits at what the seed rolled.
 Run from a shell with `-- shot`, the lab saves a screenshot and quits by itself,
 so a picture of the rendered island can be had without anyone at the keyboard.
@@ -978,7 +1005,7 @@ so a picture of the rendered island can be had without anyone at the keyboard.
 at each footprint, meshed, with the triangle counts against what the boxes
 drew, the times, and three checks that must pass — that Godot's triangles face
 the way the renderer assumes, that the mesh's area equals the count of faces
-touching air, and that a ray dropped onto a column lands on its top and one
+touching air (and the falling water's the count of wet rock under the falls), and that a ray dropped onto a column lands on its top and one
 fired up from below lands on its keel, so the physics shapes are right too. It
 runs without a window and quits by itself. A second bench, `domains_bench.tscn`,
 opens a window with many whole Domains in view and reports the frame rate; the

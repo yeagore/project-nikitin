@@ -143,6 +143,9 @@ public partial class GenerationAudit
         public int GooCells, GooIslands, GooTouchesWater;
         public readonly List<int> AltSpans = new();
         public int AltOverCap;
+
+        /// <summary>Columns whose ground span shares no slab with a neighbour's, and wet columns whose water stands beside the air under a neighbour's keel.</summary>
+        public int HangingColumns, WaterOpenBelow;
         public int GorgeCells, GorgeReaches, GorgeCrossable, GorgeSealed;
         public int GorgeMisaligned, GorgeIslands;
         public readonly List<int> GorgeLengths = new();
@@ -515,6 +518,36 @@ public partial class GenerationAudit
             {
                 AltSpans.Add(crest - bilge);
                 if (crest - bilge > v.N) AltOverCap++;
+            }
+            MeasureUnderside(v.D);
+        }
+
+        /// <summary>
+        /// The landmass in one piece from underneath: a column hangs clear when its top is
+        /// under a neighbour's keel (a deep bed once did, with the keel a level that only
+        /// its own column followed down), and its water is open below when any of it
+        /// stands against the air under that keel. <c>Keel.Root</c> is what holds both at nought.
+        /// </summary>
+        private void MeasureUnderside(IslandData d)
+        {
+            int n = d.Size;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.HasLand(x, z)) continue;
+                Span s = d.Spans[x, z][0];
+                bool wet = d.WaterLevel[x, z] != IslandData.NoLand && d.WaterLevel[x, z] > s.Top;
+                bool hangs = false, open = false;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
+                    int keel = d.Spans[nx, nz][0].Bottom;
+                    if (keel > s.Top) hangs = true;
+                    if (wet && keel > s.Top + 1) open = true;
+                }
+                if (hangs) HangingColumns++;
+                if (open) WaterOpenBelow++;
             }
         }
 

@@ -1039,6 +1039,53 @@ thing you can find. On the sixty seeds: 201 pools under the 268 inner falls,
 54 lake deeps beside them, 1,414 river cells dug below their kind (the pools
 and the deep middles of half the long navigable reaches), fords 359 → 347.
 
+### The keel takes its neighbours down with it
+
+The depth work above said the keel "hangs below whatever the bed is", and that
+was the bug: it was true of the bed's own column and of no other. The keel is a
+level, shallow at the coast, and the only thing tying it to the ground was a
+clamp per column (never less than the edge thickness under *its own* surface).
+So a bed dug below the level took one column down and left the ones beside it
+hanging where they were. On seed 608982959 (a 128² Ring of plains with a great
+lake twenty slabs deep near a thin rim) the bed stood at −20…−17 and the shore
+beside it at −8…1: the lake's floor clear of the island by up to fifteen slabs,
+and a wall of water open to the aether under the shore, which is what it looked
+like from the side. Not only lakes: over 300 swept islands 164 had some column
+whose top lay under a neighbour's keel (3,592 pairs — plunge pools, canyon and
+sinkhole floors, river beds in valleys near the rim, mostly by a slab or two),
+and 110 had water open underneath (1,309 cells). It had been there since the
+first canyon; the deep lakes made it a gap you could see through.
+
+`Keel.Root` is the rule that should have been there: a column's underside is at
+least the edge thickness under the lowest ground *beside* it (king's moves), and
+that push spreads outward through the land rising three slabs a cell. The taper
+is for looks — without it a deep lake sits on a sheer plug the shape of the lake
+plus one cell — and three slabs a cell is steeper than the keel's own gradient
+inland, so the root dies out within a few cells and the underside elsewhere is
+untouched. It is a propagation that only lowers from fixed sources, so it has
+one answer whatever order the queue runs in; the checksum moved on 351 of 458
+islands, and a fingerprint per concern over 180 of them showed the span bottoms
+moving on 167 and nothing else at all — water, walk and reach areas, roads and
+their works, materials, every anchor list. After it both counts are nought over
+the 300 and over the audit's sixty, and the audit carries them as guarantees
+(`hangingColumns`, `waterOpenBelow`), which is the part that makes it "never"
+rather than "not on the seeds looked at".
+
+### A fall is a sheet, not the side of the water
+
+The mesher draws water as a volume: a top, and a wall where the water's own
+slabs meet air. A river is one slab of water, so at the lip of a ten-slab fall
+that wall is one slab tall, and the nine slabs of rock under it were drawn as
+bare rock. The lab had covered for this with its own fall sheets since the box
+days, and hid them whenever the mesh was on, on the note that the mesh's water
+"stands in for the sheets, falls included" — which it never did. The fall is
+now a surface of its own in the chunk mesh: a quad down the face from what the
+fall lands on to the lip's bed, a whisker proud of the rock, one per recorded
+`Fall` (so a rim fall runs past the keel, as its `Bottom` says) and one per
+two-slab step between waters, where the higher bed would otherwise show as a
+dry stair in the middle of a river. It is geometry the data already described;
+nothing was added to `IslandData`.
+
 ## C. Tried and removed
 
 - **A road check that could not pass.** The audit flagged any road hop that was
@@ -1098,7 +1145,7 @@ vary one thing, which is what makes their columns comparable; the ordinary audit
 rolls from `Auto`, where every request is trivially satisfied because nothing
 was asked for.
 
-**The baseline** (`docs/audit-baseline.json`) holds thirty headline numbers
+**The baseline** (`docs/audit-baseline.json`) holds forty-six headline numbers
 from the last accepted run and every run prints what moved. It is a diff, not a
 test: numbers are expected to move when the generator changes, and the point is
 to see them move and decide whether you meant it.
@@ -1305,6 +1352,35 @@ its neighbour is a larger share of a smaller island.
    wanted a lake's guards and a re-run of the analysis): the pool is the bed
    under the landing cell, dug deeper, on water the routing already put there,
    so nothing above the surface moved. See "Plunge pools dig the bed" in §B.
+9. **Cataracts as a feature.** A fall is a step of three slabs or more
+   (`Rivers.FallDepth`); a smaller step between two waters is drawn (a wall of
+   water, and since 2026-09-19 a sheet where it bares rock) but recorded
+   nowhere and cuts nothing. Measured over 300 islands (`step_probe.tscn --
+   mode=watersteps`, 2026-09-19): no step of three or more is without its fall;
+   there are 2,981 smaller ones, ten an island and on 97% of islands, 84% of
+   them one slab and the rest two. Nine in ten run *along* a course and three
+   quarters are stream to stream: a stream coming down a slope a slab at a
+   time, which is what a stream is. Another 456 are a stream stepping into a
+   navigable reach (a tributary's mouth), 31 a lake and a stream. What matters
+   to a hull is the rest: 246 steps (0.8 an island) lie *inside one sailable
+   body* — 218 of them a lake standing a slab or two over the navigable reach
+   that drains it, never the other way up, and 28 between two reaches (a
+   confluence, a funnel's edge). Today a hull sails over those. If a cataract
+   cut a body as a fall does: at every step, 57 of 934 bodies (6.1%) break, the
+   count rises 7% to 998, the mean body falls from 36.6 cells to 34.2, and of
+   the 129 pieces 25 are under four cells; at two-slab steps only, 20 bodies
+   (2.1%) break, the count rises 2%, and 3 of 41 pieces are specks. So it would
+   not shred navigation; what it would mostly do is part a lake from its river
+   at the outflow. The alternative for those 218 is to level them instead — the
+   reach is already a stair of pools, and the lake's outflow cell could take the
+   lake's level as `FlattenReaches` does between reaches — which removes the
+   step rather than naming it. Which of the two is a design call: a cataract is
+   a place (portage, a mill, a weir, a lock later), a levelled outflow is one
+   more body a barge can use end to end. Examples to look at, lab `seed=N
+   at=X,Z`: 164926 at 34,81 (128², Bram Water: a lake 2 over its reach, 274
+   cells that would part 212 / 53 / 9); 109567 at 45,8 (64², Rath Mere, 1 slab,
+   108 → 73 / 19 / 15 / 1); 171077 at 34,16 (96², two reaches 2 apart); 5000 at
+   21,56 (64², streams stepping down a slope).
 
 ---
 

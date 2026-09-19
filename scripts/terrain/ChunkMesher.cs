@@ -15,7 +15,10 @@ namespace ProjectNikitin.Meshing;
 /// four slabs is one quad. Water is its own surface: the top at <c>WaterLevel + 1</c>
 /// and sides against anything that is neither solid nor the same water — the face of
 /// a river spilling over the rim, the step of a cataract. Goo likewise, on a third
-/// surface. Nothing buried is ever emitted.
+/// surface. Nothing buried is ever emitted. Falling water is a fourth surface, since
+/// it is not the water's own volume but a sheet down the rock under a lip: one per
+/// recorded <see cref="Fall"/>, and one wherever water stands beside the same water
+/// lying under its bed without a fall recorded (a two-slab cataract).
 /// </summary>
 public static class ChunkMesher
 {
@@ -26,13 +29,17 @@ public static class ChunkMesher
 
     private static readonly (int Dx, int Dz)[] Sides = { (1, 0), (-1, 0), (0, 1), (0, -1) };
 
-    /// <summary>Meshes chunk (<paramref name="cx"/>, <paramref name="cz"/>) into the three buffers, clearing them first.</summary>
+    /// <summary>How far a sheet of falling water stands off the rock it falls down, in cells: on the face's own plane it fights the face for depth.</summary>
+    private const float SheetStandOff = 0.03f;
+
+    /// <summary>Meshes chunk (<paramref name="cx"/>, <paramref name="cz"/>) into the four buffers, clearing them first.</summary>
     public static void Build(IslandData d, int cx, int cz, IslandTint tint,
-                             MeshBuffer ground, MeshBuffer water, MeshBuffer goo)
+                             MeshBuffer ground, MeshBuffer water, MeshBuffer goo, MeshBuffer falls)
     {
         ground.Clear();
         water.Clear();
         goo.Clear();
+        falls.Clear();
         var cover = new List<Span>(4);
         int n = d.Size;
         int x0 = cx * ChunkSize, z0 = cz * ChunkSize;
@@ -78,8 +85,46 @@ public static class ChunkMesher
             {
                 FluidCover(d, x + dx, z + dz, fluid, cover);
                 Exposed(into, x, z, dx, dz, bed + 1, level, cover, colour, wallTag);
+                if (!isGoo) Cataract(d, falls, x, z, dx, dz, bed, level, colour);   // goo does not pour
             }
         }
+
+        // The recorded falls whose lip stands in this chunk: from under the lip's own
+        // water, which the wall above already shows, down to what the fall lands on —
+        // the pool's surface, the ground, or past the keel off the rim.
+        foreach (Fall f in d.Falls)
+        {
+            int x = f.Cell.X, z = f.Cell.Y;
+            if (x < x0 || x >= x1 || z < z0 || z >= z1) continue;
+            Span[] spans = d.Spans[x, z];
+            if (spans == null || spans.Length == 0) continue;
+            short bed = spans[0].Top;
+            if (f.Bottom + 1 > bed) continue;
+            Vertical(falls, x, z, f.Flow.X, f.Flow.Y, f.Bottom + 1, bed, tint.Liquid(d, x, z),
+                     new Vector2((byte)FluidKind.Water, (int)FaceKind.Fall), SheetStandOff);
+        }
+    }
+
+    /// <summary>
+    /// The step between two waters too small to be a <see cref="Fall"/>: where the water
+    /// beside this column is the same fluid and lies under this column's bed, the rock
+    /// between them is wet, and gets a sheet from that water's surface up to the bed.
+    /// A step of one slab never shows rock (the lower water reaches the bed), and a
+    /// step of <see cref="Rivers.FallDepth"/> or more is a fall, drawn from the list.
+    /// </summary>
+    private static void Cataract(IslandData d, MeshBuffer falls, int x, int z, int dx, int dz,
+                                 short bed, short level, Color colour)
+    {
+        int nx = x + dx, nz = z + dz;
+        if (nx < 0 || nz < 0 || nx >= d.Size || nz >= d.Size) return;
+        Span[] spans = d.Spans[nx, nz];
+        if (spans == null || spans.Length == 0) return;
+        short below = d.WaterLevel[nx, nz];
+        if (below == IslandData.NoLand || below <= spans[0].Top) return;
+        if (d.Fluid[nx, nz] != (byte)FluidKind.Water) return;
+        if (below >= bed || level - below >= Rivers.FallDepth) return;
+        Vertical(falls, x, z, dx, dz, below + 1, bed, colour,
+                 new Vector2((byte)FluidKind.Water, (int)FaceKind.Fall), SheetStandOff);
     }
 
     /// <summary>The neighbour's solid spans, or nothing off the grid or in the aether. Bottom-up, as stored.</summary>
@@ -140,14 +185,15 @@ public static class ChunkMesher
             normal, tag, colour);
     }
 
-    /// <summary>A vertical face on the (dx, dz) side of cell (x, z), slabs <paramref name="lo"/>..<paramref name="hi"/> inclusive.</summary>
-    private static void Vertical(MeshBuffer into, int x, int z, int dx, int dz, int lo, int hi, Color colour, Vector2 tag)
+    /// <summary>A vertical face on the (dx, dz) side of cell (x, z), slabs <paramref name="lo"/>..<paramref name="hi"/> inclusive, <paramref name="standOff"/> cells proud of the cell's own side.</summary>
+    private static void Vertical(MeshBuffer into, int x, int z, int dx, int dz, int lo, int hi, Color colour, Vector2 tag,
+                                 float standOff = 0f)
     {
         float ya = lo * SlabHeight, yb = (hi + 1) * SlabHeight;
         var normal = new Vector3(dx, 0f, dz);
         if (dx != 0)
         {
-            float fx = (x + 0.5f * dx) * CellSize;
+            float fx = (x + (0.5f + standOff) * dx) * CellSize;
             float za = (z - 0.5f) * CellSize, zb = (z + 0.5f) * CellSize;
             into.AddQuad(
                 new Vector3(fx, ya, za), new Vector3(fx, ya, zb), new Vector3(fx, yb, zb), new Vector3(fx, yb, za),
@@ -156,7 +202,7 @@ public static class ChunkMesher
         }
         else
         {
-            float fz = (z + 0.5f * dz) * CellSize;
+            float fz = (z + (0.5f + standOff) * dz) * CellSize;
             float xa = (x - 0.5f) * CellSize, xb = (x + 0.5f) * CellSize;
             into.AddQuad(
                 new Vector3(xa, ya, fz), new Vector3(xb, ya, fz), new Vector3(xb, yb, fz), new Vector3(xa, yb, fz),

@@ -205,7 +205,9 @@ public partial class GenerationAudit
         GD.Print($"  goo within a king's move of water (want 0): {t.GooTouchesWater}\n");
 
         Report("altitude, keel to peak", t.AltSpans, "slabs");
-        GD.Print($"  islands taller than their own size in slabs (want 0): {t.AltOverCap}\n");
+        GD.Print($"  islands taller than their own size in slabs (want 0): {t.AltOverCap}");
+        GD.Print($"  columns hanging clear of a neighbour, its top under that keel (want 0): {t.HangingColumns}"
+            + $"   water open to the aether underneath (want 0): {t.WaterOpenBelow}\n");
     }
 
     private void PrintGorges(Tally t)
@@ -393,6 +395,8 @@ public partial class GenerationAudit
             ["gorgeSealed"] = t.GorgeSealed,
             ["gateOutOfBox"] = t.GateOutOfBox,
             ["altOverCap"] = t.AltOverCap,
+            ["hangingColumns"] = t.HangingColumns,
+            ["waterOpenBelow"] = t.WaterOpenBelow,
             ["waterBodies"] = t.WaterBodies,
             ["overhangColumns"] = t.OverhangCells,
             ["mainland%"] = Math.Round(100.0 * t.WalkMainland / t.WalkLand, 1),

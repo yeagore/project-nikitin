@@ -37,7 +37,7 @@ What to report, per scene:
 - Checksum, `scenes/dev/generation_checksum.tscn`: the "N of 458 islands
   moved" line. If N is not zero, the seeds and fields that moved, as printed.
 - Audit, `scenes/dev/generation_audit.tscn` with `--quit-after 2`: the diff
-  of the thirty headline numbers against `docs/audit-baseline.json`, old and
+  of the headline numbers (forty-six) against `docs/audit-baseline.json`, old and
   new for each that moved; any guarantee that failed, verbatim.
 - Mesh bench, `scenes/dev/mesh_bench.tscn`: triangle counts, times, the
   winding probe, the voxel oracle's m², the collider check.

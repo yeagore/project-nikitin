@@ -148,6 +148,9 @@ public partial class CameraRig : Node3D
         _camera.LookAt(GlobalPosition, Vector3.Up);
     }
 
+    /// <summary>Tilts the camera to <paramref name="degrees"/> above the horizon, or below it to look up at a keel; clamped to the rig's range.</summary>
+    public void Tilt(float degrees) => SetPitch(Mathf.DegToRad(degrees));
+
     /// <summary>
     /// Recentre on <paramref name="center"/> and zoom so a sphere of <paramref name="radius"/>
     /// fits the view. Overrides the current pan/zoom — call on load or an explicit frame key.

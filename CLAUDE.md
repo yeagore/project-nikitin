@@ -97,7 +97,7 @@ out in one message so they run at once. `docs/delegation.md` is the guide.
   (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The
   ratio is decided; the Notion wiki still says a tentative "8?".
 - **Traversal:** a one-slab step (0.25 u) is free. A face of two or three slabs
-  is an **scarp**, which a ladder climbs; four or more is a **cliff**, which a
+  is a **scarp**, which a ladder climbs; four or more is a **cliff**, which a
   stair or an elevator climbs, up to 8 (`Traversal.FreeStep`, `Traversal.CliffFace`).
   Both are walls to walking. Terrain generated under a one-slab slope limit is
   walkable by construction; every scarp and cliff is one some rule put there.
@@ -151,7 +151,7 @@ under `scripts/generation/`, in the order they run:
 | Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; each bed flat or a bathymetry (a bowl, a shelf with a drop-off, a plunge, to 20 slabs at 128²; the deepest cell a deep, the bed tiered by the water over it: shallow to two slabs, mid to eight, deep of ooze from nine); on about one Domain in ten a great lake, two to five patches on one rung flooded as one site; goo puddles that never touch water (off by default since 2026-09-15). |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
 | Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; a plunge pool dug under most inner falls and a deep middle on half the long reaches (the bed, never the water); occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
-| Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
+| Keel | `Keel` | The underside, a level hung under the surface; then a root pass brings every column to at least the edge thickness under the lowest ground beside it and tapers the push outward three slabs a cell, so a deep bed never hangs clear of the island (2026-09-19; the audit holds `hangingColumns` and `waterOpenBelow` at 0). The columns are packed into `IslandData`. |
 | Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by ladders, stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
@@ -175,7 +175,7 @@ seeds sample the whole knob space; a sweep pins the knob it sweeps.
 `IslandData` for 458 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
-measured guarantees and diffs thirty headline numbers against
+measured guarantees and diffs its headline numbers (forty-six) against
 `docs/audit-baseline.json`. Determinism hangs on details a refactor can break
 silently: hash salts, `Noise` seed offsets, float expression order, scan and
 neighbour order, `List.Sort` (unstable) versus `OrderBy`, and dictionary
@@ -200,19 +200,22 @@ would shadow the `Terrain` constants class for every file under
 
 `IslandRenderer` is the terrain renderer: a `Node3D` that draws an `IslandData`
 as `TerrainChunk`s of 16 × 16 columns, each a `StaticBody3D` holding a ground
-`ArrayMesh`, a liquid `ArrayMesh` (water and goo as two surfaces) and a trimesh
+`ArrayMesh`, a liquid `ArrayMesh` (water, goo and falling water as three surfaces) and a trimesh
 collider over the ground. `ChunkMesher` is the pure part: per column per span it
 emits the top at `Top + 1`, the underside at `Bottom` and a side wherever the
 neighbouring column's spans do not fill that slab range, merged over the range
 so a cliff is one quad; water gets its top at `WaterLevel + 1` and a wall
 wherever it meets anything that is neither solid nor the same water, which is
-what a fall and a cataract are. Nothing buried is emitted, and the bench's voxel
-oracle checks that to 0.000 m². Vertices are flat-shaded quads with a normal, a
+what the lip of a fall and a cataract are; the fall itself is a fourth surface,
+a sheet down the rock from the lip's bed to what it lands on, one per `Fall` and
+one per two-slab cataract (`FaceKind.Fall`, `TerrainMaterials.Falls`). Nothing
+buried is emitted, and the bench's voxel oracle checks that to 0.000 m², with a
+second oracle for the falling water. Vertices are flat-shaded quads with a normal, a
 UV in metres, UV2 = (material or fluid byte, `FaceKind`) for a shader to read,
 and a colour from an `IslandTint`: two callbacks the lab swaps per view and the
 game leaves at `IslandTint.Default` (the column's `SurfaceMaterial` through
 `SurfacePalette`, stone for a lip and every underside). `TerrainMaterials` holds
-the three materials; the lab's boxes use the same factories. In the renderer's
+the four materials; the lab's boxes use the same factories. In the renderer's
 local space cell (x, z) is centred on `(x · CellSize, ·, z · CellSize)`, the grid
 → world rule above. `Show(data)` builds everything; `RebuildAround(x, z)`
 remeshes the chunk holding a column and the neighbours its border faces depend

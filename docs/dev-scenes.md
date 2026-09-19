@@ -33,8 +33,15 @@ roll — the same way for every step of the sweep, since the roll is the seed's.
 
 Open the project in the .NET editor, build C#, open the scene and press **F6**
 (it is not the main scene, so F5 will not run it). The control panel down the
-left is the interface; **Tab** hides it. Every control is also a key, and both
-write the same `Params`:
+left is the interface. The text is kept to the edges so the island has the
+middle (2026-09-19; the legend, the island's readout and the cell line used to
+stack in front of it): the island's readout along the top, folded to its title
+and two lines until **F3** or its **more** button opens it; the view's legend
+down the right edge, a colour to a line with the small print under the colours
+(**F4** hides it); and under the legend the cell under the cursor. Each plate
+scrolls rather than grows, and nothing sits along the bottom, which the editor's
+chrome hides when the game is embedded. **Tab** (or **F1**) hides every plate at
+once. Every control is also a key, and both write the same `Params`:
 
 | Key | Does |
 |---|---|
@@ -47,6 +54,8 @@ write the same `Params`:
 | **I** | liquid on or off: water, goo and falls; off shows the beds |
 | **Z** | the ground as the game's mesh, or as the old box per span |
 | **F2** | screenshot |
+| **Tab** / **F1** | every plate on or off |
+| **F3** / **F4** | open or fold the island's readout / hide or show the legend |
 
 Camera: **WASD** pan, **Q/E** or middle-drag yaw, middle-drag or **Up/Down**
 tilt, wheel zoom, **Shift** faster. (Fords are on **O** because **D** is the
@@ -147,18 +156,39 @@ The ground is drawn by the game's own renderer (`IslandRenderer`, the chunked
 mesh with colliders; `docs/island-generation.md` §4). The mesh is on when the
 lab opens; **Z**, or the **Mesh, not boxes** box under GROUND, swaps in the old
 one-box-per-span drawing, which is also the only mode that draws the sea stacks.
-With the mesh on, the water is the mesh's own: a flat top per flooded column and
-a wall wherever the water meets air, so a fall is the face of the water dropping,
-and the lab's fall sheets are not drawn. Every view tints the mesh as it tinted
+With the mesh on, the water is the mesh's own: a flat top per flooded column, a
+wall wherever the water meets air, and a sheet of falling water down the rock
+under every fall's lip and every two-slab cataract (until 2026-09-19 the mesh
+drew only the lip's wall and the lab hid its own fall sheets, so a mesh had no
+waterfalls). Every view tints the mesh as it tinted
 the boxes, every face of a span in the span's colour. The readout's last line
 says which mode is on, how many triangles and chunks the mesh came to and how
-long it took to build. The line above the readout is the frame rate and, with
-the mesh on, the column under the cursor, read off the chunk's collider with a
-ray from the camera: cell, slab, landform and patch, surface level and ground,
-its water, its walk area or district, and its habitat bytes. It is the first
-thing to use the colliders, and the way to ask "what is that cell".
+long it took to build.
 
-The readout at the top right says what the view means, then what the island
+**The cell under the cursor** (the plate under the legend, with the mesh on) is
+read off the chunk's collider with a ray from the camera; nothing is cast while
+the cursor is over a plate. It says what the column is in any view — cell and
+slab, landform and patch, ground level and material, its water by kind with its
+level and depth — and then what the *current view* says about it, so the cell
+answers the question the map is asking:
+
+| View | The cell says |
+|---|---|
+| height | top and keel, slabs of ground, any lip and the air under it, the step to each neighbour (free, scarp, cliff, water, aether) |
+| landform, region | the landform, the patch and its size, a pass, a canyon, a fjord shore; on the patch's border or inside it |
+| walk | the mainland, a named district or broken ground, with its size and levels, whether it is somewhere to build, the steps |
+| reach | the heartland or out of reach, with its size |
+| navigable | the body by name with its cells, a lip where the body ends, and any water beside it standing at another level (and whether that is the same body) |
+| surface | the material and what decided it: the warmth and moisture bands, the walk to water, a beach, a delta's fan |
+| anchors | **every anchor list the cell is on** (the lists overlap and the map shows one colour), then which one the colour is |
+| moisture, warmth | the byte and its band, and the inputs that move it: exposure, ruggedness, rim distance, the background knob, the wind and the sun |
+| rugged, exposure, rim, water, magick | the byte and what it measures; the magick pattern and density |
+
+The band names are read off the surface stage's own chart lines, so they cannot
+drift from the rule. It is the first thing to use the colliders, and the way to
+ask "what is that cell".
+
+The readout along the top says what the island
 turned out to be: name, arrangement, the landforms it got, the ladder, walk and
 reach shares, districts (and how many the heartland holds), bodies of water,
 rivers, springs, any lake that swallows a river, great lakes, deeps, deltas, the
@@ -179,9 +209,13 @@ Windowed, not headless (a screenshot needs a viewport): the lab builds the
 island, frames it, saves the screenshot **F2** would have saved
 (`user://island-<seed>-<view>.png`; the full path is printed) a few frames in,
 and quits by itself. `seed=N` picks the seed, `view=NAME` the view, `boxes` the
-box drawing, `nopanel` hides the panel, `noliquid` the beds with the water off
+box drawing, `nopanel` hides every plate, `noliquid` the beds with the water off
 (**I** without a hand on the keys), `zoom=N` frames a 1/N of the island and
-`at=X,Z` centres that on a cell. It is the one way to look at the mesh without
+`at=X,Z` centres that on a cell; `tilt=DEG` sets the camera's height above the
+horizon (`under` is −40, up at the keel) and `yaw=DEG` turns it about the island
+(180 looks from the north); `pick=X,Z` pins the cell readout to a cell, since a
+shell run has no cursor over its window. The run also prints the tallest inner
+falls, the fjord mouths and the estuary mouths as cells, to aim a second shot at. It is the one way to look at the mesh without
 a hand on the keys; the audit's pictures are drawn from the data and never see
 the renderer.
 
@@ -197,7 +231,7 @@ great lakes, goo, rivers and the bodies of water, surfaces and habitat, roads,
 Gates, crossings, continuity. Run it after any
 change to the generator. A `want 0` that is not 0 names its seed as it happens
 (a crossing whose banks disagree prints the seed, the banks, the deck and what
-is under each bank), so it can be built in the lab. It ends by diffing thirty headline numbers against
+is under each bank), so it can be built in the lab. It ends by diffing its headline numbers (forty-six) against
 `docs/audit-baseline.json`; that is a diff, not a test — set `AcceptBaseline` to
 accept the current numbers as the new reference.
 
@@ -399,7 +433,10 @@ oracle** counts, slab by slab, every face of solid touching air and every face o
 water touching neither solid nor the same water, as area, and compares it with
 the area of the triangles the mesher emitted: `oracle off by 0.000 m²` says the
 mesh is exactly the exposed faces, nothing buried drawn and nothing exposed
-missed. A third check runs last, once physics has stepped: the last island
+missed. The falling water is sheets rather than volume, so it has an oracle of
+its own on the same line: under every recorded fall the rock from what it lands
+on up to the lip's bed, and the same between two waters whose step is too small
+to be a fall but bares the higher bed. A third check runs last, once physics has stepped: the last island
 stays in the tree and a ray down onto every third land column must hit the top
 of its highest span, a ray up from below its keel, so the colliders are tested
 as the game will use them (headless physics is real physics). About twenty

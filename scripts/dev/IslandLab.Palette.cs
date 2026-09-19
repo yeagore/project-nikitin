@@ -45,14 +45,24 @@ public partial class IslandLab
 
 	private static string Ramp((Color Lo, Color Hi) ramp) => Ramp(ramp.Lo, ramp.Hi);
 
+	/// <summary>
+	/// A view's legend in the parts the plate lays out: what the view asks, its colours
+	/// one to a line (so the plate can be a narrow column at the edge of the screen and
+	/// scroll), and the small print under them.
+	/// </summary>
+	private readonly record struct Legend(string Title, string Intro, List<string> Items, string Note = "");
+
 	/// <summary>What each view is answering, with its actual colours, next to the picture.</summary>
-	private static string ViewLegend(View view)
+	private static Legend ViewLegend(View view)
 	{
 		switch (view)
 		{
 			case View.Height:
-				return $"[b]height[/b]   {Ramp(DevPalette.HeightLow, DevPalette.HeightMid)}{Ramp(DevPalette.HeightMid, DevPalette.HeightHigh)}"
-					+ "  low ground dark, high ground pale";
+				return new Legend("height", "", new List<string>
+				{
+					$"{Ramp(DevPalette.HeightLow, DevPalette.HeightMid)}{Ramp(DevPalette.HeightMid, DevPalette.HeightHigh)}",
+					"low ground dark, high ground pale",
+				});
 
 			case View.Landform:
 			{
@@ -60,45 +70,58 @@ public partial class IslandLab
 				foreach (LandformType t in Enum.GetValues<LandformType>())
 					bits.Add(Keyed(LandformColor(t), t.ToString().ToLowerInvariant()));
 				bits.Add(Keyed(LandformColor(LandformType.Plain).Lerp(PassTint, 0.55f), "pass (tinted)"));
-				return "[b]landform[/b]   " + string.Join("   ", bits);
+				return new Legend("landform", "", bits);
 			}
 
 			case View.Region:
-				return "[b]region[/b]   one hue per patch, borders darkened   "
-					+ Keyed(RegionColor(3), "a patch") + "   " + Keyed(RegionColor(3).Darkened(0.55f), "its border");
+				return new Legend("region", "one hue per patch, borders darkened", new List<string>
+				{
+					Keyed(RegionColor(3), "a patch"),
+					Keyed(RegionColor(3).Darkened(0.55f), "its border"),
+				});
 
 			case View.Walk:
-				return "[b]walk[/b]   what you can cross on foot, corners cut unless both sides are scarps or cliffs; "
-					+ $"a district ({Traversal.MinDistrictArea}+ cells) is somewhere to build   "
-					+ Keyed(MainlandTint, "mainland") + "   a hue per other district   "
-					+ Keyed(Unremarkable, "broken ground") + "   " + Keyed(WaterTint, "water");
+				return new Legend("walk", "what you can cross on foot",
+					new List<string>
+					{
+						Keyed(MainlandTint, "mainland"),
+						$"{Swatch(DevPalette.District(1))}{Swatch(DevPalette.District(2))}{Swatch(DevPalette.District(3))} a hue per other district",
+						Keyed(Unremarkable, "broken ground"),
+						Keyed(WaterTint, "water"),
+					},
+					"Corners are cut unless both sides are scarps or cliffs; a district "
+					+ $"({Traversal.MinDistrictArea}+ cells) is somewhere to build.");
 
 			case View.Reach:
-				return "[b]reach[/b]   what you can cross once built   "
-					+ Keyed(MainlandTint, "heartland") + "   "
-					+ Ramp(ReachColor(0f), ReachColor(1f)) + " out of reach whatever you build, "
-					+ "warmer the smaller   " + Keyed(WaterTint, "water");
+				return new Legend("reach", "what you can cross once built", new List<string>
+				{
+					Keyed(MainlandTint, "heartland"),
+					Ramp(ReachColor(0f), ReachColor(1f)) + " out of reach whatever you build, warmer the smaller",
+					Keyed(WaterTint, "water"),
+				});
 
 			case View.Navigable:
-				return "[b]navigable[/b]   the bodies of sailable water — standing water and "
-					+ "navigable reaches, never goo and never a stream, which is forded and not "
-					+ "sailed. A hull goes anywhere within one hue and nowhere between two: "
-					+ "[b]a fall cuts a body[/b], since nothing sails up one   "
-					+ Keyed(DevPalette.Body(0), "a body") + "   " + Keyed(DevPalette.Body(1), "another")
-					+ "   " + Keyed(DevPalette.Body(2), "another") + "   "
-					+ Keyed(DevPalette.Anchor(DevPalette.FallLip), "the lip a body ends at") + "   "
-					+ Keyed(DevPalette.Unsailable, "water no hull uses") + "   "
-					+ Keyed(DevPalette.Goo, "goo") + "   " + Keyed(Unremarkable, "land")
-					+ "   The bed under a body carries its colour dimmed, so the regions still "
-					+ "read with the liquid off (I); the readout names every body and counts its cells.";
+				return new Legend("navigable", "the bodies of sailable water; [b]a fall cuts a body[/b]",
+					new List<string>
+					{
+						$"{Swatch(DevPalette.Body(0))}{Swatch(DevPalette.Body(1))}{Swatch(DevPalette.Body(2))} a hue per body",
+						Keyed(DevPalette.Anchor(DevPalette.FallLip), "the lip a body ends at"),
+						Keyed(DevPalette.Unsailable, "water no hull uses"),
+						Keyed(DevPalette.Goo, "goo"),
+						Keyed(Unremarkable, "land"),
+					},
+					"Standing water and navigable reaches, never goo and never a stream, which is forded "
+					+ "and not sailed. A hull goes anywhere within one hue and nowhere between two, since "
+					+ "nothing sails up a fall. The bed under a body carries its colour dimmed, so the "
+					+ "regions still read with the liquid off (I); the island readout (F3) names every "
+					+ "body and counts its cells, and the cell readout names the one pointed at.");
 
 			case View.Surface:
 			{
 				var bits = new List<string>();
 				foreach (SurfaceMaterial m in Enum.GetValues<SurfaceMaterial>())
 					bits.Add(Keyed(MaterialColor(m), m.ToString().ToLowerInvariant()));
-				return "[b]surface[/b]   what the ground is made of   " + string.Join("   ", bits)
-					+ "   (an overhang's lip is drawn as stone)";
+				return new Legend("surface", "what the ground is made of", bits, "An overhang's lip is drawn as stone.");
 			}
 
 			case View.Anchors:
@@ -107,57 +130,64 @@ public partial class IslandLab
 				foreach (int kind in DevPalette.LegendOrder)
 					bits.Add(Keyed(DevPalette.Anchor(kind), DevPalette.AnchorName(kind)));
 				bits.Add(Keyed(DevPalette.Anchor(0), "unremarkable ground"));
-				return "[b]anchors[/b]   what the content layer attaches to. A cliff is a face of "
-					+ $"{Traversal.CliffFace}+ slabs, a scarp one of 2–{Traversal.CliffFace - 1}. The lists overlap; "
-					+ "here the built and rarer kinds win, a cliff anchor over a scarp one, and a cell "
-					+ "that is both brink and foot of one kind of face is its ledge   " + string.Join("   ", bits)
-					+ "   Only the lip of an overhang is magenta: the ground under it is its own kind. "
-					+ "Beds show with liquid off (I). A sea stack is a dark column in the aether, in every view.";
+				return new Legend("anchors", "what the content layer attaches to",
+					bits,
+					$"A cliff is a face of {Traversal.CliffFace}+ slabs, a scarp one of 2–{Traversal.CliffFace - 1}. "
+					+ "The lists overlap; here the built and rarer kinds win, a cliff anchor over a scarp "
+					+ "one, and a cell that is both brink and foot of one kind of face is its ledge. The "
+					+ "cell readout names every list a cell is on. "
+					+ "Only the lip of an overhang is magenta: the ground under it is its own kind. "
+					+ "Beds show with liquid off (I). A sea stack is a dark column in the aether, in every view.");
 			}
 
 			case View.Moisture:
-				return $"[b]moisture[/b]   {Ramp(DevPalette.MoistureRamp)}  parched … waterside: the "
-					+ "Domain's background moisture in patches; the lee in the wind's rain shadow, and "
+				return new Legend("moisture", "", new List<string> { $"{Ramp(DevPalette.MoistureRamp)}  parched … waterside" },
+					"The Domain's background moisture in patches; the lee in the wind's rain shadow, and "
 					+ "sheltered broken ground (a gorge floor) damper, both by the wind knob; rock and its "
 					+ "fringe with patches of drought; plus what fresh water adds along a walk from it "
 					+ "(two cells more per slab climbed, so a river waters the plain it crosses and "
-					+ "not the mountain it passes)";
+					+ "not the mountain it passes).");
 
 			case View.Warmth:
 			{
 				var stops = new List<string>();
 				foreach (byte w in new byte[] { 0, 64, 110, 150, 190, 205, 220, 235, 255 })
 					stops.Add(Swatch(DevPalette.WarmthTint(w)));
-				return $"[b]warmth[/b]   {string.Join("", stops)}  frozen … cold (blue) … temperate "
-					+ "(yellow) … hot (orange): one climate over the whole island, then the lapse over a "
-					+ "mountain's upper part; a slope facing the sun (compass overlay, X) a touch warmer and "
-					+ "one facing away colder; basins and sinkhole pits frost hollows; the lee milder by the "
-					+ "wind knob, the rim colder, wet ground tempered; on a cold Domain a bloom round each "
-					+ "hot spring or pool (orange water)";
+				return new Legend("warmth", "", new List<string>
+					{
+						string.Join("", stops),
+						"frozen … cold (blue) … temperate (yellow) … hot (orange)",
+					},
+					"One climate over the whole island, then the lapse over a mountain's upper part; a "
+					+ "slope facing the sun (compass overlay, X) a touch warmer and one facing away colder; "
+					+ "basins and sinkhole pits frost hollows; the lee milder by the wind knob, the rim "
+					+ "colder, wet ground tempered; on a cold Domain a bloom round each hot spring or "
+					+ "pool (orange water).");
 			}
 
 			case View.Rugged:
-				return $"[b]rugged[/b]   {Ramp(DevPalette.RuggedRamp)}  flat … broken: local relief within "
-					+ "two cells. Water is read as its bank, a slab over its surface, so a stream through "
-					+ "a plain is flat country and a gorge is still its walls";
+				return new Legend("rugged", "", new List<string> { $"{Ramp(DevPalette.RuggedRamp)}  flat … broken" },
+					"Local relief within two cells. Water is read as its bank, a slab over its surface, "
+					+ "so a stream through a plain is flat country and a gorge is still its walls.");
 
 			case View.Exposure:
-				return $"[b]exposure[/b]   {Ramp(DevPalette.ExposureRamp)}  lee … windswept: openness to "
-					+ "the Domain's one wind (compass overlay, X, shows it), dunes or not";
+				return new Legend("exposure", "", new List<string> { $"{Ramp(DevPalette.ExposureRamp)}  lee … windswept" },
+					"Openness to the Domain's one wind (compass overlay, X, shows it), dunes or not.");
 
 			case View.Rim:
-				return $"[b]rim[/b]   {Ramp(DevPalette.RimRamp)}  rim … interior: cells of land between "
-					+ "here and the aether. Essencecoral country is the violet end";
+				return new Legend("rim", "", new List<string> { $"{Ramp(DevPalette.RimRamp)}  rim … interior" },
+					"Cells of land between here and the aether. Essencecoral country is the violet end.");
 
 			case View.Water:
-				return $"[b]water distance[/b]   {Ramp(DevPalette.WaterRamp)}  bank … out of reach: the walk "
-					+ "cost to fresh water the moisture strip reads (a cell per cell along or down, two more "
-					+ "per slab up), kept as a byte for the settlement and biome layers; shown to 60";
+				return new Legend("water distance", "", new List<string> { $"{Ramp(DevPalette.WaterRamp)}  bank … out of reach" },
+					"The walk cost to fresh water the moisture strip reads (a cell per cell along or "
+					+ "down, two more per slab up), kept as a byte for the settlement and biome layers; shown to 60.");
 
 			default:
-				return $"[b]magick[/b]   {Ramp(DevPalette.MagickRamp)}  inert … saturated: the magickal "
-					+ "density layer, grown by a Turing reaction between the magick and the inhibitor "
-					+ "it feeds on — spots, worms, mazes or lace by the six magicks knobs. Read by nothing";
+				return new Legend("magick", "", new List<string> { $"{Ramp(DevPalette.MagickRamp)}  inert … saturated" },
+					"The magickal density layer, grown by a Turing reaction between the magick and the "
+					+ "inhibitor it feeds on: spots, worms, mazes or lace by the pattern, thickened by "
+					+ "the density. Read by nothing.");
 		}
 	}
 

@@ -3,10 +3,10 @@ using Godot;
 namespace ProjectNikitin.Meshing;
 
 /// <summary>
-/// The three materials the mesh is drawn with, and the factories the lab shares so a
+/// The four materials the mesh is drawn with, and the factories the lab shares so a
 /// box there and a face here read the same. Ground is matte and unspecular: a face's
-/// colour is its vertex colour times the light. Water and goo are alpha-blended and
-/// double-sided, so a tilt under the island still shows them.
+/// colour is its vertex colour times the light. Water, goo and falling water are
+/// alpha-blended and double-sided, so a tilt under the island still shows them.
 /// </summary>
 public sealed class TerrainMaterials
 {
@@ -15,6 +15,8 @@ public sealed class TerrainMaterials
     public Material Water { get; init; } = WaterMaterial(0.66f);
 
     public Material Goo { get; init; } = GooMaterial();
+
+    public Material Falls { get; init; } = FallMaterial(0.75f, WaterBlue);
 
     public static StandardMaterial3D GroundMaterial() => new()
     {
@@ -45,6 +47,18 @@ public sealed class TerrainMaterials
         Roughness = 0.12f,
         Metallic = 0.1f,
     };
+
+    /// <summary>
+    /// Falling water: the water's material a little denser, and drawn after it. A sheet
+    /// and the pool it lands in belong to one mesh at one origin, so without the
+    /// priority the two sort against each other by camera distance and pop.
+    /// </summary>
+    public static StandardMaterial3D FallMaterial(float alpha, Color albedo)
+    {
+        StandardMaterial3D material = WaterMaterial(alpha, albedo);
+        material.RenderPriority = 1;
+        return material;
+    }
 
     /// <summary>Violet, and deaf to vertex colour: the water blue would multiply any warm tint down to nothing, and goo has one look.</summary>
     public static StandardMaterial3D GooMaterial() => new()

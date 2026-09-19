@@ -29,6 +29,7 @@ public partial class StepProbe : Node
             if (arg.StartsWith("mode=")) _mode = arg[5..];
             else if (arg.StartsWith("seeds=") && int.TryParse(arg.AsSpan(6), out int n)) Seeds = n;
             else if (arg.StartsWith("size=") && int.TryParse(arg.AsSpan(5), out int s)) Params.Size = s;
+            else if (arg.StartsWith("seed=") && int.TryParse(arg.AsSpan(5), out int pin)) _pinned = pin;
         }
 
         ulong t0 = Time.GetTicksMsec();
@@ -50,6 +51,8 @@ public partial class StepProbe : Node
             case "borders": Borders(); break;
             case "fingerprint": Fingerprint(); break;
             case "anchorcheck": AnchorCheck(); break;
+            case "detached": Detached(); break;
+            case "watersteps": WaterSteps(); break;
             default: Steps(); break;
         }
         GD.Print($"[{_mode}] {Time.GetTicksMsec() - t0} ms");
