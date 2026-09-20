@@ -160,7 +160,7 @@ internal static partial class Rivers
 
     /// <summary>
     /// Stands every eyot one slab clear of the river water round it. Its ground was
-    /// floodplain, level with what became the bed, so left alone it would be a shoal.
+    /// the low flat of the valley, level with what became the bed, so left alone it would be a shoal.
     /// </summary>
     private static void Beach(int n, short[,] water, bool[,] river, short[,] surface,
                               bool[,] eyot)

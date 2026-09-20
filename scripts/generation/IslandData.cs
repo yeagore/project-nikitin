@@ -91,7 +91,7 @@ public sealed class IslandData
     /// </summary>
     public List<Vector2I> GreatLakes { get; } = new();
 
-    /// <summary>Cells of a delta fan: the ground between a navigable mouth's distributaries, floodplain whatever the climate.</summary>
+    /// <summary>Cells of a delta fan: the ground between a navigable mouth's distributaries, the wet ground of its row whatever the moisture.</summary>
     public bool[,] Delta { get; }
 
     /// <summary>The apex of each delta: the axis cell the mouths part at, a few cells upstream of the rim.</summary>

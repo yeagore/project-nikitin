@@ -155,7 +155,7 @@ under `scripts/generation/`, in the order they run:
 | Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by ladders, stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column, named and coloured by the soil glossary (a four-by-three climate grid of plain soil names, frostearth to redearth, with murkearth on the cold-to-cool half and muckearth on the warm-to-hot, floodearth along hot water, tors in soft country, a delta's fan the wet ground of its row), names. |
 | Magicks | `Magicks` | The magickal density byte, grown rather than sampled: a Turing reaction (Gray–Scott) between the magick, which makes more of itself, and the inhibitor it feeds on, which is replenished everywhere and spreads faster — so the field breaks into spots, worms, mazes or lace instead of settling flat. Its coefficients are not knobs: the settings that pattern at all are islands in a sea of dead and flooded ones, so six of them are named as `MagickPattern` (motes, wells, veins, labyrinth, lace, hollows) and the stage shows two parameters — which pattern, and `MagickDensity`, how much magick the Domain holds. The reaction runs on its own lattice, three ground cells to the side, and is enlarged back onto the columns, so a feature is three cells across for every cell it would have been — magick is a place, not a texture. Read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
@@ -215,7 +215,9 @@ UV in metres, UV2 = (material or fluid byte, `FaceKind`) for a shader to read,
 and a colour from an `IslandTint`: two callbacks the lab swaps per view and the
 game leaves at `IslandTint.Default` (the column's `SurfaceMaterial` through
 `SurfacePalette`, stone for a lip and every underside). `TerrainMaterials` holds
-the four materials; the lab's boxes use the same factories. In the renderer's
+the four materials; the lab's boxes use the same factories. The ground reads its
+vertex colour as sRGB (`VertexColorIsSrgb`), as the palettes are written, so a
+face draws its legend swatch's hex; the water still reads its tint as linear. In the renderer's
 local space cell (x, z) is centred on `(x · CellSize, ·, z · CellSize)`, the grid
 → world rule above. `Show(data)` builds everything; `RebuildAround(x, z)`
 remeshes the chunk holding a column and the neighbours its border faces depend
@@ -278,7 +280,7 @@ scripts/
     MeshBuffer.cs              Quads into ArrayMesh arrays and collider faces; the winding rule.
     IslandTint.cs, FaceKind.cs, SurfacePalette.cs, TerrainMaterials.cs
                                Colour per face, which side a face is, the provisional
-                               material palette, the materials.
+                               material palette (the soil glossary's colours), the materials.
   generation/                  Namespace ProjectNikitin.Generation
     IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
     Footprint.cs, Fjords.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
@@ -382,7 +384,9 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 | The Gameplay Loop → The First Hour | written | Best description of moment-to-moment play. |
 | Economy, Population and Settlements | draft | Settlements, classes, Needs, money. |
 | Generation → Island Generation | short | Requirements checklist for island generation. |
-| Terrain, Polities, Magicks, Lore, Content | stubs | |
+| Generation → Part 1: Terrain and Climate | written | The generator in plain words, with the audit's sheets. |
+| Terrain → [CLAUDE] The Soil Glossary | proposal | The surface materials' plain names, Latinate names, codes and colours; the code uses the plain names and the colours. |
+| Terrain, Polities, Magicks, Lore, Content | stubs | Terrain holds biome sketches in prose. |
 | Glossary | partial | |
 | Decision Log | DB, near-empty | Log firm decisions here, with the why and the alternatives. |
 | Open Questions | DB | Unresolved design questions. |
@@ -393,6 +397,10 @@ Consult the relevant page before non-trivial design work. When a decision gets
 made in a session, offer to add it to the Decision Log and to close the matching
 Open Question. Two decisions are made but not yet logged there: the slab's 1:4
 ratio, and the three supported footprints (the Ecumene page still says 16³–64³).
+
+When writing to Notion, create a new page whose title starts with "[CLAUDE]".
+Never edit an existing page unless I explicitly ask you to edit or check that
+specific page.
 
 ---
 

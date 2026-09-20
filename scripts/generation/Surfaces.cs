@@ -37,73 +37,73 @@ internal static class Surfaces
 
     // ---- the climate grid --------------------------------------------------
     // Warmth in four bands (frigid, cold, temperate, hot) and moisture in three,
-    // with two cells for water in excess — bog on the cold-to-cool half of the
-    // warmth range, marsh on the warm-to-hot half — and sand and snow past the ends.
+    // with two cells for water in excess — murkearth on the cold-to-cool half of the
+    // warmth range, muckearth on the warm-to-hot half — and sand and snow past the ends.
 
-    /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its tundra.</summary>
+    /// <summary>Warmth below which ground is frozen: the extreme cold, and a mountain above its frostearth.</summary>
     internal const int SnowBelow = 35;
 
     // The bands are placed on the knob: warmth is 60 + 180 × the knob on open
     // lowland, so frigid is a knob under about 0.14, cold under about 0.3, hot one
     // over about 0.7, and sand the last twentieth.
 
-    /// <summary>Warmth below which the ground is frigid: tundra whatever the moisture, but for the bog.</summary>
+    /// <summary>Warmth below which the ground is frigid: frostearth whatever the moisture, but for murkearth.</summary>
     private const int FrigidBelow = 85;
 
-    /// <summary>Warmth below which the ground is the cold band: tundra, heath, moorland.</summary>
+    /// <summary>Warmth below which the ground is the cold band: frostearth, bleachearth, shadowearth.</summary>
     private const int ColdBelow = 115;
 
     /// <summary>
-    /// Warmth from which the excess cell is marsh rather than bog: the warm part of
+    /// Warmth from which the excess cell is muckearth rather than murkearth: the warm part of
     /// the temperate band and everything hotter. Just under the knob's middle (150)
     /// less what the water's tempering takes off a wet bank, so a temperate Domain's
-    /// riversides are warm-side and a cool one's (a knob of 0.4 and under) bog-side.
+    /// riversides are warm-side and a cool one's (a knob of 0.4 and under) murkearth-side.
     /// </summary>
     private const int WarmFrom = 140;
 
-    /// <summary>Warmth from which the ground is the hot band: dust, savanna, floodplain.</summary>
+    /// <summary>Warmth from which the ground is the hot band: dustearth, yellowearth, floodearth.</summary>
     private const int HotFrom = 185;
 
-    /// <summary>Warmth from which hot ground is sand: the extreme heat. A floodplain still beats it.</summary>
+    /// <summary>Warmth from which hot ground is sand: the extreme heat. Floodearth still beats it.</summary>
     private const int SandFrom = 220;
 
-    /// <summary>Moisture below which the ground is dry: dust, steppe, tundra.</summary>
+    /// <summary>Moisture below which the ground is dry: dustearth, dryearth, frostearth.</summary>
     private const int DryBelow = 90;
 
-    /// <summary>Moisture from which the ground is wet: floodplain, grass, bog.</summary>
+    /// <summary>Moisture from which the ground is wet: floodearth, brownearth, murkearth.</summary>
     private const int WetFrom = 170;
 
-    /// <summary>Cells from fresh water a hot floodplain reaches; wet hot ground further off is savanna.</summary>
-    private const int FloodplainReach = 3;
+    /// <summary>Cells from fresh water a hot floodearth reaches; wet hot ground further off is yellowearth.</summary>
+    private const int FloodearthReach = 3;
 
     /// <summary>
-    /// Warmth from which a wet riverside is floodplain: the hot line less what the
+    /// Warmth from which a wet riverside is floodearth: the hot line less what the
     /// water's tempering takes off a bank (135 + 0.7 × (185 − 135)), so the bank and
-    /// the strip behind it read the same and a floodplain never starts a cell away
+    /// the strip behind it read the same and floodearth never starts a cell away
     /// from its river.
     /// </summary>
-    private const int FloodplainFrom = 170;
+    private const int FloodearthFrom = 170;
 
-    /// <summary>Moisture from which hot ground is verdure rather than savanna: a higher bar than grass, since heat is the less forgiving side.</summary>
+    /// <summary>Moisture from which hot ground is redearth rather than yellowearth: a higher bar than brownearth, since heat is the less forgiving side.</summary>
     private const int HotWetFrom = 200;
 
-    /// <summary>Moisture from which cold-to-cool ground may be bog: past wet, water in excess.</summary>
-    private const int BogFrom = 190;
+    /// <summary>Moisture from which cold-to-cool ground may be murkearth: past wet, water in excess.</summary>
+    private const int MurkearthFrom = 190;
 
-    /// <summary>The noise bar such ground must clear to be bog: in patches, and more of them than there are marshes, but a tenth of a wet cool Domain and not a fifth.</summary>
-    private const float BogBar = 0.66f;
+    /// <summary>The noise bar such ground must clear to be murkearth: in patches, and more of them than there are of muckearth, but a tenth of a wet cool Domain and not a fifth.</summary>
+    private const float MurkearthBar = 0.66f;
 
-    /// <summary>Moisture from which warm-to-hot ground beside the water may be marsh: extreme, so a high background and the water's own strip both.</summary>
-    private const int MarshFrom = 230;
+    /// <summary>Moisture from which warm-to-hot ground beside the water may be muckearth: extreme, so a high background and the water's own strip both.</summary>
+    private const int MuckearthFrom = 230;
 
-    /// <summary>Cells from fresh water a marsh reaches.</summary>
-    private const int MarshReach = 2;
+    /// <summary>Cells from fresh water muckearth reaches.</summary>
+    private const int MuckearthReach = 2;
 
-    /// <summary>Ruggedness (32 per slab) a marsh tolerates: flat, give or take a slab, so the ground is low as well as near.</summary>
-    private const int MarshFlat = 40;
+    /// <summary>Ruggedness (32 per slab) muckearth tolerates: flat, give or take a slab, so the ground is low as well as near.</summary>
+    private const int MuckearthFlat = 40;
 
-    /// <summary>The noise bar such ground must clear to be marsh: occasional.</summary>
-    private const float MarshBar = 0.62f;
+    /// <summary>The noise bar such ground must clear to be muckearth: occasional.</summary>
+    private const float MuckearthBar = 0.62f;
 
     /// <summary>The noise bar a plain or a hillside must clear to show a tor: a small outcrop, rare.</summary>
     private const float TorBar = 0.87f;
@@ -118,15 +118,15 @@ internal static class Surfaces
     public static void Classify(int seed, IslandData d)
     {
         int n = d.Size;
-        var bog = new Noise(seed + 71_019, 0.07f, octaves: 2);
-        var marsh = new Noise(seed + 71_029, 0.09f, octaves: 2);
+        var murkearth = new Noise(seed + 71_019, 0.07f, octaves: 2);
+        var muckearth = new Noise(seed + 71_029, 0.09f, octaves: 2);
         var tor = new Noise(seed + 71_027, 0.16f, octaves: 1);
-        // Cells from fresh water (goo waters nothing), as far as a floodplain reaches; -1 beyond.
+        // Cells from fresh water (goo waters nothing), as far as floodearth reaches; -1 beyond.
         int[,] toWater = Flood.Distance(n,
             (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
                       && d.Fluid[x, z] != (byte)FluidKind.Goo,
             (_, _, nx, nz) => d.HasLand(nx, nz),
-            cap: FloodplainReach);
+            cap: FloodearthReach);
 
         d.CoastCells.Clear();
         d.CliffCells.Clear();
@@ -195,30 +195,30 @@ internal static class Surfaces
                 d.BankCells.Add(new Vector2I(x, z));
 
             int near = toWater[x, z] < 0 ? int.MaxValue : toWater[x, z];
-            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, bog, marsh, tor);
+            d.Material[x, z] = (byte)Pick(d, x, z, drop, face, gooSide, near, murkearth, muckearth, tor);
         }
 
-        WipeStrandedFloodplain(d);
+        WipeStrandedFloodearth(d);
         FindSummits(d);
     }
 
     /// <summary>
-    /// A floodplain is the flat beside the water: any patch of it that does not
-    /// touch fresh water through other floodplain is savanna instead. One flood
+    /// Floodearth is the flat beside the water: any patch of it that does not
+    /// touch fresh water through other floodearth is yellowearth instead. One flood
     /// over the footprint, so it costs nothing worth measuring.
     /// </summary>
-    private static void WipeStrandedFloodplain(IslandData d)
+    private static void WipeStrandedFloodearth(IslandData d)
     {
         int n = d.Size;
         int[,] linked = Flood.Distance(n,
             (x, z) => d.HasLand(x, z) && d.WaterLevel[x, z] != IslandData.NoLand
                       && d.Fluid[x, z] != (byte)FluidKind.Goo,
-            (_, _, nx, nz) => d.HasLand(nx, nz) && d.Material[nx, nz] == (byte)SurfaceMaterial.Floodplain);
+            (_, _, nx, nz) => d.HasLand(nx, nz) && d.Material[nx, nz] == (byte)SurfaceMaterial.Floodearth);
 
         for (int x = 0; x < n; x++)
         for (int z = 0; z < n; z++)
-            if (d.Material[x, z] == (byte)SurfaceMaterial.Floodplain && linked[x, z] < 0)
-                d.Material[x, z] = (byte)SurfaceMaterial.Savanna;
+            if (d.Material[x, z] == (byte)SurfaceMaterial.Floodearth && linked[x, z] < 0)
+                d.Material[x, z] = (byte)SurfaceMaterial.Yellowearth;
     }
 
     /// <summary>
@@ -274,13 +274,13 @@ internal static class Surfaces
     /// and the sculpted rock (a dune field is sand only where it is not cold); then
     /// a delta's fan, the wet ground of its row; then
     /// the tors, small outcrops of stone in soft country; then the water in excess
-    /// — marsh on warm-to-hot ground, bog on cold-to-cool — and then the climate
+    /// — muckearth on warm-to-hot ground, murkearth on cold-to-cool — and then the climate
     /// grid, warmth against moisture. A beach is ground like any other — nothing
     /// washes it — and a plateau rung in soft country changes nothing: the ground
     /// runs up to the edge.
     /// </summary>
     private static SurfaceMaterial Pick(IslandData d, int x, int z, int drop, int face,
-                                        bool gooSide, int near, Noise bog, Noise marsh, Noise tor)
+                                        bool gooSide, int near, Noise murkearth, Noise muckearth, Noise tor)
     {
         if (d.WaterLevel[x, z] != IslandData.NoLand)
         {
@@ -306,15 +306,15 @@ internal static class Surfaces
 
         // A dune field is sand where it is warm enough to be one; in the cold band and
         // under it the ridges stay and wear the climate's ground, a frozen dune field
-        // under tundra rather than a pile of sand in it.
+        // under frostearth rather than a pile of sand in it.
         if (form == LandformType.Dunes && warmth >= ColdBelow) return SurfaceMaterial.Sand;
-        // Broken rock, not a desert: dust here put a hot-band ground in cold country.
+        // Broken rock, not a desert: dustearth here put a hot-band ground in cold country.
         if (form is LandformType.Badlands or LandformType.Karst or LandformType.Sinkholes)
             return SurfaceMaterial.Scree;
 
-        // A delta's fan is the river's own wet ground: the wet cell of its row (a
-        // floodplain on a hot Domain, grass on a temperate, moorland on a cold,
-        // tundra where it is frigid), never a hot ground in a cold country.
+        // A delta's fan is the river's own wet ground: the wet cell of its row
+        // (floodearth on a hot Domain, brownearth on a temperate, shadowearth on a cold,
+        // frostearth where it is frigid), never a hot ground in a cold country.
         if (d.Delta[x, z])
             return Climate(warmth, Math.Max(d.Moisture[x, z], (byte)WetFrom), 1, rugged, 0f, 0f);
 
@@ -323,50 +323,50 @@ internal static class Surfaces
             return SurfaceMaterial.Stone;
 
         // The climate grid, for the ground that is not rock.
-        return Climate(warmth, d.Moisture[x, z], near, rugged, bog.At(x, z), marsh.At(x, z));
+        return Climate(warmth, d.Moisture[x, z], near, rugged, murkearth.At(x, z), muckearth.At(x, z));
     }
 
     /// <summary>
     /// The living ground for one climate: warmth against moisture, with
     /// <paramref name="near"/> cells to fresh water (<c>int.MaxValue</c> for none)
-    /// and the ruggedness for the marsh's flatness, and the two noise values that
-    /// gate the patches of water in excess. Marsh first on the warm-to-hot half and
-    /// bog on the cold-to-cool half, since neither is the rule — a marsh wants
+    /// and the ruggedness for muckearth's flatness, and the two noise values that
+    /// gate the patches of water in excess. Muckearth first on the warm-to-hot half and
+    /// murkearth on the cold-to-cool half, since neither is the rule — muckearth wants
     /// extreme moisture, a high background and the water's strip both, on flat
-    /// ground beside the water; a bog only asks for the excess, so there are more
-    /// bogs than marshes. Then the bands: frigid ground is tundra whatever the
-    /// moisture; the cold band splits tundra, heath, moorland; the floodplain lies
-    /// along hot water; and the hot row's verdure beats the sand as the floodplain
+    /// ground beside the water; murkearth only asks for the excess, so there is more
+    /// murkearth than muckearth. Then the bands: frigid ground is frostearth whatever the
+    /// moisture; the cold band splits frostearth, bleachearth, shadowearth; floodearth lies
+    /// along hot water; and the hot row's redearth beats the sand as floodearth
     /// does. The chart the audit draws (<c>ClimateChart</c>) is this function.
     /// </summary>
     internal static SurfaceMaterial Climate(byte warmth, byte moist, int near, byte rugged,
-                                            float bogNoise, float marshNoise)
+                                            float murkearthNoise, float muckearthNoise)
     {
         bool wet = moist >= WetFrom, dryGround = moist < DryBelow;
         if (warmth >= WarmFrom)
         {
-            if (moist >= MarshFrom && near <= MarshReach && rugged <= MarshFlat
-                && marshNoise > MarshBar)
-                return SurfaceMaterial.Marsh;
+            if (moist >= MuckearthFrom && near <= MuckearthReach && rugged <= MuckearthFlat
+                && muckearthNoise > MuckearthBar)
+                return SurfaceMaterial.Muckearth;
         }
-        else if (moist >= BogFrom && bogNoise > BogBar) return SurfaceMaterial.Bog;
+        else if (moist >= MurkearthFrom && murkearthNoise > MurkearthBar) return SurfaceMaterial.Murkearth;
 
-        if (warmth < FrigidBelow) return SurfaceMaterial.Tundra;
+        if (warmth < FrigidBelow) return SurfaceMaterial.Frostearth;
         if (warmth < ColdBelow)
         {
-            if (dryGround) return SurfaceMaterial.Tundra;
-            return wet ? SurfaceMaterial.Moorland : SurfaceMaterial.Heath;
+            if (dryGround) return SurfaceMaterial.Frostearth;
+            return wet ? SurfaceMaterial.Shadowearth : SurfaceMaterial.Bleachearth;
         }
 
-        if (wet && near <= FloodplainReach && warmth >= FloodplainFrom) return SurfaceMaterial.Floodplain;
+        if (wet && near <= FloodearthReach && warmth >= FloodearthFrom) return SurfaceMaterial.Floodearth;
         if (warmth >= HotFrom)
         {
-            if (moist >= HotWetFrom) return SurfaceMaterial.Verdure;
+            if (moist >= HotWetFrom) return SurfaceMaterial.Redearth;
             if (warmth >= SandFrom) return SurfaceMaterial.Sand;
-            return dryGround ? SurfaceMaterial.Dust : SurfaceMaterial.Savanna;
+            return dryGround ? SurfaceMaterial.Dustearth : SurfaceMaterial.Yellowearth;
         }
-        if (wet) return SurfaceMaterial.Grass;
-        return dryGround ? SurfaceMaterial.Steppe : SurfaceMaterial.Meadow;
+        if (wet) return SurfaceMaterial.Brownearth;
+        return dryGround ? SurfaceMaterial.Dryearth : SurfaceMaterial.Blackearth;
     }
 
     /// <summary>The warmth byte the open lowland reads at a warmth knob of 0 and of 1: what the chart brackets as the knob's own range.</summary>
@@ -375,13 +375,13 @@ internal static class Surfaces
     /// <summary>The band lines on the warmth axis, for the chart: name and byte.</summary>
     internal static readonly (string Name, int At)[] WarmthLines =
     {
-        ("SNOW", SnowBelow), ("FRIGID", FrigidBelow), ("COLD", ColdBelow), ("BOG/MARSH", WarmFrom),
+        ("SNOW", SnowBelow), ("FRIGID", FrigidBelow), ("COLD", ColdBelow), ("MURKEARTH/MUCKEARTH", WarmFrom),
         ("HOT", HotFrom), ("SAND", SandFrom),
     };
 
     /// <summary>The band lines on the moisture axis, for the chart: name and byte.</summary>
     internal static readonly (string Name, int At)[] MoistureLines =
     {
-        ("DRY", DryBelow), ("WET", WetFrom), ("BOG", BogFrom), ("VERDURE", HotWetFrom), ("MARSH", MarshFrom),
+        ("DRY", DryBelow), ("WET", WetFrom), ("MURKEARTH", MurkearthFrom), ("REDEARTH", HotWetFrom), ("MUCKEARTH", MuckearthFrom),
     };
 }

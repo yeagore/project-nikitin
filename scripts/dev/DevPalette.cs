@@ -115,11 +115,13 @@ internal static class DevPalette
         => depth <= usual ? kind : kind.Darkened(Mathf.Min(0.5f, 0.08f * (depth - usual)));
 
     /// <summary>
-    /// Eighteen materials. The climate grid reads as a grid: the cold row is
-    /// mint, heather-brown, mauve and a dark bog; the temperate row straw,
-    /// yellow-green, green and a blue-green marsh; the hot row red-brown, gold, a
-    /// deep verdure and the emerald floodplain. Sand pale, snow white, silt brown,
-    /// ooze near-black.
+    /// Eighteen materials, in the soil glossary's alchemical colours, three of them
+    /// nudged (<see cref="Meshing.SurfacePalette"/>). The cold row is cool-grey
+    /// frostearth, ash-mauve bleachearth, violet-slate shadowearth and sage
+    /// murkearth; the temperate row tan dryearth, dark-umber blackearth, brown
+    /// brownearth and teal muckearth; the hot row bone dustearth, ochre yellowearth,
+    /// red redearth and plum floodearth. Stone dark grey, scree pale warm grey, silt
+    /// khaki, sand yellow, snow white, ooze near-black.
     /// </summary>
     public static Color Material(SurfaceMaterial m) => Meshing.SurfacePalette.Of(m);
 

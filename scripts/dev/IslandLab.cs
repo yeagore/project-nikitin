@@ -96,8 +96,8 @@ public partial class IslandLab : Node3D
 		_unitBox.Material = TerrainMaterials.GroundMaterial();
 
 		// A steep white sun over a neutral 0.3 ambient (set on the scene's Environment,
-		// with linear tonemapping): a top face reads at about the legend's colour and
-		// the shaded sides still separate. Oriented here: a rotated basis in the .tscn
+		// with linear tonemapping), and the ground's vertex colour read as sRGB: a top
+		// face reads at about the legend's colour and the shaded sides still separate. Oriented here: a rotated basis in the .tscn
 		// is the transpose gotcha.
 		var sun = GetNode<DirectionalLight3D>("Sun");
 		sun.LookAt(sun.GlobalPosition + new Vector3(0.35f, -0.85f, 0.45f), Vector3.Up);

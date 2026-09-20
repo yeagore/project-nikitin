@@ -113,9 +113,9 @@ line that names every body, counts its cells and says whether they are still
 water or a reach; the water's own blue is dropped from the material there, or it
 would multiply a warm hue down to nothing), `surface` (stone, scree,
 snow, sand, silt, ooze (a bed under nine slabs of water or more) and the climate
-grid — tundra, heath, moorland; steppe, meadow,
-grass; dust, savanna, verdure, floodplain; bog and marsh for water in excess;
-tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
+grid — frostearth, bleachearth, shadowearth; dryearth, blackearth,
+brownearth; dustearth, yellowearth, redearth, floodearth; murkearth and
+muckearth for water in excess; tors of stone in soft country; an overhang's lip is drawn as stone; a beach is
 the ground round it, not sand), `anchors` (what the content layer attaches to:
 coast; cliff brink, cliff foot and a ledge where a cell is both, for a face of
 4+ slabs; scarp brink, scarp foot and their ledge for a face of 2–3, a cliff
@@ -134,7 +134,10 @@ read through the surface; goo is violet in all of them. The
 legend shows each view's actual colours as swatches, from the one palette
 (`DevPalette`) the audit's PNGs also use. The lighting is tuned so a top face
 reads at about the legend's colour: a steep white sun over a neutral ambient,
-linear tonemapping, no specular.
+linear tonemapping, no specular, and the ground reads its vertex colour as sRGB,
+the way the palettes are written (until 2026-09-19 it read it as linear, which
+drew every colour paler than its swatch: a deep red came out salmon). The water
+still reads its tint as linear.
 
 In the `anchors` view a column is coloured per span: only the lip of an
 overhang is magenta, and the ground under it is whatever it is — a river bed,
@@ -306,7 +309,7 @@ material shares of each of the twenty-five, and drops the tiles beside the sheet
 `ClimateScout=<n>` is how the seed gets chosen rather than guessed: it scores `n`
 consecutive seeds from `FirstSeed` at the same footprint for landform and material
 variety, lakes, rivers and navigable water, and prints them best first. Avoid the
-characters that force a material — Dunes, Karst, Badlands make sand and dust
+characters that force a material — Dunes, Karst, Badlands make sand and dustearth
 whatever the climate — or the sheet shows the character rather than the knobs.
 
 ```
@@ -344,10 +347,10 @@ three things to read off it. About four minutes at sixteen seeds.
 `ClimateChart=<dir>` writes `climate_chart.png`: the climate grid as an area
 chart, warmth across and moisture down, every byte pair coloured with the
 ground it gives. Two panels, open ground away from water and flat ground
-beside it (where the floodplain and the marsh can be); the band lines drawn on
+beside it (where floodearth and muckearth can be); the band lines drawn on
 the axes with their bytes; the range a warmth knob reaches on open lowland
 (60 to 240) bracketed, with the knob's quarters ticked on both axes; and the
-patches (bog, marsh) as a checker of their colour over the ground they sit in,
+patches (murkearth, muckearth) as a checker of their colour over the ground they sit in,
 since a noise field decides them cell by cell. It is drawn from
 `Surfaces.Climate`, the rule the surface stage itself uses, so it cannot drift
 from the code. No seed is involved; `Seeds=1` keeps the run short.

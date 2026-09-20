@@ -87,8 +87,8 @@ public partial class GenerationAudit
             magick += d.Magick[x, z];
 
             var m = (SurfaceMaterial)d.Material[x, z];
-            if (m is SurfaceMaterial.Grass or SurfaceMaterial.Moorland or SurfaceMaterial.Verdure
-                or SurfaceMaterial.Floodplain or SurfaceMaterial.Bog or SurfaceMaterial.Marsh) wet++;
+            if (m is SurfaceMaterial.Brownearth or SurfaceMaterial.Shadowearth or SurfaceMaterial.Redearth
+                or SurfaceMaterial.Floodearth or SurfaceMaterial.Murkearth or SurfaceMaterial.Muckearth) wet++;
             if (m == SurfaceMaterial.Snow) snow++;
 
             bool flat = d.Ruggedness[x, z] < 64;

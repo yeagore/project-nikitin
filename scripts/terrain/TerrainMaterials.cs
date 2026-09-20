@@ -5,7 +5,9 @@ namespace ProjectNikitin.Meshing;
 /// <summary>
 /// The four materials the mesh is drawn with, and the factories the lab shares so a
 /// box there and a face here read the same. Ground is matte and unspecular: a face's
-/// colour is its vertex colour times the light. Water, goo and falling water are
+/// colour is its vertex colour times the light, the vertex colour read as sRGB since
+/// the palettes are written that way (read as linear, every colour drew paler than
+/// its swatch in the legend). Water, goo and falling water are
 /// alpha-blended and double-sided, so a tilt under the island still shows them.
 /// </summary>
 public sealed class TerrainMaterials
@@ -21,6 +23,7 @@ public sealed class TerrainMaterials
     public static StandardMaterial3D GroundMaterial() => new()
     {
         VertexColorUseAsAlbedo = true,
+        VertexColorIsSrgb = true,
         Roughness = 1f,
         Metallic = 0f,
         SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,

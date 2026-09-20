@@ -707,8 +707,8 @@ tempers heat and cold alike.
 spring has a chance (40% at a dial of 0, fading to nothing at 0.35) and each
 small pool of standing water with no watercourse through it (35%) of running
 hot. A hot source adds 90 warmth at itself, decaying over four cells of walk
-cost, but never lifts a cell past the temperate band: a meadow in the tundra,
-never a floodplain.
+cost, but never lifts a cell past the temperate band: blackearth in the frostearth,
+never floodearth.
 
 **Ruggedness** (flat to broken): how much the effective surface rises and falls
 within two cells, 32 per slab, saturating at eight slabs, with water read as its
@@ -767,7 +767,19 @@ swallowed a river, the great lakes and the deltas. The lists overlap freely; onl
 flattened view has to pick one colour per cell.
 
 **Materials.** Each column gets a provisional material so the island reads as a
-place before the biome layer exists. In order of precedence:
+place before the biome layer exists. The names and colours come from the soil
+glossary in Notion (19 September 2026): a plain English name for what the bare
+ground looks or feels like — frostearth, bleachearth, shadowearth, murkearth,
+dryearth, blackearth, brownearth, muckearth, dustearth, yellowearth, redearth,
+floodearth — with stone, scree, silt, sand and snow kept as they were, and each
+drawn in the glossary's colour, except three that were moved a little after the
+island was looked at in the lab: frostearth went cooler (it looked like the
+scree beside it), shadowearth went violet (it looked like water, so a cold wet
+Domain looked flooded), and blackearth went from near-black to a dark brown (it
+was so dark that the light could not shade it, and every terrace and step
+vanished). The glossary's learned names (Cryosol and the
+rest) are for in-game text later and are not in the code. Ooze is not in the
+glossary and keeps its name and colour. In order of precedence:
 
 1. A river or lake bed is **silt**, or **ooze** where nine slabs of water or more
    stand over it, and nothing else is either. A goo pool's bed and
@@ -777,7 +789,7 @@ place before the biome layer exists. In order of precedence:
    and drops **scree** at its foot whatever the landform; a rock landform
    (mountain, massif, karst, badlands, sinkholes, a canyon) shows stone at any
    cliff and where it is very broken, scree where it is rough. A plateau rung in
-   soft country changes nothing: the meadow runs up to the edge.
+   soft country changes nothing: the blackearth runs up to the edge.
 4. Dunes are **sand** where the warmth is at least the cold line; colder, the
    ridges stay and wear the climate's ground, a frozen dune field. Badlands,
    karst and sinkhole country are scree.
@@ -785,24 +797,24 @@ place before the biome layer exists. In order of precedence:
 6. **Tors**: on plains and hills, where a fine noise pattern peaks (about one
    cell in a hundred), stone: building stone where there is no rock landform.
 7. Water in excess, in patches that a noise pattern decides cell by cell:
-   **bog** on the cold-to-cool half of the warmth range (warmth under 140,
-   moisture 190 or more), **marsh** on the warm-to-hot half (moisture 230 or
-   more, within two cells of fresh water, on flat ground). There are more bogs
-   than marshes by design.
+   **murkearth** on the cold-to-cool half of the warmth range (warmth under 140,
+   moisture 190 or more), **muckearth** on the warm-to-hot half (moisture 230 or
+   more, within two cells of fresh water, on flat ground). There is more murkearth
+   than muckearth by design.
 8. The climate grid, warmth against moisture:
 
 | warmth | dry (under 90) | balanced | wet (170 and over) | beside water |
 |---|---|---|---|---|
-| frigid (under 85) | tundra | tundra | tundra | |
-| cold (under 115) | tundra | heath | moorland | |
-| temperate | steppe | meadow | grass | |
-| hot (185 and over) | dust | savanna | verdure (moisture 200 and over), savanna under it | floodplain within three cells of a river or lake |
+| frigid (under 85) | frostearth | frostearth | frostearth | |
+| cold (under 115) | frostearth | bleachearth | shadowearth | |
+| temperate | dryearth | blackearth | brownearth | |
+| hot (185 and over) | dustearth | yellowearth | redearth (moisture 200 and over), yellowearth under it | floodearth within three cells of a river or lake |
 
-Past the ends, hot ground at 220 or more is sand unless it is verdure or a
-floodplain. A floodplain has its own warmth line (170) so the bank and the strip
-behind it read the same, and any floodplain patch that does not touch fresh
-water through other floodplain is wiped to savanna. On the dial, a warmth of 0
-is nearly all tundra; heath and moorland are what 0.25 looks like.
+Past the ends, hot ground at 220 or more is sand unless it is redearth or
+floodearth. Floodearth has its own warmth line (170) so the bank and the strip
+behind it read the same, and any floodearth patch that does not touch fresh
+water through other floodearth is wiped to yellowearth. On the dial, a warmth of 0
+is nearly all frostearth; bleachearth and shadowearth are what 0.25 looks like.
 
 **Names.** The Domain, each district and each body of water get placeholder
 names from syllable lists, deterministic per seed, so the output can be talked
@@ -864,7 +876,7 @@ Nothing else is re-rolled for.
 - **The fit band wraps the linker**, since the linker shrinks every scattered
   layout.
 - **Beaches are ground, and the sculpted rock is scree**: sand beaches drew a
-  yellow strand round tundra; dust on karst put hot ground beside snow.
+  yellow strand round frostearth; dustearth on karst put hot ground beside snow.
 - **The chills were the label**: an earlier warmth model cooled every cell by a
   permanent twenty points, so the dial lied; now the label is the open lowland.
 - **The lapse per mountain**, from its own foot, after three earlier models put
@@ -873,8 +885,8 @@ Nothing else is re-rolled for.
   shapes of one.
 - **Shelves gave way to districts**; **the lee is a rain shadow**; **a lake may
   swallow a river**; **a delta is cut, not found**; **sea stacks are aether**;
-  **bog on the cold side, marsh on the warm**; **hot water on a cold Domain**;
-  **cold sand and cold floodplain** fixed after the co-occurrence count caught
+  **murkearth on the cold side, muckearth on the warm**; **hot water on a cold Domain**;
+  **cold sand and cold floodearth** fixed after the co-occurrence count caught
   them.
 
 Things tried and removed include ramps (replaced by passes), lake chains, a
@@ -982,7 +994,10 @@ views (height, landform, region, walk, reach, navigable — walk's counterpart o
 the water, a colour per body a hull could get around in, with a waterfall
 cutting one body into two — surface, anchors, and the seven fields: moisture,
 warmth, ruggedness, exposure, rim, water distance, magick),
-each with a legend in its actual colours; overlays for bridge sites, landings,
+each with a legend in its actual colours (since 19 September 2026 the ground in
+the 3D view really is drawn in the legend's colours: before, the renderer read
+them as the wrong kind of colour number and drew every one paler, a deep red as
+salmon); overlays for bridge sites, landings,
 roads, fords, and the compass with the wind, the sun, the dune grain
 and the two boxes; a liquid toggle that shows the beds; a seed field; a
 frame-rate counter; a plate naming the cell under the mouse (found by casting a
@@ -1033,9 +1048,9 @@ Measured on the last accepted audit (60 seeds, 128², all dials rolled):
   a funnel's mouth pours its own. The fjords took about a tenth of the river
   cells, because an inlet is new coast and the rivers now drain into it; the
   estuaries gave a quarter of the navigable cells back.
-- **Ground**: grass 21.5%, stone 11.2%, meadow 9.8%, dust 8.4%, tundra 8.2%,
-  scree 5.7%, sand 5.3%, silt 4.7%, heath 4.5%, moorland 4.4%, steppe 4.4%,
-  savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, snow 0.8%, marsh 0.4%.
+- **Ground**: brownearth 21.5%, stone 11.2%, blackearth 9.8%, dustearth 8.4%, frostearth 8.2%,
+  scree 5.7%, sand 5.3%, silt 4.7%, bleachearth 4.5%, shadowearth 4.4%, dryearth 4.4%,
+  yellowearth 4.3%, redearth 2.4%, murkearth 2.1%, floodearth 2.0%, snow 0.8%, muckearth 0.4%.
 - **Walkability**: 40.8% of land on the mainland on foot; 94.7% on the
   heartland once built; 48 of 60 islands one reachable whole; 467 districts on
   the heartland, every island with at least one.

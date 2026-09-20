@@ -144,7 +144,7 @@ public partial class IslandLab
 		if (v < Line(l, "SNOW")) return $"snow (under {Line(l, "SNOW")})";
 		if (v < Line(l, "FRIGID")) return $"frigid (under {Line(l, "FRIGID")})";
 		if (v < Line(l, "COLD")) return $"cold (under {Line(l, "COLD")})";
-		if (v < Line(l, "HOT")) return $"temperate (under {Line(l, "HOT")}), {(v < Line(l, "BOG/MARSH") ? "the bog side" : "the marsh side")}";
+		if (v < Line(l, "HOT")) return $"temperate (under {Line(l, "HOT")}), {(v < Line(l, "MURKEARTH/MUCKEARTH") ? "the murkearth side" : "the muckearth side")}";
 		return v < Line(l, "SAND") ? $"hot (from {Line(l, "HOT")})" : $"hot, sand where dry (from {Line(l, "SAND")})";
 	}
 

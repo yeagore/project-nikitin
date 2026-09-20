@@ -306,7 +306,7 @@ that shears rims apart will shout; see the open gaps.
 
 `Surfaces.Pick` once had a ternary with one answer, two moisture bands
 returning the same material, and an unreached cell given exactly the threshold
-value, and between them Heath (now moorland) was 0.0% of every island ever generated. Nothing
+value, and between them the material then called heath (now shadowearth) was 0.0% of every island ever generated. Nothing
 broke a guarantee. What found it was printing a share per category with `NEVER`
 beside the empty ones, which the audit does for every enum the generator
 assigns. A branch that never fires looks exactly like a branch that works.
@@ -344,16 +344,16 @@ the coldest setting froze the coast and not the peaks, the opposite of the
 knob's own doc. Now the label is the open lowland: the lee gains up to 10, the
 rim loses 6 over four cells, and the mean reads 153 at the knob's middle. The
 grid's bands moved up to meet it (cold below 115, hot from 185, sand from 220,
-floodplain from 170), which is why a knob of 0.85 is still hot country and not
+floodearth from 170), which is why a knob of 0.85 is still hot country and not
 a desert.
 
 ### Beaches are ground, and the sculpted rock is scree
 
-A beach was sand, which on a cold Domain drew a yellow strand round tundra;
+A beach was sand, which on a cold Domain drew a yellow strand round frostearth;
 nothing washes a beach, so it is now whatever the climate grid says a slab
-lower, and the anchor is unchanged. Badlands, karst and sinkholes were dust
-before the grid was consulted, so a cold karst Domain was 10% dust beside 53%
-tundra; they are scree, a rock, until the biome layer decides otherwise.
+lower, and the anchor is unchanged. Badlands, karst and sinkholes were dustearth
+before the grid was consulted, so a cold karst Domain was 10% dustearth beside 53%
+frostearth; they are scree, a rock, until the biome layer decides otherwise.
 
 ### The knobs roll
 
@@ -429,7 +429,7 @@ same time — `Wind`, the tenth 0–1 knob, rolled per seed like the rest — si
 model. `2 × Wind` multiplies every modifier exposure drives: the rain shadow
 (30 in the lee at the nominal 0.5), the milder lee (10) and the **gorge damp**
 (70 × shelter × ruggedness), added in the same change so that a gorge floor
-under its walls goes mossy while the plateau above it stays steppe. The
+under its walls goes mossy while the plateau above it stays dryearth. The
 exposure byte is geometry and does not move, so the collage's field strip
 holds across a wind sweep. In the `Knobs` sweep, from wind 0 to 1, flat lee
 ground dries by 32, gorge floors wet by 41 and the lee warms by 15 while open
@@ -473,7 +473,7 @@ until it meets the rim, over ground that never climbs and never drops more
 than the free step, and is refused if it meets water, a bridgehead, an eyot or
 the river itself. The arm is a stream with the pair cell as its head, and
 `Descend` holds that head to the pair, since no `down` joins them. The dry
-ground between the mouths is the fan, floodplain whatever the climate. Two
+ground between the mouths is the fan, the wet ground of its row. Two
 things kept the first version at zero deltas: the mouth cell has no partner
 (`Widen` needs a downstream cell to find the side), so "an axis cell with a
 mate" found no mouths at all — a mouth is an axis cell with nothing
@@ -611,26 +611,26 @@ than the rule suggests: on most seeds the crop leaves no speck to keep, so the
 audit found them on nine islands of sixty. If every Domain should have them,
 they will have to be placed, not salvaged.
 
-### Bog on the cold side, marsh on the warm, and the hot row's grass
+### Murkearth on the cold side, muckearth on the warm, and the hot row's brownearth
 
-The first cut put marsh in the temperate row and bog in the cold one, as
+The first cut put muckearth in the temperate row and murkearth in the cold one, as
 "past wet" cells. The second, later the same day, split them by warmth
-instead: **bog** is water in excess on the cold-to-cool half (warmth under
-140, moisture 190 or more, a noise field over 0.66) and **marsh** on the
+instead: **murkearth** is water in excess on the cold-to-cool half (warmth under
+140, moisture 190 or more, a noise field over 0.66) and **muckearth** on the
 warm-to-hot half (140 and over, moisture 230 or more — extreme, which takes a
 high background and the water's strip both — within two cells of water, flat,
-a noise field over 0.62). So there are more bogs than marshes, a marsh shares
-the floodplain's ground on a hot Domain and takes a few percent of it, and a
-warm temperate Domain gets no bog. The line at 140 rather than 150 is the
+a noise field over 0.62). So there is more murkearth than muckearth, muckearth shares
+the floodearth's ground on a hot Domain and takes a few percent of it, and a
+warm temperate Domain gets no murkearth. The line at 140 rather than 150 is the
 water's tempering: at a knob of 0.5 a wet bank is pulled to about 145, and at
-150 the whole riverside of a temperate Domain went bog-side. At 0.6 the bog
+150 the whole riverside of a temperate Domain went murkearth-side. At 0.6 the murkearth
 was a fifth of the wet cool corners; 0.66 makes it a tenth. The hot row also
-got its own wet cell, **verdure**, at moisture 200 or more, a higher bar than
-grass because heat is the less forgiving side: at 0.75 moisture a hot Domain
-is half savanna and a quarter verdure, at 1.0 it is verdure where it was all
-savanna. And the cold row got **heath** between tundra and moorland, with a
-**frigid** band under 85 that is tundra whatever the moisture: a knob of 0 is
-mostly tundra, and the heath and the moor are a knob of 0.25.
+got its own wet cell, **redearth**, at moisture 200 or more, a higher bar than
+brownearth because heat is the less forgiving side: at 0.75 moisture a hot Domain
+is half yellowearth and a quarter redearth, at 1.0 it is redearth where it was all
+yellowearth. And the cold row got **bleachearth** between frostearth and shadowearth, with a
+**frigid** band under 85 that is frostearth whatever the moisture: a knob of 0 is
+mostly frostearth, and the bleachearth and the shadowearth are a knob of 0.25.
 
 ### Hot water on a cold Domain
 
@@ -639,35 +639,35 @@ Now, on a Domain whose warmth knob is under 0.35, each spring has a chance
 (40% at a knob of 0, nothing at 0.35) and each pool of standing water with no
 watercourse through it and at most sixty cells a chance (35%) of running hot,
 and a hot source adds 90 warmth at the source, decaying to 1/e over four cells
-of the same walk cost the moisture uses. That is a meadow round a spring in
-the tundra, which is what the extremes wanted. Eleven of the twenty cold
+of the same walk cost the moisture uses. That is blackearth round a spring in
+the frostearth, which is what the extremes wanted. Eleven of the twenty cold
 islands in the audit have some; the collages show them as orange water in
 the cold columns.
 
-### Cold sand, and floodplain in the tundra
+### Cold sand, and floodearth in the frostearth
 
-The co-occurrence matrix caught two things the grid did not. Floodplain
-turned up on one tundra island in a hundred: a delta's fan was floodplain in
+The co-occurrence matrix caught two things the grid did not. Floodearth
+turned up on one frostearth island in a hundred: a delta's fan was floodearth in
 any climate, and a hot spring's bloom on a cool Domain could lift a bank past
-the hot line. Now a fan is the wet ground of its row — floodplain on a hot
-Domain, grass on a temperate, moorland on a cold, tundra where it is frigid —
+the hot line. Now a fan is the wet ground of its row — floodearth on a hot
+Domain, brownearth on a temperate, shadowearth on a cold, frostearth where it is frigid —
 and the bloom never lifts a cell past 160, the temperate band, so a hot spring
-makes a meadow in the tundra and nothing hotter. And sand held at 3% of land
+makes blackearth in the frostearth and nothing hotter. And sand held at 3% of land
 in every tile of the shares sheet, the frigid ones included: not the beaches,
 which have not been sand since the climate grid went in, but the Dunes
 character, rolled by one seed in eight whatever the climate, its fields sand
-in the tundra. A dune field is sand now only where the warmth is at least the
+in the frostearth. A dune field is sand now only where the warmth is at least the
 cold line; colder, the ridges stay and wear the climate's ground, a frozen
 dune field. A sliver survives at a knob near 0.3, where the lee of a ridge is
 warm enough and its windward face is not; steering the character roll away
 from cold seeds would remove that too, at the cost of the dice.
 
-### Marsh past grass, and rarer bogs
+### Muckearth past brownearth, and rarer murkearth
 
-The temperate row had no cell for water in excess where the cold row had bog
-and the hot row floodplain. Marsh is that cell: moisture 205 or more, fresh
+The temperate row had no cell for water in excess where the cold row had murkearth
+and the hot row floodearth. Muckearth is that cell: moisture 205 or more, fresh
 water within two cells, flat ground (so it is low as well as near) and a noise
-field over 0.62 — 0.4% of land over sixty seeds, which is "occasionally". Bog
+field over 0.62 — 0.4% of land over sixty seeds, which is "occasionally". Murkearth
 was a third of cold wet ground; it now needs moisture past 190 and a noise
 field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
 2.1%. Tors — stone on plains and hills where a fine noise clears 0.87, about
@@ -1258,28 +1258,28 @@ measured a fixed preset are kept where they still say something.
 
 | | |
 |---|---|
-| surface, the sixty rolled seeds, after marsh, tors and the rarer bog | grass 22.1%, moorland 10.6%, meadow 9.7%, dust 8.4%, tundra 7.2%, savanna 6.6%, steppe 4.4%, floodplain 2.3%, bog 0.7% (from 2.1%), marsh 0.4%, stone 11.2% (from 9.5%: the tors, 6718 cells on all sixty islands), scree 5.7%, sand 5.3%, silt 4.7%, snow 0.8% |
-| the climate corners after the change (`Climate`, 12 seeds each) | cold wet: moorland 69%, bog 6% (was 22%). Temperate balanced: meadow 61%, grass 12%, marsh 0.8%. Temperate wet: grass 73%, marsh 0.9%. The other corners within a point of before, stone a point higher everywhere (the tors) |
-| the wind (`Knobs`, 6 seeds, wind 0 → 1) | flat lee moisture 188 → 156 against flat open 151 held; gorge floors 160 → 201; flat lee warmth 156 → 172 against open 160 held; marsh 0.62% → 0.55%, bog 0.74% → 0.72% |
+| surface, the sixty rolled seeds, after muckearth, tors and the rarer murkearth | brownearth 22.1%, shadowearth 10.6%, blackearth 9.7%, dustearth 8.4%, frostearth 7.2%, yellowearth 6.6%, dryearth 4.4%, floodearth 2.3%, murkearth 0.7% (from 2.1%), muckearth 0.4%, stone 11.2% (from 9.5%: the tors, 6718 cells on all sixty islands), scree 5.7%, sand 5.3%, silt 4.7%, snow 0.8% |
+| the climate corners after the change (`Climate`, 12 seeds each) | cold wet: shadowearth 69%, murkearth 6% (was 22%). Temperate balanced: blackearth 61%, brownearth 12%, muckearth 0.8%. Temperate wet: brownearth 73%, muckearth 0.9%. The other corners within a point of before, stone a point higher everywhere (the tors) |
+| the wind (`Knobs`, 6 seeds, wind 0 → 1) | flat lee moisture 188 → 156 against flat open 151 held; gorge floors 160 → 201; flat lee warmth 156 → 172 against open 160 held; muckearth 0.62% → 0.55%, murkearth 0.74% → 0.72% |
 | the sun and the hollows | warmth on slopes turned to the sun 141.6, turned away 133.5 (n≈18.8k each); basin floors 147.0 against an island median of 154 |
 | rivers after the terminal lakes and deltas | 7876 river cells (from 7812), 3565 navigable, 778 falls; 8 lakes swallow a river on 8 islands, fed by 16 channel cells; 17 deltas on 12 islands, 70 cells of fan; 218 springs, none on a navigable cell; fords per 100 stream cells 11.2 on flat ground and 6.1 on broken; every island's rivers still reach the rim |
 | districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
 | the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick per-island mean 1–183, median 98, and a saturated share of 0–92% of the land, median 40% — the mean is the density knob's own claim, so it spans nearly the whole byte across rolled seeds, and the saturated share is what the pattern and the level make of it; a run where the share stops moving is a run where the reaction has fallen out of its band |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
 | the beds (2026-09-14, the cap raised 2026-09-15) | lake depth, the deepest cell per body, 2–20 slabs, median 3, over 155 bodies, 54 of them with a profile; lake bed 6,740 cells, 4,037 shallow (two slabs of water or fewer), 1,942 mid (three to eight) and 761 deep (nine or more), ooze 0.3% of land; great lakes 4 on 4 of 60 islands, 1,537 cells, the largest body 514; deeps 255, of which 201 plunge pools under falls; 1,414 river cells dug below their kind; the gates 25 dry, 28 dice, 3 no seed, 4 unions of 2–4 patches |
-| the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
-| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 tundra 77%, tundra 68%, steppe 68%, dust 66%, sand 77%; at 0.5 tundra 70%, heath 55%, meadow 58%, savanna 32% with meadow 27%, sand 52%; at 1.0 tundra 52% with bog 14%, moorland 50% with grass 14% and bog 13%, grass 74%, grass 63% with floodplain 10%, verdure 64% with floodplain 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |
-| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: grass 67%, meadow 52%, bog 33%, floodplain 30%, moorland 28%, savanna 28%, marsh 27%, steppe 26%, heath 25%, tundra 23%, snow 21%, sand 17%, dust 14%, verdure 11%; stone 100%, scree 81%. Given tundra: heath 79%, moorland 84%, bog 58%, sand 3%, no hot ground at all. Given verdure: floodplain 100%, savanna 92%, marsh 75%. Given dust: savanna 91%, floodplain 87%. Given bog: grass 76%, moorland 63%, marsh 4%. Given marsh: grass 78%, floodplain 59%, savanna 52%, bog 5%. The cold row and the hot row never share an island |
-| its corners (`Climate`, 12 seeds each) | cold dry: tundra 62%, heath 8%. Cold balanced: heath 60%, moorland 10%. Cold wet: moorland 63%, bog 9%. Cool wet (0.35): grass 64%, bog 9%. Temperate wet: grass 73%, marsh 0.8%. Warm wet (0.65): grass 72%, marsh 0.9%. Hot wet: savanna 43%, verdure 21%, floodplain 9%, marsh 1%. Frigid wet (0.05): tundra 38%, moorland 26% (the tempered banks), bog 9%. Snow end: tundra 69%, bog 2% |
-| surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
-| the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
+| the second climate grid, sixty rolled seeds | brownearth 21.5%, blackearth 9.8%, frostearth 8.2%, dustearth 8.4%, bleachearth 4.5%, shadowearth 4.4%, dryearth 4.4%, yellowearth 4.3%, redearth 2.4%, murkearth 2.1%, floodearth 2.0%, muckearth 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
+| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 frostearth 77%, frostearth 68%, dryearth 68%, dustearth 66%, sand 77%; at 0.5 frostearth 70%, bleachearth 55%, blackearth 58%, yellowearth 32% with blackearth 27%, sand 52%; at 1.0 frostearth 52% with murkearth 14%, shadowearth 50% with brownearth 14% and murkearth 13%, brownearth 74%, brownearth 63% with floodearth 10%, redearth 64% with floodearth 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |
+| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: brownearth 67%, blackearth 52%, murkearth 33%, floodearth 30%, shadowearth 28%, yellowearth 28%, muckearth 27%, dryearth 26%, bleachearth 25%, frostearth 23%, snow 21%, sand 17%, dustearth 14%, redearth 11%; stone 100%, scree 81%. Given frostearth: bleachearth 79%, shadowearth 84%, murkearth 58%, sand 3%, no hot ground at all. Given redearth: floodearth 100%, yellowearth 92%, muckearth 75%. Given dustearth: yellowearth 91%, floodearth 87%. Given murkearth: brownearth 76%, shadowearth 63%, muckearth 4%. Given muckearth: brownearth 78%, floodearth 59%, yellowearth 52%, murkearth 5%. The cold row and the hot row never share an island |
+| its corners (`Climate`, 12 seeds each) | cold dry: frostearth 62%, bleachearth 8%. Cold balanced: bleachearth 60%, shadowearth 10%. Cold wet: shadowearth 63%, murkearth 9%. Cool wet (0.35): brownearth 64%, murkearth 9%. Temperate wet: brownearth 73%, muckearth 0.8%. Warm wet (0.65): brownearth 72%, muckearth 0.9%. Hot wet: yellowearth 43%, redearth 21%, floodearth 9%, muckearth 1%. Frigid wet (0.05): frostearth 38%, shadowearth 26% (the tempered banks), murkearth 9%. Snow end: frostearth 69%, murkearth 2% |
+| surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | blackearth 61.8%, brownearth 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, dryearth 0.6%, dustearth 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
+| the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave shadowearth 58%; the mesas were cold at every setting. After: blackearth 58%, brownearth 18%, and no frostearth or shadowearth at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
 | walking by king's moves | against four-way walking on the same islands: land on the mainland 40.8% → 42.8%, heartland 94.9% → 95.0%, roads that can simply be walked 45 → 50 of 121. Cutting corners joins a few scraps to their districts and lets a few roads round a cliff; nothing large moves |
 | habitat, per-island means | moisture 32–254 (median 183), warmth 75–225 (median 153: the knob's middle reads at its label; it was 118–133 with the chills), rugged 25–213, exposure 134–245, rim distance 1–13 cells |
-| surface, the sixty rolled seeds | grass 23.8%, meadow 10.5%, savanna 6.4%, moorland 9.4%, tundra 7.0%, steppe 4.1%, dust 8.3%, floodplain 2.3%, bog 2.1%, stone 9.5%, scree 5.8%, sand 5.1%, silt 5.0%, snow 0.8%: every row of the grid present, because every seed is its own climate |
+| surface, the sixty rolled seeds | brownearth 23.8%, blackearth 10.5%, yellowearth 6.4%, shadowearth 9.4%, frostearth 7.0%, dryearth 4.1%, dustearth 8.3%, floodearth 2.3%, murkearth 2.1%, stone 9.5%, scree 5.8%, sand 5.1%, silt 5.0%, snow 0.8%: every row of the grid present, because every seed is its own climate |
 | snow at every footprint (`Sizes`, 12 seeds each) | share of land under snow 0.8 / 0.7 / 0.5 / 0.4 / 1.0% at 48 / 64 / 72 / 96 / 128², and every island with a mountain carries some at every size (3 of 3, 3 of 3, 4 of 4, 3 of 3, 4 of 4). Under the parameter ceiling it was 128² only |
-| the climate grid, re-tuned (`Climate`, 12 seeds each) | cold dry: tundra 62%, moorland 14%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 56%, bog 22%. Temperate dry: steppe 62%, meadow 11%. Temperate balanced: meadow 62%, grass 15%. Temperate wet: grass 76%. Hot dry: dust 62%, savanna 11%, floodplain 5%. Hot balanced: savanna 66%, floodplain 11%. Hot wet: savanna 66%, floodplain 11%. Sand end: sand 63%, floodplain 11%, savanna 7%. Snow end: moorland 72%, bog 4%, snow 1.6%. Stone, scree and silt hold at 9 / 4 / 5.5% in all eleven |
+| the climate grid, re-tuned (`Climate`, 12 seeds each) | cold dry: frostearth 62%, shadowearth 14%. Cold balanced: shadowearth 72%, murkearth 4%. Cold wet: shadowearth 56%, murkearth 22%. Temperate dry: dryearth 62%, blackearth 11%. Temperate balanced: blackearth 62%, brownearth 15%. Temperate wet: brownearth 76%. Hot dry: dustearth 62%, yellowearth 11%, floodearth 5%. Hot balanced: yellowearth 66%, floodearth 11%. Hot wet: yellowearth 66%, floodearth 11%. Sand end: sand 63%, floodearth 11%, yellowearth 7%. Snow end: shadowearth 72%, murkearth 4%, snow 1.6%. Stone, scree and silt hold at 9 / 4 / 5.5% in all eleven |
 | road hops no work explains | 0 of 121 roads; the old diagonal-counting check read 4110 |
-| the climate grid (`Climate`, 6 seeds each) | cold dry: tundra 64%, moorland 13%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 55%, bog 21%. Temperate dry: steppe 59%, meadow 10%, grass 4% (along the water). Temperate balanced: meadow 59%, grass 13%. Temperate wet: grass 72%. Hot dry: dust 58%, savanna 10%, floodplain 4% (along the water). Hot balanced: savanna 62%, floodplain 10%. Hot wet: savanna 55%, floodplain 11%, grass 8% (the tempered riverside). The sand end (warmth 1): sand 43%, savanna 27%, floodplain 10%. Every floodplain touches its water: the tempered bank used to turn to grass with the floodplain starting a cell behind it, until the floodplain got its own warmth line and stranded patches were wiped. The snow end (warmth 0): moorland 72%, snow 5% — the lowland stays liveable. Rock, silt, beaches and snow make up the rest of each |
+| the climate grid (`Climate`, 6 seeds each) | cold dry: frostearth 64%, shadowearth 13%. Cold balanced: shadowearth 72%, murkearth 4%. Cold wet: shadowearth 55%, murkearth 21%. Temperate dry: dryearth 59%, blackearth 10%, brownearth 4% (along the water). Temperate balanced: blackearth 59%, brownearth 13%. Temperate wet: brownearth 72%. Hot dry: dustearth 58%, yellowearth 10%, floodearth 4% (along the water). Hot balanced: yellowearth 62%, floodearth 10%. Hot wet: yellowearth 55%, floodearth 11%, brownearth 8% (the tempered riverside). The sand end (warmth 1): sand 43%, yellowearth 27%, floodearth 10%. All floodearth touches its water: the tempered bank used to turn to brownearth with the floodearth starting a cell behind it, until the floodearth got its own warmth line and stranded patches were wiped. The snow end (warmth 0): shadowearth 72%, snow 5% — the lowland stays liveable. Rock, silt, beaches and snow make up the rest of each |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |
 | Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |
