@@ -12,7 +12,8 @@ namespace ProjectNikitin.Dev;
 /// the last row is a pair of open ports, so a link dropped there makes a new slot or a new
 /// output. A slot says what it accepts: a good, several ("or"), or a tag in amber, which
 /// links itself to whatever in the web carries it; a chevron marks a slot whose filling
-/// passes its variety on to the output.
+/// passes its variety on to the output, a plus one that grants the output a tag of its own.
+/// The recipe's element, if it has one, sits before its title.
 /// </summary>
 public partial class RecipeNode : GraphNode
 {
@@ -25,11 +26,16 @@ public partial class RecipeNode : GraphNode
 	public int Outputs { get; private set; }
 
 	private string _shown = "";
+	private readonly TextureRect _element;
 
 	public RecipeNode()
 	{
 		CustomMinimumSize = new Vector2(WebArrange.RecipeWidth, 0);
 		LabLook.Dress(this, LabLook.RecipeHead);
+		_element = LabLook.Sprite(null, 16);
+		_element.Visible = false;
+		GetTitlebarHBox().AddChild(_element);
+		GetTitlebarHBox().MoveChild(_element, 0);
 		foreach (Label title in GetTitlebarHBox().GetChildren().OfType<Label>())
 		{
 			title.AddThemeFontSizeOverride("font_size", 12);
@@ -44,10 +50,10 @@ public partial class RecipeNode : GraphNode
 		RecipeId = recipe.Id;
 		string title = analysis.TitleOf(recipe);
 
-		var shown = new StringBuilder(title).Append('|').Append(recipe.Note);
+		var shown = new StringBuilder(title).Append('|').Append(recipe.Note).Append('|').Append(recipe.Element);
 		foreach (RecipeInput slot in recipe.Inputs)
 		{
-			shown.Append("|i").Append(slot.Optional ? '?' : '!').Append(slot.Passes ? '>' : '.');
+			shown.Append("|i").Append(slot.Optional ? '?' : '!').Append(slot.Passes ? '>' : '.').Append(string.Join("+", slot.GrantList));
 			foreach (string acceptor in slot.Accepts) shown.Append(acceptor).Append('=').Append(palette.Find(acceptor)?.Name).Append(',');
 		}
 		foreach (RecipeOutput output in recipe.Outputs)
@@ -56,7 +62,10 @@ public partial class RecipeNode : GraphNode
 		_shown = shown.ToString();
 
 		Title = title;
-		TooltipText = recipe.Note.Length > 0 ? $"{title}\n{recipe.Note}" : title;
+		Element? element = Element.Find(recipe.Element);
+		_element.Texture = sprites.Element(recipe.Element);
+		_element.Visible = _element.Texture != null;
+		TooltipText = title + (element == null ? "" : $"\n{element.Name}: {element.Gloss}") + (recipe.Note.Length > 0 ? "\n" + recipe.Note : "");
 		Inputs = recipe.Inputs.Count;
 		Outputs = recipe.Outputs.Count;
 
@@ -119,7 +128,7 @@ public partial class RecipeNode : GraphNode
 		foreach (string acceptor in slot.Accepts)
 			words.Add(Acceptor.IsTag(acceptor) ? "#" + LabLook.Short(Acceptor.TagOf(acceptor)) : palette.Find(acceptor)?.Name ?? acceptor);
 		// A slot that passes variety on wears a chevron: what goes in here shows in what comes out.
-		string text = (slot.Optional ? "(opt) " : "") + string.Join(" or ", words) + (slot.Passes ? "  »" : "");
+		string text = (slot.Optional ? "(opt) " : "") + string.Join(" or ", words) + (slot.Passes ? "  »" : "") + (slot.GrantList.Count > 0 ? "  +" : "");
 
 		Label label = LabLook.Text(text, 11, SlotColour(slot) == LabLook.InputPort ? LabLook.Ink : SlotColour(slot), trim: true);
 		label.CustomMinimumSize = new Vector2(Math.Min(120, 20 + text.Length * 6), 0);

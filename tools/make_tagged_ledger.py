@@ -99,7 +99,7 @@ TAG_NOTES = {
 # ---------------------------------------------------------------------------------------
 VARIETY_NAMESPACES = {
     "heart": "Which heart a golem was given.",
-    "fit": "An optional fitting built into a golem.",
+    "fit": "An optional fitting built into a golem. Granted by the golem recipe's own slots, not carried by the bronze or the clockwork.",
     "soil": "Which of the seventeen soils: it travels from the clay to the golem's body to the golem.",
     "grain": "Which grain: it travels to the flour, the malt, the loaf and the beer.",
     "fat": "Which fat or wax a soap or a candle was made from.",
@@ -110,7 +110,6 @@ VARIETY_NAMESPACES = {
 
 VARIETY_TAGS = {
     "h1": ["heart:arsenic"], "h2": ["heart:antimony"], "h3": ["heart:bismuth"],
-    "bronze": ["fit:bronze-joints"], "smalt": ["fit:smalt-eyes"], "lunar": ["fit:caustic-nerves"], "clockw": ["fit:clockwork-hands"],
     "tallow": ["fat:tallow"], "oil": ["fat:olive"], "palmoil": ["fat:palm"], "wax": ["fat:beeswax"],
     "linen": ["cloth:linen"], "woolc": ["cloth:wool"], "cottonc": ["cloth:cotton"],
     "madderl": ["colour:red"], "weldd": ["colour:yellow"], "indigod": ["colour:blue"], "ironblk": ["colour:black"], "scarlet": ["colour:scarlet"],
@@ -127,9 +126,16 @@ AUTHORED = {
               ("barley", "Barley", ["grain:barley"], "The brewer's grain.")],
 }
 
+# (recipe id, slot index): tags the slot itself stamps on the output when it is filled. The fitting
+# is a fact about the golem, not about bronze or clockwork, which stay plain for every other use.
+GRANTS = {
+    ("r.golem", 4): ["fit:bronze-joints"], ("r.golem", 5): ["fit:smalt-eyes"],
+    ("r.golem", 6): ["fit:caustic-nerves"], ("r.golem", 7): ["fit:clockwork-hands"],
+}
+
 # (recipe id, slot index): what fills it marks what comes out.
 PASSES = [
-    ("r.golem", 1), ("r.golem", 2), ("r.golem", 4), ("r.golem", 5), ("r.golem", 6), ("r.golem", 7),
+    ("r.golem", 1), ("r.golem", 2),
     ("r.body", 0),
     ("r.flour", 0), ("r.bread", 0), ("r.malt", 0), ("r.beer", 0),
     ("r.soap", 1), ("r.candles", 0),
@@ -144,7 +150,7 @@ def main():
     web["name"] = "The full ledger, tagged"
     web["note"] = (
         "The full ledger with its either-or slots turned into tag slots wherever a tag can carry the meaning, "
-        "and with varieties switched on as a worked example: hearts, fittings and soils on the golem, grain down "
+        "and with varieties switched on as a worked example: hearts, soils and slot-granted fittings on the golem, grain down "
         "to the loaf and the beer, fats in soap and candles, cloth, dye colours, gemstones. It has its own palette, "
         "so nothing here touches the full ledger. Made by tools/make_tagged_ledger.py; every choice is there to overrule."
     )
@@ -166,6 +172,10 @@ def main():
     harts["inputs"] = [{"accepts": ["horn"]}]
     second = {"id": "r.harts.2", "name": "", "note": "From sal ammoniac and lime.",
               "inputs": [{"accepts": ["sama"]}, {"accepts": ["qlime"]}], "outputs": [{"good": "harts"}]}
+    elements = Path(__file__).resolve().parent / "recipe_elements.json"
+    if elements.exists() and "r.harts.2" in json.load(open(elements)):
+        second = {**{k: second[k] for k in ("id", "name", "note")}, "element": json.load(open(elements))["r.harts.2"],
+                  **{k: second[k] for k in ("inputs", "outputs")}}
     web["recipes"].insert(web["recipes"].index(harts) + 1, second)
     recipes[second["id"]] = second
     x, y = web["layout"]["r.harts"]
@@ -240,6 +250,8 @@ def main():
         goods[gid]["varieties"] = [{"id": vid, "name": vname, "note": vnote, "tags": vtags} for vid, vname, vtags, vnote in varieties]
     for rid, index in PASSES:
         recipes[rid]["inputs"][index]["passes"] = True
+    for (rid, index), tags in GRANTS.items():
+        recipes[rid]["inputs"][index]["grants"] = list(tags)
 
     out = ROOT / "tagged-ledger.json"
     json.dump(web, open(out, "w"), indent=2, ensure_ascii=False)

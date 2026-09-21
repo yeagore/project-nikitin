@@ -106,6 +106,8 @@ public partial class EconomyLab : Control
 		else if (!Store.HasWeb(wanted)) wanted = Store.HasWeb("starter") ? "starter" : webs[0].Id;
 		OpenWeb(wanted);
 
+		if (Embedded && !_shooting) Say(EmbeddedHint);
+
 		// The first time on a machine the help sheet opens by itself; after that it is F1.
 		if (!_shooting && !_prefs.GetValue("lab", "seen_help", false).AsBool())
 		{
@@ -156,6 +158,9 @@ public partial class EconomyLab : Control
 			{
 				case Key.S: Save(); break;
 				case Key.F: Find(); break;
+				case Key.Equal or Key.Plus or Key.KpAdd: NudgeUiScale(+1); break;
+				case Key.Minus or Key.KpSubtract: NudgeUiScale(-1); break;
+				case Key.Key0 or Key.Kp0: SetUiScale(0f); break;
 				case Key.Z when !typing && key.ShiftPressed: Redo(); break;
 				case Key.Z when !typing: Undo(); break;
 				case Key.Y when !typing: Redo(); break;
@@ -168,7 +173,7 @@ public partial class EconomyLab : Control
 			ToggleHelp();
 			GetViewport().SetInputAsHandled();
 		}
-		else if (key.Keycode == Key.F11)
+		else if (key.Keycode == Key.F11 || (key.Keycode == Key.Enter && key.AltPressed))
 		{
 			ToggleFullscreen();
 			GetViewport().SetInputAsHandled();
@@ -203,6 +208,15 @@ public partial class EconomyLab : Control
 		if (_changing)
 		{
 			edit();
+			return;
+		}
+
+		// A locked web is a reference copy. Whatever the hand did on screen (a node dragged, a letter typed) is put back.
+		if (Web.Locked)
+		{
+			Say(LockedHint);
+			SyncGraph();
+			RefreshInspector();
 			return;
 		}
 
@@ -277,6 +291,9 @@ public partial class EconomyLab : Control
 	/// <summary>True if the key names a good, a recipe or a consumer of the open web.</summary>
 	internal bool Exists(string key) => Web.Holds(key) || Web.Recipe(key) != null || Web.Consumer(key) != null;
 
+	/// <summary>What a locked web says when something tries to change it.</summary>
+	internal string LockedHint => $"{Web.Name} is locked: a reference copy to look at, cut from and import from. To change it, New… → \"A copy of the open web\".";
+
 	// ---- selection -------------------------------------------------------------
 
 	/// <summary>
@@ -347,6 +364,7 @@ public partial class EconomyLab : Control
 		id = Web.Id;
 		bool arranged = WebArrange.NeedsArranging(Web);
 		if (arranged) WebArrange.Arrange(Web);
+		if (Web.Locked) arranged = false; // laid out for this sitting only: a locked web's file is never written
 		_undo.Clear();
 		_redo.Clear();
 		SelectedKey = null;
@@ -367,7 +385,7 @@ public partial class EconomyLab : Control
 	internal void Save()
 	{
 		_saveIn = -1;
-		if (_shooting) return;
+		if (_shooting || Web.Locked) return;
 		if (!_webDirty)
 		{
 			Say("Nothing to save.");
@@ -409,32 +427,64 @@ public partial class EconomyLab : Control
 
 	// ---- the window -------------------------------------------------------------
 
+	/// <summary>The narrowest the interface can be, in its own pixels, before the top bar starts to wrap: what Auto scales to fit.</summary>
+	private const float ComfortableWidth = 1480f;
+
+	/// <summary>True when the lab runs inside the editor's Game tab, where a window cannot be maximised or go full screen.</summary>
+	private static bool Embedded => Engine.IsEmbeddedInEditor();
+
+	private const string EmbeddedHint =
+		"The lab is running inside the editor's Game tab, which cannot be maximised. For the whole screen: in the Game tab's ⋮ menu untick \"Embed Game on Next Play\", then run again.";
+
 	/// <summary>
 	/// The project stretches its 1920 by 1080 canvas to whatever the window is, which suits a game
 	/// and not an editor: a bigger window should mean more room, not bigger buttons. So the lab
-	/// turns the stretch off, opens maximised (or full screen), and scales its interface by a
-	/// factor of its own: the screen's, unless one was chosen. A shell run keeps the plain window,
-	/// so a shot is the same picture on every machine.
+	/// turns the stretch off, opens maximised (or full screen) when it has a window of its own,
+	/// and scales its interface by a factor of its own, which Auto fits to the window it actually
+	/// got: the editor's Game tab is often half a screen. A shell run keeps the plain window, so
+	/// a shot is the same picture on every machine.
 	/// </summary>
 	private void ApplyWindow(bool plain = false)
 	{
 		Window window = GetWindow();
 		window.ContentScaleMode = Window.ContentScaleModeEnum.Disabled;
+
+		// A shell run may ask for a window of a given size (window=1100x700), to see how the lab fits a small one.
+		string? asked = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("window="));
+		if (asked != null && asked[7..].Split('x') is { Length: 2 } parts && int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+		{
+			window.Size = new Vector2I(w, h);
+			window.ContentScaleFactor = UiScale;
+			return;
+		}
+
 		window.ContentScaleFactor = plain ? 1f : UiScale;
 		if (plain) return;
-		window.MinSize = new Vector2I(1100, 640);
+		window.SizeChanged += () =>
+		{
+			if (_uiScale > 0) return;
+			GetWindow().ContentScaleFactor = UiScale;
+			SyncScalePick();
+		};
+		if (Embedded) return;
+		window.MinSize = new Vector2I(900, 560);
 		window.Mode = _fullscreen ? Window.ModeEnum.Fullscreen : Window.ModeEnum.Maximized;
 	}
 
-	/// <summary>The scale in force: the chosen one, or the screen's own (a Retina panel says 2, a Windows screen says its DPI).</summary>
+	/// <summary>
+	/// The scale in force: the chosen one, or Auto, which is the screen's own (a Retina panel says 2,
+	/// a Windows screen says its DPI) brought down until the window is wide enough for the top bar.
+	/// </summary>
 	private float UiScale
 	{
 		get
 		{
 			if (_uiScale > 0) return _uiScale;
-			int screen = GetWindow().CurrentScreen;
-			float auto = OS.GetName() == "macOS" ? DisplayServer.ScreenGetScale(screen) : DisplayServer.ScreenGetDpi(screen) / 96f;
-			return Mathf.Clamp(Mathf.Snapped(auto, 0.25f), 1f, 3f);
+			Window window = GetWindow();
+			int screen = window.CurrentScreen;
+			float screenScale = OS.GetName() == "macOS" ? DisplayServer.ScreenGetScale(screen) : DisplayServer.ScreenGetDpi(screen) / 96f;
+			float fits = Mathf.Floor(window.Size.X / ComfortableWidth * 4f) / 4f;
+			return Mathf.Clamp(Mathf.Min(Mathf.Snapped(screenScale, 0.25f), fits), 0.5f, 3f);
 		}
 	}
 
@@ -443,11 +493,25 @@ public partial class EconomyLab : Control
 		_uiScale = scale;
 		GetWindow().ContentScaleFactor = UiScale;
 		SavePrefs();
-		Say(scale > 0 ? $"Interface at {scale * 100:0}%." : $"Interface at the screen's own scale, {UiScale * 100:0}%.");
+		Say(scale > 0 ? $"Interface at {scale * 100:0}%. Cmd/Ctrl with + and - change it, with 0 it follows the window." : $"Interface follows the window: {UiScale * 100:0}% now.");
+		SyncScalePick();
+	}
+
+	/// <summary>One step up or down the scale menu, from the keys: they work even when the menu is off-screen.</summary>
+	private void NudgeUiScale(int step)
+	{
+		float now = UiScale;
+		float next = Mathf.Clamp(Mathf.Snapped(now + 0.25f * step, 0.25f), 0.5f, 3f);
+		SetUiScale(next);
 	}
 
 	internal void ToggleFullscreen()
 	{
+		if (Embedded)
+		{
+			Say(EmbeddedHint);
+			return;
+		}
 		_fullscreen = !_fullscreen;
 		GetWindow().Mode = _fullscreen ? Window.ModeEnum.Fullscreen : Window.ModeEnum.Maximized;
 		SavePrefs();

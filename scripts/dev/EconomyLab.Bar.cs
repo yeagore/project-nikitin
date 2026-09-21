@@ -26,6 +26,19 @@ public partial class EconomyLab
 	private Action<string>? _goodThen;
 	private ulong _saidAt;
 
+	private static readonly float[] Scales = { 0f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f };
+	private OptionButton _scalePick = null!;
+	private Label _lockBadge = null!;
+
+	/// <summary>Shows the scale in force in the menu; a scale from the keys that is not on the menu reads as its number.</summary>
+	private void SyncScalePick()
+	{
+		if (_scalePick == null) return;
+		int index = Array.IndexOf(Scales, _uiScale);
+		_scalePick.Select(Math.Max(0, index));
+		_scalePick.SetItemText(0, _uiScale <= 0 ? $"UI auto ({UiScale * 100:0}%)" : "UI auto");
+	}
+
 	private void BuildUi()
 	{
 		SetAnchorsPreset(LayoutPreset.FullRect);
@@ -64,14 +77,22 @@ public partial class EconomyLab
 	{
 		var bar = new PanelContainer();
 		bar.AddThemeStyleboxOverride("panel", LabLook.Box(LabLook.Dock.Darkened(0.2f), 0, 0, marginX: 10, marginY: 6));
-		var row = new HBoxContainer();
-		row.AddThemeConstantOverride("separation", 8);
+		// A flow, not a row: in a narrow window (the editor's Game tab, a small laptop) the bar takes
+		// a second line rather than running off the edge with the scale menu on the part you cannot reach.
+		var row = new HFlowContainer();
+		row.AddThemeConstantOverride("h_separation", 8);
+		row.AddThemeConstantOverride("v_separation", 4);
 		bar.AddChild(row);
 
 		row.AddChild(LabLook.Text("Web", 13, LabLook.Dim));
 		_webPick = new OptionButton { CustomMinimumSize = new Vector2(260, 0), FocusMode = FocusModeEnum.None, TooltipText = "Which version of the economy is open. Each is a file under resources/economy/webs." };
 		_webPick.ItemSelected += index => OpenWeb(_webPick.GetItemMetadata((int)index).AsString());
 		row.AddChild(_webPick);
+		_lockBadge = LabLook.Text("LOCKED", 12, LabLook.Accent);
+		_lockBadge.TooltipText = "A reference copy: it can be looked at, cut from and imported from, never changed or binned. New… → \"A copy of the open web\" makes one you can change.";
+		_lockBadge.MouseFilter = MouseFilterEnum.Stop;
+		_lockBadge.Visible = false;
+		row.AddChild(_lockBadge);
 		row.AddChild(Press("New…", "A new web with its own palette: clean, this web's, a copy of this web, or the selected goods with everything upstream of them.", AskNewWeb));
 		row.AddChild(Press("Bin…", "Move this web's file to the system trash.", AskBinWeb));
 		row.AddChild(new VSeparator());
@@ -108,13 +129,12 @@ public partial class EconomyLab
 		row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 
 		// The interface's scale and the window: per machine, since screens differ.
-		var scale = new OptionButton { FocusMode = FocusModeEnum.None, TooltipText = "How large the lab's interface is drawn on this machine. Auto follows the screen." };
-		float[] scales = { 0f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f };
-		foreach (float option in scales) scale.AddItem(option == 0f ? "UI auto" : $"UI {option * 100:0}%");
-		scale.Select(Math.Max(0, Array.IndexOf(scales, _uiScale)));
-		scale.ItemSelected += index => SetUiScale(scales[index]);
-		row.AddChild(scale);
-		row.AddChild(Press("Full screen", "Full screen, or back to a maximised window (F11).", ToggleFullscreen));
+		_scalePick = new OptionButton { FocusMode = FocusModeEnum.None, TooltipText = "How large the lab's interface is drawn on this machine. Auto follows the screen and the window. Cmd/Ctrl with + and - step it from the keys, with 0 it goes back to Auto." };
+		foreach (float option in Scales) _scalePick.AddItem(option == 0f ? "UI auto" : $"UI {option * 100:0}%");
+		_scalePick.ItemSelected += index => SetUiScale(Scales[index]);
+		row.AddChild(_scalePick);
+		SyncScalePick();
+		row.AddChild(Press("Full screen", "Full screen, or back to a maximised window (F11, or Alt+Enter). Not inside the editor's Game tab.", ToggleFullscreen));
 		row.AddChild(new VSeparator());
 
 		_issuesButton = Press("No issues", "What the web's analysis found wrong or unfinished. Pick one to go to it.", ShowIssues);
@@ -165,6 +185,7 @@ public partial class EconomyLab
 	private void RefreshBar()
 	{
 		if (_webPick == null) return;
+		_lockBadge.Visible = Web.Locked;
 		if (_webPick.Selected >= 0 && _webPick.GetItemText(_webPick.Selected) != Web.Name) _webPick.SetItemText(_webPick.Selected, Web.Name);
 		bool dirty = _webDirty;
 		_saveButton.Text = dirty ? "Save •" : "Saved";
@@ -243,7 +264,9 @@ public partial class EconomyLab
 		  Right: whatever is selected, for editing. Nothing selected shows the web itself.
 
 		KEYS
-		  Cmd/Ctrl+S save · Cmd/Ctrl+Z undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+F find · F frame · F11 full screen · F1 this sheet
+		  Cmd/Ctrl+S save · Cmd/Ctrl+Z undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+F find · F frame · F1 this sheet
+		  Cmd/Ctrl with + and - : the interface larger and smaller; with 0: fitted to the window
+		  F11 or Alt+Enter: full screen (not inside the editor's Game tab: untick "Embed Game on Next Play" there)
 
 		FILES
 		  resources/economy/webs/<web>.json, one per web, saved as you work. Commit and push them
@@ -396,6 +419,7 @@ public partial class EconomyLab
 				made = EconomyStore.Clone(Web);
 				made.Id = id;
 				made.Name = name;
+				made.Locked = false; // a copy of a reference is there to be worked on
 				break;
 			case 3:
 				List<string> goods = SelectedKeys().Where(Web.Holds).ToList();
@@ -420,12 +444,18 @@ public partial class EconomyLab
 
 	private void AskBinWeb()
 	{
-		_binDialog.DialogText = $"Move \"{Web.Name}\" ({Web.Id}.json) to the system trash?\nIts palette goes with it. The other webs are not touched.";
+		if (Web.Locked)
+		{
+			Say($"{Web.Name} is locked and cannot be binned from the lab. It is a file, webs/{Web.Id}.json: if it really must go, that is where.");
+			return;
+		}
+		_binDialog.DialogText = $"Move \"{Web.Name}\" ({Web.Id}.json) to the system trash?\nIts palette goes with it. The other webs are not touched.\n\nIt can come back from the trash, and if it was ever committed, from git.";
 		_binDialog.PopupCentered();
 	}
 
 	private void BinWeb()
 	{
+		if (Web.Locked) return;
 		string gone = Web.Name;
 		_webDirty = false;
 		_saveIn = -1;

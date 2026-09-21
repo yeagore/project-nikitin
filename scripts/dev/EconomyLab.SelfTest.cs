@@ -19,7 +19,7 @@ public partial class EconomyLab
 	private int _checks, _failed;
 
 	/// <summary>The webs the repository ships, which the self-test holds to having no errors.</summary>
-	private static readonly string[] Shipped = { "starter", "full-ledger", "tagged-ledger" };
+	private static readonly string[] Shipped = { "starter", "full-ledger", "tagged-ledger", "full-ledger-reference" };
 
 	/// <summary>The scratch copy of the economy folder the self-test works in.</summary>
 	private static string SelfTestRoot()
@@ -197,6 +197,25 @@ public partial class EconomyLab
 		Undo();
 		Check(Analysis.VarietiesOf("golem").IsPlain && Palette.Find("grain")!.VarietyList.Count == 0, "two undos take the varieties away");
 
+		// A slot can grant a tag of its own: the fitting is a fact about the golem, not about bronze.
+		Change("the golem's bronze slot grants bronze joints", () =>
+		{
+			EconomyEdit.EnsureNamespace(Palette, "fit").Role = TagNamespace.Variety;
+			Web.Recipe("r.golem")!.Inputs[4].Grants = new List<string> { "fit:bronze-joints" };
+		});
+		VarietySet fitted = Analysis.VarietiesOf("golem");
+		Check(fitted.Count == 2 && fitted.Sets.Any(v => v.Count == 0) && fitted.Sets.Any(v => v.SequenceEqual(new[] { "fit:bronze-joints" })) && Analysis.VarietiesOf("bronze").IsPlain,
+			"an optional slot that grants a tag makes two golems, with and without, and bronze itself stays plain");
+		Change("renamed the fitting", () => EconomyEdit.RenameTag(Web, "fit:bronze-joints", "fit:bronze"));
+		Check(Web.Recipe("r.golem")!.Inputs[4].GrantList.SequenceEqual(new[] { "fit:bronze" }), "a renamed tag follows into the slot that grants it");
+		Undo();
+		Undo();
+
+		// A recipe's element is part of the web like anything else.
+		Change("iron is of fire", () => Web.Recipe("r.ife")!.Element = Element.Fire.Id);
+		Check(EconomyStore.ToJson(Web).Contains("\"element\": \"fire\"") && Element.Find(Web.Recipe("r.ife")!.Element) == Element.Fire, "a recipe's element is written to the file");
+		Undo();
+
 		// Moving is a change too.
 		Spot was = Web.Layout["golem"];
 		_nodes["golem"].PositionOffset += new Vector2(40, 30);
@@ -265,6 +284,49 @@ public partial class EconomyLab
 		CheckCanvas("deleting from the palette");
 		Undo();
 		Check(Palette.Find("golem") != null && Web.Holds("golem"), "and undo brings it back");
+
+		// ---- a locked web refuses everything ---------------------------------------
+		EconomyWeb reference = EconomyStore.Clone(Web);
+		reference.Id = "locked-test";
+		reference.Name = "Locked test";
+		reference.Locked = true;
+		Store.SaveWeb(reference);
+		OpenWeb("locked-test");
+		string lockedFile = File.ReadAllText(Store.WebPath("locked-test"));
+		string lockedWeb = EconomyStore.ToJson(Web);
+		Link("grain", 0, "r.golem", 0);
+		RemoveNodes(new List<string> { "golem" });
+		Change("a note on a locked web", () => Web.Note = "changed");
+		Spot stood = Web.Layout["golem"];
+		_nodes["golem"].PositionOffset += new Vector2(50, 50);
+		NodesMoved();
+		Check(EconomyStore.ToJson(Web) == lockedWeb && _undo.Count == 0, "a locked web refuses links, removals, notes and moves, and keeps no undo step");
+		Check(SpotOf(_nodes["golem"]) == stood, "a node dragged in a locked web is put back where it stood");
+		AskBinWeb();
+		BinWeb();
+		Save();
+		Check(File.Exists(Store.WebPath("locked-test")) && File.ReadAllText(Store.WebPath("locked-test")) == lockedFile && Web.Id == "locked-test", "it cannot be binned, and its file is never written");
+		EconomyWeb freed = EconomyStore.Clone(Web);
+		Check(freed.Locked, "a clone carries the lock, which New… → a copy takes off on purpose");
+		File.Delete(Store.WebPath("locked-test"));
+
+		// ---- what ships: elements on every recipe, in rough balance, and a locked reference ----
+		foreach (string id in new[] { "full-ledger", "tagged-ledger", "starter" })
+		{
+			if (!Store.HasWeb(id)) continue;
+			EconomyWeb shipped = Store.LoadWeb(id);
+			int without = shipped.Recipes.Count(r => Element.Find(r.Element) == null);
+			Check(without == 0, $"{id}: every recipe has an element ({without} without)");
+			if (id == "starter") continue;
+			int four = shipped.Recipes.Count(r => r.Element != Element.Quintessence.Id);
+			var shares = Element.All.Where(e => e != Element.Quintessence).Select(e => (e.Name, Share: shipped.Recipes.Count(r => r.Element == e.Id) * 100 / Math.Max(1, four))).ToList();
+			Check(shares.All(p => p.Share is >= 15 and <= 35), $"{id}: the four are in rough balance ({string.Join(", ", shares.Select(p => $"{p.Name} {p.Share}%"))}; quintessence {shipped.Recipes.Count - four})");
+		}
+		if (Store.HasWeb("full-ledger-reference"))
+		{
+			EconomyWeb kept = Store.LoadWeb("full-ledger-reference");
+			Check(kept.Locked && kept.Recipes.Count == Store.LoadWeb("full-ledger").Recipes.Count, "the reference copy of the full ledger is locked and whole");
+		}
 
 		// ---- the tagged ledger: the worked example of tag slots and varieties ---------
 		if (Store.HasWeb("tagged-ledger"))

@@ -24,6 +24,18 @@ public sealed class RecipeInput
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public bool Passes { get; set; }
 
+	/// <summary>
+	/// Variety tags this slot stamps on the output whenever it is filled, whatever fills it. For when
+	/// the effect belongs to the combination and not to the ingredient: clockwork in a golem's hands
+	/// slot makes a golem with <c>fit:clockwork-hands</c>, while Clockwork itself stays plain clockwork
+	/// for the clockmaker. Null when the slot grants nothing; read through <see cref="GrantList"/>.
+	/// </summary>
+	public List<string>? Grants { get; set; }
+
+	/// <summary>The granted tags, never null.</summary>
+	[JsonIgnore]
+	public IReadOnlyList<string> GrantList => Grants ?? (IReadOnlyList<string>)System.Array.Empty<string>();
+
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }
 }

@@ -18,6 +18,10 @@ public sealed class Recipe
 	public string Name { get; set; } = "";
 
 	public string Note { get; set; } = "";
+
+	/// <summary>The recipe's elemental association, an <see cref="Economy.Element"/> id (<c>fire</c>, <c>wind</c>, <c>water</c>, <c>earth</c>, <c>qe</c>), or null.</summary>
+	public string? Element { get; set; }
+
 	public List<RecipeInput> Inputs { get; set; } = new();
 	public List<RecipeOutput> Outputs { get; set; } = new();
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using ProjectNikitin.Economy;
+using Economy = ProjectNikitin.Economy;
 
 namespace ProjectNikitin.Dev;
 
@@ -45,6 +46,17 @@ internal sealed class SpriteBank
 			FilterClip = true,
 		};
 		return _cells[(atlas.File, atlas.Cell, index)] = texture;
+	}
+
+	/// <summary>An element's icon off the elements sheet, which belongs to the system and not to any palette.</summary>
+	public Texture2D? Element(string? id)
+	{
+		Element? element = Economy.Element.Find(id);
+		if (element == null) return null;
+		if (_cells.TryGetValue((Economy.Element.Sheet, 16, element.Cell), out Texture2D? cell)) return cell;
+		ImageTexture? sheet = Image(Economy.Element.Sheet);
+		if (sheet == null) return null;
+		return _cells[(Economy.Element.Sheet, 16, element.Cell)] = new AtlasTexture { Atlas = sheet, Region = new Rect2(element.Cell * 16, 0, 16, 16), FilterClip = true };
 	}
 
 	/// <summary>How many cells the sheet has room for, drawn or blank.</summary>

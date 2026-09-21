@@ -45,8 +45,16 @@ House rules:
   an undo is dead. Typing in a field passes a `merge` key (one undo step) and
   `keepInspector: true` (the field keeps its caret).
 - The lab turns the project's stretch off and scales its own interface
-  (`ApplyWindow`, per machine in `user://economy_lab.cfg`); a `shot` or `selftest`
-  run keeps a plain 1920 by 1080 window so pictures match across machines.
+  (`ApplyWindow`, per machine in `user://economy_lab.cfg`). Auto is the screen's
+  scale brought down until `ComfortableWidth` fits the window it actually got,
+  because pressing F6 usually runs it **embedded in the editor's Game tab**
+  (`Engine.IsEmbeddedInEditor()`), where it cannot be maximised or go full screen;
+  the top bar is a flow so it wraps rather than hides the scale menu, and
+  Cmd/Ctrl with + - 0 change the scale from the keys. A `shot` or `selftest` run
+  keeps a plain 1920 by 1080 window so pictures match across machines
+  (`window=WxH` asks for another size, to see the fitting).
+- A locked web (`Web.Locked`) is refused at the door: `Change` says why and puts
+  the canvas and the inspector back; `Save` and Bin skip it.
 - A pop-up opened in the first frames of a shell run is closed again by the
   window's focus changes; `show=` waits (`ShowForShot`).
 
@@ -56,4 +64,4 @@ godot --path . scenes/dev/economy_lab.tscn -- shot web=tagged-ledger select=r.go
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake        # arrange webs with no layout, rewrite every file in the lab's format
 ```
 
-`shot` also takes `show=help|find|newweb|newgood|issues`, `tags`, `tags=ns:<namespace>` and `import`.
+`shot` also takes `show=help|find|newweb|newgood|issues`, `tags`, `tags=ns:<namespace>`, `import` and `window=WxH`.

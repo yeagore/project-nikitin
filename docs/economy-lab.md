@@ -48,13 +48,32 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
   - A slot can be marked **passes variety** (a `»` on the recipe node). Whatever
     fills such a slot stamps its variety tags on what the recipe makes, and those
     travel on through the next passing slot. Rye grain makes rye flour makes rye
-    bread, through one Flour node and one Bread node. A golem recipe whose heart
-    slot and four optional fittings pass variety on makes 48 different golems, and
-    nobody writes any of them down: the lab derives them and shows the count on
+    bread, through one Flour node and one Bread node. A golem recipe with a
+    three-heart slot that passes variety on and four optional fittings makes 48
+    different golems, and nobody writes any of them down: the lab derives them and shows the count on
     the node and the list in the inspector. Same inputs, same variety, always.
+  - A slot can also **grant** tags of its own (a `+` on the recipe node): whatever
+    fills it, the output gets them. This is for when the effect belongs to the
+    combination and not to the ingredient. Clockwork in the golem's hands slot
+    makes a golem with `fit:clockwork-hands`; Clockwork itself stays plain
+    clockwork for the clockmaker, where a tag like that would be nonsense.
   - Nothing reads variety tags yet. They are where prices ("rye sells better where
     boreal goods are in fashion") and uses ("a sand-bodied golem bears heat")
     will attach in the next stage.
+- **Every recipe has an element**, in the spirit of alchemy. Two questions sort a
+  craft: does it put things together or take a thing apart, and does it do so
+  with violence or with patience. **Fire** is violent synthesis (smelting,
+  burning, firing). **Wind** is violent analysis (milling, crushing, distilling).
+  **Water** is gentle synthesis (mixing, assembling, weaving). **Earth** is gentle
+  analysis (fermenting, curing, spinning wool into thread). **Quintessence** is
+  pure magic, like animating a golem. It is a classification by feel, not a law,
+  and nothing reads it yet; a web does well to keep the four in rough balance
+  with a little quintessence on top, and the web view says how it stands. The
+  element's icon sits before the recipe's title, and leads its **formula**: the
+  recipe written in the goods' alchemical signs, which is where all this is
+  meant to end up.
+- A web can be **locked**: a reference copy that the lab will open, cut from and
+  import from, and will not change or bin. To work on one, make a copy of it.
 - Nothing about a good's place in the web is stored. A **source** is a good
   nothing in this web makes, a **final** good is one no recipe here uses, and the
   rest are intermediates. The lab reads these off the links every time something
@@ -67,9 +86,12 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
 |---|---|
 | `resources/economy/webs/starter.json` | A small one to learn on: the golem with its three hearts and bronze joints, bread and beer. 48 goods on the canvas, 29 recipes, two consumers; the full 286-good palette, so there is plenty to drag in. Opens first. |
 | `resources/economy/webs/full-ledger.json` | Everything from the 21 September 2026 brainstorm: 286 goods, 197 recipes, four consumers (Food, Intoxicants and physic, Clothing, Wares). Big: a map to cut from. |
+| `resources/economy/webs/full-ledger-reference.json` | A **locked** copy of the full ledger, so the big web can always be got back however the working copy is treated. |
 | `resources/economy/webs/tagged-ledger.json` | The full ledger reworked as a worked example: its either-or slots turned into tag slots, and varieties switched on (see the findings below). Its own palette, so the full ledger is untouched. |
-| `resources/economy/sprites/icons.png`, `signs.png` | 16 px cells, 16 columns. `sprites/custom/` takes PNGs imported through the lab. The sheets are files shared by every web; each palette names the sheets it uses. |
+| `resources/economy/sprites/icons.png`, `signs.png` | 16 px cells, 16 columns. `sprites/custom/` takes PNGs imported through the lab, for a good's icon (`<id>.png`) and for its sign (`<id>.sign.png`). The sheets are files shared by every web; each palette names the sheets it uses. |
+| `resources/economy/sprites/elements.png` | The five element icons, 16 px, in a row: fire, wind, water, earth, quintessence. They belong to the system, not to a palette. `tools/make_element_icons.py` drew them. |
 | `tools/import_economy_export.py`, `tools/make_tagged_ledger.py` | The one-off converter from the chat export, and the script that derived the tagged ledger. Kept as the record of how the data was made; running either again overwrites lab edits to the webs it writes. |
+| `tools/recipe_elements.json`, `tools/apply_recipe_elements.py` | The classification of every recipe by element (made by feel on 2026-09-22, to be overruled in the lab), and the script that stamped it into the webs in place and made the locked reference copy. |
 
 The import changed three things in the data. The computed `trait:hub` tag was
 dropped (the lab computes hubs). The golem's heart slot, which listed the
@@ -95,10 +117,18 @@ opened, the interface scale and the toggles (`user://economy_lab.cfg`).
 ## Using it
 
 Open `scenes/dev/economy_lab.tscn` in the editor and press F6. F1 in the lab
-shows the same gestures as below. The lab opens maximised; **Full screen** (F11)
-is in the top bar, and beside it **UI** sets how large the interface is drawn on
-this machine (Auto follows the screen; a 4K panel and a laptop want different
-answers, and each machine remembers its own).
+shows the same gestures as below.
+
+**The window.** The lab fits whatever window it gets: **UI auto** draws the
+interface at the screen's own scale, brought down until everything fits, and the
+top bar wraps onto a second line rather than run off the edge. Cmd/Ctrl with `+`
+and `-` make the interface larger and smaller from the keys, and with `0` it goes
+back to Auto; each machine remembers its own. With a window of its own the lab
+opens maximised, and **Full screen** (F11 or Alt+Enter) is in the top bar.
+**If the lab appears inside the editor, in the Game tab,** it cannot be maximised
+or go full screen from within, because the editor owns that window: in the Game
+tab's ⋮ menu untick *Embed Game on Next Play* and run again, and it gets a window
+of its own. The status line says so when that is the case.
 
 **The canvas** (middle)
 - Drag a node to move it. Drag on empty canvas for a rubber band. Wheel zooms,
@@ -148,10 +178,11 @@ to describe it, set its role, rename it, or add a tag in it; *New namespace…*
 makes one. All of it stays in this web.
 
 **The right dock** edits what is selected. A good: name, description, tags, its
-varieties (what the web can make of it, and the ones authored by hand), icon and
-sign (from the sheet, or a PNG of your own), what makes it and uses it, delete
-from the palette. A recipe: its label, its slots (what each accepts, optional or
-not, passes variety or not, and what each filler would pass), its outputs. A
+varieties (what the web can make of it, and the ones authored by hand), its icon
+and its sign (each from the sheet, or from a PNG of your own), what makes it and
+uses it, delete from the palette. A recipe: its label, its element, its formula
+in signs, its slots (what each accepts, optional or not, passes variety or not
+and what each filler would pass, what the slot itself grants), its outputs. A
 consumer: its name and what it accepts. Nothing selected: the web's name and
 note, its numbers, hubs, issues, and the legend.
 
@@ -199,10 +230,46 @@ The full ledger had 27 slots of the form "x or y". In `tagged-ledger`:
   Neither is done; both are the kind of cut the variety system is for.
 
 The tagged ledger's varieties, as a worked example: the golem takes its heart
-(three), four optional fittings and its body's soil (seventeen, from the clay up)
-and comes out in about 816 varieties from one recipe; bread, beer, soap and
+(three, passed on), four optional fittings (granted by the recipe's own slots) and
+its body's soil (seventeen, passed on from the clay up) and comes out in about 816
+varieties from one recipe; bread, beer, soap and
 candles in three each (grain, fat); clothes in three cloths, dyed cloth in five
 colours, jewellery in five stones.
+
+## An open question: how varieties stack in play
+
+One recipe can make hundreds of varieties. A warehouse that kept a stack for each
+would bury the player, and one that hid them would make them pointless. Thoughts,
+none of them built:
+
+- **Stack by what matters, not by what happened.** A variety tag is history ("made
+  with rye", "bodied in sand"). What the player and the market care about is what
+  that history *does*: sells better under a boreal fashion, bears heat. If every
+  reader of variety tags (a fashion, a use, a recipe that asks for a particular
+  variety) is a short list of **effects**, then units stack by good and effect
+  signature: seventeen soils collapse into the four or five kinds of golem anyone
+  can tell apart. Tags that nothing reads are dropped at the workshop door, or
+  kept as flavour on the item. The lab can already count varieties; the number
+  worth watching will be the *distinguishable* ones, once readers exist.
+- **Bulk goods blend, made things stay themselves.** Grain, flour, bread, cloth
+  are fungible: a stack of bread can be "two thirds wheat, one third rye", shown
+  as one row with a composition bar, priced by its mix. Golems, jewels, ships are
+  few and dear: each unit keeps its variety, like equipment, and five golems with
+  five names overwhelm nobody.
+- **Order by intent.** The player asks for "a golem for the desert mine" or "bread,
+  any", not for a stock-keeping unit. Orders and trade routes default to the good,
+  and narrow to an effect or a variety only where the player chooses to care.
+- **One row per good, opened on demand.** Every list shows the good; the varieties
+  are inside it. Opaque is when a difference matters and is hidden; overwhelming
+  is when it does not matter and is shown. The effect table is what decides which.
+- **Keep most slots from passing variety on**, in the webs themselves. Every
+  passing slot multiplies the count by whatever can fill it, down the whole chain:
+  if bread remembers its grain and its salt, and ship's provisions remember their
+  bread, fish and beer, provisions come in dozens of kinds that mean nothing. A
+  slot should pass only where the choice shows in the product or something
+  downstream reads it, and chains should forget at the point where identity
+  dissolves (provisions are provisions). A good that shows hundreds of varieties
+  on the canvas is a prompt to look at which slots pass.
 
 ## From a shell
 
@@ -218,7 +285,8 @@ web, the canvas and undo agree after each, and exits 1 if any check failed. It i
 the regression gate for the lab and the model and takes a few seconds. `shot`
 opens a window, draws, saves a PNG and quits; it never writes to the data (`web=`
 which web, `select=` a node key, `zoom=`, `out=` the file, `show=help|find|newweb|newgood|issues`
-a pop-up, `tags` or `tags=ns:kind` the Tags tab, `import` the Import dialog). `bake`
+a pop-up, `tags` or `tags=ns:kind` the Tags tab, `import` the Import dialog,
+`window=1150x700` a window of that size with the interface fitted to it). `bake`
 arranges every web that has no layout and rewrites every file through the lab's
 own writer; run it after either script in `tools/`.
 
@@ -235,6 +303,7 @@ three kinds never collide and a layout key needs no prefix.
 {
   "format": 2,
   "id": "tagged-ledger", "name": "…", "note": "…",
+  "locked": true,
   "palette": {
     "atlases": [ { "id": "icons", "file": "sprites/icons.png", "cell": 16, "columns": 16 } ],
     "tagNamespaces": [
@@ -253,11 +322,11 @@ three kinds never collide and a layout key needs no prefix.
   },
   "goods": [ "h2", "grain", "golem" ],
   "recipes": [
-    { "id": "r.golem", "name": "", "note": "",
+    { "id": "r.golem", "name": "", "note": "", "element": "qe",
       "inputs": [
         { "accepts": [ "blood" ] },
         { "accepts": [ "#kind:golem-heart" ], "passes": true },
-        { "accepts": [ "bronze" ], "optional": true, "passes": true }
+        { "accepts": [ "bronze" ], "optional": true, "grants": [ "fit:bronze-joints" ] }
       ],
       "outputs": [ { "good": "golem" } ] }
   ],
@@ -265,7 +334,8 @@ three kinds never collide and a layout key needs no prefix.
   "layout": { "h2": [0, 0], "r.golem": [1480, 310] }
 }
 ```
-`goods` lists which of the palette's goods are on the canvas. A sprite is a cell
+`locked` is written only when true. `element` is `fire`, `wind`, `water`, `earth`
+or `qe`. `goods` lists which of the palette's goods are on the canvas. A sprite is a cell
 of an atlas (`atlas`, `index`) or a PNG of its own (`"file": "sprites/custom/h4.png"`).
 A tag may be in use without an entry under `tags`; the entry is where its note
 lives. Inputs and outputs are objects so that amounts can join them
@@ -285,9 +355,9 @@ the canvas follows it; a gesture becomes a change to the web through
 Not done here, in rough order of how soon they will be wanted: amounts on slots
 and outputs, and a recipe's time, building and labour; rates at the sources and
 the consumers, and a balance sheet per web; variety tags read by consumers (what
-a fashion pays for) and by uses (what a variety is good at), and a slot that
-*grants* a tag of its own for when the effect belongs to the combination rather
-than to the ingredient; folding near-duplicate goods into varieties; by-products
+a fashion pays for) and by uses (what a variety is good at), which is also what
+will decide how varieties stack (above); folding near-duplicate goods into
+varieties; whole chains written out as formulae in signs, with signs for tags; by-products
 used in earnest (the second output port is there); webs compared side by side; a
 pixel editor for the sprites; frames to group a chain on the canvas; the soil and
 climate a raw variety needs.

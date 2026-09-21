@@ -8115,6 +8115,7 @@
       "id": "r.nit.nitbed",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8132,6 +8133,7 @@
       "id": "r.cocoon",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8149,6 +8151,7 @@
       "id": "r.icu",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8166,6 +8169,7 @@
       "id": "r.ife",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8189,6 +8193,7 @@
       "id": "r.isn",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8206,6 +8211,7 @@
       "id": "r.ipb",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8223,6 +8229,7 @@
       "id": "r.izn",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8245,6 +8252,7 @@
       "id": "r.iag",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8262,6 +8270,7 @@
       "id": "r.iau",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8279,6 +8288,7 @@
       "id": "r.hg",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8296,6 +8306,7 @@
       "id": "r.salt",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8313,6 +8324,7 @@
       "id": "r.brim",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8330,6 +8342,7 @@
       "id": "r.oov",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8348,6 +8361,7 @@
       "id": "r.nitre",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8370,6 +8384,7 @@
       "id": "r.was",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8387,6 +8402,7 @@
       "id": "r.reg",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8409,6 +8425,7 @@
       "id": "r.bic",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8426,6 +8443,7 @@
       "id": "r.pearl",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8443,6 +8461,7 @@
       "id": "r.alum",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8460,6 +8479,7 @@
       "id": "r.sama",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8478,6 +8498,7 @@
       "id": "r.qlime",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8501,6 +8522,7 @@
       "id": "r.zaf",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8518,6 +8540,7 @@
       "id": "r.borax",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8535,6 +8558,7 @@
       "id": "r.soda",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8553,6 +8577,7 @@
       "id": "r.ash",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8570,6 +8595,7 @@
       "id": "r.copperas",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8587,6 +8613,7 @@
       "id": "r.plaster",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8609,6 +8636,7 @@
       "id": "r.clay",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8626,6 +8654,7 @@
       "id": "r.sand",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8643,6 +8672,7 @@
       "id": "r.ochre",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8660,6 +8690,7 @@
       "id": "r.fearth",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8677,6 +8708,7 @@
       "id": "r.peat",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8694,6 +8726,7 @@
       "id": "r.nitbed",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8726,6 +8759,7 @@
       "id": "r.flour",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8743,6 +8777,7 @@
       "id": "r.malt",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8760,6 +8795,7 @@
       "id": "r.wine",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8777,6 +8813,7 @@
       "id": "r.oil",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8794,6 +8831,7 @@
       "id": "r.linthr",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8811,6 +8849,7 @@
       "id": "r.linseed",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8828,6 +8867,7 @@
       "id": "r.hempf",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8845,6 +8885,7 @@
       "id": "r.cotthr",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8862,6 +8903,7 @@
       "id": "r.sugar",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8879,6 +8921,7 @@
       "id": "r.opium",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8896,6 +8939,7 @@
       "id": "r.pulque",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8913,6 +8957,7 @@
       "id": "r.planks",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8930,6 +8975,7 @@
       "id": "r.charcoal",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8947,6 +8993,7 @@
       "id": "r.pitch",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8965,6 +9012,7 @@
       "id": "r.turps",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8982,6 +9030,7 @@
       "id": "r.lampblk",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9000,6 +9049,7 @@
       "id": "r.silkthr",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9017,6 +9067,7 @@
       "id": "r.yarn",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9034,6 +9085,7 @@
       "id": "r.honey",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9051,6 +9103,7 @@
       "id": "r.wax",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9068,6 +9121,7 @@
       "id": "r.glue",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9090,6 +9144,7 @@
       "id": "r.boneash",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9107,6 +9162,7 @@
       "id": "r.parch",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9129,6 +9185,7 @@
       "id": "r.leather",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9157,6 +9214,7 @@
       "id": "r.cheese",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9179,6 +9237,7 @@
       "id": "r.saltfish",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9201,6 +9260,7 @@
       "id": "r.tealeaf",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9218,6 +9278,7 @@
       "id": "r.coffeeb",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9235,6 +9296,7 @@
       "id": "r.shellac",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9252,6 +9314,7 @@
       "id": "r.bronze",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9274,6 +9337,7 @@
       "id": "r.brass",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9296,6 +9360,7 @@
       "id": "r.pewter",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9318,6 +9383,7 @@
       "id": "r.typem",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9345,6 +9411,7 @@
       "id": "r.steel",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9367,6 +9434,7 @@
       "id": "r.tinplate",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9400,6 +9468,7 @@
       "id": "r.specm",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9427,6 +9496,7 @@
       "id": "r.amalgam",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9449,6 +9519,7 @@
       "id": "r.litharge",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9471,6 +9542,7 @@
       "id": "r.shot",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9493,6 +9565,7 @@
       "id": "r.goldthr",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9515,6 +9588,7 @@
       "id": "r.aqf",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9537,6 +9611,7 @@
       "id": "r.aqr",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9560,6 +9635,7 @@
       "id": "r.lye",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9582,6 +9658,7 @@
       "id": "r.sos",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9604,6 +9681,7 @@
       "id": "r.vinegar",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9621,6 +9699,7 @@
       "id": "r.brandy",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9638,6 +9717,7 @@
       "id": "r.spirit",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9655,6 +9735,7 @@
       "id": "r.harts",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9674,6 +9755,7 @@
       "id": "r.tartar",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9691,6 +9773,7 @@
       "id": "r.gunp",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9718,6 +9801,7 @@
       "id": "r.verm",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9740,6 +9824,7 @@
       "id": "r.smalt",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9762,6 +9847,7 @@
       "id": "r.whitelead",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9789,6 +9875,7 @@
       "id": "r.redlead",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9806,6 +9893,7 @@
       "id": "r.verdi",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9828,6 +9916,7 @@
       "id": "r.prussian",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9855,6 +9944,7 @@
       "id": "r.ultram",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9882,6 +9972,7 @@
       "id": "r.kingsy",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -9899,6 +9990,7 @@
       "id": "r.rouge",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -9916,6 +10008,7 @@
       "id": "r.madderl",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9939,6 +10032,7 @@
       "id": "r.indigod",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -9962,6 +10056,7 @@
       "id": "r.weldd",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -9984,6 +10079,7 @@
       "id": "r.scarlet",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10017,6 +10113,7 @@
       "id": "r.ironblk",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10039,6 +10136,7 @@
       "id": "r.pigm",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10102,6 +10200,7 @@
       "id": "r.glass",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10135,6 +10234,7 @@
       "id": "r.crystal",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10162,6 +10262,7 @@
       "id": "r.winpane",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10184,6 +10285,7 @@
       "id": "r.lens",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10207,6 +10309,7 @@
       "id": "r.enamel",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10240,6 +10343,7 @@
       "id": "r.glaze",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10268,6 +10372,7 @@
       "id": "r.paper",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10297,6 +10402,7 @@
       "id": "r.ink",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10324,6 +10430,7 @@
       "id": "r.printink",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10346,6 +10453,7 @@
       "id": "r.oilpaint",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10374,6 +10482,7 @@
       "id": "r.varnish",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10403,6 +10512,7 @@
       "id": "r.lacquer",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10425,6 +10535,7 @@
       "id": "r.sealwax",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10453,6 +10564,7 @@
       "id": "r.candles",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10472,6 +10584,7 @@
       "id": "r.soap",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10496,6 +10609,7 @@
       "id": "r.rope",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10519,6 +10633,7 @@
       "id": "r.canvas",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10536,6 +10651,7 @@
       "id": "r.linen",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10553,6 +10669,7 @@
       "id": "r.woolc",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10580,6 +10697,7 @@
       "id": "r.cottonc",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10597,6 +10715,7 @@
       "id": "r.silk",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10614,6 +10733,7 @@
       "id": "r.mortar",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -10636,6 +10756,7 @@
       "id": "r.brick",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10659,6 +10780,7 @@
       "id": "r.pottery",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10681,6 +10803,7 @@
       "id": "r.porcel",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10714,6 +10837,7 @@
       "id": "r.bread",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10736,6 +10860,7 @@
       "id": "r.beer",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -10758,6 +10883,7 @@
       "id": "r.masa",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -10780,6 +10906,7 @@
       "id": "r.ricew",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -10797,6 +10924,7 @@
       "id": "r.mead",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -10814,6 +10942,7 @@
       "id": "r.choc",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10841,6 +10970,7 @@
       "id": "r.potg",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -10868,6 +10998,7 @@
       "id": "r.thun",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -10895,6 +11026,7 @@
       "id": "r.lunar",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -10917,6 +11049,7 @@
       "id": "r.phos",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -10944,6 +11077,7 @@
       "id": "r.ruby",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -10971,6 +11105,7 @@
       "id": "r.quint",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -10993,6 +11128,7 @@
       "id": "r.philm",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11020,6 +11156,7 @@
       "id": "r.stone",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11052,6 +11189,7 @@
       "id": "r.blood",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11080,6 +11218,7 @@
       "id": "r.body",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11102,6 +11241,7 @@
       "id": "r.h1",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -11129,6 +11269,7 @@
       "id": "r.h2",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -11156,6 +11297,7 @@
       "id": "r.h3",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -11183,6 +11325,7 @@
       "id": "r.plate",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11205,6 +11348,7 @@
       "id": "r.clockw",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11227,6 +11371,7 @@
       "id": "r.golem",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11283,6 +11428,7 @@
       "id": "r.hull",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11310,6 +11456,7 @@
       "id": "r.sails",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11332,6 +11479,7 @@
       "id": "r.rigging",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11354,6 +11502,7 @@
       "id": "r.compass",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11381,6 +11530,7 @@
       "id": "r.spyglass",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11403,6 +11553,7 @@
       "id": "r.charts",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11432,6 +11583,7 @@
       "id": "r.engine",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11464,6 +11616,7 @@
       "id": "r.provis",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11491,6 +11644,7 @@
       "id": "r.ship",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11552,6 +11706,7 @@
       "id": "r.tortilla",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -11569,6 +11724,7 @@
       "id": "r.laud",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11591,6 +11747,7 @@
       "id": "r.theriac",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11629,6 +11786,7 @@
       "id": "r.antcup",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -11646,6 +11804,7 @@
       "id": "r.ointm",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11668,6 +11827,7 @@
       "id": "r.smell",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -11685,6 +11845,7 @@
       "id": "r.tinct",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -11707,6 +11868,7 @@
       "id": "r.elix",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -11729,6 +11891,7 @@
       "id": "r.betel",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11757,6 +11920,7 @@
       "id": "r.clothes",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11776,6 +11940,7 @@
       "id": "r.dyed",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11806,6 +11971,7 @@
       "id": "r.scarletc",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11828,6 +11994,7 @@
       "id": "r.court",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11855,6 +12022,7 @@
       "id": "r.hats",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11882,6 +12050,7 @@
       "id": "r.shoes",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11899,6 +12068,7 @@
       "id": "r.cosm",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -11937,6 +12107,7 @@
       "id": "r.batik",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11964,6 +12135,7 @@
       "id": "r.lookg",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -11991,6 +12163,7 @@
       "id": "r.mirror",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -12018,6 +12191,7 @@
       "id": "r.book",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12050,6 +12224,7 @@
       "id": "r.writing",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12082,6 +12257,7 @@
       "id": "r.lucent",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -12109,6 +12285,7 @@
       "id": "r.lamp",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12136,6 +12313,7 @@
       "id": "r.bluewhite",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12158,6 +12336,7 @@
       "id": "r.lacqw",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12180,6 +12359,7 @@
       "id": "r.jewel",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -12215,6 +12395,7 @@
       "id": "r.silverw",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -12232,6 +12413,7 @@
       "id": "r.giltw",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12254,6 +12436,7 @@
       "id": "r.enamelw",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12276,6 +12459,7 @@
       "id": "r.firew",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12321,6 +12505,7 @@
       "id": "r.spect",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12344,6 +12529,7 @@
       "id": "r.clock",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12371,6 +12557,7 @@
       "id": "r.autom",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12404,6 +12591,7 @@
       "id": "r.obsw",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -12426,6 +12614,7 @@
       "id": "r.perfume",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12465,6 +12654,7 @@
       "id": "r.incense",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12494,6 +12684,7 @@
       "id": "r.castbrass",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12521,6 +12712,7 @@
       "id": "r.tools",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12543,6 +12735,7 @@
       "id": "r.musket",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -12570,6 +12763,7 @@
       "id": "r.cannon",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12587,6 +12781,7 @@
       "id": "r.charge",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12610,6 +12805,7 @@
       "id": "r.wildfire",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -12642,6 +12838,7 @@
       "id": "r.telescope",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [

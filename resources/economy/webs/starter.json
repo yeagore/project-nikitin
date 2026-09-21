@@ -7877,6 +7877,7 @@
       "id": "r.golem",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -7915,6 +7916,7 @@
       "id": "r.bread",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -7937,6 +7939,7 @@
       "id": "r.beer",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -7959,6 +7962,7 @@
       "id": "r.blood",
       "name": "",
       "note": "",
+      "element": "qe",
       "inputs": [
         {
           "accepts": [
@@ -7981,6 +7985,7 @@
       "id": "r.body",
       "name": "",
       "note": "",
+      "element": "water",
       "inputs": [
         {
           "accepts": [
@@ -8003,6 +8008,7 @@
       "id": "r.h1",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8030,6 +8036,7 @@
       "id": "r.h2",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8057,6 +8064,7 @@
       "id": "r.h3",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8084,6 +8092,7 @@
       "id": "r.plate",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8106,6 +8115,7 @@
       "id": "r.bronze",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8128,6 +8138,7 @@
       "id": "r.flour",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8145,6 +8156,7 @@
       "id": "r.salt",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8162,6 +8174,7 @@
       "id": "r.malt",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8179,6 +8192,7 @@
       "id": "r.hg",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8196,6 +8210,7 @@
       "id": "r.was",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8213,6 +8228,7 @@
       "id": "r.brass",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8235,6 +8251,7 @@
       "id": "r.borax",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8252,6 +8269,7 @@
       "id": "r.reg",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8274,6 +8292,7 @@
       "id": "r.bic",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8291,6 +8310,7 @@
       "id": "r.aqf",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8313,6 +8333,7 @@
       "id": "r.icu",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8330,6 +8351,7 @@
       "id": "r.isn",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8347,6 +8369,7 @@
       "id": "r.izn",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8369,6 +8392,7 @@
       "id": "r.ife",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8392,6 +8416,7 @@
       "id": "r.nitre",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8414,6 +8439,7 @@
       "id": "r.oov",
       "name": "",
       "note": "",
+      "element": "wind",
       "inputs": [
         {
           "accepts": [
@@ -8432,6 +8458,7 @@
       "id": "r.charcoal",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [
@@ -8449,6 +8476,7 @@
       "id": "r.ash",
       "name": "",
       "note": "",
+      "element": "fire",
       "inputs": [
         {
           "accepts": [
@@ -8466,6 +8494,7 @@
       "id": "r.copperas",
       "name": "",
       "note": "",
+      "element": "earth",
       "inputs": [
         {
           "accepts": [

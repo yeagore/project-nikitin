@@ -263,6 +263,7 @@ public static class EconomyEdit
 			else def.Id = to;
 		}
 		foreach (List<string> accepts in AcceptLists(web)) Swap(accepts, Acceptor.ForTag(from), Acceptor.ForTag(to));
+		foreach (List<string> grants in GrantLists(web)) Swap(grants, from, to);
 	}
 
 	/// <summary>Takes a tag off every good and variety, out of the tag list, and out of every slot and consumer that accepted it.</summary>
@@ -271,6 +272,11 @@ public static class EconomyEdit
 		foreach (List<string> tags in TagLists(web.Palette)) tags.Remove(tag);
 		web.Palette.Tags.RemoveAll(t => t.Id == tag);
 		foreach (List<string> accepts in AcceptLists(web)) accepts.Remove(Acceptor.ForTag(tag));
+		foreach (RecipeInput slot in web.Recipes.SelectMany(r => r.Inputs).Where(i => i.Grants != null))
+		{
+			slot.Grants!.Remove(tag);
+			if (slot.Grants.Count == 0) slot.Grants = null;
+		}
 	}
 
 	/// <summary>Renames a namespace: its entry, and the prefix of every tag in it, wherever the tag appears.</summary>
@@ -278,7 +284,8 @@ public static class EconomyEdit
 	{
 		if (from == to || to.Length == 0) return;
 		string prefix = from + ":";
-		List<string> tags = web.Palette.TagsInUse().Select(t => t.Tag).Where(t => t.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+		List<string> tags = web.Palette.TagsInUse().Select(t => t.Tag).Concat(GrantLists(web).SelectMany(g => g)).Distinct()
+			.Where(t => t.StartsWith(prefix, StringComparison.Ordinal)).ToList();
 		foreach (string acceptor in AcceptLists(web).SelectMany(a => a).Where(Acceptor.IsTag).ToList())
 			if (Acceptor.TagOf(acceptor).StartsWith(prefix, StringComparison.Ordinal) && !tags.Contains(Acceptor.TagOf(acceptor)))
 				tags.Add(Acceptor.TagOf(acceptor));
@@ -307,6 +314,12 @@ public static class EconomyEdit
 		if (list.Contains(to)) list.RemoveAt(at);
 		else list[at] = to;
 	}
+
+	private static IEnumerable<List<string>> GrantLists(EconomyWeb web) =>
+		web.Recipes.SelectMany(r => r.Inputs).Where(i => i.Grants != null).Select(i => i.Grants!);
+
+	/// <summary>True if any slot of the web grants the tag.</summary>
+	public static bool GrantsTag(EconomyWeb web, string tag) => GrantLists(web).Any(g => g.Contains(tag));
 
 	private static IEnumerable<List<string>> TagLists(Palette palette) =>
 		palette.Goods.Select(g => g.Tags).Concat(palette.Goods.SelectMany(g => g.VarietyList).Select(v => v.Tags));

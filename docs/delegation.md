@@ -22,10 +22,15 @@ the work.
 ## The three pieces, and where they live
 
 **1. The standing rule: `CLAUDE.md`, under Engine & tooling → Delegating.**
-This is what the main model reads at the start of every session. It holds a
-table of three tiers (mechanical → Haiku, bounded → Sonnet, anything with
-judgement in it → the main model) and the rule that a brief must be
-self-contained. It is checked in, so it follows the repo to the Windows box.
+This is what the main model reads at the start of every session. It holds the
+budget (in a task the main model starts, 35 to 45% of the work should be done by
+the cheaper siblings and 55 to 65% by the main model: a direction, not a hard
+limit, there so that sessions are interrupted by the usage limit less often), a
+table of four tiers (mechanical → Haiku, bounded → Sonnet, a whole component to
+a written spec → Opus, design, the core and the review → the main model), and
+what makes a delegation work: a brief that stands alone, a way for the delegate
+to check itself, files of its own, no more than two or three at once, and small
+enough that an interruption does not leave half-written work. It is checked in, so it follows the repo to the Windows box.
 If you ever want the same rule in every project on one machine, copy that
 section into `~/.claude/CLAUDE.md` (create the file); the project file is read
 as well, so both apply.
@@ -80,6 +85,15 @@ evidence gets asked again.
 | What a great lake *should* do | The main model | Design. |
 | Anything touching hash salts, `Noise` offsets, sort or scan order | The main model | Determinism. A delegate cannot tell "same" from "same by luck". |
 | Reading a delegate's diff before it is trusted | The main model | Review is not crude work. |
+
+The economy lab (September 2026) is the worked example of the upper tiers: Sonnet
+wrote the data converter with its own assertions, the layout algorithm with a
+harness, the element icons and the classification of two hundred recipes; Opus
+wrote the inspector dock from a written spec and checked it by screenshot; the
+main model kept the data model, the lab's core, the self-test, the briefs and the
+review. One lesson from it: two large agents running at once with the main model
+also working used the limit up, and both were cut off mid-file. Send fewer at a
+time, keep each small, and look at the tree before resuming.
 
 The tiers are a default, not a law. If a Haiku result looks wrong, the main
 model is supposed to redo it or send it to Sonnet, and say so.

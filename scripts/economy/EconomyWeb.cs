@@ -22,6 +22,13 @@ public sealed class EconomyWeb
 	public string Name { get; set; } = "";
 	public string Note { get; set; } = "";
 
+	/// <summary>
+	/// A reference copy: the lab opens it to look at, to cut from and to import from, and refuses to
+	/// change it or bin it. To work on it, make a copy. Unlocking is an edit to the file, on purpose.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool Locked { get; set; }
+
 	/// <summary>The web's own goods, tags and sprite sheets.</summary>
 	public Palette Palette { get; set; } = new();
 

@@ -36,6 +36,17 @@ load a web as it is and a test can run without the engine.
   and four optional fittings yields 48 golems, and nobody writes them down:
   `WebAnalysis.VarietiesOf` derives them (`VarietySet`, listed up to 512, counted
   beyond). Prices and in-world uses will read variety tags; nothing does yet.
+  A slot may also `Grants` variety tags of its own to the output whenever it is
+  filled, for when the effect belongs to the combination and not the ingredient
+  (the golem's hands slot grants `fit:clockwork-hands`; Clockwork stays plain).
+- **Elements.** A recipe has an `Element` (`Element.All`: fire violent synthesis,
+  wind violent analysis, water gentle synthesis, earth gentle analysis, qe pure
+  magic). A classification by feel, Maxim's scheme of 2026-09-22; nothing reads it
+  yet. Webs should keep the four in rough balance; the self-test holds the shipped
+  ones to 15 to 35% each. The icons are `sprites/elements.png`, the system's, not a palette's.
+- **Locked webs.** `EconomyWeb.Locked` marks a reference copy: the lab refuses to
+  change or bin it. `full-ledger-reference` is the big web's backup. Unlocking is
+  an edit to the file, on purpose.
 - Sources, final goods, depth, hubs, links (drawn, and implied by tags), varieties
   and issues are read off a web by `WebAnalysis` and **never stored**.
 
@@ -59,8 +70,8 @@ load a web as it is and a test can run without the engine.
 ```
 EconomyWeb.cs, Palette.cs, Good.cs, Variety.cs, SpriteRef.cs, TagDef.cs, TagNamespace.cs, AtlasDef.cs
                            A web and its palette.
-Recipe.cs, RecipeInput.cs, RecipeOutput.cs, Consumer.cs, Acceptor.cs, Spot.cs
-                           Recipes with slots, consumers, what a slot accepts, a canvas position.
+Recipe.cs, RecipeInput.cs, RecipeOutput.cs, Consumer.cs, Acceptor.cs, Element.cs, Spot.cs
+                           Recipes with slots, consumers, what a slot accepts, the five elements, a canvas position.
 EconomyStore.cs            The JSON files: load, save, list, clone.
 WebAnalysis.cs, VarietySet.cs, WebLink.cs, LinkKind.cs, GoodRole.cs, WebIssue.cs, IssueLevel.cs
                            A web read back.
@@ -69,8 +80,11 @@ WebArrange.cs, LayeredLayout.cs
                            The left-to-right arrangement.
 ```
 
-Data: `resources/economy/webs/` (`full-ledger`, `starter`, `tagged-ledger`, and
-whatever Maxim has made), `resources/economy/sprites/`. `tools/import_economy_export.py`
-made the first two from the chat export; `tools/make_tagged_ledger.py` derived the
-third. Both are one-offs kept as the record; re-running either overwrites lab edits.
+Data: `resources/economy/webs/` (`full-ledger`, its locked `full-ledger-reference`,
+`starter`, `tagged-ledger`, and whatever Maxim has made), `resources/economy/sprites/`.
+`tools/import_economy_export.py` made the first two from the chat export;
+`tools/make_tagged_ledger.py` derived the tagged one; `tools/apply_recipe_elements.py`
+stamped `tools/recipe_elements.json` into them in place and made the reference copy;
+`tools/make_element_icons.py` drew the element icons. One-offs kept as the record;
+re-running the first two overwrites lab edits.
 Icons and signs are 16 px placeholders generated in chat: pre-production material.

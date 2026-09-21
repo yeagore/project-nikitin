@@ -107,6 +107,63 @@ internal static class InspectorLook
 		return button;
 	}
 
+	/// <summary>
+	/// One of a row of choices: a sprite, or a word when there is no sprite to draw, in a pill
+	/// that wears the accent while it is the one in force. A button would serve, except that a
+	/// button cannot draw a sprite at a whole multiple of its 16 px.
+	/// </summary>
+	public static Control Toggle(string text, Texture2D? icon, int side, bool on, string tooltip, Action pressed)
+	{
+		var pill = new PanelContainer
+		{
+			TooltipText = tooltip,
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand,
+		};
+		StyleBoxFlat quiet = on
+			? LabLook.Box(LabLook.Accent.Darkened(0.66f), 5, 5, LabLook.Accent, 1, 5, 3)
+			: LabLook.Box(new Color(1, 1, 1, 0.06f), 5, 5, marginX: 6, marginY: 4);
+		StyleBoxFlat lit = on
+			? LabLook.Box(LabLook.Accent.Darkened(0.5f), 5, 5, LabLook.Accent, 1, 5, 3)
+			: LabLook.Box(new Color(1, 1, 1, 0.14f), 5, 5, marginX: 6, marginY: 4);
+		pill.AddThemeStyleboxOverride("panel", quiet);
+		if (icon == null) pill.AddChild(LabLook.Text(text, 12, on ? LabLook.Accent : LabLook.Dim));
+		else pill.AddChild(LabLook.Sprite(icon, side));
+		pill.GuiInput += @event =>
+		{
+			if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) pressed();
+		};
+		pill.MouseEntered += () => pill.AddThemeStyleboxOverride("panel", lit);
+		pill.MouseExited += () => pill.AddThemeStyleboxOverride("panel", quiet);
+		return pill;
+	}
+
+	/// <summary>
+	/// A sign in a formula: the sprite, with what it stands for in a tooltip, or the word itself
+	/// when nothing has been drawn for it yet.
+	/// </summary>
+	public static Control Glyph(Texture2D? texture, int side, string word, string tooltip)
+	{
+		if (texture == null) return Mark(word, tooltip, LabLook.Ink);
+		TextureRect sprite = LabLook.Sprite(texture, side);
+		sprite.MouseFilter = Control.MouseFilterEnum.Stop;
+		sprite.TooltipText = tooltip;
+		return sprite;
+	}
+
+	/// <summary>A word or a mark of punctuation in a formula: the slashes, brackets, pluses and the arrow.</summary>
+	public static Label Mark(string text, string tooltip = "", Color? colour = null)
+	{
+		Label label = LabLook.Text(text, 13, colour ?? LabLook.Faint);
+		label.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+		if (tooltip.Length > 0)
+		{
+			label.MouseFilter = Control.MouseFilterEnum.Stop;
+			label.TooltipText = tooltip;
+		}
+		return label;
+	}
+
 	/// <summary>A colour and what it means, for the legend.</summary>
 	public static Control Swatch(string text, Color colour)
 	{

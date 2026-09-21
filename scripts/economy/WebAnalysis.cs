@@ -259,7 +259,8 @@ public sealed class WebAnalysis
 	/// The varieties of a good this web can make, each a set of variety tags. A good's own variety
 	/// tags are on every one; its authored varieties (rye, wheat) are alternatives; and each recipe
 	/// that makes it multiplies in, for every slot that passes variety on, the varieties of whatever
-	/// can fill that slot, with "nothing" as one more choice if the slot is optional. So a golem
+	/// can fill that slot, and for every slot that grants tags, those tags; with "nothing" as one
+	/// more choice if the slot is optional. So a golem
 	/// recipe with a three-heart slot and one optional fitting yields six golems from one node.
 	/// The list is capped at <see cref="VarietySet.Cap"/>; past it only the count is kept, as "at least".
 	/// </summary>
@@ -300,13 +301,25 @@ public sealed class WebAnalysis
 			for (int i = 0; i < recipe.Inputs.Count; i++)
 			{
 				RecipeInput slot = recipe.Inputs[i];
-				if (!slot.Passes) continue;
+				List<string> grants = slot.GrantList.Where(_palette.IsVariety).ToList();
+				if (!slot.Passes && grants.Count == 0) continue;
+				List<string> fillers = FillersOf(recipe.Id, i).ToList();
+				if (fillers.Count == 0) continue; // nothing fills it: the issue list says so
+
+				// Filled, the slot gives what its filler passes (if it passes) and what it grants itself.
+				var filled = new VarietySet.Builder();
+				if (slot.Passes) foreach (string filler in fillers) filled.Add(Varieties(filler, walking));
+				else filled.Add(Array.Empty<string>());
+				if (grants.Count > 0)
+				{
+					var granted = new VarietySet.Builder();
+					granted.Add(grants);
+					filled = filled.Times(granted);
+				}
+
 				var choices = new VarietySet.Builder();
-				if (slot.Optional) choices.Add(new SortedSet<string>(StringComparer.Ordinal));
-				foreach (WebLink link in _links)
-					if (link.Kind == LinkKind.Input && link.To == recipe.Id && link.Port == i)
-						choices.Add(Varieties(link.From, walking));
-				if (choices.Count == 0) continue; // nothing fills it: the issue list says so
+				if (slot.Optional) choices.Add(Array.Empty<string>());
+				choices.Add(filled);
 				product = product.Times(choices);
 			}
 			builder.Add(product);

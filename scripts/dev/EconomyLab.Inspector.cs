@@ -10,10 +10,12 @@ namespace ProjectNikitin.Dev;
 /// <summary>
 /// The right-hand dock: whatever is selected, laid out for editing. A good shows its name, its
 /// description, its tags, the varieties of it this web can make and the ones written by hand,
-/// its two sprites and what makes, uses and eats it; a recipe its input slots — what each admits
-/// and whether it passes variety on — and its outputs; a consumer what reaches it; several nodes
-/// what can be done to them all; and with nothing selected, the web itself — its numbers, its
-/// hubs, what the analysis found wrong, and the legend of the canvas's colours.
+/// its two sprites and what makes, uses and eats it; a recipe its element, itself written out in
+/// signs as a formula, then its input slots — what each admits, whether it passes variety on and
+/// what it grants of its own — and its outputs; a consumer what reaches it; several nodes what can
+/// be done to them all; and with nothing selected, the web itself — its numbers, how its recipes
+/// fall among the elements, its hubs, what the analysis found wrong, and the legend of the
+/// canvas's colours.
 ///
 /// Every field and button goes through <see cref="Change"/>, so everything here is a step to
 /// undo and a moment later a save. Typing merges into one step and leaves the dock standing;
@@ -33,6 +35,9 @@ public partial class EconomyLab
 
 	private bool _inspShownMany;
 	private string _inspBinGood = "", _inspPngGood = "";
+
+	/// <summary>Which of a good's two sprites the PNG dialog was opened for.</summary>
+	private bool _inspPngSign;
 
 	/// <summary>How many tag values one namespace's line of the varieties block names before it counts the rest.</summary>
 	private const int VarietyValuesShown = 20;
@@ -67,7 +72,7 @@ public partial class EconomyLab
 			Filters = new[] { "*.png ; PNG images" },
 			UseNativeDialog = true,
 		};
-		_inspPng.FileSelected += ImportIcon;
+		_inspPng.FileSelected += ImportSprite;
 		AddChild(_inspPng);
 		return _inspScroll;
 	}
@@ -92,6 +97,12 @@ public partial class EconomyLab
 			_inspRows.RemoveChild(old);
 			old.QueueFree();
 		}
+
+		// A locked web says so at the head of every view: the core refuses the edits, and this is why.
+		if (Web.Locked)
+			_inspRows.AddChild(InspectorLook.Note(
+				"Locked: a reference copy. Look, cut and import from it; New… → \"A copy of the open web\" to change it.",
+				LabLook.Accent, 12));
 
 		if (many) ShowSeveralInspector(selected);
 		else if (key == null) ShowWebInspector();
@@ -167,11 +178,8 @@ public partial class EconomyLab
 		GoodVarieties(rows, id);
 
 		InspectorLook.Section(rows, "Sprites");
-		rows.AddChild(SpriteRow(Sprites.Get(good.Icon), "Icon from the sheet…",
-			"Pick a cell of sprites/icons.png.", () => PickSprite(id, sign: false)));
-		rows.AddChild(SpriteRow(Sprites.Get(good.Sign), "Sign from the sheet…",
-			"Pick a cell of sprites/signs.png. The sign's reading and its parts are kept.", () => PickSprite(id, sign: true)));
-		rows.AddChild(InspectorAct("Import PNG…", "Copy a 16 px PNG into sprites/custom/ and use it as the icon.", () => AskPng(id)));
+		rows.AddChild(SpriteRow(id, sign: false));
+		rows.AddChild(SpriteRow(id, sign: true));
 
 		InspectorLook.Section(rows, "Made by");
 		IReadOnlyList<Recipe> makers = Analysis.MakersOf(id);
@@ -369,15 +377,28 @@ public partial class EconomyLab
 		return string.Join(" · ", words);
 	}
 
-	/// <summary>A row of the sprites block: the sprite as it stands, and the button that changes it.</summary>
-	private static Control SpriteRow(Texture2D? now, string text, string tip, Action pressed)
+	/// <summary>
+	/// One row of the sprites block: the sprite as it stands, which of the two it is, and the two
+	/// ways to change it — a cell of this web's sheet, or a PNG of the good's own.
+	/// </summary>
+	private Control SpriteRow(string id, bool sign)
 	{
+		Good? good = Palette.Find(id);
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 8);
-		row.AddChild(LabLook.Sprite(now, 32));
-		Button button = InspectorAct(text, tip, pressed);
-		button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		row.AddChild(button);
+		row.AddChild(LabLook.Sprite(Sprites.Get(sign ? good?.Sign : good?.Icon), 32));
+		Label what = LabLook.Text(sign ? "Sign" : "Icon", 13, LabLook.Dim);
+		what.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+		row.AddChild(what);
+		Button sheet = InspectorLook.Small("from the sheet…", sign
+			? "Pick a cell of sprites/signs.png. The sign's reading and its parts are kept."
+			: "Pick a cell of sprites/icons.png.", () => PickSprite(id, sign));
+		sheet.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		row.AddChild(sheet);
+		Button png = InspectorLook.Small("from a PNG…",
+			$"Copy a 16 px PNG into sprites/custom/ and use it as the {(sign ? "sign" : "icon")}.", () => AskPng(id, sign));
+		png.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		row.AddChild(png);
 		return row;
 	}
 
@@ -422,22 +443,26 @@ public partial class EconomyLab
 			}
 		});
 
-	private void AskPng(string id)
+	private void AskPng(string id, bool sign)
 	{
 		_inspPngGood = id;
+		_inspPngSign = sign;
+		_inspPng.Title = sign ? "A PNG for the sign" : "A PNG for the icon";
 		_inspPng.PopupCentered(new Vector2I(900, 620));
 	}
 
 	/// <summary>
-	/// The chosen PNG is copied into <c>sprites/custom/</c> under the good's id and becomes its
-	/// icon. The copy is a file and no undo takes it back; the good pointing at it is a change
-	/// like any other, so an undo leaves an unused PNG behind and nothing worse.
+	/// The chosen PNG is copied into <c>sprites/custom/</c> under the good's id — with
+	/// <c>.sign</c> before the extension when it is the sign — and becomes that sprite. The copy
+	/// is a file and no undo takes it back; the good pointing at it is a change like any other,
+	/// so an undo leaves an unused PNG behind and nothing worse.
 	/// </summary>
-	private void ImportIcon(string path)
+	private void ImportSprite(string path)
 	{
 		string id = _inspPngGood;
+		bool sign = _inspPngSign;
 		if (Palette.Find(id) == null) return;
-		string relative = "sprites/custom/" + id + ".png";
+		string relative = "sprites/custom/" + id + (sign ? ".sign" : "") + ".png";
 		try
 		{
 			string into = Store.Resolve(relative);
@@ -451,7 +476,23 @@ public partial class EconomyLab
 			return;
 		}
 		Sprites.Forget(relative);
-		Change($"gave {NameOf(id)} an icon of its own", () => { if (Palette.Find(id) is { } good) good.Icon = SpriteRef.Png(relative); });
+		Change($"gave {NameOf(id)} {(sign ? "a sign" : "an icon")} of its own", () =>
+		{
+			if (Palette.Find(id) is not { } good) return;
+			if (!sign)
+			{
+				good.Icon = SpriteRef.Png(relative);
+				return;
+			}
+			// A sign's reading, its source and its parts ride in Extra; only where the picture comes from changes.
+			if (good.Sign == null) good.Sign = SpriteRef.Png(relative);
+			else
+			{
+				good.Sign.File = relative;
+				good.Sign.Atlas = null;
+				good.Sign.Index = null;
+			}
+		});
 	}
 
 	/// <summary>
@@ -499,6 +540,15 @@ public partial class EconomyLab
 		note.TextChanged += () => Change("noted " + NameOf(rid), () => { if (Web.Recipe(rid) is { } live) live.Note = note.Text; },
 			merge: "recipe.note:" + rid, keepInspector: true);
 		rows.AddChild(note);
+
+		Label element = InspectorLook.Caption("Element");
+		element.MouseFilter = MouseFilterEnum.Stop;
+		element.TooltipText = "What kind of craft this is: violence or patience, putting together or taking apart. A classification by feel; nothing reads it yet.";
+		rows.AddChild(element);
+		rows.AddChild(ElementRow(rid, recipe.Element));
+
+		rows.AddChild(InspectorLook.Caption("Formula"));
+		rows.AddChild(Formula(recipe));
 
 		InspectorLook.Section(rows, "Inputs");
 		if (recipe.Inputs.Count == 0) rows.AddChild(InspectorLook.Note("It takes nothing.", LabLook.Warning, 12));
@@ -555,10 +605,96 @@ public partial class EconomyLab
 		rows.AddChild(bin);
 	}
 
+	// ---- a recipe's element and its formula ------------------------------------
+
+	/// <summary>
+	/// The recipe's elemental association: the five, and none. The one in force wears the accent,
+	/// and a click on it is a change like any other. The icons sit on a sheet of the system's own,
+	/// so each element stands as its name until that sheet is drawn.
+	/// </summary>
+	private Control ElementRow(string rid, string? now)
+	{
+		HFlowContainer flow = InspectorLook.Flow();
+		foreach (Element element in Element.All)
+		{
+			string eid = element.Id;
+			bool on = string.Equals(now, eid, StringComparison.Ordinal);
+			flow.AddChild(InspectorLook.Toggle(element.Name, Sprites.Element(eid), 24, on, $"{element.Name}: {element.Gloss}",
+				() => { if (!on) SetElement(rid, eid); }));
+		}
+		flow.AddChild(InspectorLook.Toggle("none", null, 24, now == null, "No elemental association.",
+			() => { if (now != null) SetElement(rid, null); }));
+		return flow;
+	}
+
+	private void SetElement(string rid, string? id)
+	{
+		if (Web.Recipe(rid) is not { } recipe) return;
+		string title = Analysis.TitleOf(recipe);
+		Element? element = Element.Find(id);
+		Change(element == null ? $"{title} has no element now" : $"{title} is now of {element.Name.ToLowerInvariant()}",
+			() => { if (Web.Recipe(rid) is { } live) live.Element = element?.Id; });
+	}
+
+	/// <summary>
+	/// The recipe written out in signs: its element, then what fills each slot, then what comes
+	/// out. The alternatives of one slot are parted by a slash, an optional slot stands in
+	/// brackets, and a slot that takes a tag is written as the tag, there being no one sign for
+	/// it. Nothing here is editable: it is a reading, and the far goal is a chain of recipes that
+	/// reads as a formula.
+	/// </summary>
+	private Control Formula(Recipe recipe)
+	{
+		HFlowContainer flow = InspectorLook.Flow();
+		if (Element.Find(recipe.Element) is { } element)
+			flow.AddChild(InspectorLook.Glyph(Sprites.Element(element.Id), 24, element.Name, $"{element.Name}: {element.Gloss}"));
+
+		for (int i = 0; i < recipe.Inputs.Count; i++)
+		{
+			if (i > 0) flow.AddChild(InspectorLook.Mark("+"));
+			RecipeInput slot = recipe.Inputs[i];
+			if (slot.Optional) flow.AddChild(InspectorLook.Mark("(", "the recipe runs without it"));
+			if (slot.Accepts.Count == 0) flow.AddChild(InspectorLook.Mark("?", "the slot accepts nothing", LabLook.Error));
+			for (int a = 0; a < slot.Accepts.Count; a++)
+			{
+				if (a > 0) flow.AddChild(InspectorLook.Mark("/", "any one of them"));
+				flow.AddChild(AcceptorGlyph(slot.Accepts[a]));
+			}
+			if (slot.Optional) flow.AddChild(InspectorLook.Mark(")", "the recipe runs without it"));
+		}
+
+		flow.AddChild(InspectorLook.Mark("→", "makes", LabLook.Dim));
+		if (recipe.Outputs.Count == 0) flow.AddChild(InspectorLook.Mark("?", "it makes nothing", LabLook.Error));
+		for (int o = 0; o < recipe.Outputs.Count; o++)
+		{
+			if (o > 0) flow.AddChild(InspectorLook.Mark("+"));
+			flow.AddChild(AcceptorGlyph(recipe.Outputs[o].Good));
+		}
+		return flow;
+	}
+
+	/// <summary>
+	/// One term of a formula: a good's sign, or its icon where it has no sign yet, or its name
+	/// where it has neither; a tag as the tag itself, dim, since a tag stands for many goods.
+	/// </summary>
+	private Control AcceptorGlyph(string acceptor)
+	{
+		if (Acceptor.IsTag(acceptor))
+		{
+			string tag = Acceptor.TagOf(acceptor);
+			return InspectorLook.Mark("#" + LabLook.Short(tag),
+				InspectorLook.Lines("#" + tag, Palette.NoteFor(tag), "anything in this web carrying it"), LabLook.Dim);
+		}
+		Good? good = Palette.Find(acceptor);
+		if (good == null) return InspectorLook.Mark(acceptor, $"{acceptor} is not in this web's palette.", LabLook.Error);
+		return InspectorLook.Glyph(Sprites.Get(good.Sign) ?? Sprites.Get(good.Icon), 24, good.Name, good.Name);
+	}
+
 	/// <summary>
 	/// One input slot in a frame: what fills it, whether the recipe runs without it, whether the
-	/// variety of what fills it passes on to the output, what each tag of it admits from this web
-	/// as things stand, and — when it passes — what each filler would pass.
+	/// variety of what fills it passes on to the output, what it grants the output of its own,
+	/// what each tag of it admits from this web as things stand, and — when it passes — what each
+	/// filler would pass.
 	/// </summary>
 	private Control SlotBlock(string rid, RecipeInput slot, int port)
 	{
@@ -605,9 +741,74 @@ public partial class EconomyLab
 		if (slot.Passes)
 			foreach (string filler in Analysis.FillersOf(rid, port).Distinct())
 				rows.AddChild(FillerLine(filler));
+		rows.AddChild(SlotGrants(rid, port, slot.GrantList));
 		rows.AddChild(AcceptorButtons(rid, port));
 		return frame;
 	}
+
+	/// <summary>
+	/// What a slot stamps on the output of its own accord, whatever fills it: the tags as chips
+	/// with a × each, and a way to add another. Unlike a passed variety this belongs to the
+	/// combination rather than to the ingredient, so it is written on the slot and not on a good.
+	/// </summary>
+	private Control SlotGrants(string rid, int port, IReadOnlyList<string> grants)
+	{
+		HFlowContainer flow = InspectorLook.Flow();
+		Label caption = LabLook.Text("grants the output", 12, grants.Count > 0 ? LabLook.VarietyTag : LabLook.Dim);
+		caption.MouseFilter = MouseFilterEnum.Stop;
+		caption.TooltipText = "For when the effect belongs to the combination and not to the ingredient: the slot stamps these on what the recipe makes, whatever fills it.";
+		caption.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+		flow.AddChild(caption);
+		foreach (string tag in grants)
+		{
+			string held = tag;
+			flow.AddChild(InspectorLook.Chip(held, InspectorLook.TagFill(Palette, held), null,
+				InspectorLook.Lines(held, Palette.NoteFor(held), InspectorLook.RoleLine(Palette, held)),
+				() => Ungrant(rid, port, held), InspectorLook.TagInk(Palette, held)));
+		}
+		flow.AddChild(InspectorLook.Small("+ grant…", "A tag this slot stamps on the output whenever it is filled, whatever fills it.",
+			() => AskTag("Whenever this slot is filled the output gets…", tag => Granted(rid, port, tag))));
+		return flow;
+	}
+
+	/// <summary>
+	/// A tag a slot grants. Granted tags travel like any other variety tag, and only a tag of a
+	/// variety namespace travels at all, so a namespace that plays no part yet is made a variety
+	/// one in the same step and the status line says so: it decides for every tag in it.
+	/// </summary>
+	private void Granted(string rid, int port, string tag)
+	{
+		if (tag.Length == 0) return;
+		if (Web.Recipe(rid) is not { } recipe || port >= recipe.Inputs.Count) return;
+		string named = SlotName(rid, port);
+		if (recipe.Inputs[port].GrantList.Contains(tag))
+		{
+			Say($"{named} of {NameOf(rid)} grants {tag} already.");
+			return;
+		}
+
+		string space = Palette.NamespaceOf(tag);
+		bool teach = space.Length > 0 && !Palette.IsVariety(tag);
+		Change($"{named} of {NameOf(rid)} grants {tag}", () =>
+		{
+			if (teach) EconomyEdit.EnsureNamespace(Palette, space).Role = TagNamespace.Variety;
+			if (Web.Recipe(rid) is not { } live || port >= live.Inputs.Count) return;
+			RecipeInput filled = live.Inputs[port];
+			filled.Grants ??= new List<string>();
+			if (!filled.Grants.Contains(tag)) filled.Grants.Add(tag);
+		});
+		if (teach) Say($"{named} of {NameOf(rid)} grants {tag}. {space}: is a variety namespace now, so every tag in it rides from inputs to outputs.");
+	}
+
+	/// <summary>A granted tag off a slot again; the list goes back to nothing when the last one leaves.</summary>
+	private void Ungrant(string rid, int port, string tag) =>
+		Change($"{SlotName(rid, port)} of {NameOf(rid)} no longer grants {tag}", () =>
+		{
+			if (Web.Recipe(rid) is not { } live || port >= live.Inputs.Count) return;
+			RecipeInput slot = live.Inputs[port];
+			slot.Grants?.Remove(tag);
+			if (slot.Grants is { Count: 0 }) slot.Grants = null;
+		});
 
 	/// <summary>One of a slot's two switches: small, quiet, and one change to undo when it is toggled.</summary>
 	private static CheckBox SlotSwitch(string text, bool on, Color ink, string tip, Action<bool> toggled)
@@ -844,6 +1045,22 @@ public partial class EconomyLab
 			rows.AddChild(InspectorJump($"deepest: {NameOf(deepest)}, {Analysis.Depth(deepest)} steps from the ground",
 				deepest, LabLook.Dim, IconOf(deepest)));
 
+		InspectorLook.Section(rows, "Elements");
+		var elements = new Dictionary<string, int>(StringComparer.Ordinal);
+		foreach (Recipe recipe in Web.Recipes)
+			if (Element.Find(recipe.Element) is { } of) elements[of.Id] = elements.GetValueOrDefault(of.Id) + 1;
+		foreach (Element element in Element.All)
+		{
+			int count = elements.GetValueOrDefault(element.Id);
+			rows.AddChild(ElementLine(element,
+				$"{element.Name}: {(count == 0 ? "none" : count == 1 ? "1 recipe" : count + " recipes")}",
+				count > 0 ? LabLook.Ink : LabLook.Faint));
+		}
+		int elementless = Web.Recipes.Count - elements.Values.Sum();
+		if (elementless > 0)
+			rows.AddChild(InspectorLook.Note(elementless == 1 ? "1 recipe has none" : $"{elementless} recipes have none", LabLook.Faint, 12));
+		rows.AddChild(InspectorLook.Note(ElementBalance(elements), LabLook.Dim, 12));
+
 		List<string> hubs = Web.Goods.Where(Analysis.IsHub)
 			.OrderByDescending(g => Analysis.UsersOf(g).Count).ThenBy(NameOf, StringComparer.OrdinalIgnoreCase).ToList();
 		if (hubs.Count > 0)
@@ -868,8 +1085,40 @@ public partial class EconomyLab
 		rows.AddChild(InspectorLook.Swatch("what a recipe makes", LabLook.ProductPort));
 		rows.AddChild(InspectorLook.Swatch("consumed", LabLook.EatenPort));
 		rows.AddChild(InspectorLook.Note("» on a slot: what fills it passes its variety on", LabLook.Dim, 12));
+		rows.AddChild(InspectorLook.Note("+ on a slot: it grants the output a tag of its own", LabLook.Dim, 12));
 		rows.AddChild(InspectorLook.Swatch("a variety tag", LabLook.VarietyTag));
 		rows.AddChild(InspectorLook.Swatch("a core tag", LabLook.CoreTag));
+		foreach (Element element in Element.All) rows.AddChild(ElementLine(element, $"{element.Name}: {element.Gloss}", LabLook.Dim));
+	}
+
+	/// <summary>An element's icon and a line about it; the icon is a blank square until the sheet is drawn.</summary>
+	private Control ElementLine(Element element, string text, Color colour)
+	{
+		var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		row.AddThemeConstantOverride("separation", 6);
+		row.AddChild(LabLook.Sprite(Sprites.Element(element.Id), 16));
+		row.AddChild(InspectorLook.Note(text, colour, 12));
+		return row;
+	}
+
+	/// <summary>
+	/// Whether the four main elements share the recipes that have one of them evenly enough. A
+	/// quarter each would be 25%; under 15 or over 35 is worth saying, the classification being
+	/// by feel and a web that is all fire probably not having been thought about.
+	/// </summary>
+	private static string ElementBalance(IReadOnlyDictionary<string, int> counts)
+	{
+		Element[] four = { Element.Fire, Element.Wind, Element.Water, Element.Earth };
+		int total = four.Sum(element => counts.GetValueOrDefault(element.Id));
+		if (total == 0) return "No recipe is of fire, wind, water or earth yet.";
+		var said = new List<string>();
+		foreach (Element element in four)
+		{
+			int share = (int)Math.Round(counts.GetValueOrDefault(element.Id) * 100.0 / total);
+			if (share < 15) said.Add($"{element.Name.ToLowerInvariant()} is thin at {share}%");
+			else if (share > 35) said.Add($"{element.Name.ToLowerInvariant()} is heavy at {share}%");
+		}
+		return said.Count == 0 ? "The four are in rough balance." : string.Join(", ", said) + ".";
 	}
 
 	// ---- several nodes ---------------------------------------------------------
