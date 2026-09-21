@@ -1,0 +1,5378 @@
+{
+  "format": 1,
+  "id": "full-ledger",
+  "name": "The full ledger",
+  "note": "Every good and recipe of the 21 September 2026 brainstorm. A map to cut from, not a scope.",
+  "goods": [
+    "cu",
+    "fe",
+    "sn",
+    "pb",
+    "zn",
+    "ag",
+    "au",
+    "cin",
+    "slt",
+    "sul",
+    "vit",
+    "nit",
+    "rea",
+    "stb",
+    "bis",
+    "alu",
+    "sam",
+    "lim",
+    "cob",
+    "tinc",
+    "nat",
+    "coal",
+    "pyr",
+    "lode",
+    "mang",
+    "soil",
+    "kaolin",
+    "gyps",
+    "bitu",
+    "lapis",
+    "jade",
+    "amber",
+    "obs",
+    "rockc",
+    "grain",
+    "rice",
+    "maize",
+    "grapes",
+    "olives",
+    "flax",
+    "hemp",
+    "cotton",
+    "cane",
+    "tea",
+    "cacao",
+    "coffee",
+    "poppy",
+    "agave",
+    "madder",
+    "indigo",
+    "weld",
+    "timber",
+    "galls",
+    "bark",
+    "resin",
+    "herbs",
+    "spice",
+    "kelp",
+    "lacsap",
+    "mulb",
+    "gum",
+    "dammar",
+    "camphor",
+    "benzoin",
+    "frank",
+    "bamboo",
+    "coconut",
+    "areca",
+    "dyewood",
+    "palmoil",
+    "kola",
+    "cutch",
+    "wool",
+    "hides",
+    "tallow",
+    "bone",
+    "horn",
+    "milk",
+    "dung",
+    "urine",
+    "oxblood",
+    "comb",
+    "coch",
+    "eggs",
+    "quills",
+    "fish",
+    "furs",
+    "cocoon",
+    "lac",
+    "shells",
+    "ess",
+    "icu",
+    "ife",
+    "isn",
+    "ipb",
+    "izn",
+    "iag",
+    "iau",
+    "hg",
+    "salt",
+    "brim",
+    "oov",
+    "nitre",
+    "was",
+    "reg",
+    "bic",
+    "pearl",
+    "alum",
+    "sama",
+    "qlime",
+    "zaf",
+    "borax",
+    "soda",
+    "ash",
+    "copperas",
+    "plaster",
+    "clay",
+    "sand",
+    "ochre",
+    "fearth",
+    "peat",
+    "nitbed",
+    "flour",
+    "malt",
+    "wine",
+    "oil",
+    "linthr",
+    "linseed",
+    "hempf",
+    "cotthr",
+    "sugar",
+    "opium",
+    "pulque",
+    "planks",
+    "charcoal",
+    "pitch",
+    "turps",
+    "lampblk",
+    "silkthr",
+    "yarn",
+    "honey",
+    "wax",
+    "glue",
+    "boneash",
+    "parch",
+    "leather",
+    "cheese",
+    "saltfish",
+    "tealeaf",
+    "coffeeb",
+    "shellac",
+    "bronze",
+    "brass",
+    "pewter",
+    "typem",
+    "steel",
+    "tinplate",
+    "specm",
+    "amalgam",
+    "litharge",
+    "shot",
+    "goldthr",
+    "aqf",
+    "aqr",
+    "lye",
+    "sos",
+    "vinegar",
+    "brandy",
+    "spirit",
+    "harts",
+    "tartar",
+    "gunp",
+    "verm",
+    "smalt",
+    "whitelead",
+    "redlead",
+    "verdi",
+    "prussian",
+    "ultram",
+    "kingsy",
+    "rouge",
+    "madderl",
+    "indigod",
+    "weldd",
+    "scarlet",
+    "ironblk",
+    "pigm",
+    "glass",
+    "crystal",
+    "winpane",
+    "lens",
+    "enamel",
+    "glaze",
+    "paper",
+    "ink",
+    "printink",
+    "oilpaint",
+    "varnish",
+    "lacquer",
+    "sealwax",
+    "candles",
+    "soap",
+    "rope",
+    "canvas",
+    "linen",
+    "woolc",
+    "cottonc",
+    "silk",
+    "mortar",
+    "brick",
+    "pottery",
+    "porcel",
+    "bread",
+    "beer",
+    "masa",
+    "ricew",
+    "mead",
+    "choc",
+    "potg",
+    "thun",
+    "lunar",
+    "phos",
+    "ruby",
+    "quint",
+    "philm",
+    "stone",
+    "blood",
+    "body",
+    "h1",
+    "h2",
+    "h3",
+    "plate",
+    "clockw",
+    "golem",
+    "hull",
+    "sails",
+    "rigging",
+    "compass",
+    "spyglass",
+    "charts",
+    "engine",
+    "provis",
+    "ship",
+    "tortilla",
+    "laud",
+    "theriac",
+    "antcup",
+    "ointm",
+    "smell",
+    "tinct",
+    "elix",
+    "betel",
+    "clothes",
+    "dyed",
+    "scarletc",
+    "court",
+    "hats",
+    "shoes",
+    "cosm",
+    "batik",
+    "lookg",
+    "mirror",
+    "book",
+    "writing",
+    "lucent",
+    "lamp",
+    "bluewhite",
+    "lacqw",
+    "jewel",
+    "silverw",
+    "giltw",
+    "enamelw",
+    "firew",
+    "spect",
+    "clock",
+    "autom",
+    "obsw",
+    "perfume",
+    "incense",
+    "castbrass",
+    "tools",
+    "musket",
+    "cannon",
+    "charge",
+    "wildfire",
+    "telescope"
+  ],
+  "recipes": [
+    {
+      "id": "r.nit.nitbed",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nitbed"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "nit"
+        }
+      ]
+    },
+    {
+      "id": "r.cocoon",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "mulb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cocoon"
+        }
+      ]
+    },
+    {
+      "id": "r.icu",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cu"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "icu"
+        }
+      ]
+    },
+    {
+      "id": "r.ife",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "fe"
+          ]
+        },
+        {
+          "accepts": [
+            "coal",
+            "charcoal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ife"
+        }
+      ]
+    },
+    {
+      "id": "r.isn",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "sn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "isn"
+        }
+      ]
+    },
+    {
+      "id": "r.ipb",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "pb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ipb"
+        }
+      ]
+    },
+    {
+      "id": "r.izn",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "zn"
+          ]
+        },
+        {
+          "accepts": [
+            "coal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "izn"
+        }
+      ]
+    },
+    {
+      "id": "r.iag",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ag"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "iag"
+        }
+      ]
+    },
+    {
+      "id": "r.iau",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "au"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "iau"
+        }
+      ]
+    },
+    {
+      "id": "r.hg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cin"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "hg"
+        }
+      ]
+    },
+    {
+      "id": "r.salt",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "slt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "salt"
+        }
+      ]
+    },
+    {
+      "id": "r.brim",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "sul"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "brim"
+        }
+      ]
+    },
+    {
+      "id": "r.oov",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "vit",
+            "copperas"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "oov"
+        }
+      ]
+    },
+    {
+      "id": "r.nitre",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nit"
+          ]
+        },
+        {
+          "accepts": [
+            "ash"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "nitre"
+        }
+      ]
+    },
+    {
+      "id": "r.was",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "rea"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "was"
+        }
+      ]
+    },
+    {
+      "id": "r.reg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "stb"
+          ]
+        },
+        {
+          "accepts": [
+            "ife"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "reg"
+        }
+      ]
+    },
+    {
+      "id": "r.bic",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bis"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bic"
+        }
+      ]
+    },
+    {
+      "id": "r.pearl",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ash"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pearl"
+        }
+      ]
+    },
+    {
+      "id": "r.alum",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "alu"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "alum"
+        }
+      ]
+    },
+    {
+      "id": "r.sama",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "sam",
+            "dung"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sama"
+        }
+      ]
+    },
+    {
+      "id": "r.qlime",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lim",
+            "shells"
+          ]
+        },
+        {
+          "accepts": [
+            "coal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "qlime"
+        }
+      ]
+    },
+    {
+      "id": "r.zaf",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cob"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "zaf"
+        }
+      ]
+    },
+    {
+      "id": "r.borax",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "tinc"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "borax"
+        }
+      ]
+    },
+    {
+      "id": "r.soda",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nat",
+            "kelp"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "soda"
+        }
+      ]
+    },
+    {
+      "id": "r.ash",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ash"
+        }
+      ]
+    },
+    {
+      "id": "r.copperas",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "pyr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "copperas"
+        }
+      ]
+    },
+    {
+      "id": "r.plaster",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "gyps"
+          ]
+        },
+        {
+          "accepts": [
+            "coal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "plaster"
+        }
+      ]
+    },
+    {
+      "id": "r.clay",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "clay"
+        }
+      ]
+    },
+    {
+      "id": "r.sand",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sand"
+        }
+      ]
+    },
+    {
+      "id": "r.ochre",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ochre"
+        }
+      ]
+    },
+    {
+      "id": "r.fearth",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "fearth"
+        }
+      ]
+    },
+    {
+      "id": "r.peat",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "peat"
+        }
+      ]
+    },
+    {
+      "id": "r.nitbed",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "dung"
+          ]
+        },
+        {
+          "accepts": [
+            "urine"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        },
+        {
+          "accepts": [
+            "ash"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "nitbed"
+        }
+      ]
+    },
+    {
+      "id": "r.flour",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "flour"
+        }
+      ]
+    },
+    {
+      "id": "r.malt",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "malt"
+        }
+      ]
+    },
+    {
+      "id": "r.wine",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "grapes"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "wine"
+        }
+      ]
+    },
+    {
+      "id": "r.oil",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "olives"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "oil"
+        }
+      ]
+    },
+    {
+      "id": "r.linthr",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "flax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "linthr"
+        }
+      ]
+    },
+    {
+      "id": "r.linseed",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "flax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "linseed"
+        }
+      ]
+    },
+    {
+      "id": "r.hempf",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hemp"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "hempf"
+        }
+      ]
+    },
+    {
+      "id": "r.cotthr",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cotton"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cotthr"
+        }
+      ]
+    },
+    {
+      "id": "r.sugar",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cane"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sugar"
+        }
+      ]
+    },
+    {
+      "id": "r.opium",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "poppy"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "opium"
+        }
+      ]
+    },
+    {
+      "id": "r.pulque",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "agave"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pulque"
+        }
+      ]
+    },
+    {
+      "id": "r.planks",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "planks"
+        }
+      ]
+    },
+    {
+      "id": "r.charcoal",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "charcoal"
+        }
+      ]
+    },
+    {
+      "id": "r.pitch",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "resin",
+            "bitu"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pitch"
+        }
+      ]
+    },
+    {
+      "id": "r.turps",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "resin"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "turps"
+        }
+      ]
+    },
+    {
+      "id": "r.lampblk",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "resin",
+            "oil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lampblk"
+        }
+      ]
+    },
+    {
+      "id": "r.silkthr",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cocoon"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "silkthr"
+        }
+      ]
+    },
+    {
+      "id": "r.yarn",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "wool"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "yarn"
+        }
+      ]
+    },
+    {
+      "id": "r.honey",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "comb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "honey"
+        }
+      ]
+    },
+    {
+      "id": "r.wax",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "comb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "wax"
+        }
+      ]
+    },
+    {
+      "id": "r.glue",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bone"
+          ]
+        },
+        {
+          "accepts": [
+            "hides"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "glue"
+        }
+      ]
+    },
+    {
+      "id": "r.boneash",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bone"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "boneash"
+        }
+      ]
+    },
+    {
+      "id": "r.parch",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hides"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "parch"
+        }
+      ]
+    },
+    {
+      "id": "r.leather",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hides"
+          ]
+        },
+        {
+          "accepts": [
+            "bark",
+            "cutch"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "leather"
+        }
+      ]
+    },
+    {
+      "id": "r.cheese",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "milk"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cheese"
+        }
+      ]
+    },
+    {
+      "id": "r.saltfish",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "fish"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "saltfish"
+        }
+      ]
+    },
+    {
+      "id": "r.tealeaf",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "tea"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tealeaf"
+        }
+      ]
+    },
+    {
+      "id": "r.coffeeb",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "coffee"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "coffeeb"
+        }
+      ]
+    },
+    {
+      "id": "r.shellac",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lac"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "shellac"
+        }
+      ]
+    },
+    {
+      "id": "r.bronze",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bronze"
+        }
+      ]
+    },
+    {
+      "id": "r.brass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "izn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "brass"
+        }
+      ]
+    },
+    {
+      "id": "r.pewter",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "ipb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pewter"
+        }
+      ]
+    },
+    {
+      "id": "r.typem",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ipb"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "reg"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "typem"
+        }
+      ]
+    },
+    {
+      "id": "r.steel",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ife"
+          ]
+        },
+        {
+          "accepts": [
+            "charcoal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "steel"
+        }
+      ]
+    },
+    {
+      "id": "r.tinplate",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ife"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "sama"
+          ]
+        },
+        {
+          "accepts": [
+            "palmoil"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tinplate"
+        }
+      ]
+    },
+    {
+      "id": "r.specm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "was"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "specm"
+        }
+      ]
+    },
+    {
+      "id": "r.amalgam",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "iau"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "amalgam"
+        }
+      ]
+    },
+    {
+      "id": "r.litharge",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ipb"
+          ]
+        },
+        {
+          "accepts": [
+            "boneash"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "litharge"
+        }
+      ]
+    },
+    {
+      "id": "r.shot",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ipb"
+          ]
+        },
+        {
+          "accepts": [
+            "was"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "shot"
+        }
+      ]
+    },
+    {
+      "id": "r.goldthr",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iau"
+          ]
+        },
+        {
+          "accepts": [
+            "silkthr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "goldthr"
+        }
+      ]
+    },
+    {
+      "id": "r.aqf",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nitre"
+          ]
+        },
+        {
+          "accepts": [
+            "oov"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "aqf"
+        }
+      ]
+    },
+    {
+      "id": "r.aqr",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "aqf"
+          ]
+        },
+        {
+          "accepts": [
+            "sama",
+            "sos"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "aqr"
+        }
+      ]
+    },
+    {
+      "id": "r.lye",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "pearl"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lye"
+        }
+      ]
+    },
+    {
+      "id": "r.sos",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "salt"
+          ]
+        },
+        {
+          "accepts": [
+            "oov"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sos"
+        }
+      ]
+    },
+    {
+      "id": "r.vinegar",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "wine"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "vinegar"
+        }
+      ]
+    },
+    {
+      "id": "r.brandy",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "wine"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "brandy"
+        }
+      ]
+    },
+    {
+      "id": "r.spirit",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brandy"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "spirit"
+        }
+      ]
+    },
+    {
+      "id": "r.harts",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "horn",
+            "sama",
+            "qlime"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "harts"
+        }
+      ]
+    },
+    {
+      "id": "r.tartar",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "wine"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tartar"
+        }
+      ]
+    },
+    {
+      "id": "r.gunp",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nitre"
+          ]
+        },
+        {
+          "accepts": [
+            "brim"
+          ]
+        },
+        {
+          "accepts": [
+            "charcoal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "gunp"
+        }
+      ]
+    },
+    {
+      "id": "r.verm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "brim"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "verm"
+        }
+      ]
+    },
+    {
+      "id": "r.smalt",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "glass"
+          ]
+        },
+        {
+          "accepts": [
+            "zaf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "smalt"
+        }
+      ]
+    },
+    {
+      "id": "r.whitelead",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ipb"
+          ]
+        },
+        {
+          "accepts": [
+            "vinegar"
+          ]
+        },
+        {
+          "accepts": [
+            "dung"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "whitelead"
+        }
+      ]
+    },
+    {
+      "id": "r.redlead",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "litharge"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "redlead"
+        }
+      ]
+    },
+    {
+      "id": "r.verdi",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "vinegar"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "verdi"
+        }
+      ]
+    },
+    {
+      "id": "r.prussian",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "oxblood"
+          ]
+        },
+        {
+          "accepts": [
+            "pearl"
+          ]
+        },
+        {
+          "accepts": [
+            "copperas"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "prussian"
+        }
+      ]
+    },
+    {
+      "id": "r.ultram",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lapis"
+          ]
+        },
+        {
+          "accepts": [
+            "wax"
+          ]
+        },
+        {
+          "accepts": [
+            "resin"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ultram"
+        }
+      ]
+    },
+    {
+      "id": "r.kingsy",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "rea"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "kingsy"
+        }
+      ]
+    },
+    {
+      "id": "r.rouge",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "copperas"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "rouge"
+        }
+      ]
+    },
+    {
+      "id": "r.madderl",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "madder",
+            "dyewood"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "madderl"
+        }
+      ]
+    },
+    {
+      "id": "r.indigod",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "indigo"
+          ]
+        },
+        {
+          "accepts": [
+            "urine",
+            "lye"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "indigod"
+        }
+      ]
+    },
+    {
+      "id": "r.weldd",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "weld"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "weldd"
+        }
+      ]
+    },
+    {
+      "id": "r.scarlet",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "coch",
+            "lac"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "tartar"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "r.ironblk",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "galls"
+          ]
+        },
+        {
+          "accepts": [
+            "copperas"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ironblk"
+        }
+      ]
+    },
+    {
+      "id": "r.pigm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "verm"
+          ]
+        },
+        {
+          "accepts": [
+            "smalt"
+          ]
+        },
+        {
+          "accepts": [
+            "kingsy"
+          ]
+        },
+        {
+          "accepts": [
+            "ultram"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "prussian"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "verdi"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "whitelead"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "ochre"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "redlead"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pigm"
+        }
+      ]
+    },
+    {
+      "id": "r.glass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soda"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        },
+        {
+          "accepts": [
+            "sand"
+          ]
+        },
+        {
+          "accepts": [
+            "mang"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "glass"
+        }
+      ]
+    },
+    {
+      "id": "r.crystal",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "glass"
+          ]
+        },
+        {
+          "accepts": [
+            "litharge"
+          ]
+        },
+        {
+          "accepts": [
+            "mang"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "crystal"
+        }
+      ]
+    },
+    {
+      "id": "r.winpane",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "glass"
+          ]
+        },
+        {
+          "accepts": [
+            "ipb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "winpane"
+        }
+      ]
+    },
+    {
+      "id": "r.lens",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "crystal",
+            "rockc"
+          ]
+        },
+        {
+          "accepts": [
+            "rouge"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lens"
+        }
+      ]
+    },
+    {
+      "id": "r.enamel",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "glass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        },
+        {
+          "accepts": [
+            "redlead"
+          ]
+        },
+        {
+          "accepts": [
+            "zaf"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "enamel"
+        }
+      ]
+    },
+    {
+      "id": "r.glaze",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "litharge"
+          ]
+        },
+        {
+          "accepts": [
+            "sand"
+          ]
+        },
+        {
+          "accepts": [
+            "zaf"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "glaze"
+        }
+      ]
+    },
+    {
+      "id": "r.paper",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "linthr",
+            "hempf",
+            "bamboo"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        },
+        {
+          "accepts": [
+            "glue"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "paper"
+        }
+      ]
+    },
+    {
+      "id": "r.ink",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "galls"
+          ]
+        },
+        {
+          "accepts": [
+            "copperas"
+          ]
+        },
+        {
+          "accepts": [
+            "gum"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ink"
+        }
+      ]
+    },
+    {
+      "id": "r.printink",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lampblk"
+          ]
+        },
+        {
+          "accepts": [
+            "linseed"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "printink"
+        }
+      ]
+    },
+    {
+      "id": "r.oilpaint",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "pigm"
+          ]
+        },
+        {
+          "accepts": [
+            "linseed"
+          ]
+        },
+        {
+          "accepts": [
+            "varnish"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "oilpaint"
+        }
+      ]
+    },
+    {
+      "id": "r.varnish",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "resin",
+            "dammar",
+            "shellac"
+          ]
+        },
+        {
+          "accepts": [
+            "turps"
+          ]
+        },
+        {
+          "accepts": [
+            "linseed"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "varnish"
+        }
+      ]
+    },
+    {
+      "id": "r.lacquer",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lacsap"
+          ]
+        },
+        {
+          "accepts": [
+            "verm"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lacquer"
+        }
+      ]
+    },
+    {
+      "id": "r.sealwax",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "wax"
+          ]
+        },
+        {
+          "accepts": [
+            "resin",
+            "shellac"
+          ]
+        },
+        {
+          "accepts": [
+            "verm"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sealwax"
+        }
+      ]
+    },
+    {
+      "id": "r.candles",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "tallow",
+            "wax",
+            "palmoil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "candles"
+        }
+      ]
+    },
+    {
+      "id": "r.soap",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lye"
+          ]
+        },
+        {
+          "accepts": [
+            "tallow",
+            "oil",
+            "palmoil"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "soap"
+        }
+      ]
+    },
+    {
+      "id": "r.rope",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hempf",
+            "coconut"
+          ]
+        },
+        {
+          "accepts": [
+            "pitch"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "rope"
+        }
+      ]
+    },
+    {
+      "id": "r.canvas",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hempf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "canvas"
+        }
+      ]
+    },
+    {
+      "id": "r.linen",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "linthr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "linen"
+        }
+      ]
+    },
+    {
+      "id": "r.woolc",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "yarn"
+          ]
+        },
+        {
+          "accepts": [
+            "fearth"
+          ]
+        },
+        {
+          "accepts": [
+            "urine"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "woolc"
+        }
+      ]
+    },
+    {
+      "id": "r.cottonc",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cotthr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cottonc"
+        }
+      ]
+    },
+    {
+      "id": "r.silk",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "silkthr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "silk"
+        }
+      ]
+    },
+    {
+      "id": "r.mortar",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "qlime"
+          ]
+        },
+        {
+          "accepts": [
+            "sand"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "mortar"
+        }
+      ]
+    },
+    {
+      "id": "r.brick",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "clay"
+          ]
+        },
+        {
+          "accepts": [
+            "coal",
+            "peat"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "brick"
+        }
+      ]
+    },
+    {
+      "id": "r.pottery",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "clay"
+          ]
+        },
+        {
+          "accepts": [
+            "glaze"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "pottery"
+        }
+      ]
+    },
+    {
+      "id": "r.porcel",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "kaolin"
+          ]
+        },
+        {
+          "accepts": [
+            "gyps"
+          ]
+        },
+        {
+          "accepts": [
+            "coal"
+          ]
+        },
+        {
+          "accepts": [
+            "zaf"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "porcel"
+        }
+      ]
+    },
+    {
+      "id": "r.bread",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "flour"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bread"
+        }
+      ]
+    },
+    {
+      "id": "r.beer",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "malt"
+          ]
+        },
+        {
+          "accepts": [
+            "herbs"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "beer"
+        }
+      ]
+    },
+    {
+      "id": "r.masa",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "maize"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "masa"
+        }
+      ]
+    },
+    {
+      "id": "r.ricew",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "rice"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ricew"
+        }
+      ]
+    },
+    {
+      "id": "r.mead",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "honey"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "mead"
+        }
+      ]
+    },
+    {
+      "id": "r.choc",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cacao"
+          ]
+        },
+        {
+          "accepts": [
+            "sugar"
+          ]
+        },
+        {
+          "accepts": [
+            "spice"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "choc"
+        }
+      ]
+    },
+    {
+      "id": "r.potg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iau"
+          ]
+        },
+        {
+          "accepts": [
+            "aqr"
+          ]
+        },
+        {
+          "accepts": [
+            "ess"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "potg"
+        }
+      ]
+    },
+    {
+      "id": "r.thun",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iau"
+          ]
+        },
+        {
+          "accepts": [
+            "aqr"
+          ]
+        },
+        {
+          "accepts": [
+            "harts"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "thun"
+        }
+      ]
+    },
+    {
+      "id": "r.lunar",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iag"
+          ]
+        },
+        {
+          "accepts": [
+            "aqf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lunar"
+        }
+      ]
+    },
+    {
+      "id": "r.phos",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "urine"
+          ]
+        },
+        {
+          "accepts": [
+            "sand"
+          ]
+        },
+        {
+          "accepts": [
+            "charcoal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "phos"
+        }
+      ]
+    },
+    {
+      "id": "r.ruby",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "glass"
+          ]
+        },
+        {
+          "accepts": [
+            "potg"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ruby"
+        }
+      ]
+    },
+    {
+      "id": "r.quint",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ess"
+          ]
+        },
+        {
+          "accepts": [
+            "spirit"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "quint"
+        }
+      ]
+    },
+    {
+      "id": "r.philm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "reg"
+          ]
+        },
+        {
+          "accepts": [
+            "quint"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "philm"
+        }
+      ]
+    },
+    {
+      "id": "r.stone",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "philm"
+          ]
+        },
+        {
+          "accepts": [
+            "potg"
+          ]
+        },
+        {
+          "accepts": [
+            "verm"
+          ]
+        },
+        {
+          "accepts": [
+            "h3"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "stone"
+        }
+      ]
+    },
+    {
+      "id": "r.blood",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "ess"
+          ]
+        },
+        {
+          "accepts": [
+            "potg"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "blood"
+        }
+      ]
+    },
+    {
+      "id": "r.body",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "body"
+        }
+      ]
+    },
+    {
+      "id": "r.h1",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "was"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h1"
+        }
+      ]
+    },
+    {
+      "id": "r.h2",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "reg"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h2"
+        }
+      ]
+    },
+    {
+      "id": "r.h3",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bic"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h3"
+        }
+      ]
+    },
+    {
+      "id": "r.plate",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "aqf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "plate"
+        }
+      ]
+    },
+    {
+      "id": "r.clockw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "steel"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "clockw"
+        }
+      ]
+    },
+    {
+      "id": "r.golem",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "blood"
+          ]
+        },
+        {
+          "accepts": [
+            "body"
+          ]
+        },
+        {
+          "accepts": [
+            "#kind:golem-heart"
+          ]
+        },
+        {
+          "accepts": [
+            "plate"
+          ]
+        },
+        {
+          "accepts": [
+            "bronze"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "smalt"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "lunar"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "clockw"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "golem"
+        }
+      ]
+    },
+    {
+      "id": "r.hull",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "planks"
+          ]
+        },
+        {
+          "accepts": [
+            "pitch"
+          ]
+        },
+        {
+          "accepts": [
+            "icu"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "hull"
+        }
+      ]
+    },
+    {
+      "id": "r.sails",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "canvas"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "sails"
+        }
+      ]
+    },
+    {
+      "id": "r.rigging",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "rope"
+          ]
+        },
+        {
+          "accepts": [
+            "pitch"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "rigging"
+        }
+      ]
+    },
+    {
+      "id": "r.compass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lode"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "winpane"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "compass"
+        }
+      ]
+    },
+    {
+      "id": "r.spyglass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lens"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "spyglass"
+        }
+      ]
+    },
+    {
+      "id": "r.charts",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "paper",
+            "parch"
+          ]
+        },
+        {
+          "accepts": [
+            "ink"
+          ]
+        },
+        {
+          "accepts": [
+            "oilpaint"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "charts"
+        }
+      ]
+    },
+    {
+      "id": "r.engine",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "clockw"
+          ]
+        },
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "quint"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "engine"
+        }
+      ]
+    },
+    {
+      "id": "r.provis",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "saltfish"
+          ]
+        },
+        {
+          "accepts": [
+            "bread"
+          ]
+        },
+        {
+          "accepts": [
+            "beer"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "provis"
+        }
+      ]
+    },
+    {
+      "id": "r.ship",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hull"
+          ]
+        },
+        {
+          "accepts": [
+            "sails"
+          ]
+        },
+        {
+          "accepts": [
+            "rigging"
+          ]
+        },
+        {
+          "accepts": [
+            "compass"
+          ]
+        },
+        {
+          "accepts": [
+            "engine"
+          ]
+        },
+        {
+          "accepts": [
+            "spyglass"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "charts"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "cannon"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "provis"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ship"
+        }
+      ]
+    },
+    {
+      "id": "r.tortilla",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "masa"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tortilla"
+        }
+      ]
+    },
+    {
+      "id": "r.laud",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "opium"
+          ]
+        },
+        {
+          "accepts": [
+            "spirit"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "laud"
+        }
+      ]
+    },
+    {
+      "id": "r.theriac",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "herbs"
+          ]
+        },
+        {
+          "accepts": [
+            "honey"
+          ]
+        },
+        {
+          "accepts": [
+            "opium"
+          ]
+        },
+        {
+          "accepts": [
+            "spice"
+          ]
+        },
+        {
+          "accepts": [
+            "camphor"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "theriac"
+        }
+      ]
+    },
+    {
+      "id": "r.antcup",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "reg"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "antcup"
+        }
+      ]
+    },
+    {
+      "id": "r.ointm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "tallow"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ointm"
+        }
+      ]
+    },
+    {
+      "id": "r.smell",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "harts"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "smell"
+        }
+      ]
+    },
+    {
+      "id": "r.tinct",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "herbs"
+          ]
+        },
+        {
+          "accepts": [
+            "spirit"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tinct"
+        }
+      ]
+    },
+    {
+      "id": "r.elix",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "potg"
+          ]
+        },
+        {
+          "accepts": [
+            "quint"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "elix"
+        }
+      ]
+    },
+    {
+      "id": "r.betel",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "areca"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        },
+        {
+          "accepts": [
+            "cutch"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "betel"
+        }
+      ]
+    },
+    {
+      "id": "r.clothes",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "linen",
+            "woolc",
+            "cottonc"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "clothes"
+        }
+      ]
+    },
+    {
+      "id": "r.dyed",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "woolc"
+          ]
+        },
+        {
+          "accepts": [
+            "alum"
+          ]
+        },
+        {
+          "accepts": [
+            "madderl",
+            "weldd",
+            "indigod",
+            "ironblk"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "dyed"
+        }
+      ]
+    },
+    {
+      "id": "r.scarletc",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "woolc"
+          ]
+        },
+        {
+          "accepts": [
+            "scarlet"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "scarletc"
+        }
+      ]
+    },
+    {
+      "id": "r.court",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "silk"
+          ]
+        },
+        {
+          "accepts": [
+            "goldthr"
+          ]
+        },
+        {
+          "accepts": [
+            "scarletc"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "court"
+        }
+      ]
+    },
+    {
+      "id": "r.hats",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "furs"
+          ]
+        },
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "aqf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "hats"
+        }
+      ]
+    },
+    {
+      "id": "r.shoes",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "leather"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "shoes"
+        }
+      ]
+    },
+    {
+      "id": "r.cosm",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "stb"
+          ]
+        },
+        {
+          "accepts": [
+            "whitelead"
+          ]
+        },
+        {
+          "accepts": [
+            "bic"
+          ]
+        },
+        {
+          "accepts": [
+            "aqf"
+          ]
+        },
+        {
+          "accepts": [
+            "scarlet"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cosm"
+        }
+      ]
+    },
+    {
+      "id": "r.batik",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cottonc"
+          ]
+        },
+        {
+          "accepts": [
+            "wax"
+          ]
+        },
+        {
+          "accepts": [
+            "indigod"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "batik"
+        }
+      ]
+    },
+    {
+      "id": "r.lookg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "winpane"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        },
+        {
+          "accepts": [
+            "hg"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lookg"
+        }
+      ]
+    },
+    {
+      "id": "r.mirror",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lookg"
+          ]
+        },
+        {
+          "accepts": [
+            "lunar"
+          ]
+        },
+        {
+          "accepts": [
+            "ess"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "mirror"
+        }
+      ]
+    },
+    {
+      "id": "r.book",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "typem"
+          ]
+        },
+        {
+          "accepts": [
+            "paper"
+          ]
+        },
+        {
+          "accepts": [
+            "printink"
+          ]
+        },
+        {
+          "accepts": [
+            "leather"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "book"
+        }
+      ]
+    },
+    {
+      "id": "r.writing",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "ink"
+          ]
+        },
+        {
+          "accepts": [
+            "quills"
+          ]
+        },
+        {
+          "accepts": [
+            "paper"
+          ]
+        },
+        {
+          "accepts": [
+            "sealwax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "writing"
+        }
+      ]
+    },
+    {
+      "id": "r.lucent",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "crystal"
+          ]
+        },
+        {
+          "accepts": [
+            "phos"
+          ]
+        },
+        {
+          "accepts": [
+            "ess"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lucent"
+        }
+      ]
+    },
+    {
+      "id": "r.lamp",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "phos"
+          ]
+        },
+        {
+          "accepts": [
+            "winpane"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lamp"
+        }
+      ]
+    },
+    {
+      "id": "r.bluewhite",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "porcel"
+          ]
+        },
+        {
+          "accepts": [
+            "zaf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bluewhite"
+        }
+      ]
+    },
+    {
+      "id": "r.lacqw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "planks"
+          ]
+        },
+        {
+          "accepts": [
+            "lacquer"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "lacqw"
+        }
+      ]
+    },
+    {
+      "id": "r.jewel",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iau"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        },
+        {
+          "accepts": [
+            "lapis",
+            "jade",
+            "amber"
+          ]
+        },
+        {
+          "accepts": [
+            "enamel"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "jewel"
+        }
+      ]
+    },
+    {
+      "id": "r.silverw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "iag"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "silverw"
+        }
+      ]
+    },
+    {
+      "id": "r.giltw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bronze"
+          ]
+        },
+        {
+          "accepts": [
+            "amalgam"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "giltw"
+        }
+      ]
+    },
+    {
+      "id": "r.enamelw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "enamel"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "enamelw"
+        }
+      ]
+    },
+    {
+      "id": "r.firew",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "gunp"
+          ]
+        },
+        {
+          "accepts": [
+            "paper"
+          ]
+        },
+        {
+          "accepts": [
+            "rea"
+          ]
+        },
+        {
+          "accepts": [
+            "verdi"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "sama"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "camphor"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "firew"
+        }
+      ]
+    },
+    {
+      "id": "r.spect",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "lens"
+          ]
+        },
+        {
+          "accepts": [
+            "horn",
+            "brass"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "spect"
+        }
+      ]
+    },
+    {
+      "id": "r.clock",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "clockw"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "winpane"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "clock"
+        }
+      ]
+    },
+    {
+      "id": "r.autom",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "clockw"
+          ]
+        },
+        {
+          "accepts": [
+            "plate"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "h1"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "autom"
+        }
+      ]
+    },
+    {
+      "id": "r.obsw",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "obs"
+          ]
+        },
+        {
+          "accepts": [
+            "rouge"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "obsw"
+        }
+      ]
+    },
+    {
+      "id": "r.perfume",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "spirit"
+          ]
+        },
+        {
+          "accepts": [
+            "herbs"
+          ]
+        },
+        {
+          "accepts": [
+            "amber"
+          ]
+        },
+        {
+          "accepts": [
+            "frank"
+          ],
+          "optional": true
+        },
+        {
+          "accepts": [
+            "benzoin"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "perfume"
+        }
+      ]
+    },
+    {
+      "id": "r.incense",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "frank",
+            "benzoin"
+          ]
+        },
+        {
+          "accepts": [
+            "charcoal"
+          ]
+        },
+        {
+          "accepts": [
+            "camphor"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "incense"
+        }
+      ]
+    },
+    {
+      "id": "r.castbrass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "wax"
+          ]
+        },
+        {
+          "accepts": [
+            "clay"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "castbrass"
+        }
+      ]
+    },
+    {
+      "id": "r.tools",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "steel"
+          ]
+        },
+        {
+          "accepts": [
+            "planks"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tools"
+        }
+      ]
+    },
+    {
+      "id": "r.musket",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "steel"
+          ]
+        },
+        {
+          "accepts": [
+            "planks"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "musket"
+        }
+      ]
+    },
+    {
+      "id": "r.cannon",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bronze"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cannon"
+        }
+      ]
+    },
+    {
+      "id": "r.charge",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "gunp"
+          ]
+        },
+        {
+          "accepts": [
+            "thun"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "charge"
+        }
+      ]
+    },
+    {
+      "id": "r.wildfire",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bitu"
+          ]
+        },
+        {
+          "accepts": [
+            "qlime"
+          ]
+        },
+        {
+          "accepts": [
+            "brim"
+          ]
+        },
+        {
+          "accepts": [
+            "resin"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "wildfire"
+        }
+      ]
+    },
+    {
+      "id": "r.telescope",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "specm"
+          ]
+        },
+        {
+          "accepts": [
+            "lens"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "rouge"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "telescope"
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "id": "c.food",
+      "name": "Food",
+      "note": "",
+      "accepts": [
+        "#need:food"
+      ]
+    },
+    {
+      "id": "c.intoxicants",
+      "name": "Intoxicants and physic",
+      "note": "",
+      "accepts": [
+        "#need:intoxicants-and-physic"
+      ]
+    },
+    {
+      "id": "c.clothing",
+      "name": "Clothing",
+      "note": "",
+      "accepts": [
+        "#need:clothing"
+      ]
+    },
+    {
+      "id": "c.wares",
+      "name": "Wares",
+      "note": "",
+      "accepts": [
+        "#need:wares"
+      ]
+    }
+  ],
+  "layout": {
+    "ag": [0, 9692],
+    "agave": [0, 3430],
+    "alu": [0, 2950],
+    "alum": [590, 3275],
+    "amalgam": [1180, 5954],
+    "amber": [0, 9452],
+    "antcup": [2360, 4678],
+    "aqf": [2950, 5698],
+    "aqr": [3540, 6073],
+    "areca": [0, 4070],
+    "ash": [590, 4958],
+    "au": [0, 6550],
+    "autom": [4130, 6956],
+    "bamboo": [0, 7030],
+    "bark": [0, 5270],
+    "batik": [2950, 4419],
+    "beer": [1180, 4251],
+    "benzoin": [0, 9212],
+    "betel": [1180, 4891],
+    "bic": [590, 4718],
+    "bis": [0, 4630],
+    "bitu": [0, 4950],
+    "blood": [4720, 6325],
+    "bluewhite": [1770, 7969],
+    "body": [1180, 6194],
+    "bone": [0, 8070],
+    "boneash": [590, 7464],
+    "book": [2950, 5993],
+    "borax": [590, 7544],
+    "brandy": [1180, 3743],
+    "brass": [1180, 7188],
+    "bread": [1180, 4651],
+    "brick": [1180, 7428],
+    "brim": [590, 7156],
+    "bronze": [1180, 7831],
+    "c.clothing": [5610, 4313],
+    "c.food": [5610, 6022],
+    "c.intoxicants": [5610, 4570],
+    "c.wares": [5610, 7103],
+    "cacao": [0, 3910],
+    "camphor": [0, 7910],
+    "candles": [1180, 7268],
+    "cane": [0, 5350],
+    "cannon": [1770, 7361],
+    "canvas": [1180, 3503],
+    "castbrass": [1770, 6641],
+    "charcoal": [590, 5224],
+    "charge": [4720, 6405],
+    "charts": [3540, 5470],
+    "cheese": [1180, 6274],
+    "choc": [1180, 4331],
+    "cin": [0, 6390],
+    "clay": [590, 6996],
+    "clock": [2950, 7018],
+    "clockw": [2360, 6321],
+    "clothes": [1770, 4489],
+    "coal": [0, 7830],
+    "cob": [0, 9372],
+    "coch": [0, 3590],
+    "coconut": [0, 5190],
+    "cocoon": [590, 3131],
+    "coffee": [0, 3510],
+    "coffeeb": [590, 3816],
+    "comb": [0, 6710],
+    "compass": [2360, 6081],
+    "copperas": [590, 5464],
+    "cosm": [3540, 4621],
+    "cotthr": [590, 1323],
+    "cotton": [0, 0],
+    "cottonc": [1180, 3263],
+    "court": [2950, 4181],
+    "crystal": [1770, 7121],
+    "cu": [0, 6950],
+    "cutch": [0, 4790],
+    "dammar": [0, 5030],
+    "dung": [0, 6070],
+    "dyed": [2950, 4261],
+    "dyewood": [0, 3030],
+    "eggs": [0, 7190],
+    "elix": [4720, 4995],
+    "enamel": [2360, 7712],
+    "enamelw": [2950, 7098],
+    "engine": [2950, 6233],
+    "ess": [0, 6870],
+    "fe": [0, 6630],
+    "fearth": [590, 6344],
+    "firew": [3540, 6675],
+    "fish": [0, 5590],
+    "flax": [0, 4310],
+    "flour": [590, 3976],
+    "frank": [0, 9292],
+    "furs": [0, 4550],
+    "galls": [0, 4390],
+    "giltw": [1770, 6801],
+    "glass": [1180, 7348],
+    "glaze": [1770, 7281],
+    "glue": [590, 5944],
+    "goldthr": [1770, 4569],
+    "golem": [5310, 6727],
+    "grain": [0, 3670],
+    "grapes": [0, 3990],
+    "gum": [0, 5830],
+    "gunp": [2950, 6073],
+    "gyps": [0, 9532],
+    "h1": [1770, 7201],
+    "h2": [2360, 6485],
+    "h3": [1770, 6191],
+    "harts": [1180, 6434],
+    "hats": [3540, 4707],
+    "hemp": [0, 3190],
+    "hempf": [590, 3355],
+    "herbs": [0, 4870],
+    "hg": [590, 5704],
+    "hides": [0, 5110],
+    "honey": [590, 6024],
+    "horn": [0, 6790],
+    "hull": [1180, 5794],
+    "iag": [590, 8543],
+    "iau": [590, 5864],
+    "icu": [590, 6264],
+    "ife": [1180, 6114],
+    "incense": [1180, 7751],
+    "indigo": [0, 2870],
+    "indigod": [2360, 4511],
+    "ink": [1180, 5051],
+    "ipb": [590, 7317],
+    "ironblk": [1180, 4811],
+    "isn": [590, 7624],
+    "izn": [590, 7076],
+    "jade": [0, 9772],
+    "jewel": [2950, 7524],
+    "kaolin": [0, 9612],
+    "kelp": [0, 9052],
+    "kingsy": [590, 7704],
+    "kola": [0, 4470],
+    "lac": [0, 5510],
+    "lacquer": [1770, 6961],
+    "lacqw": [2360, 6161],
+    "lacsap": [0, 8310],
+    "lamp": [2360, 7132],
+    "lampblk": [1180, 7508],
+    "lapis": [0, 8230],
+    "laud": [2360, 4205],
+    "leather": [1180, 5131],
+    "lens": [2360, 6241],
+    "lim": [0, 5750],
+    "linen": [1180, 4411],
+    "linseed": [590, 4638],
+    "linthr": [590, 4363],
+    "litharge": [1180, 8057],
+    "lode": [0, 2630],
+    "lookg": [2360, 7292],
+    "lucent": [2360, 6565],
+    "lunar": [3540, 6897],
+    "lye": [1770, 5631],
+    "madder": [0, 3110],
+    "madderl": [1180, 3423],
+    "maize": [0, 7270],
+    "malt": [590, 3896],
+    "mang": [0, 7670],
+    "masa": [1180, 6514],
+    "mead": [1180, 6354],
+    "milk": [0, 7430],
+    "mirror": [4130, 7036],
+    "mortar": [1180, 6948],
+    "mulb": [0, 2790],
+    "musket": [2360, 6001],
+    "nat": [0, 9132],
+    "nit": [1770, 5551],
+    "nitbed": [1180, 5371],
+    "nitre": [2360, 5385],
+    "obs": [0, 9852],
+    "obsw": [1770, 6721],
+    "ochre": [590, 6756],
+    "oil": [590, 7944],
+    "oilpaint": [2950, 6153],
+    "ointm": [1180, 6594],
+    "olives": [0, 8630],
+    "oov": [1180, 5874],
+    "opium": [590, 3656],
+    "oxblood": [0, 6470],
+    "palmoil": [0, 8550],
+    "paper": [1180, 4571],
+    "parch": [1180, 5531],
+    "pb": [0, 7990],
+    "pearl": [1180, 4971],
+    "peat": [590, 6916],
+    "perfume": [2360, 6405],
+    "pewter": [1180, 8137],
+    "philm": [2950, 5581],
+    "phos": [1180, 5714],
+    "pigm": [2360, 6909],
+    "pitch": [590, 5384],
+    "planks": [590, 4878],
+    "plaster": [590, 7864],
+    "plate": [3540, 6755],
+    "poppy": [0, 3350],
+    "porcel": [1180, 8323],
+    "potg": [4130, 6146],
+    "pottery": [2360, 7446],
+    "printink": [1770, 6031],
+    "provis": [1770, 4690],
+    "prussian": [1770, 5711],
+    "pulque": [590, 3736],
+    "pyr": [0, 5990],
+    "qlime": [590, 5784],
+    "quills": [0, 8710],
+    "quint": [2360, 5305],
+    "r.alum": [300, 3065],
+    "r.amalgam": [890, 5987],
+    "r.antcup": [2070, 4808],
+    "r.aqf": [2660, 5444],
+    "r.aqr": [3250, 5920],
+    "r.ash": [300, 5176],
+    "r.autom": [3840, 6796],
+    "r.batik": [2660, 4511],
+    "r.beer": [890, 3415],
+    "r.betel": [890, 4355],
+    "r.bic": [300, 4626],
+    "r.blood": [4430, 6161],
+    "r.bluewhite": [1480, 8391],
+    "r.body": [890, 6367],
+    "r.boneash": [300, 7698],
+    "r.book": [2660, 5556],
+    "r.borax": [300, 7788],
+    "r.brandy": [890, 3185],
+    "r.brass": [890, 7353],
+    "r.bread": [890, 3997],
+    "r.brick": [890, 7711],
+    "r.brim": [300, 7441],
+    "r.bronze": [890, 8047],
+    "r.candles": [890, 7465],
+    "r.cannon": [1480, 7926],
+    "r.canvas": [890, 2749],
+    "r.castbrass": [1480, 6566],
+    "r.charcoal": [300, 5283],
+    "r.charge": [4430, 6295],
+    "r.charts": [3250, 5289],
+    "r.cheese": [890, 6479],
+    "r.choc": [890, 3527],
+    "r.clay": [300, 7200],
+    "r.clock": [2660, 6902],
+    "r.clockw": [2070, 6140],
+    "r.clothes": [1480, 4182],
+    "r.cocoon": [300, 2918],
+    "r.coffeeb": [300, 3605],
+    "r.compass": [2070, 5782],
+    "r.copperas": [300, 5637],
+    "r.cosm": [3250, 4888],
+    "r.cotthr": [300, 625],
+    "r.cottonc": [890, 2032],
+    "r.court": [2660, 4044],
+    "r.crystal": [1480, 7524],
+    "r.dyed": [2660, 4178],
+    "r.elix": [4430, 5428],
+    "r.enamel": [2070, 8104],
+    "r.enamelw": [2660, 7042],
+    "r.engine": [2660, 6118],
+    "r.fearth": [300, 6809],
+    "r.firew": [3250, 6323],
+    "r.flour": [300, 3790],
+    "r.giltw": [1480, 7032],
+    "r.glass": [890, 7555],
+    "r.glaze": [1480, 7792],
+    "r.glue": [300, 6269],
+    "r.goldthr": [1480, 4423],
+    "r.golem": [5020, 6654],
+    "r.gunp": [2660, 5721],
+    "r.h1": [1480, 7658],
+    "r.h2": [2070, 6635],
+    "r.h3": [1480, 6252],
+    "r.harts": [890, 6681],
+    "r.hats": [3250, 5088],
+    "r.hempf": [300, 3225],
+    "r.hg": [300, 5937],
+    "r.honey": [300, 6381],
+    "r.hull": [890, 5763],
+    "r.iag": [300, 9069],
+    "r.iau": [300, 6179],
+    "r.icu": [300, 6661],
+    "r.ife": [890, 6255],
+    "r.incense": [890, 7913],
+    "r.indigod": [2070, 4541],
+    "r.ink": [890, 4579],
+    "r.ipb": [300, 7596],
+    "r.ironblk": [890, 4243],
+    "r.isn": [300, 7908],
+    "r.izn": [300, 7315],
+    "r.jewel": [2660, 7915],
+    "r.kingsy": [300, 7998],
+    "r.lacquer": [1480, 7300],
+    "r.lacqw": [2070, 5916],
+    "r.lamp": [2070, 7303],
+    "r.lampblk": [890, 7823],
+    "r.laud": [2070, 4030],
+    "r.leather": [890, 4713],
+    "r.lens": [2070, 6028],
+    "r.linen": [890, 3661],
+    "r.linseed": [300, 4426],
+    "r.linthr": [300, 4289],
+    "r.litharge": [890, 8327],
+    "r.lookg": [2070, 7549],
+    "r.lucent": [2070, 6769],
+    "r.lunar": [3250, 6994],
+    "r.lye": [1480, 5395],
+    "r.madderl": [890, 2637],
+    "r.malt": [300, 3700],
+    "r.masa": [890, 6771],
+    "r.mead": [890, 6591],
+    "r.mirror": [3840, 6952],
+    "r.mortar": [890, 6995],
+    "r.musket": [2070, 5648],
+    "r.nit.nitbed": [1480, 5305],
+    "r.nitbed": [890, 5159],
+    "r.nitre": [2070, 5175],
+    "r.obsw": [1480, 6920],
+    "r.ochre": [300, 6930],
+    "r.oil": [300, 8343],
+    "r.oilpaint": [2660, 5855],
+    "r.ointm": [890, 6883],
+    "r.oov": [890, 5897],
+    "r.opium": [300, 3425],
+    "r.paper": [890, 3863],
+    "r.parch": [890, 5405],
+    "r.pearl": [890, 4489],
+    "r.peat": [300, 7110],
+    "r.perfume": [2070, 6457],
+    "r.pewter": [890, 8439],
+    "r.philm": [2660, 5300],
+    "r.phos": [890, 5629],
+    "r.pigm": [2070, 7037],
+    "r.pitch": [300, 5486],
+    "r.planks": [300, 5086],
+    "r.plaster": [300, 8231],
+    "r.plate": [3250, 6523],
+    "r.porcel": [890, 8888],
+    "r.potg": [3840, 6058],
+    "r.pottery": [2070, 7785],
+    "r.printink": [1480, 6006],
+    "r.provis": [1480, 4576],
+    "r.prussian": [1480, 5507],
+    "r.pulque": [300, 3515],
+    "r.qlime": [300, 6067],
+    "r.quint": [2070, 5063],
+    "r.redlead": [1480, 8214],
+    "r.reg": [1480, 5193],
+    "r.ricew": [300, 3880],
+    "r.rigging": [1480, 4710],
+    "r.rope": [890, 3751],
+    "r.rouge": [890, 5315],
+    "r.ruby": [4430, 6966],
+    "r.sails": [1480, 3669],
+    "r.salt": [300, 5742],
+    "r.saltfish": [890, 5517],
+    "r.sama": [300, 6571],
+    "r.sand": [300, 7020],
+    "r.scarlet": [1480, 4822],
+    "r.scarletc": [2070, 4429],
+    "r.sealwax": [1480, 6118],
+    "r.shellac": [300, 5373],
+    "r.ship": [3840, 5549],
+    "r.shoes": [1480, 4991],
+    "r.shot": [890, 8551],
+    "r.silk": [1480, 3579],
+    "r.silkthr": [890, 2547],
+    "r.silverw": [890, 9044],
+    "r.smalt": [1480, 8077],
+    "r.smell": [1480, 6386],
+    "r.soap": [2070, 7437],
+    "r.soda": [300, 8784],
+    "r.sos": [1480, 5887],
+    "r.specm": [890, 8174],
+    "r.spect": [2660, 6513],
+    "r.spirit": [1480, 4048],
+    "r.spyglass": [2660, 6625],
+    "r.steel": [1480, 5775],
+    "r.stone": [4430, 6005],
+    "r.sugar": [300, 4996],
+    "r.tartar": [890, 3095],
+    "r.tealeaf": [300, 3970],
+    "r.telescope": [2660, 6737],
+    "r.theriac": [890, 4847],
+    "r.thun": [3840, 6192],
+    "r.tinct": [2070, 4302],
+    "r.tinplate": [1480, 7144],
+    "r.tools": [2070, 5287],
+    "r.tortilla": [1480, 6476],
+    "r.turps": [300, 5847],
+    "r.typem": [2070, 6903],
+    "r.ultram": [890, 7219],
+    "r.varnish": [890, 5025],
+    "r.verdi": [1480, 5081],
+    "r.verm": [890, 7107],
+    "r.vinegar": [890, 3312],
+    "r.was": [300, 8088],
+    "r.wax": [300, 6471],
+    "r.weldd": [890, 2839],
+    "r.whitelead": [1480, 5641],
+    "r.wildfire": [890, 6099],
+    "r.wine": [300, 4075],
+    "r.winpane": [1480, 7412],
+    "r.woolc": [890, 4109],
+    "r.writing": [2070, 5492],
+    "r.yarn": [300, 2828],
+    "r.zaf": [300, 8874],
+    "rea": [0, 8470],
+    "redlead": [1770, 7889],
+    "reg": [1770, 5471],
+    "resin": [0, 6310],
+    "rice": [0, 3750],
+    "ricew": [590, 4056],
+    "rigging": [1770, 4770],
+    "rockc": [0, 5910],
+    "rope": [1180, 4491],
+    "rouge": [1180, 5451],
+    "ruby": [4720, 7038],
+    "sails": [1770, 4297],
+    "salt": [590, 5544],
+    "saltfish": [1180, 5611],
+    "sam": [0, 7510],
+    "sama": [590, 6184],
+    "sand": [590, 6836],
+    "scarlet": [1770, 4850],
+    "scarletc": [2360, 4393],
+    "sealwax": [1770, 6111],
+    "shellac": [590, 5304],
+    "shells": [0, 5670],
+    "ship": [4130, 5633],
+    "shoes": [1770, 4930],
+    "shot": [1180, 8243],
+    "silk": [1770, 3923],
+    "silkthr": [1180, 3343],
+    "silverw": [1180, 8403],
+    "slt": [0, 6150],
+    "smalt": [1770, 7672],
+    "smell": [1770, 6271],
+    "sn": [0, 8390],
+    "soap": [2360, 7212],
+    "soda": [590, 8368],
+    "soil": [0, 7350],
+    "sos": [1770, 5951],
+    "specm": [1180, 7911],
+    "spect": [2950, 6429],
+    "spice": [0, 4150],
+    "spirit": [1770, 4409],
+    "spyglass": [2950, 6509],
+    "stb": [0, 4230],
+    "steel": [1770, 5871],
+    "stone": [4720, 6014],
+    "sugar": [590, 4798],
+    "sul": [0, 7750],
+    "tallow": [0, 7590],
+    "tartar": [1180, 3663],
+    "tea": [0, 3830],
+    "tealeaf": [590, 4136],
+    "telescope": [2950, 6860],
+    "theriac": [1180, 5211],
+    "thun": [4130, 6253],
+    "timber": [0, 5430],
+    "tinc": [0, 8150],
+    "tinct": [2360, 4313],
+    "tinplate": [1770, 6881],
+    "tools": [2360, 5465],
+    "tortilla": [1770, 6561],
+    "turps": [590, 5624],
+    "typem": [2360, 6645],
+    "ultram": [1180, 7108],
+    "urine": [0, 4710],
+    "varnish": [1180, 5291],
+    "verdi": [1770, 5391],
+    "verm": [1180, 7028],
+    "vinegar": [1180, 4171],
+    "vit": [0, 6230],
+    "was": [590, 7784],
+    "wax": [590, 6104],
+    "weld": [0, 3270],
+    "weldd": [1180, 3583],
+    "whitelead": [1770, 5791],
+    "wildfire": [1180, 6034],
+    "wine": [590, 4216],
+    "winpane": [1770, 7041],
+    "wool": [0, 2710],
+    "woolc": [1180, 4731],
+    "writing": [2360, 5921],
+    "yarn": [590, 3051],
+    "zaf": [590, 8463],
+    "zn": [0, 7110]
+  }
+}

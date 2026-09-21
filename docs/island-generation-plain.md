@@ -1026,6 +1026,15 @@ runs without a window and quits by itself. A second bench, `domains_bench.tscn`,
 opens a window with many whole Domains in view and reports the frame rate; the
 numbers in section 6 about twenty and eighty Domains come from it.
 
+### The economy lab
+
+One dev scene has nothing to do with islands: `economy_lab.tscn` is an editor
+for the economy, where goods are boxes you drag about, recipes sit between
+them, and lines say what is made of what. It has its own plainly written
+manual, `docs/economy-lab.md`, and its own check, a self-test that makes the
+edits a hand would make and confirms the lab kept up; it never touches the
+generator, so the checksum and the audit do not care about it.
+
 ---
 
 ## 6. What the numbers say now

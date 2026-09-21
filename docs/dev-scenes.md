@@ -5,6 +5,8 @@ measure the generator, two the renderer that draws its islands. All five load
 the same preset, `resources/island_default.tres`, so the audit measures the
 island the lab shows. Edit the `.tres` in the Inspector to change it durably; use
 the lab's panel (or the Remote tab of the Scene dock) for a throwaway experiment.
+A sixth scene, the economy lab, has nothing to do with terrain; it is at the end
+of this file and has a manual of its own.
 
 Godot is not on `PATH`; from a shell use the .NET build's own binary:
 
@@ -462,3 +464,23 @@ refresh is a floor on it. Past 150 Domains no colliders are built, since Jolt's
 default cap of 10,240 bodies is 160 Domains of 64 chunk bodies (the chunk nodes
 are bodies with or without a shape, so the engine still logs the cap). The
 numbers it found on the Mac are in `CLAUDE.md` under Rendering.
+
+## The economy lab — `economy_lab.tscn`
+
+Not a terrain scene: an editor of production webs (goods, recipes, tags,
+consumers). Its manual and its data format are **`docs/economy-lab.md`**. From a
+shell it takes three runs, all on the scene itself:
+
+```
+godot --path . --headless scenes/dev/economy_lab.tscn -- selftest
+godot --path . scenes/dev/economy_lab.tscn -- shot web=starter select=r.golem zoom=1 out=/tmp/lab.png
+godot --path . --headless scenes/dev/economy_lab.tscn -- bake
+```
+
+`selftest` copies `resources/economy/` to a scratch folder under `user://`,
+makes there the changes a hand would make (through the handlers the mouse
+calls), checks that the web, the canvas and undo agree after each, and exits 1
+if any check failed; it is the lab's regression gate and takes a few seconds.
+`shot` is windowed, saves a PNG and quits, and never writes to the data. `bake`
+arranges every web that has no layout and rewrites every file through the lab's
+writer.

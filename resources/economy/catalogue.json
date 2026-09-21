@@ -1,0 +1,7820 @@
+{
+  "format": 1,
+  "title": "Project Nikitin goods catalogue",
+  "note": "Imported from the alchemical production tree export of 2026-09-21. Icons and signs are 16 px concept placeholders generated in chat: pre-production material.",
+  "atlases": [
+    {
+      "id": "icons",
+      "file": "sprites/icons.png",
+      "cell": 16,
+      "columns": 16
+    },
+    {
+      "id": "signs",
+      "file": "sprites/signs.png",
+      "cell": 16,
+      "columns": 16
+    }
+  ],
+  "tagNamespaces": [
+    {
+      "id": "stage",
+      "note": "Production stage: raw, processed, compound, magistery, assembly, finished."
+    },
+    {
+      "id": "source",
+      "note": "For raw goods: mined, quarried, farmed, herded or magical."
+    },
+    {
+      "id": "group",
+      "note": "The shelf the good sits on in the ledger."
+    },
+    {
+      "id": "need",
+      "note": "Which population Need buys it: food, intoxicants-and-physic, clothing, wares, works-and-arms."
+    },
+    {
+      "id": "nature",
+      "note": "mundane, alchemical (mineral chemistry) or magical (Essence somewhere upstream)."
+    },
+    {
+      "id": "kind",
+      "note": "What sort of stuff it is: metal, acid, pigment, fibre and so on."
+    },
+    {
+      "id": "trait",
+      "note": "Gameplay-relevant properties: toxic, corrosive, explosive, perishable, luxury, staple, by-product, hub."
+    },
+    {
+      "id": "folk",
+      "note": "Association with one of your named archetypes. Only Lakefolk, Jadefolk and Steelfolk are used; other cultures get an origin tag instead."
+    },
+    {
+      "id": "origin",
+      "note": "Earth region the good is historically tied to, for mapping onto archetypes later."
+    }
+  ],
+  "tags": [
+    {
+      "id": "stage:raw",
+      "note": ""
+    },
+    {
+      "id": "source:mined",
+      "note": ""
+    },
+    {
+      "id": "group:mined",
+      "note": ""
+    },
+    {
+      "id": "nature:alchemical",
+      "note": ""
+    },
+    {
+      "id": "kind:ore",
+      "note": ""
+    },
+    {
+      "id": "origin:sub-saharan-africa",
+      "note": ""
+    },
+    {
+      "id": "origin:southeast-asia",
+      "note": ""
+    },
+    {
+      "id": "origin:south-asia",
+      "note": ""
+    },
+    {
+      "id": "trait:toxic",
+      "note": ""
+    },
+    {
+      "id": "folk:jadefolk",
+      "note": ""
+    },
+    {
+      "id": "kind:salt",
+      "note": ""
+    },
+    {
+      "id": "origin:mediterranean-and-near-east",
+      "note": ""
+    },
+    {
+      "id": "origin:europe",
+      "note": ""
+    },
+    {
+      "id": "kind:alkali",
+      "note": ""
+    },
+    {
+      "id": "kind:fuel",
+      "note": ""
+    },
+    {
+      "id": "kind:glass",
+      "note": ""
+    },
+    {
+      "id": "source:quarried",
+      "note": ""
+    },
+    {
+      "id": "group:quarried-and-dug",
+      "note": ""
+    },
+    {
+      "id": "kind:ceramic",
+      "note": ""
+    },
+    {
+      "id": "origin:east-asia",
+      "note": ""
+    },
+    {
+      "id": "kind:resin",
+      "note": ""
+    },
+    {
+      "id": "kind:gem",
+      "note": ""
+    },
+    {
+      "id": "trait:luxury",
+      "note": ""
+    },
+    {
+      "id": "need:wares",
+      "note": ""
+    },
+    {
+      "id": "folk:lakefolk",
+      "note": ""
+    },
+    {
+      "id": "origin:new-world",
+      "note": ""
+    },
+    {
+      "id": "kind:optics",
+      "note": ""
+    },
+    {
+      "id": "source:farmed",
+      "note": ""
+    },
+    {
+      "id": "group:farmed",
+      "note": ""
+    },
+    {
+      "id": "nature:mundane",
+      "note": ""
+    },
+    {
+      "id": "kind:food",
+      "note": ""
+    },
+    {
+      "id": "trait:staple",
+      "note": ""
+    },
+    {
+      "id": "folk:steelfolk",
+      "note": ""
+    },
+    {
+      "id": "trait:perishable",
+      "note": ""
+    },
+    {
+      "id": "kind:fibre",
+      "note": ""
+    },
+    {
+      "id": "kind:naval",
+      "note": ""
+    },
+    {
+      "id": "origin:horn-of-africa-and-arabia",
+      "note": ""
+    },
+    {
+      "id": "kind:drug",
+      "note": ""
+    },
+    {
+      "id": "kind:dyestuff",
+      "note": ""
+    },
+    {
+      "id": "kind:medicine",
+      "note": ""
+    },
+    {
+      "id": "kind:incense",
+      "note": ""
+    },
+    {
+      "id": "need:food",
+      "note": ""
+    },
+    {
+      "id": "kind:flux",
+      "note": ""
+    },
+    {
+      "id": "need:intoxicants-and-physic",
+      "note": ""
+    },
+    {
+      "id": "source:herded",
+      "note": ""
+    },
+    {
+      "id": "group:herded-and-gathered",
+      "note": ""
+    },
+    {
+      "id": "kind:animal",
+      "note": ""
+    },
+    {
+      "id": "trait:by-product",
+      "note": ""
+    },
+    {
+      "id": "kind:lighting",
+      "note": ""
+    },
+    {
+      "id": "kind:writing",
+      "note": ""
+    },
+    {
+      "id": "source:magical",
+      "note": ""
+    },
+    {
+      "id": "group:magical",
+      "note": ""
+    },
+    {
+      "id": "nature:magical",
+      "note": ""
+    },
+    {
+      "id": "stage:processed",
+      "note": ""
+    },
+    {
+      "id": "group:metals",
+      "note": ""
+    },
+    {
+      "id": "kind:metal",
+      "note": ""
+    },
+    {
+      "id": "kind:mordant",
+      "note": ""
+    },
+    {
+      "id": "group:salts-and-earths",
+      "note": ""
+    },
+    {
+      "id": "kind:acid",
+      "note": ""
+    },
+    {
+      "id": "trait:corrosive",
+      "note": ""
+    },
+    {
+      "id": "kind:construction",
+      "note": ""
+    },
+    {
+      "id": "kind:pigment",
+      "note": ""
+    },
+    {
+      "id": "need:works-and-arms",
+      "note": ""
+    },
+    {
+      "id": "group:farm-and-herd-goods",
+      "note": ""
+    },
+    {
+      "id": "kind:drink",
+      "note": ""
+    },
+    {
+      "id": "stage:compound",
+      "note": ""
+    },
+    {
+      "id": "group:alloys-and-metalwork",
+      "note": ""
+    },
+    {
+      "id": "kind:arms",
+      "note": ""
+    },
+    {
+      "id": "group:waters-and-spirits",
+      "note": ""
+    },
+    {
+      "id": "group:powders-and-pigments",
+      "note": ""
+    },
+    {
+      "id": "trait:explosive",
+      "note": ""
+    },
+    {
+      "id": "kind:dye",
+      "note": ""
+    },
+    {
+      "id": "group:materials",
+      "note": ""
+    },
+    {
+      "id": "kind:cosmetic",
+      "note": ""
+    },
+    {
+      "id": "kind:cloth",
+      "note": ""
+    },
+    {
+      "id": "need:clothing",
+      "note": ""
+    },
+    {
+      "id": "group:food-and-drink",
+      "note": ""
+    },
+    {
+      "id": "stage:magistery",
+      "note": ""
+    },
+    {
+      "id": "group:magisteries",
+      "note": ""
+    },
+    {
+      "id": "stage:assembly",
+      "note": ""
+    },
+    {
+      "id": "group:golem-works",
+      "note": ""
+    },
+    {
+      "id": "kind:golem-part",
+      "note": ""
+    },
+    {
+      "id": "kind:golem-heart",
+      "note": "Fits the heart slot of a golem."
+    },
+    {
+      "id": "group:aethership-works",
+      "note": ""
+    },
+    {
+      "id": "stage:finished",
+      "note": ""
+    },
+    {
+      "id": "group:food",
+      "note": ""
+    },
+    {
+      "id": "group:intoxicants-and-physic",
+      "note": ""
+    },
+    {
+      "id": "group:clothing",
+      "note": ""
+    },
+    {
+      "id": "group:wares",
+      "note": ""
+    },
+    {
+      "id": "group:works-and-arms",
+      "note": ""
+    }
+  ],
+  "goods": [
+    {
+      "id": "cu",
+      "name": "Native copper",
+      "note": "The one metal you can find already metal, green with verdigris where the air has touched it.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 0
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 0,
+        "source": "hand-drawn",
+        "reading": "copper family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "fe",
+      "name": "Ironstone",
+      "note": "Red, heavy and everywhere. The cheapest ore and the hungriest for fuel.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 1
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 1,
+        "source": "hand-drawn",
+        "reading": "iron family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "sn",
+      "name": "Cassiterite",
+      "note": "Dark, heavy crystals. Rare in the world, which is why bronze made empires trade.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 2
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 2,
+        "source": "hand-drawn",
+        "reading": "tin family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "pb",
+      "name": "Galena",
+      "note": "Usually carries a little silver.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 3
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 3,
+        "source": "hand-drawn",
+        "reading": "lead family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "zn",
+      "name": "Calamine",
+      "note": "Looks like nothing. Its metal boils away in the furnace, so for centuries it was known only through brass.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 4
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 4,
+        "source": "hand-drawn",
+        "reading": "zinc family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "ag",
+      "name": "Native silver",
+      "note": "Grows in wires and ferns inside the rock. Tarnishes black, polishes white.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 5
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 5,
+        "source": "hand-drawn",
+        "reading": "silver family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "au",
+      "name": "Gold nuggets",
+      "note": "Never rusts, never hides. The only ore a child can identify.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 6
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 6,
+        "source": "hand-drawn",
+        "reading": "gold family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "cin",
+      "name": "Cinnabar",
+      "note": "Heavy vermilion stone. Heat it and the red turns to running silver.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "trait:toxic",
+        "folk:jadefolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 7
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 7,
+        "source": "historical",
+        "reading": "cinnabar (U+1F713)",
+        "parts": null
+      }
+    },
+    {
+      "id": "slt",
+      "name": "Rock salt",
+      "note": "Mined in blocks, grey or pink. The same stuff as the sea, a few million years drier.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 8
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 8,
+        "source": "hand-drawn",
+        "reading": "salt family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "sul",
+      "name": "Native sulfur",
+      "note": "Yellow crystals at volcanic vents. Burns blue and stinks of the underworld.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 9
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 9,
+        "source": "hand-drawn",
+        "reading": "sulfur family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "vit",
+      "name": "Blue vitriol crystals",
+      "note": "Blue crystals that grow where copper mines weep. Iron dipped in the solution comes out copper-coated, which looked like transmutation.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 10
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 10,
+        "source": "hand-drawn",
+        "reading": "vitriol family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "nit",
+      "name": "Nitre earth",
+      "note": "Dug from caves, or farmed in a nitre bed.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 11
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 11,
+        "source": "hand-drawn",
+        "reading": "saltpetre family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "rea",
+      "name": "Realgar",
+      "note": "Red arsenic ore, with yellow orpiment.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 12
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 12,
+        "source": "historical",
+        "reading": "realgar (U+1F73B)",
+        "parts": null
+      }
+    },
+    {
+      "id": "stb",
+      "name": "Stibnite",
+      "note": "Bundles of grey metallic blades. Ground fine, it has lined eyes as kohl for four thousand years.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 13
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 13,
+        "source": "hand-drawn",
+        "reading": "antimony family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "bis",
+      "name": "Bismuth ore",
+      "note": "A pink-tinged silver metal, long mistaken for tin or lead. The least poisonous of the heavy metals.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 14
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 14,
+        "source": "hand-drawn",
+        "reading": "bismuth family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "alu",
+      "name": "Alum stone",
+      "note": "A pale rock, worthless until roasted and leached. Popes and sultans fought over good deposits.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 15
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 15,
+        "source": "historical",
+        "reading": "alum (U+1F745)",
+        "parts": null
+      }
+    },
+    {
+      "id": "sam",
+      "name": "Sal ammoniac crust",
+      "note": "Volcanic vents and burning coal seams.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 16
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 16,
+        "source": "historical",
+        "reading": "sal-ammoniac (U+1F739)",
+        "parts": null
+      }
+    },
+    {
+      "id": "lim",
+      "name": "Limestone",
+      "note": "Old seabed. Burn it and it becomes the most useful white powder in the tree.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 17
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 17,
+        "source": "historical",
+        "reading": "quick lime (U+1F741)",
+        "parts": null
+      }
+    },
+    {
+      "id": "cob",
+      "name": "Cobalt ore",
+      "note": "The kobold ore, with pink cobalt bloom.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 18
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 18,
+        "source": "compound",
+        "reading": "stone or gem + cobalt",
+        "parts": [
+          "GM",
+          "Ko"
+        ]
+      }
+    },
+    {
+      "id": "tinc",
+      "name": "Tincal",
+      "note": "Raw borax from dry lake beds.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:salt",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 19
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 19,
+        "source": "historical",
+        "reading": "borax (U+1F742)",
+        "parts": null
+      }
+    },
+    {
+      "id": "nat",
+      "name": "Natron",
+      "note": "A crust from dry salt lakes. Egypt embalmed its dead in it and made glass with it.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:alkali",
+        "origin:sub-saharan-africa",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 20
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 20,
+        "source": "historical",
+        "reading": "alkali (U+1F736)",
+        "parts": null
+      }
+    },
+    {
+      "id": "coal",
+      "name": "Coal",
+      "note": "Fuel and reducer. Hotter than wood, dirtier than charcoal.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:fuel"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 21
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 21,
+        "source": "compound",
+        "reading": "stone or gem + fire",
+        "parts": [
+          "GM",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "pyr",
+      "name": "Marcasite",
+      "note": "Fool's gold. Weathers into green vitriol.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 22
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 22,
+        "source": "compound",
+        "reading": "iron + sulfur",
+        "parts": [
+          "Fe",
+          "S"
+        ]
+      }
+    },
+    {
+      "id": "lode",
+      "name": "Lodestone",
+      "note": "A natural magnet. The stone that made open-ocean navigation possible.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "folk:jadefolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 23
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 23,
+        "source": "historical",
+        "reading": "lodestone (U+1F753)",
+        "parts": null
+      }
+    },
+    {
+      "id": "mang",
+      "name": "Magnesia nigra",
+      "note": "Pyrolusite, the glassmaker's soap: it takes the green out of glass.",
+      "tags": [
+        "stage:raw",
+        "source:mined",
+        "group:mined",
+        "nature:alchemical",
+        "kind:ore",
+        "kind:glass"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 24
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 24,
+        "source": "compound",
+        "reading": "glass + cut or worked",
+        "parts": [
+          "GL",
+          "X"
+        ]
+      }
+    },
+    {
+      "id": "soil",
+      "name": "Soil, any of 17",
+      "note": "The terrain generator's surfaces, dug as a resource.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 25
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 25,
+        "source": "historical",
+        "reading": "earth (U+1F703)",
+        "parts": null
+      }
+    },
+    {
+      "id": "kaolin",
+      "name": "Kaolin",
+      "note": "China clay.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical",
+        "kind:ceramic",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 26
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 26,
+        "source": "compound",
+        "reading": "earth + silver",
+        "parts": [
+          "EA",
+          "Ag"
+        ]
+      }
+    },
+    {
+      "id": "gyps",
+      "name": "Gypsum",
+      "note": "Soft enough to scratch with a fingernail. Heat it gently and it becomes plaster.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 27
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 27,
+        "source": "compound",
+        "reading": "stone or gem + water",
+        "parts": [
+          "GM",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "bitu",
+      "name": "Bitumen",
+      "note": "Rock tar that seeps from the ground. Waterproofs anything and burns fiercely.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical",
+        "kind:resin"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 28
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 28,
+        "source": "compound",
+        "reading": "resin or gum + earth",
+        "parts": [
+          "RS",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "lapis",
+      "name": "Lapis lazuli",
+      "note": "Deep blue stone flecked with fool's gold. For centuries it came from a single valley.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical",
+        "kind:gem",
+        "trait:luxury",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 29
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 29,
+        "source": "compound",
+        "reading": "stone or gem + air",
+        "parts": [
+          "GM",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "jade",
+      "name": "Jade",
+      "note": "Tougher than steel to carve, cool to the touch. Some peoples value it above gold.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "need:wares",
+        "nature:alchemical",
+        "kind:gem",
+        "trait:luxury",
+        "folk:lakefolk",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 30
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 30,
+        "source": "compound",
+        "reading": "stone or gem + leaf",
+        "parts": [
+          "GM",
+          "LF"
+        ]
+      }
+    },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "note": "Fossil resin, warm and light. Rub it and it attracts dust: the first electricity anyone noticed.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "need:wares",
+        "nature:alchemical",
+        "kind:resin",
+        "kind:gem",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 31
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 31,
+        "source": "compound",
+        "reading": "stone or gem + resin or gum",
+        "parts": [
+          "GM",
+          "RS"
+        ]
+      }
+    },
+    {
+      "id": "obs",
+      "name": "Obsidian",
+      "note": "Volcanic glass. Flakes to an edge sharper than any steel, and shatters as easily.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical",
+        "kind:gem",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 32
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 32,
+        "source": "compound",
+        "reading": "stone or gem + glass",
+        "parts": [
+          "GM",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "rockc",
+      "name": "Rock crystal",
+      "note": "Clear quartz. The ancients thought it was ice frozen too hard to melt.",
+      "tags": [
+        "stage:raw",
+        "source:quarried",
+        "group:quarried-and-dug",
+        "nature:alchemical",
+        "kind:optics",
+        "kind:gem"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 33
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 33,
+        "source": "compound",
+        "reading": "stone or gem + lens",
+        "parts": [
+          "GM",
+          "LN"
+        ]
+      }
+    },
+    {
+      "id": "grain",
+      "name": "Grain",
+      "note": "Wheat, barley or rye, as the climate allows. Bread and beer both start here.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 34
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 34,
+        "source": "compound",
+        "reading": "grain or grass",
+        "parts": [
+          "GR",
+          "GR"
+        ]
+      }
+    },
+    {
+      "id": "rice",
+      "name": "Rice",
+      "note": "The wet-field staple. Feeds more people per field than anything else, if you have the water.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 35
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 35,
+        "source": "compound",
+        "reading": "grain or grass + water",
+        "parts": [
+          "GR",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "maize",
+      "name": "Maize",
+      "note": "Huge yields, one catch: it must be cooked with lime or the people who live on it fall ill.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 36
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 36,
+        "source": "compound",
+        "reading": "grain or grass + gold",
+        "parts": [
+          "GR",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "grapes",
+      "name": "Grapes",
+      "note": "Looks like a luxury crop. Turns out to feed half the chemistry in this tree.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "trait:perishable",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 37
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 37,
+        "source": "compound",
+        "reading": "fruit or nut + cup or vessel",
+        "parts": [
+          "FR",
+          "CP"
+        ]
+      }
+    },
+    {
+      "id": "olives",
+      "name": "Olives",
+      "note": "Slow trees, long lives. Oil for food, lamps and the best soap.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 38
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 38,
+        "source": "compound",
+        "reading": "fruit or nut + liquid",
+        "parts": [
+          "FR",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "flax",
+      "name": "Flax",
+      "note": "Fibre and oil seed from one plant.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:fibre",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 39
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 39,
+        "source": "compound",
+        "reading": "thread or fibre + flower",
+        "parts": [
+          "TH",
+          "FL"
+        ]
+      }
+    },
+    {
+      "id": "hemp",
+      "name": "Hemp",
+      "note": "Coarse, strong and rot-resistant. The ship's crop: rope and sailcloth.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:fibre",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 40
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 40,
+        "source": "compound",
+        "reading": "thread or fibre + earth",
+        "parts": [
+          "TH",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "cotton",
+      "name": "Cotton",
+      "note": "Soft fibre from a warm-country boll. Light, washable, cool to wear.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:fibre",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 41
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 41,
+        "source": "compound",
+        "reading": "thread or fibre + air",
+        "parts": [
+          "TH",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "cane",
+      "name": "Sugar cane",
+      "note": "A giant grass that stores sugar. Hungry for heat, water and labour.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 42
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 42,
+        "source": "compound",
+        "reading": "grain or grass + bee: honey and wax",
+        "parts": [
+          "GR",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "tea",
+      "name": "Tea leaves",
+      "note": "Leaves of an evergreen bush. Worth an ocean voyage once people acquire the habit.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 43
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 43,
+        "source": "compound",
+        "reading": "leaf + cup or vessel",
+        "parts": [
+          "LF",
+          "CP"
+        ]
+      }
+    },
+    {
+      "id": "cacao",
+      "name": "Cacao",
+      "note": "Pods from a rainforest tree. Bitter, stimulating, and once used as money.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 44
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 44,
+        "source": "compound",
+        "reading": "fruit or nut + gold",
+        "parts": [
+          "FR",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee cherries",
+      "note": "Red cherries with a bitter seed. The drink of people who want to stay awake and argue.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "origin:horn-of-africa-and-arabia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 45
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 45,
+        "source": "compound",
+        "reading": "fruit or nut + fire",
+        "parts": [
+          "FR",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "poppy",
+      "name": "Opium poppy",
+      "note": "Score the green pod and it bleeds the most effective painkiller of the age.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:drug",
+        "folk:jadefolk",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 46
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 46,
+        "source": "compound",
+        "reading": "flower + physic",
+        "parts": [
+          "FL",
+          "RX"
+        ]
+      }
+    },
+    {
+      "id": "agave",
+      "name": "Agave",
+      "note": "A desert rosette that takes a decade to mature. Its sap ferments in days.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 47
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 47,
+        "source": "compound",
+        "reading": "leaf + ferment",
+        "parts": [
+          "LF",
+          "FM"
+        ]
+      }
+    },
+    {
+      "id": "madder",
+      "name": "Madder root",
+      "note": "A scrambling weed with red roots. The colour of soldiers' coats and Turkey carpets.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 48
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 48,
+        "source": "compound",
+        "reading": "root + iron",
+        "parts": [
+          "RT",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "indigo",
+      "name": "Indigo plant",
+      "note": "A shrub whose green leaves hide the deepest blue. Getting it out is a foul business.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff",
+        "origin:south-asia",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 49
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 49,
+        "source": "compound",
+        "reading": "leaf + air",
+        "parts": [
+          "LF",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "weld",
+      "name": "Weld",
+      "note": "A roadside weed that gives the clearest, fastest yellow.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 50
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 50,
+        "source": "compound",
+        "reading": "flower + gold",
+        "parts": [
+          "FL",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "timber",
+      "name": "Timber",
+      "note": "The universal input: fuel, ash, planks, charcoal. Forests set the ceiling on everything.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:fuel"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 51
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 51,
+        "source": "compound",
+        "reading": "tree or wood",
+        "parts": [
+          "TR",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "galls",
+      "name": "Oak galls",
+      "note": "Lumps a wasp makes an oak grow. Packed with the tannin that turns iron salts black.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 52
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 52,
+        "source": "compound",
+        "reading": "fruit or nut + tree or wood",
+        "parts": [
+          "FR",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "bark",
+      "name": "Tanbark",
+      "note": "Oak bark, stripped and ground. A hide soaks in it for a year to become leather.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 53
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 53,
+        "source": "compound",
+        "reading": "tree or wood + beast",
+        "parts": [
+          "TR",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "resin",
+      "name": "Pine resin",
+      "note": "Tapped from living pines. Distil it for turpentine, boil it down for pitch.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 54
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 54,
+        "source": "compound",
+        "reading": "resin or gum + tree or wood",
+        "parts": [
+          "RS",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "herbs",
+      "name": "Herbs and hops",
+      "note": "The physic garden and the brewer's bittering, in one basket.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:medicine"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 55
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 55,
+        "source": "compound",
+        "reading": "leaf + physic",
+        "parts": [
+          "LF",
+          "RX"
+        ]
+      }
+    },
+    {
+      "id": "spice",
+      "name": "Spices",
+      "note": "Light, dry, imperishable and wildly overpriced. The ideal long-distance cargo.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:food",
+        "trait:luxury",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 56
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 56,
+        "source": "compound",
+        "reading": "powder + fire",
+        "parts": [
+          "PW",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "kelp",
+      "name": "Kelp",
+      "note": "Seaweed burnt on the beach for its ash. A coast's answer to natron.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 57
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 57,
+        "source": "compound",
+        "reading": "leaf + water",
+        "parts": [
+          "LF",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "lacsap",
+      "name": "Lacquer sap",
+      "note": "Milky sap of the lacquer tree. Raises blisters raw, cures harder than any varnish.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 58
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 58,
+        "source": "compound",
+        "reading": "resin or gum + leaf",
+        "parts": [
+          "RS",
+          "LF"
+        ]
+      }
+    },
+    {
+      "id": "mulb",
+      "name": "Mulberry leaves",
+      "note": "The only thing silkworms will eat. No mulberry, no silk.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 59
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 59,
+        "source": "compound",
+        "reading": "leaf + insect",
+        "parts": [
+          "LF",
+          "IN"
+        ]
+      }
+    },
+    {
+      "id": "gum",
+      "name": "Gum arabic",
+      "note": "Hardened tears of the acacia. The binder in ink, watercolour and sweets.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 60
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 60,
+        "source": "compound",
+        "reading": "resin or gum + water",
+        "parts": [
+          "RS",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "dammar",
+      "name": "Dammar resin",
+      "note": "Clear resin tapped from rainforest trees. The painter's favourite varnish, and torch fuel where it grows.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 61
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 61,
+        "source": "compound",
+        "reading": "resin or gum + glass",
+        "parts": [
+          "RS",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "camphor",
+      "name": "Camphor",
+      "note": "White crystals distilled from the wood of a giant tree. Cool, piercing, and worth more than gold at the right port.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "kind:medicine",
+        "kind:incense",
+        "trait:luxury",
+        "origin:east-asia",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 62
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 62,
+        "source": "compound",
+        "reading": "tree or wood + air",
+        "parts": [
+          "TR",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "benzoin",
+      "name": "Benzoin",
+      "note": "A sweet, vanilla-smelling gum cut from forest trees. The base note of half the world's incense.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "kind:incense",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 63
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 63,
+        "source": "compound",
+        "reading": "resin or gum + flower",
+        "parts": [
+          "RS",
+          "FL"
+        ]
+      }
+    },
+    {
+      "id": "frank",
+      "name": "Frankincense and myrrh",
+      "note": "Tears of thorny desert trees. Temples burn them by the ton, so whoever holds the groves holds a steady income.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:resin",
+        "kind:incense",
+        "trait:luxury",
+        "origin:horn-of-africa-and-arabia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 64
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 64,
+        "source": "compound",
+        "reading": "resin or gum + gold",
+        "parts": [
+          "RS",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "bamboo",
+      "name": "Bamboo",
+      "note": "A grass that thinks it is timber. Grows a foot a day; pulps into paper.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:fibre",
+        "folk:jadefolk",
+        "origin:east-asia",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 65
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 65,
+        "source": "compound",
+        "reading": "grain or grass + tree or wood",
+        "parts": [
+          "GR",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "coconut",
+      "name": "Coconut",
+      "note": "Food, drink, oil and, from the husk, a rope that salt water cannot rot.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "need:food",
+        "nature:mundane",
+        "kind:fibre",
+        "kind:food",
+        "trait:perishable",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 66
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 66,
+        "source": "compound",
+        "reading": "fruit or nut + thread or fibre",
+        "parts": [
+          "FR",
+          "TH"
+        ]
+      }
+    },
+    {
+      "id": "areca",
+      "name": "Areca nut",
+      "note": "The seed at the heart of the betel quid. Mild, habit-forming, and chewed by a tenth of the world.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:drug",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 67
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 67,
+        "source": "compound",
+        "reading": "fruit or nut + leaf",
+        "parts": [
+          "FR",
+          "LF"
+        ]
+      }
+    },
+    {
+      "id": "dyewood",
+      "name": "Dyewood",
+      "note": "Sappan in the east, brazilwood in the west, camwood in the south: heartwoods that bleed red. One of them named a country.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff",
+        "folk:lakefolk",
+        "origin:new-world",
+        "origin:southeast-asia",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 68
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 68,
+        "source": "compound",
+        "reading": "tree or wood + cloth",
+        "parts": [
+          "TR",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "palmoil",
+      "name": "Palm oil",
+      "note": "Red oil pressed from palm fruit. Food at home; abroad it becomes soap, candles and the flux for tinplate.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "need:food",
+        "nature:mundane",
+        "kind:flux",
+        "kind:food",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 69
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 69,
+        "source": "compound",
+        "reading": "liquid + fruit or nut",
+        "parts": [
+          "DP",
+          "FR"
+        ]
+      }
+    },
+    {
+      "id": "kola",
+      "name": "Kola nut",
+      "note": "Bitter, stimulating, and the proper gift for a host. Travels weeks wrapped in wet leaves.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drug",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 70
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 70,
+        "source": "compound",
+        "reading": "fruit or nut + physic",
+        "parts": [
+          "FR",
+          "RX"
+        ]
+      }
+    },
+    {
+      "id": "cutch",
+      "name": "Cutch",
+      "note": "Dark extract boiled from acacia heartwood. Tans leather, dyes cloth khaki, and goes into the betel quid.",
+      "tags": [
+        "stage:raw",
+        "source:farmed",
+        "group:farmed",
+        "nature:mundane",
+        "kind:dyestuff",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 71
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 71,
+        "source": "compound",
+        "reading": "tree or wood + water",
+        "parts": [
+          "TR",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "wool",
+      "name": "Wool",
+      "note": "Sheared yearly, so the sheep is a renewable mine. Takes dye better than any plant fibre.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:fibre",
+        "kind:animal",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 72
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 72,
+        "source": "compound",
+        "reading": "thread or fibre + beast",
+        "parts": [
+          "TH",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "hides",
+      "name": "Hides",
+      "note": "A by-product of meat. Rots in days unless salted, limed or tanned.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:perishable",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 73
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 73,
+        "source": "compound",
+        "reading": "beast + cut or worked",
+        "parts": [
+          "BS",
+          "X"
+        ]
+      }
+    },
+    {
+      "id": "tallow",
+      "name": "Tallow",
+      "note": "Rendered beef and mutton fat. Poor people's light and everyone's soap.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "kind:lighting",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 74
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 74,
+        "source": "compound",
+        "reading": "beast + liquid",
+        "parts": [
+          "BS",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "bone",
+      "name": "Bone",
+      "note": "Slaughterhouse leftovers. Boil for glue, burn for the ash that refines silver.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 75
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 75,
+        "source": "compound",
+        "reading": "bone",
+        "parts": [
+          "BN",
+          "BN"
+        ]
+      }
+    },
+    {
+      "id": "horn",
+      "name": "Horn",
+      "note": "Translucent when pressed thin: lantern panes, combs, spectacle frames.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 76
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 76,
+        "source": "compound",
+        "reading": "bone + lens",
+        "parts": [
+          "BN",
+          "LN"
+        ]
+      }
+    },
+    {
+      "id": "milk",
+      "name": "Milk",
+      "note": "Spoils by evening. Everything done with it is a way of making it keep.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:food",
+        "kind:animal",
+        "trait:perishable"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 77
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 77,
+        "source": "compound",
+        "reading": "liquid + beast",
+        "parts": [
+          "DP",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "dung",
+      "name": "Dung",
+      "note": "A gentle, steady heat as it rots, and the base of a nitre bed.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 78
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 78,
+        "source": "historical",
+        "reading": "horse dung (U+1F756)",
+        "parts": null
+      }
+    },
+    {
+      "id": "urine",
+      "name": "Urine",
+      "note": "The alchemists' most underrated raw material.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 79
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 79,
+        "source": "historical",
+        "reading": "urine (U+1F755)",
+        "parts": null
+      }
+    },
+    {
+      "id": "oxblood",
+      "name": "Ox blood",
+      "note": "Caught at the slaughterhouse. Clarifies sugar and wine, and once, by accident, made a new blue.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:perishable",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 80
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 80,
+        "source": "compound",
+        "reading": "liquid + iron",
+        "parts": [
+          "DP",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "comb",
+      "name": "Honeycomb",
+      "note": "Two goods in one: honey to eat, wax to burn and seal.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 81
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 81,
+        "source": "compound",
+        "reading": "bee: honey and wax",
+        "parts": [
+          "HX",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "coch",
+      "name": "Cochineal",
+      "note": "Scale insects farmed on cactus pads.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:dyestuff",
+        "kind:animal",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 82
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 82,
+        "source": "compound",
+        "reading": "insect + iron",
+        "parts": [
+          "IN",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "eggs",
+      "name": "Eggs",
+      "note": "Food first. The white also clears wine and sticks down gold leaf; the yolk binds paint.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "kind:animal",
+        "trait:perishable"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 83
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 83,
+        "source": "compound",
+        "reading": "egg",
+        "parts": [
+          "EG",
+          "EG"
+        ]
+      }
+    },
+    {
+      "id": "quills",
+      "name": "Quills",
+      "note": "Goose flight feathers, from the left wing for right-handed writers.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:writing",
+        "kind:animal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 84
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 84,
+        "source": "compound",
+        "reading": "feather + page or book",
+        "parts": [
+          "FE",
+          "BK"
+        ]
+      }
+    },
+    {
+      "id": "fish",
+      "name": "Fish",
+      "note": "Cheap protein that spoils in a day. Salt turns it into a trade good.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:food",
+        "kind:animal",
+        "trait:perishable"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 85
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 85,
+        "source": "compound",
+        "reading": "fish",
+        "parts": [
+          "FS",
+          "FS"
+        ]
+      }
+    },
+    {
+      "id": "furs",
+      "name": "Furs",
+      "note": "Beaver above all: its barbed underfur felts better than any other.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 86
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 86,
+        "source": "compound",
+        "reading": "beast + garment",
+        "parts": [
+          "BS",
+          "GT"
+        ]
+      }
+    },
+    {
+      "id": "cocoon",
+      "name": "Silk cocoons",
+      "note": "Silkworms eat nothing else.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:fibre",
+        "kind:animal",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 87
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 87,
+        "source": "compound",
+        "reading": "insect + thread or fibre",
+        "parts": [
+          "IN",
+          "TH"
+        ]
+      }
+    },
+    {
+      "id": "lac",
+      "name": "Sticklac",
+      "note": "Resin crust that scale insects leave on twigs. One harvest gives a varnish, a wax and a red dye.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:dyestuff",
+        "kind:animal",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 88
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 88,
+        "source": "compound",
+        "reading": "insect + resin or gum",
+        "parts": [
+          "IN",
+          "RS"
+        ]
+      }
+    },
+    {
+      "id": "shells",
+      "name": "Shells",
+      "note": "Burn them and you have lime without a quarry. Small glossy ones have also passed as money across half the world.",
+      "tags": [
+        "stage:raw",
+        "source:herded",
+        "group:herded-and-gathered",
+        "nature:mundane",
+        "kind:animal",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 89
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 89,
+        "source": "compound",
+        "reading": "shell",
+        "parts": [
+          "SH",
+          "SH"
+        ]
+      }
+    },
+    {
+      "id": "ess",
+      "name": "Essence",
+      "note": "Your magical fuel. Every magistery and both great assemblies draw on it.",
+      "tags": [
+        "stage:raw",
+        "source:magical",
+        "group:magical",
+        "nature:magical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 90
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 90,
+        "source": "historical",
+        "reading": "quintessence (U+1F700)",
+        "parts": null
+      }
+    },
+    {
+      "id": "icu",
+      "name": "Copper",
+      "note": "Red, soft, and the best carrier of heat. Half of it ends up in alloys.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 91
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 91,
+        "source": "hand-drawn",
+        "reading": "copper family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "ife",
+      "name": "Iron",
+      "note": "Wrought in a bloomery or cast from a blast furnace. Either way it eats forests or coal.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 92
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 92,
+        "source": "hand-drawn",
+        "reading": "iron family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "isn",
+      "name": "Tin",
+      "note": "Soft and bright, and it cries when bent. Almost never used alone.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal",
+        "kind:mordant"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 93
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 93,
+        "source": "hand-drawn",
+        "reading": "tin family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "ipb",
+      "name": "Lead",
+      "note": "Heavy, soft, melts on a kitchen fire. Roofs, pipes, shot and slow poison.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 94
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 94,
+        "source": "hand-drawn",
+        "reading": "lead family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "izn",
+      "name": "Spelter",
+      "note": "The bluish metal caught by condensing calamine's fumes. Spelter was its trade name.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 95
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 95,
+        "source": "hand-drawn",
+        "reading": "zinc family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "iag",
+      "name": "Silver",
+      "note": "Also cupelled out of galena lead on a bed of bone ash.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 96
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 96,
+        "source": "hand-drawn",
+        "reading": "silver family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "iau",
+      "name": "Gold",
+      "note": "Pure, heavy and useless for tools. Its whole value is that it stays.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 97
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 97,
+        "source": "hand-drawn",
+        "reading": "gold family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "hg",
+      "name": "Quicksilver",
+      "note": "Roast cinnabar, condense the vapour.",
+      "tags": [
+        "stage:processed",
+        "group:metals",
+        "nature:alchemical",
+        "kind:metal",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 98
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 98,
+        "source": "hand-drawn",
+        "reading": "mercury family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "salt",
+      "name": "Salt",
+      "note": "Preserves meat, fish, hides and cheese. A settlement without salt cannot store food.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 99
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 99,
+        "source": "hand-drawn",
+        "reading": "salt family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "brim",
+      "name": "Brimstone",
+      "note": "Sulfur melted and cast into sticks. Gunpowder, bleaching and fumigation.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 100
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 100,
+        "source": "hand-drawn",
+        "reading": "sulfur family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "oov",
+      "name": "Oil of vitriol",
+      "note": "The first strong acid. Parent of the others.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:acid",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 101
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 101,
+        "source": "hand-drawn",
+        "reading": "vitriol family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "nitre",
+      "name": "Nitre",
+      "note": "Nitre liquor was really treated with wood ash.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 102
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 102,
+        "source": "hand-drawn",
+        "reading": "saltpetre family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "was",
+      "name": "White arsenic",
+      "note": "A white powder sublimed from roasting arsenic ore. Tasteless, which made it the poisoner's favourite.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 103
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 103,
+        "source": "hand-drawn",
+        "reading": "arsenic family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "reg",
+      "name": "Star regulus",
+      "note": "Stibnite was really reduced with iron to get the star.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 104
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 104,
+        "source": "historical",
+        "reading": "regulus of antimony (U+1F730)",
+        "parts": null
+      }
+    },
+    {
+      "id": "bic",
+      "name": "Bismuth crystal",
+      "note": "Melt bismuth, let it cool slowly, and it builds itself into rainbow staircases.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 105
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 105,
+        "source": "hand-drawn",
+        "reading": "bismuth family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "pearl",
+      "name": "Pearl ash",
+      "note": "Wood ash leached, boiled dry in an iron pot, then baked white. The original potash.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:alkali"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 106
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 106,
+        "source": "hand-drawn",
+        "reading": "potash family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "alum",
+      "name": "Alum",
+      "note": "The mordant that makes dye bite into cloth. Also tans white leather, sizes paper and slows fire.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt",
+        "kind:mordant",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 107
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 107,
+        "source": "historical",
+        "reading": "alum (U+1F745)",
+        "parts": null
+      }
+    },
+    {
+      "id": "sama",
+      "name": "Sal ammoniac",
+      "note": "Egypt made it from the soot of burnt dung.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt",
+        "kind:flux",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 108
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 108,
+        "source": "historical",
+        "reading": "sal-ammoniac (U+1F739)",
+        "parts": null
+      }
+    },
+    {
+      "id": "qlime",
+      "name": "Quicklime",
+      "note": "Burnt limestone. Add water and it boils. Strips hides, makes mortar, sharpens lye and unlocks maize.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:alkali",
+        "kind:construction",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 109
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 109,
+        "source": "historical",
+        "reading": "quick lime (U+1F741)",
+        "parts": null
+      }
+    },
+    {
+      "id": "zaf",
+      "name": "Zaffre",
+      "note": "Roasted cobalt ore, a blue-making powder.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:pigment",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 110
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 110,
+        "source": "compound",
+        "reading": "cobalt + fire",
+        "parts": [
+          "Ko",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "borax",
+      "name": "Borax",
+      "note": "Flux for brazing and enamel.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt",
+        "kind:flux",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 111
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 111,
+        "source": "historical",
+        "reading": "borax (U+1F742)",
+        "parts": null
+      }
+    },
+    {
+      "id": "soda",
+      "name": "Soda ash",
+      "note": "Or burn kelp for it.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:alkali"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 112
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 112,
+        "source": "historical",
+        "reading": "alkali (U+1F736)",
+        "parts": null
+      }
+    },
+    {
+      "id": "ash",
+      "name": "Wood ash",
+      "note": "What is left of a tree. Ten tons of wood give about a bucket of potash.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:alkali",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 113
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 113,
+        "source": "historical",
+        "reading": "ashes (U+1F757)",
+        "parts": null
+      }
+    },
+    {
+      "id": "copperas",
+      "name": "Green vitriol",
+      "note": "Iron vitriol: for ink, black dye and Prussian blue.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt",
+        "kind:mordant"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 114
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 114,
+        "source": "historical",
+        "reading": "vitriol-2 (U+1F717)",
+        "parts": null
+      }
+    },
+    {
+      "id": "plaster",
+      "name": "Plaster",
+      "note": "Gypsum baked and ground. Add water and it sets in minutes.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "need:works-and-arms",
+        "nature:alchemical",
+        "kind:construction"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 115
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 115,
+        "source": "compound",
+        "reading": "powder + water",
+        "parts": [
+          "PW",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "clay",
+      "name": "Potter's clay",
+      "note": "From Limosol and Fluvisol.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:ceramic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 116
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 116,
+        "source": "historical",
+        "reading": "earth (U+1F703)",
+        "parts": null
+      }
+    },
+    {
+      "id": "sand",
+      "name": "Sand",
+      "note": "From Arenosol.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:glass"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 117
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 117,
+        "source": "compound",
+        "reading": "earth + glass",
+        "parts": [
+          "EA",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "ochre",
+      "name": "Ochre",
+      "note": "From Rubrisol and Vertisol.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:pigment"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 118
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 118,
+        "source": "compound",
+        "reading": "earth + iron",
+        "parts": [
+          "EA",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "fearth",
+      "name": "Fuller's earth",
+      "note": "From Cinerisol, the bleachearth. Scours grease out of wool.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 119
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 119,
+        "source": "compound",
+        "reading": "earth + cloth",
+        "parts": [
+          "EA",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "peat",
+      "name": "Peat",
+      "note": "From Turbisol. A poor Domain's coal.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:fuel"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 120
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 120,
+        "source": "compound",
+        "reading": "earth + tree or wood",
+        "parts": [
+          "EA",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "nitbed",
+      "name": "Nitre bed",
+      "note": "Farmed saltpetre: a year of rotting, then leach.",
+      "tags": [
+        "stage:processed",
+        "group:salts-and-earths",
+        "nature:alchemical",
+        "kind:salt"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 121
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 121,
+        "source": "hand-drawn",
+        "reading": "saltpetre family sign",
+        "parts": null
+      }
+    },
+    {
+      "id": "flour",
+      "name": "Flour",
+      "note": "Ground grain. Keeps for months, where bread keeps for days.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 122
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 122,
+        "source": "compound",
+        "reading": "powder + grain or grass",
+        "parts": [
+          "PW",
+          "GR"
+        ]
+      }
+    },
+    {
+      "id": "malt",
+      "name": "Malt",
+      "note": "Grain tricked into sprouting, then dried. The sprouting makes the sugar that beer needs.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 123
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 123,
+        "source": "compound",
+        "reading": "grain or grass + ferment",
+        "parts": [
+          "GR",
+          "FM"
+        ]
+      }
+    },
+    {
+      "id": "wine",
+      "name": "Wine",
+      "note": "Grape juice left alone. Parent of vinegar, brandy and tartar.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "folk:steelfolk",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 124
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 124,
+        "source": "compound",
+        "reading": "fruit or nut + ferment",
+        "parts": [
+          "FR",
+          "FM"
+        ]
+      }
+    },
+    {
+      "id": "oil",
+      "name": "Olive oil",
+      "note": "Pressed, not cooked. Food, lamp fuel, and the base of fine soap.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 125
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 125,
+        "source": "historical",
+        "reading": "oil (U+1F746)",
+        "parts": null
+      }
+    },
+    {
+      "id": "linthr",
+      "name": "Linen thread",
+      "note": "Flax rotted, beaten, combed and spun. Laborious, which is why linen was never cheap.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fibre",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 126
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 126,
+        "source": "compound",
+        "reading": "thread or fibre + water",
+        "parts": [
+          "TH",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "linseed",
+      "name": "Linseed oil",
+      "note": "The drying oil behind paint, varnish and printer's ink.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 127
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 127,
+        "source": "historical",
+        "reading": "oil (U+1F746)",
+        "parts": null
+      }
+    },
+    {
+      "id": "hempf",
+      "name": "Hemp fibre",
+      "note": "Longer and coarser than flax. Hard on the hands, kind to a ship.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fibre",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 128
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 128,
+        "source": "compound",
+        "reading": "thread or fibre + cut or worked",
+        "parts": [
+          "TH",
+          "X"
+        ]
+      }
+    },
+    {
+      "id": "cotthr",
+      "name": "Cotton thread",
+      "note": "Short fibres, so it needs a good spinner. The thread of the everyday.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fibre",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 129
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 129,
+        "source": "compound",
+        "reading": "thread or fibre + gear",
+        "parts": [
+          "TH",
+          "GE"
+        ]
+      }
+    },
+    {
+      "id": "sugar",
+      "name": "Sugar",
+      "note": "Boiled down from cane juice and clarified with lime and blood. A spice that became a staple.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "trait:luxury",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 130
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 130,
+        "source": "compound",
+        "reading": "powder + bee: honey and wax",
+        "parts": [
+          "PW",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "opium",
+      "name": "Opium",
+      "note": "Dried poppy latex. Medicine in one dose, habit in the next.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drug",
+        "folk:jadefolk",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 131
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 131,
+        "source": "compound",
+        "reading": "physic + flower",
+        "parts": [
+          "RX",
+          "FL"
+        ]
+      }
+    },
+    {
+      "id": "pulque",
+      "name": "Pulque",
+      "note": "Milky, sour and mildly alcoholic. Must be drunk within days, so it never travels.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "trait:perishable",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 132
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 132,
+        "source": "compound",
+        "reading": "cup or vessel + ferment",
+        "parts": [
+          "CP",
+          "FM"
+        ]
+      }
+    },
+    {
+      "id": "planks",
+      "name": "Planks",
+      "note": "Sawn and seasoned timber. A sawmill turns a forest into a building material.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:construction"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 133
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 133,
+        "source": "compound",
+        "reading": "tree or wood + cut or worked",
+        "parts": [
+          "TR",
+          "X"
+        ]
+      }
+    },
+    {
+      "id": "charcoal",
+      "name": "Charcoal",
+      "note": "Wood baked without air. Burns hotter and cleaner than wood; it is what gunpowder and steel really want.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fuel"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 134
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 134,
+        "source": "compound",
+        "reading": "tree or wood + fire",
+        "parts": [
+          "TR",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "pitch",
+      "name": "Pitch",
+      "note": "Resin or tar boiled thick. The black stuff that keeps the sea out of a hull.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:resin",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 135
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 135,
+        "source": "compound",
+        "reading": "resin or gum + fire",
+        "parts": [
+          "RS",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "turps",
+      "name": "Turpentine",
+      "note": "The thin, sharp spirit distilled off pine resin. Thins paint and varnish.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:resin"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 136
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 136,
+        "source": "compound",
+        "reading": "resin or gum + distil",
+        "parts": [
+          "RS",
+          "DS"
+        ]
+      }
+    },
+    {
+      "id": "lampblk",
+      "name": "Lampblack",
+      "note": "Soot, collected on purpose.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:alchemical",
+        "kind:pigment",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 137
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 137,
+        "source": "compound",
+        "reading": "powder + resin or gum",
+        "parts": [
+          "PW",
+          "RS"
+        ]
+      }
+    },
+    {
+      "id": "silkthr",
+      "name": "Silk thread",
+      "note": "One cocoon unwinds into about a kilometre of filament, reeled in hot water several strands at once.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fibre",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 138
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 138,
+        "source": "compound",
+        "reading": "thread or fibre + insect",
+        "parts": [
+          "TH",
+          "IN"
+        ]
+      }
+    },
+    {
+      "id": "yarn",
+      "name": "Woollen yarn",
+      "note": "Carded and spun fleece. Every cottage can make it, which is what made wool a national industry.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:fibre",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 139
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 139,
+        "source": "compound",
+        "reading": "thread or fibre + garment",
+        "parts": [
+          "TH",
+          "GT"
+        ]
+      }
+    },
+    {
+      "id": "honey",
+      "name": "Honey",
+      "note": "The only sweetener most peoples had. Never spoils.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:food",
+        "nature:mundane",
+        "kind:food"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 140
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 140,
+        "source": "compound",
+        "reading": "bee: honey and wax + liquid",
+        "parts": [
+          "HX",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "wax",
+      "name": "Beeswax",
+      "note": "Clean-burning, sweet-smelling, expensive. Also the model-maker's material for lost-wax casting.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:lighting"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 141
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 141,
+        "source": "historical",
+        "reading": "wax (U+1F74A)",
+        "parts": null
+      }
+    },
+    {
+      "id": "glue",
+      "name": "Glue",
+      "note": "Hides and bones boiled to jelly. Holds furniture, books and paper size together.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 142
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 142,
+        "source": "compound",
+        "reading": "bone + water",
+        "parts": [
+          "BN",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "boneash",
+      "name": "Bone ash",
+      "note": "Makes cupels for refining silver, and bone china.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 143
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 143,
+        "source": "compound",
+        "reading": "bone + fire",
+        "parts": [
+          "BN",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "parch",
+      "name": "Parchment",
+      "note": "Limed, scraped, stretched skin. Outlasts paper by a thousand years and costs a flock per book.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:writing"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 144
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 144,
+        "source": "compound",
+        "reading": "page or book + beast",
+        "parts": [
+          "BK",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "leather",
+      "name": "Leather",
+      "note": "Lime to strip the hair, bark to tan.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 145
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 145,
+        "source": "compound",
+        "reading": "beast + tree or wood",
+        "parts": [
+          "BS",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "cheese",
+      "name": "Cheese",
+      "note": "Milk made to keep. Salt is what makes the rind.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 146
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 146,
+        "source": "compound",
+        "reading": "liquid + salt",
+        "parts": [
+          "DP",
+          "NA"
+        ]
+      }
+    },
+    {
+      "id": "saltfish",
+      "name": "Salt fish",
+      "note": "Split, salted and dried until it stacks like planks. Fast days and long voyages run on it.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 147
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 147,
+        "source": "compound",
+        "reading": "fish + salt",
+        "parts": [
+          "FS",
+          "NA"
+        ]
+      }
+    },
+    {
+      "id": "tealeaf",
+      "name": "Tea",
+      "note": "Withered, rolled and fired leaf. Light, costly and habit-forming: a perfect Fashion good.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "trait:luxury",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 148
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 148,
+        "source": "compound",
+        "reading": "cup or vessel + leaf",
+        "parts": [
+          "CP",
+          "LF"
+        ]
+      }
+    },
+    {
+      "id": "coffeeb",
+      "name": "Coffee",
+      "note": "Roasted, ground and boiled. Where it arrives, coffee houses and newspapers follow.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "trait:luxury",
+        "origin:horn-of-africa-and-arabia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 149
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 149,
+        "source": "compound",
+        "reading": "cup or vessel + fire",
+        "parts": [
+          "CP",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "shellac",
+      "name": "Shellac",
+      "note": "Sticklac washed and melted into amber flakes. The real body of sealing wax and the finest polish for wood.",
+      "tags": [
+        "stage:processed",
+        "group:farm-and-herd-goods",
+        "nature:mundane",
+        "kind:resin",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 150
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 150,
+        "source": "compound",
+        "reading": "resin or gum + insect",
+        "parts": [
+          "RS",
+          "IN"
+        ]
+      }
+    },
+    {
+      "id": "bronze",
+      "name": "Bronze",
+      "note": "Copper made hard with tin. Casts beautifully: bells, cannon, statues, bearings.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 151
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 151,
+        "source": "compound",
+        "reading": "copper + tin",
+        "parts": [
+          "Cu",
+          "Sn"
+        ]
+      }
+    },
+    {
+      "id": "brass",
+      "name": "Brass",
+      "note": "The clockwork metal.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 152
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 152,
+        "source": "compound",
+        "reading": "copper + zinc",
+        "parts": [
+          "Cu",
+          "Zn"
+        ]
+      }
+    },
+    {
+      "id": "pewter",
+      "name": "Pewter",
+      "note": "Sold as is: tableware for the middle classes.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "need:wares",
+        "nature:alchemical",
+        "kind:metal",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 153
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 153,
+        "source": "compound",
+        "reading": "tin + lead",
+        "parts": [
+          "Sn",
+          "Pb"
+        ]
+      }
+    },
+    {
+      "id": "typem",
+      "name": "Type metal",
+      "note": "Antimony makes it expand as it sets, so letters cast sharp.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal",
+        "kind:writing",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 154
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 154,
+        "source": "compound",
+        "reading": "lead + antimony",
+        "parts": [
+          "Pb",
+          "Sb"
+        ]
+      }
+    },
+    {
+      "id": "steel",
+      "name": "Steel",
+      "note": "Iron with just enough carbon. Takes an edge and holds a spring.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 155
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 155,
+        "source": "compound",
+        "reading": "iron + fire",
+        "parts": [
+          "Fe",
+          "Fi"
+        ]
+      }
+    },
+    {
+      "id": "tinplate",
+      "name": "Tinplate",
+      "note": "Iron sheet dipped in tin, with sal ammoniac as the flux that makes tin wet iron. Sold as tinware: light, bright, rustproof.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "need:wares",
+        "nature:alchemical",
+        "kind:metal"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 156
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 156,
+        "source": "compound",
+        "reading": "iron + tin",
+        "parts": [
+          "Fe",
+          "Sn"
+        ]
+      }
+    },
+    {
+      "id": "specm",
+      "name": "Speculum metal",
+      "note": "High-tin bronze whitened with arsenic: a metal mirror.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 157
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 157,
+        "source": "compound",
+        "reading": "copper + arsenic",
+        "parts": [
+          "Cu",
+          "As"
+        ]
+      }
+    },
+    {
+      "id": "amalgam",
+      "name": "Gold amalgam",
+      "note": "Paint it on, burn the mercury off: fire-gilding.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:metal",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 158
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 158,
+        "source": "compound",
+        "reading": "quicksilver + gold",
+        "parts": [
+          "Hg",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "litharge",
+      "name": "Litharge",
+      "note": "Lead calx from the cupel.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "trait:toxic",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 159
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 159,
+        "source": "historical",
+        "reading": "calx (U+1F74C)",
+        "parts": null
+      }
+    },
+    {
+      "id": "shot",
+      "name": "Lead shot",
+      "note": "Arsenic makes the drops fall round.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "need:works-and-arms",
+        "nature:alchemical",
+        "kind:arms",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 160
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 160,
+        "source": "compound",
+        "reading": "lead + arsenic",
+        "parts": [
+          "Pb",
+          "As"
+        ]
+      }
+    },
+    {
+      "id": "goldthr",
+      "name": "Gold thread",
+      "note": "Gilt strip wound round a silk core. Cloth of gold is woven from this.",
+      "tags": [
+        "stage:compound",
+        "group:alloys-and-metalwork",
+        "nature:alchemical",
+        "kind:fibre",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 161
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 161,
+        "source": "compound",
+        "reading": "thread or fibre + gold",
+        "parts": [
+          "TH",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "aqf",
+      "name": "Aqua fortis",
+      "note": "Dissolves silver, not gold. Parts the two. Etches metal.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:acid",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 162
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 162,
+        "source": "historical",
+        "reading": "aquafortis (U+1F705)",
+        "parts": null
+      }
+    },
+    {
+      "id": "aqr",
+      "name": "Aqua regia",
+      "note": "The only water that dissolves gold.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:acid",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 163
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 163,
+        "source": "historical",
+        "reading": "aqua regia (U+1F706)",
+        "parts": null
+      }
+    },
+    {
+      "id": "lye",
+      "name": "Caustic lye",
+      "note": "Potash sharpened with lime. Dissolves fat and skin alike.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:alkali",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 164
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 164,
+        "source": "historical",
+        "reading": "alkali-2 (U+1F737)",
+        "parts": null
+      }
+    },
+    {
+      "id": "sos",
+      "name": "Spirit of salt",
+      "note": "Salt distilled with oil of vitriol. Fumes in air and eats most metals. A second road to aqua regia.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:acid",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 165
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 165,
+        "source": "compound",
+        "reading": "salt + water",
+        "parts": [
+          "NA",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "vinegar",
+      "name": "Vinegar",
+      "note": "Wine gone sour on purpose. The weakest acid and the most used.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "need:food",
+        "nature:alchemical",
+        "kind:acid",
+        "kind:food"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 166
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 166,
+        "source": "historical",
+        "reading": "vinegar (U+1F70A)",
+        "parts": null
+      }
+    },
+    {
+      "id": "brandy",
+      "name": "Aqua vitae",
+      "note": "Brandy, the water of life.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "need:intoxicants-and-physic",
+        "nature:alchemical",
+        "kind:drink",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 167
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 167,
+        "source": "historical",
+        "reading": "aqua vitae (U+1F708)",
+        "parts": null
+      }
+    },
+    {
+      "id": "spirit",
+      "name": "Spirit of wine",
+      "note": "The solvent behind tinctures, varnish and perfume.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 168
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 168,
+        "source": "compound",
+        "reading": "distil + ferment",
+        "parts": [
+          "DS",
+          "FM"
+        ]
+      }
+    },
+    {
+      "id": "harts",
+      "name": "Spirit of hartshorn",
+      "note": "Ammonia, from distilled horn or from sal ammoniac and lime.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:alkali",
+        "trait:corrosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 169
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 169,
+        "source": "compound",
+        "reading": "bone + distil",
+        "parts": [
+          "BN",
+          "DS"
+        ]
+      }
+    },
+    {
+      "id": "tartar",
+      "name": "Tartar",
+      "note": "Wine-cask crust. Mordant and flux.",
+      "tags": [
+        "stage:compound",
+        "group:waters-and-spirits",
+        "nature:alchemical",
+        "kind:salt",
+        "kind:flux",
+        "kind:mordant",
+        "trait:by-product"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 170
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 170,
+        "source": "historical",
+        "reading": "tartar (U+1F73F)",
+        "parts": null
+      }
+    },
+    {
+      "id": "gunp",
+      "name": "Gunpowder",
+      "note": "Six parts nitre, one sulfur, one charcoal. The nitre is always the hard part.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:arms",
+        "trait:explosive",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 171
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 171,
+        "source": "historical",
+        "reading": "powder (U+1F74B)",
+        "parts": null
+      }
+    },
+    {
+      "id": "verm",
+      "name": "Vermilion",
+      "note": "Alchemists rebuilt cinnabar from its parts to get a purer red.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "trait:toxic",
+        "folk:jadefolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 172
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 172,
+        "source": "historical",
+        "reading": "cinnabar (U+1F713)",
+        "parts": null
+      }
+    },
+    {
+      "id": "smalt",
+      "name": "Smalt",
+      "note": "Cobalt-blue glass, ground for pigment or cast for lenses.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "kind:glass",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 173
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 173,
+        "source": "compound",
+        "reading": "glass + cobalt",
+        "parts": [
+          "GL",
+          "Ko"
+        ]
+      }
+    },
+    {
+      "id": "whitelead",
+      "name": "White lead",
+      "note": "Lead coils over vinegar, buried in dung for the heat.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 174
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 174,
+        "source": "compound",
+        "reading": "lead + water",
+        "parts": [
+          "Pb",
+          "W"
+        ]
+      }
+    },
+    {
+      "id": "redlead",
+      "name": "Red lead",
+      "note": "Litharge roasted again until it turns orange. Paint for ironwork, flux for glass.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "kind:flux",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 175
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 175,
+        "source": "compound",
+        "reading": "lead + fire",
+        "parts": [
+          "Pb",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "verdi",
+      "name": "Verdigris",
+      "note": "The green crust copper grows over vinegar. A pigment, and the green in fireworks.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 176
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 176,
+        "source": "historical",
+        "reading": "verdigris (U+1F728)",
+        "parts": null
+      }
+    },
+    {
+      "id": "prussian",
+      "name": "Prussian blue",
+      "note": "Found by accident, from blood.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 177
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 177,
+        "source": "compound",
+        "reading": "iron + air",
+        "parts": [
+          "Fe",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "ultram",
+      "name": "Ultramarine",
+      "note": "Kneaded out of lapis in a dough of wax and resin.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 178
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 178,
+        "source": "compound",
+        "reading": "powder + air",
+        "parts": [
+          "PW",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "kingsy",
+      "name": "King's yellow",
+      "note": "Orpiment. Beautiful and poisonous.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 179
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 179,
+        "source": "historical",
+        "reading": "auripigment (U+1F73D)",
+        "parts": null
+      }
+    },
+    {
+      "id": "rouge",
+      "name": "Jeweller's rouge",
+      "note": "Calcined green vitriol: the caput mortuum that polishes glass.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:pigment",
+        "kind:optics"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 180
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 180,
+        "source": "historical",
+        "reading": "caput mortuum (U+1F74E)",
+        "parts": null
+      }
+    },
+    {
+      "id": "madderl",
+      "name": "Madder lake",
+      "note": "Madder dye fixed onto alum to make a lasting red.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:dye"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 181
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 181,
+        "source": "compound",
+        "reading": "root + cloth",
+        "parts": [
+          "RT",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "indigod",
+      "name": "Indigo dye",
+      "note": "The vat ferments in stale urine.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:dye",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 182
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 182,
+        "source": "compound",
+        "reading": "leaf + cloth",
+        "parts": [
+          "LF",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "weldd",
+      "name": "Weld yellow",
+      "note": "Weld on an alum mordant. Over indigo it makes the only good green.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:dye"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 183
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 183,
+        "source": "compound",
+        "reading": "flower + cloth",
+        "parts": [
+          "FL",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "scarlet",
+      "name": "Scarlet dye",
+      "note": "Cochineal on a tin mordant: the brightest red of the age.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:dye",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 184
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 184,
+        "source": "compound",
+        "reading": "insect + cloth",
+        "parts": [
+          "IN",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "ironblk",
+      "name": "Iron black",
+      "note": "Oak galls and green vitriol: the same chemistry as ink, in a dye vat.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "nature:alchemical",
+        "kind:dye"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 185
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 185,
+        "source": "compound",
+        "reading": "iron + cloth",
+        "parts": [
+          "Fe",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "pigm",
+      "name": "Pigments",
+      "note": "The colourman's stock. Every hue has a different mine, plant or poison behind it.",
+      "tags": [
+        "stage:compound",
+        "group:powders-and-pigments",
+        "need:wares",
+        "nature:alchemical",
+        "kind:pigment"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 186
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 186,
+        "source": "compound",
+        "reading": "powder + made thing",
+        "parts": [
+          "PW",
+          "SQ"
+        ]
+      }
+    },
+    {
+      "id": "glass",
+      "name": "Glass",
+      "note": "Sand, soda and lime, melted. Greenish unless you correct it.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:glass",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 187
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 187,
+        "source": "compound",
+        "reading": "glass",
+        "parts": [
+          "GL",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "crystal",
+      "name": "Lead crystal",
+      "note": "Glass made heavy and brilliant with lead. Rings when struck, sparkles when cut.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:glass"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 188
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 188,
+        "source": "compound",
+        "reading": "glass + lead",
+        "parts": [
+          "GL",
+          "Pb"
+        ]
+      }
+    },
+    {
+      "id": "winpane",
+      "name": "Window glass",
+      "note": "Panes set in lead cames.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:glass",
+        "kind:construction"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 189
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 189,
+        "source": "compound",
+        "reading": "glass + made thing",
+        "parts": [
+          "GL",
+          "SQ"
+        ]
+      }
+    },
+    {
+      "id": "lens",
+      "name": "Lenses",
+      "note": "Ground against sand, polished with rouge. Weeks of work in each good one.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:glass",
+        "kind:optics"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 190
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 190,
+        "source": "compound",
+        "reading": "lens + glass",
+        "parts": [
+          "LN",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "enamel",
+      "name": "Enamel",
+      "note": "Coloured glass powder fused onto metal. Colour that cannot fade.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:glass"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 191
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 191,
+        "source": "compound",
+        "reading": "glass + powder",
+        "parts": [
+          "GL",
+          "PW"
+        ]
+      }
+    },
+    {
+      "id": "glaze",
+      "name": "Glaze",
+      "note": "A glassy skin fired onto clay. Lead makes it flow; cobalt makes it blue.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:glass",
+        "kind:ceramic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 192
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 192,
+        "source": "compound",
+        "reading": "glass + earth",
+        "parts": [
+          "GL",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "paper",
+      "name": "Paper",
+      "note": "Rag paper, sized with alum and glue.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:writing",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 193
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 193,
+        "source": "compound",
+        "reading": "page or book + thread or fibre",
+        "parts": [
+          "BK",
+          "TH"
+        ]
+      }
+    },
+    {
+      "id": "ink",
+      "name": "Iron-gall ink",
+      "note": "Pale when written, black by morning. Eats through the page in a few centuries.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:writing"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 194
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 194,
+        "source": "compound",
+        "reading": "page or book + iron",
+        "parts": [
+          "BK",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "printink",
+      "name": "Printer's ink",
+      "note": "Lampblack in boiled linseed oil. Sticky enough to cling to metal type.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:writing"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 195
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 195,
+        "source": "compound",
+        "reading": "page or book + powder",
+        "parts": [
+          "BK",
+          "PW"
+        ]
+      }
+    },
+    {
+      "id": "oilpaint",
+      "name": "Oil paints",
+      "note": "Pigment ground into linseed oil. Dries slowly, which lets a painter blend.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:alchemical",
+        "kind:pigment",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 196
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 196,
+        "source": "compound",
+        "reading": "powder + liquid",
+        "parts": [
+          "PW",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "varnish",
+      "name": "Varnish",
+      "note": "Resin dissolved in oil and turpentine. The glow on a violin.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:resin"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 197
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 197,
+        "source": "compound",
+        "reading": "resin or gum + liquid",
+        "parts": [
+          "RS",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "lacquer",
+      "name": "Lacquer",
+      "note": "Dozens of thin coats, each cured in damp air. Vermilion makes the classic red.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:resin",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 198
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 198,
+        "source": "compound",
+        "reading": "resin or gum + made thing",
+        "parts": [
+          "RS",
+          "SQ"
+        ]
+      }
+    },
+    {
+      "id": "sealwax",
+      "name": "Sealing wax",
+      "note": "Snap, melt, press. Vermilion for letters, black for mourning.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:mundane",
+        "kind:writing"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 199
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 199,
+        "source": "compound",
+        "reading": "bee: honey and wax + page or book",
+        "parts": [
+          "HX",
+          "BK"
+        ]
+      }
+    },
+    {
+      "id": "candles",
+      "name": "Candles",
+      "note": "Tallow for the kitchen, beeswax for the altar and the ballroom.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:mundane",
+        "kind:lighting",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 200
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 200,
+        "source": "compound",
+        "reading": "bee: honey and wax + fire",
+        "parts": [
+          "HX",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "soap",
+      "name": "Soap",
+      "note": "Fat boiled with lye. Olive oil makes it hard and white; tallow makes it cheap.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:mundane",
+        "kind:cosmetic",
+        "trait:staple",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 201
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 201,
+        "source": "historical",
+        "reading": "soap (U+1F754)",
+        "parts": null
+      }
+    },
+    {
+      "id": "rope",
+      "name": "Rope",
+      "note": "Hemp yarn twisted in a ropewalk a quarter of a mile long, then tarred.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 202
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 202,
+        "source": "compound",
+        "reading": "thread or fibre + ship",
+        "parts": [
+          "TH",
+          "SP"
+        ]
+      }
+    },
+    {
+      "id": "canvas",
+      "name": "Canvas",
+      "note": "Hemp woven tight. Sails, tents, sacks and painters' grounds.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "nature:mundane",
+        "kind:cloth",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 203
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 203,
+        "source": "compound",
+        "reading": "cloth + ship",
+        "parts": [
+          "CL",
+          "SP"
+        ]
+      }
+    },
+    {
+      "id": "linen",
+      "name": "Linen",
+      "note": "Cool, strong, and whiter with every wash. Underclothes, sheets, and in the end rags for paper.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "trait:staple",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 204
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 204,
+        "source": "compound",
+        "reading": "cloth + flower",
+        "parts": [
+          "CL",
+          "FL"
+        ]
+      }
+    },
+    {
+      "id": "woolc",
+      "name": "Woollen cloth",
+      "note": "Fulled: pounded in fuller's earth and stale urine.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "trait:staple",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 205
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 205,
+        "source": "compound",
+        "reading": "cloth + beast",
+        "parts": [
+          "CL",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "cottonc",
+      "name": "Cotton cloth",
+      "note": "Light and washable. Printed and dyed, it is the cloth that launches fashions.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 206
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 206,
+        "source": "compound",
+        "reading": "cloth + air",
+        "parts": [
+          "CL",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "silk",
+      "name": "Silk",
+      "note": "Strong, light, lustrous. The cloth that named a trade route.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "trait:luxury",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 207
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 207,
+        "source": "compound",
+        "reading": "cloth + insect",
+        "parts": [
+          "CL",
+          "IN"
+        ]
+      }
+    },
+    {
+      "id": "mortar",
+      "name": "Mortar",
+      "note": "Slaked lime and sand. Sets slowly by drinking the air.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:construction"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 208
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 208,
+        "source": "compound",
+        "reading": "made thing + lime",
+        "parts": [
+          "SQ",
+          "Ca"
+        ]
+      }
+    },
+    {
+      "id": "brick",
+      "name": "Bricks",
+      "note": "Clay shaped and fired. A city that burns down once rebuilds in brick.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:ceramic",
+        "kind:construction"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 209
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 209,
+        "source": "historical",
+        "reading": "brick (U+1F759)",
+        "parts": null
+      }
+    },
+    {
+      "id": "pottery",
+      "name": "Pottery",
+      "note": "Thrown, glazed and fired. Every household owns some, so the volume is enormous.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:mundane",
+        "kind:ceramic",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 210
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 210,
+        "source": "compound",
+        "reading": "cup or vessel + earth",
+        "parts": [
+          "CP",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "porcel",
+      "name": "Porcelain",
+      "note": "The white gold. Europe's recipe was cracked by an alchemist held prisoner to make the yellow kind.",
+      "tags": [
+        "stage:compound",
+        "group:materials",
+        "need:wares",
+        "nature:mundane",
+        "kind:ceramic",
+        "trait:luxury",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 211
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 211,
+        "source": "compound",
+        "reading": "earth + gold",
+        "parts": [
+          "EA",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "bread",
+      "name": "Bread",
+      "note": "The staple. Its price is the first thing a population riots about.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "trait:perishable",
+        "trait:staple",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 212
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 212,
+        "source": "compound",
+        "reading": "grain or grass + fire",
+        "parts": [
+          "GR",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "beer",
+      "name": "Beer",
+      "note": "Malt and water, bittered with hops so it keeps. Safer than the well.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "trait:staple",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 213
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 213,
+        "source": "compound",
+        "reading": "cup or vessel + grain or grass",
+        "parts": [
+          "CP",
+          "GR"
+        ]
+      }
+    },
+    {
+      "id": "masa",
+      "name": "Nixtamal",
+      "note": "Lime unlocks the maize. Without it a maize people sickens.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "nature:mundane",
+        "kind:food",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 214
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 214,
+        "source": "compound",
+        "reading": "grain or grass + lime",
+        "parts": [
+          "GR",
+          "Ca"
+        ]
+      }
+    },
+    {
+      "id": "ricew",
+      "name": "Rice wine",
+      "note": "Rice brewed with a mould starter. Served warm.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 215
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 215,
+        "source": "compound",
+        "reading": "cup or vessel + water",
+        "parts": [
+          "CP",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "mead",
+      "name": "Mead",
+      "note": "Honey and water, fermented. Possibly the oldest drink there is.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 216
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 216,
+        "source": "compound",
+        "reading": "cup or vessel + bee: honey and wax",
+        "parts": [
+          "CP",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "choc",
+      "name": "Chocolate",
+      "note": "Cacao ground with sugar and spice, whisked to a froth. Drunk, not eaten.",
+      "tags": [
+        "stage:compound",
+        "group:food-and-drink",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drink",
+        "trait:luxury",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 217
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 217,
+        "source": "compound",
+        "reading": "cup or vessel + fruit or nut",
+        "parts": [
+          "CP",
+          "FR"
+        ]
+      }
+    },
+    {
+      "id": "potg",
+      "name": "Potable gold",
+      "note": "Gold dissolved in aqua regia and tamed until it can be swallowed. The basis of every elixir.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:magical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 218
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 218,
+        "source": "compound",
+        "reading": "gold + water",
+        "parts": [
+          "Au",
+          "W"
+        ]
+      }
+    },
+    {
+      "id": "thun",
+      "name": "Thundergold",
+      "note": "Fulminating gold: a real, touchy explosive.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:alchemical",
+        "kind:arms",
+        "trait:explosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 219
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 219,
+        "source": "compound",
+        "reading": "gold + fire",
+        "parts": [
+          "Au",
+          "Fi"
+        ]
+      }
+    },
+    {
+      "id": "lunar",
+      "name": "Lunar caustic",
+      "note": "Silver dissolved and recrystallised.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:alchemical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 220
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 220,
+        "source": "compound",
+        "reading": "silver + water",
+        "parts": [
+          "Ag",
+          "W"
+        ]
+      }
+    },
+    {
+      "id": "phos",
+      "name": "Phosphorus",
+      "note": "Cold fire, first boiled out of urine by a man looking for gold.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:alchemical",
+        "kind:lighting",
+        "trait:toxic",
+        "trait:explosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 221
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 221,
+        "source": "compound",
+        "reading": "fire + liquid",
+        "parts": [
+          "FI",
+          "DP"
+        ]
+      }
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby glass",
+      "note": "Gold and tin make the purple that turns glass ruby.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "need:wares",
+        "nature:magical",
+        "kind:glass",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 222
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 222,
+        "source": "compound",
+        "reading": "glass + gold",
+        "parts": [
+          "GL",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "quint",
+      "name": "Quintessence",
+      "note": "Essence rectified in spirit of wine.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:magical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 223
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 223,
+        "source": "historical",
+        "reading": "quintessence (U+1F700)",
+        "parts": null
+      }
+    },
+    {
+      "id": "philm",
+      "name": "Philosophical mercury",
+      "note": "Quicksilver sharpened on the star regulus.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:magical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 224
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 224,
+        "source": "compound",
+        "reading": "quicksilver + antimony",
+        "parts": [
+          "Hg",
+          "Sb"
+        ]
+      }
+    },
+    {
+      "id": "stone",
+      "name": "Philosophers' stone",
+      "note": "A capstone, perhaps an Aspiration.",
+      "tags": [
+        "stage:magistery",
+        "group:magisteries",
+        "nature:magical"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 225
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 225,
+        "source": "compound",
+        "reading": "gold + quicksilver",
+        "parts": [
+          "Au",
+          "Hg"
+        ]
+      }
+    },
+    {
+      "id": "blood",
+      "name": "Quickblood",
+      "note": "Mercury is the spirit. Potable gold is the upgrade.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:magical",
+        "kind:golem-part"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 226
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 226,
+        "source": "compound",
+        "reading": "liquid + quicksilver",
+        "parts": [
+          "DP",
+          "Hg"
+        ]
+      }
+    },
+    {
+      "id": "body",
+      "name": "Golem body",
+      "note": "Salt is the body principle. The soil decides the function.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 227
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 227,
+        "source": "compound",
+        "reading": "earth + salt",
+        "parts": [
+          "EA",
+          "NA"
+        ]
+      }
+    },
+    {
+      "id": "h1",
+      "name": "Arsenic heart",
+      "note": "Cheap, toxic, short-lived.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part",
+        "trait:toxic",
+        "kind:golem-heart"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 228
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 228,
+        "source": "compound",
+        "reading": "heart + arsenic",
+        "parts": [
+          "HT",
+          "As"
+        ]
+      }
+    },
+    {
+      "id": "h2",
+      "name": "Antimony heart",
+      "note": "The dependable standard.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part",
+        "kind:golem-heart"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 229
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 229,
+        "source": "compound",
+        "reading": "heart + antimony",
+        "parts": [
+          "HT",
+          "Sb"
+        ]
+      }
+    },
+    {
+      "id": "h3",
+      "name": "Bismuth heart",
+      "note": "Clean, stable, holds the most instruction.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part",
+        "kind:golem-heart"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 230
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 230,
+        "source": "compound",
+        "reading": "heart + bismuth",
+        "parts": [
+          "HT",
+          "Bi"
+        ]
+      }
+    },
+    {
+      "id": "plate",
+      "name": "Command plate",
+      "note": "Brass etched with aqua fortis: the golem's written orders.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 231
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 231,
+        "source": "compound",
+        "reading": "page or book + copper",
+        "parts": [
+          "BK",
+          "Cu"
+        ]
+      }
+    },
+    {
+      "id": "clockw",
+      "name": "Clockwork",
+      "note": "Brass wheels, steel springs. The first machine that runs without being pushed.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:mundane",
+        "kind:golem-part"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 232
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 232,
+        "source": "compound",
+        "reading": "gear",
+        "parts": [
+          "GE",
+          "GE"
+        ]
+      }
+    },
+    {
+      "id": "golem",
+      "name": "Golem",
+      "note": "Needs blood, body, one heart and a plate. Optional: bronze joints, smalt eyes, lunar-caustic nerves, clockwork hands.",
+      "tags": [
+        "stage:assembly",
+        "group:golem-works",
+        "nature:magical",
+        "kind:golem-part"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 233
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 233,
+        "source": "compound",
+        "reading": "heart + earth",
+        "parts": [
+          "HT",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "hull",
+      "name": "Hull",
+      "note": "Copper sheathing under the waterline, or whatever a Domain-ship has instead.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 234
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 234,
+        "source": "compound",
+        "reading": "ship + tree or wood",
+        "parts": [
+          "SP",
+          "TR"
+        ]
+      }
+    },
+    {
+      "id": "sails",
+      "name": "Sails",
+      "note": "Alum makes cloth slow to burn.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 235
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 235,
+        "source": "compound",
+        "reading": "ship + cloth",
+        "parts": [
+          "SP",
+          "CL"
+        ]
+      }
+    },
+    {
+      "id": "rigging",
+      "name": "Rigging",
+      "note": "Miles of tarred rope per ship. A vessel is as much cordage as timber.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 236
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 236,
+        "source": "compound",
+        "reading": "ship + thread or fibre",
+        "parts": [
+          "SP",
+          "TH"
+        ]
+      }
+    },
+    {
+      "id": "compass",
+      "name": "Compass",
+      "note": "A magnetised needle under glass. Lets a ship hold a course with no land or stars in sight.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:naval",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 237
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 237,
+        "source": "compound",
+        "reading": "ship + iron",
+        "parts": [
+          "SP",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "spyglass",
+      "name": "Spyglass",
+      "note": "Two lenses in a brass tube. See the harbour, or the pirate, an hour sooner.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:naval",
+        "kind:optics"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 238
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 238,
+        "source": "compound",
+        "reading": "lens + ship",
+        "parts": [
+          "LN",
+          "SP"
+        ]
+      }
+    },
+    {
+      "id": "charts",
+      "name": "Charts",
+      "note": "A captain's most valuable and most secret possession.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:writing",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 239
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 239,
+        "source": "compound",
+        "reading": "page or book + ship",
+        "parts": [
+          "BK",
+          "SP"
+        ]
+      }
+    },
+    {
+      "id": "engine",
+      "name": "Aether engine",
+      "note": "Pure invention: the thing that makes an aethership an aethership.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:magical",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 240
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 240,
+        "source": "compound",
+        "reading": "gear + Essence",
+        "parts": [
+          "GE",
+          "QE"
+        ]
+      }
+    },
+    {
+      "id": "provis",
+      "name": "Ship's provisions",
+      "note": "Salt fish, hard bread and beer. How far a ship can go is how much of this it carries.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:mundane",
+        "kind:food",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 241
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 241,
+        "source": "compound",
+        "reading": "ship + salt",
+        "parts": [
+          "SP",
+          "NA"
+        ]
+      }
+    },
+    {
+      "id": "ship",
+      "name": "Aethership",
+      "note": "The thing that reaches the next Domain. Hemp, timber and brass, held aloft by an engine nobody fully understands.",
+      "tags": [
+        "stage:assembly",
+        "group:aethership-works",
+        "nature:magical",
+        "kind:naval"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 242
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 242,
+        "source": "compound",
+        "reading": "ship + Essence",
+        "parts": [
+          "SP",
+          "QE"
+        ]
+      }
+    },
+    {
+      "id": "tortilla",
+      "name": "Tortillas",
+      "note": "Nixtamal patted thin and baked on a hot stone. The daily bread of maize country.",
+      "tags": [
+        "stage:finished",
+        "group:food",
+        "need:food",
+        "nature:mundane",
+        "kind:food",
+        "trait:perishable",
+        "trait:staple",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 243
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 243,
+        "source": "compound",
+        "reading": "made thing + grain or grass",
+        "parts": [
+          "SQ",
+          "GR"
+        ]
+      }
+    },
+    {
+      "id": "laud",
+      "name": "Laudanum",
+      "note": "Opium in spirit of wine. Its physician's name meant 'worthy of praise'.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drug"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 244
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 244,
+        "source": "compound",
+        "reading": "physic + distil",
+        "parts": [
+          "RX",
+          "DS"
+        ]
+      }
+    },
+    {
+      "id": "theriac",
+      "name": "Theriac",
+      "note": "The cure-all of sixty ingredients, cut to four.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:medicine"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 245
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 245,
+        "source": "compound",
+        "reading": "physic + bee: honey and wax",
+        "parts": [
+          "RX",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "antcup",
+      "name": "Antimonial cup",
+      "note": "Wine left in it overnight becomes a purge. Reusable forever.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:medicine"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 246
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 246,
+        "source": "compound",
+        "reading": "cup or vessel + antimony",
+        "parts": [
+          "CP",
+          "Sb"
+        ]
+      }
+    },
+    {
+      "id": "ointm",
+      "name": "Mercurial ointment",
+      "note": "Quicksilver ground into fat. The standard cure for the pox, and nearly as bad.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:medicine",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 247
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 247,
+        "source": "compound",
+        "reading": "physic + quicksilver",
+        "parts": [
+          "RX",
+          "Hg"
+        ]
+      }
+    },
+    {
+      "id": "smell",
+      "name": "Smelling salts",
+      "note": "A whiff of ammonia under the nose. Fainting was fashionable; so was the remedy.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:medicine"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 248
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 248,
+        "source": "compound",
+        "reading": "physic + air",
+        "parts": [
+          "RX",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "tinct",
+      "name": "Tinctures",
+      "note": "Herbs steeped in spirit of wine. Keeps for years where the fresh plant lasts a week.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:medicine"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 249
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 249,
+        "source": "historical",
+        "reading": "tincture (U+1F748)",
+        "parts": null
+      }
+    },
+    {
+      "id": "elix",
+      "name": "Elixir",
+      "note": "Your potion of youth.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:magical",
+        "kind:medicine",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 250
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 250,
+        "source": "compound",
+        "reading": "physic + gold",
+        "parts": [
+          "RX",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "betel",
+      "name": "Betel quid",
+      "note": "Areca, a smear of lime and a leaf to wrap it. Without the lime it does nothing.",
+      "tags": [
+        "stage:finished",
+        "group:intoxicants-and-physic",
+        "need:intoxicants-and-physic",
+        "nature:mundane",
+        "kind:drug",
+        "origin:southeast-asia",
+        "origin:south-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 251
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 251,
+        "source": "compound",
+        "reading": "fruit or nut + lime",
+        "parts": [
+          "FR",
+          "Ca"
+        ]
+      }
+    },
+    {
+      "id": "clothes",
+      "name": "Everyday clothes",
+      "note": "What most people wear most days. Dull, steady, enormous demand.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 252
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 252,
+        "source": "compound",
+        "reading": "garment",
+        "parts": [
+          "GT",
+          "GT"
+        ]
+      }
+    },
+    {
+      "id": "dyed",
+      "name": "Fast-dyed cloth",
+      "note": "Alum is the mordant that makes colour stay.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 253
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 253,
+        "source": "compound",
+        "reading": "cloth + root",
+        "parts": [
+          "CL",
+          "RT"
+        ]
+      }
+    },
+    {
+      "id": "scarletc",
+      "name": "Scarlet cloth",
+      "note": "The brightest cloth money can buy. Cardinals, officers and anyone who wants to be seen.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 254
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 254,
+        "source": "compound",
+        "reading": "cloth + fire",
+        "parts": [
+          "CL",
+          "FI"
+        ]
+      }
+    },
+    {
+      "id": "court",
+      "name": "Court dress",
+      "note": "Silk, scarlet and gold thread. Worn twice, talked about for a season.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 255
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 255,
+        "source": "compound",
+        "reading": "garment + gold",
+        "parts": [
+          "GT",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "hats",
+      "name": "Felt hats",
+      "note": "Mercury in aqua fortis mats the fur. It also maddens the hatter.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "trait:toxic",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 256
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 256,
+        "source": "compound",
+        "reading": "garment + quicksilver",
+        "parts": [
+          "GT",
+          "Hg"
+        ]
+      }
+    },
+    {
+      "id": "shoes",
+      "name": "Shoes",
+      "note": "Everyone needs them and everyone wears them out.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 257
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 257,
+        "source": "compound",
+        "reading": "garment + beast",
+        "parts": [
+          "GT",
+          "BS"
+        ]
+      }
+    },
+    {
+      "id": "cosm",
+      "name": "Cosmetics",
+      "note": "Kohl from stibnite, ceruse from white lead, pearl white from bismuth.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cosmetic",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 258
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 258,
+        "source": "compound",
+        "reading": "powder + antimony",
+        "parts": [
+          "PW",
+          "Sb"
+        ]
+      }
+    },
+    {
+      "id": "batik",
+      "name": "Batik cloth",
+      "note": "Draw in hot wax, dye, boil the wax out. The pattern is whatever the wax protected.",
+      "tags": [
+        "stage:finished",
+        "group:clothing",
+        "need:clothing",
+        "nature:mundane",
+        "kind:cloth",
+        "trait:luxury",
+        "origin:southeast-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 259
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 259,
+        "source": "compound",
+        "reading": "cloth + bee: honey and wax",
+        "parts": [
+          "CL",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "lookg",
+      "name": "Looking glass",
+      "note": "Tin foil and quicksilver behind glass: the real Venetian secret.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:glass",
+        "kind:optics",
+        "trait:toxic"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 260
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 260,
+        "source": "compound",
+        "reading": "glass + quicksilver",
+        "parts": [
+          "GL",
+          "Hg"
+        ]
+      }
+    },
+    {
+      "id": "mirror",
+      "name": "Scrying mirror",
+      "note": "A looking glass silvered twice, once for the eye and once for elsewhere. How you see the next Domain before you go.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:magical",
+        "kind:optics",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 261
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 261,
+        "source": "compound",
+        "reading": "glass + Essence",
+        "parts": [
+          "GL",
+          "QE"
+        ]
+      }
+    },
+    {
+      "id": "book",
+      "name": "Printed books",
+      "note": "Cast type, rag paper, oil ink, a leather back. Four trades meet in every volume.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:writing",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 262
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 262,
+        "source": "compound",
+        "reading": "page or book",
+        "parts": [
+          "BK",
+          "BK"
+        ]
+      }
+    },
+    {
+      "id": "writing",
+      "name": "Writing set",
+      "note": "Ink, quills, paper and wax. What a clerk, a merchant or a lover needs.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:writing"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 263
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 263,
+        "source": "compound",
+        "reading": "page or book + feather",
+        "parts": [
+          "BK",
+          "FE"
+        ]
+      }
+    },
+    {
+      "id": "lucent",
+      "name": "Lucentware",
+      "note": "My guess at your coinage: crystal that holds a cold light.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:magical",
+        "kind:lighting",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 264
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 264,
+        "source": "compound",
+        "reading": "Essence + glass",
+        "parts": [
+          "QE",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "lamp",
+      "name": "Cold lamp",
+      "note": "A sealed glass with a little phosphorus. Glows without flame, heat or smoke.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:lighting"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 265
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 265,
+        "source": "compound",
+        "reading": "fire + glass",
+        "parts": [
+          "FI",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "bluewhite",
+      "name": "Blue-and-white ware",
+      "note": "Cobalt painted under a clear glaze. The most copied ceramics in history.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:ceramic",
+        "trait:luxury",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 266
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 266,
+        "source": "compound",
+        "reading": "cup or vessel + cobalt",
+        "parts": [
+          "CP",
+          "Ko"
+        ]
+      }
+    },
+    {
+      "id": "lacqw",
+      "name": "Lacquerware",
+      "note": "Wood under many coats of lacquer. Waterproof, feather-light and glass-smooth.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:luxury",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 267
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 267,
+        "source": "compound",
+        "reading": "cup or vessel + resin or gum",
+        "parts": [
+          "CP",
+          "RS"
+        ]
+      }
+    },
+    {
+      "id": "jewel",
+      "name": "Jewellery",
+      "note": "Gold soldered with borax, set with whatever stone the wearer's culture prizes.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:gem",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 268
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 268,
+        "source": "compound",
+        "reading": "stone or gem + gold",
+        "parts": [
+          "GM",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "silverw",
+      "name": "Silverware",
+      "note": "Spoons, cups and candlesticks. A family's savings, displayed on the sideboard.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 269
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 269,
+        "source": "compound",
+        "reading": "cup or vessel + silver",
+        "parts": [
+          "CP",
+          "Ag"
+        ]
+      }
+    },
+    {
+      "id": "giltw",
+      "name": "Gilded ware",
+      "note": "Bronze painted with gold amalgam, then heated until the mercury flies off. Splendid, and deadly to the gilder.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:toxic",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 270
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 270,
+        "source": "compound",
+        "reading": "cup or vessel + gold",
+        "parts": [
+          "CP",
+          "Au"
+        ]
+      }
+    },
+    {
+      "id": "enamelw",
+      "name": "Enamelware",
+      "note": "Copper coated in fused coloured glass. Snuffboxes, watch cases, reliquaries.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:luxury"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 271
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 271,
+        "source": "compound",
+        "reading": "cup or vessel + glass",
+        "parts": [
+          "CP",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "firew",
+      "name": "Fireworks",
+      "note": "Realgar burns white, verdigris with sal ammoniac burns blue.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:explosive",
+        "folk:jadefolk",
+        "origin:east-asia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 272
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 272,
+        "source": "compound",
+        "reading": "fire + air",
+        "parts": [
+          "FI",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "spect",
+      "name": "Spectacles",
+      "note": "Two lenses in a horn frame. Doubles the working life of every scholar and needleworker.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:optics",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 273
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 273,
+        "source": "compound",
+        "reading": "lens + bone",
+        "parts": [
+          "LN",
+          "BN"
+        ]
+      }
+    },
+    {
+      "id": "clock",
+      "name": "Clocks",
+      "note": "Brass clockwork behind glass. The Ware that teaches a town to keep hours.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:luxury",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 274
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 274,
+        "source": "compound",
+        "reading": "gear + glass",
+        "parts": [
+          "GE",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "autom",
+      "name": "Home automaton",
+      "note": "A golem's clockwork cousin: no blood, no soil, little wit.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 275
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 275,
+        "source": "compound",
+        "reading": "heart + gear",
+        "parts": [
+          "HT",
+          "GE"
+        ]
+      }
+    },
+    {
+      "id": "obsw",
+      "name": "Obsidian ware",
+      "note": "Blades and black mirrors.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "folk:lakefolk",
+        "origin:new-world"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 276
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 276,
+        "source": "compound",
+        "reading": "tool + glass",
+        "parts": [
+          "TL",
+          "GL"
+        ]
+      }
+    },
+    {
+      "id": "perfume",
+      "name": "Perfume",
+      "note": "Scent carried in spirit of wine. Flowers for the first impression, amber for what lingers.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:cosmetic",
+        "trait:luxury",
+        "origin:mediterranean-and-near-east"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 277
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 277,
+        "source": "compound",
+        "reading": "distil + flower",
+        "parts": [
+          "DS",
+          "FL"
+        ]
+      }
+    },
+    {
+      "id": "incense",
+      "name": "Incense",
+      "note": "Resin on a glowing coal. Every temple needs it every day, which makes it the steadiest luxury trade there is.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "kind:incense",
+        "trait:luxury",
+        "origin:horn-of-africa-and-arabia"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 278
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 278,
+        "source": "compound",
+        "reading": "resin or gum + air",
+        "parts": [
+          "RS",
+          "AI"
+        ]
+      }
+    },
+    {
+      "id": "castbrass",
+      "name": "Lost-wax brasses",
+      "note": "Model it in beeswax, coat it in clay, melt the wax out and pour brass in. Every cast is unique because the mould is destroyed.",
+      "tags": [
+        "stage:finished",
+        "group:wares",
+        "need:wares",
+        "nature:mundane",
+        "trait:luxury",
+        "origin:sub-saharan-africa"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 279
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 279,
+        "source": "compound",
+        "reading": "copper + bee: honey and wax",
+        "parts": [
+          "Cu",
+          "HX"
+        ]
+      }
+    },
+    {
+      "id": "tools",
+      "name": "Tools",
+      "note": "Steel edges on wooden handles. Every other workshop waits on these.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "trait:staple"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 280
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 280,
+        "source": "compound",
+        "reading": "tool + iron",
+        "parts": [
+          "TL",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "musket",
+      "name": "Muskets",
+      "note": "Steel barrel, wooden stock, brass fittings. Useless without powder and shot.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:arms",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 281
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 281,
+        "source": "compound",
+        "reading": "weapon + iron",
+        "parts": [
+          "WP",
+          "Fe"
+        ]
+      }
+    },
+    {
+      "id": "cannon",
+      "name": "Cannon",
+      "note": "Cast bronze, because bronze bulges before it bursts. Iron ones are cheaper and kill their crews.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:arms",
+        "folk:steelfolk"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 282
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 282,
+        "source": "compound",
+        "reading": "weapon + copper",
+        "parts": [
+          "WP",
+          "Cu"
+        ]
+      }
+    },
+    {
+      "id": "charge",
+      "name": "Blasting charge",
+      "note": "Powder packed to break rock. Mining goes from inches to yards a day.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:arms",
+        "trait:explosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 283
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 283,
+        "source": "compound",
+        "reading": "fire + earth",
+        "parts": [
+          "FI",
+          "EA"
+        ]
+      }
+    },
+    {
+      "id": "wildfire",
+      "name": "Wildfire",
+      "note": "Sticks, burns on water, and lime makes it light itself.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:arms",
+        "trait:explosive"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 284
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 284,
+        "source": "compound",
+        "reading": "fire + water",
+        "parts": [
+          "FI",
+          "WA"
+        ]
+      }
+    },
+    {
+      "id": "telescope",
+      "name": "Reflecting telescope",
+      "note": "A polished metal mirror instead of a lens, so no coloured fringes. The astronomer's instrument.",
+      "tags": [
+        "stage:finished",
+        "group:works-and-arms",
+        "need:works-and-arms",
+        "nature:mundane",
+        "kind:optics",
+        "folk:steelfolk",
+        "origin:europe"
+      ],
+      "icon": {
+        "atlas": "icons",
+        "index": 285
+      },
+      "sign": {
+        "atlas": "signs",
+        "index": 285,
+        "source": "compound",
+        "reading": "lens + air",
+        "parts": [
+          "LN",
+          "AI"
+        ]
+      }
+    }
+  ]
+}

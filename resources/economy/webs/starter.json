@@ -1,0 +1,763 @@
+{
+  "format": 1,
+  "id": "starter",
+  "name": "Starter: a golem, bread and beer",
+  "note": "A small web cut from the full ledger: the golem with its three hearts and bronze joints, and two things people eat and drink.",
+  "goods": [
+    "cu",
+    "fe",
+    "sn",
+    "zn",
+    "cin",
+    "slt",
+    "vit",
+    "nit",
+    "rea",
+    "stb",
+    "bis",
+    "tinc",
+    "coal",
+    "pyr",
+    "soil",
+    "grain",
+    "timber",
+    "herbs",
+    "ess",
+    "icu",
+    "ife",
+    "isn",
+    "izn",
+    "hg",
+    "salt",
+    "oov",
+    "nitre",
+    "was",
+    "reg",
+    "bic",
+    "borax",
+    "ash",
+    "copperas",
+    "flour",
+    "malt",
+    "charcoal",
+    "bronze",
+    "brass",
+    "aqf",
+    "bread",
+    "beer",
+    "blood",
+    "body",
+    "h1",
+    "h2",
+    "h3",
+    "plate",
+    "golem"
+  ],
+  "recipes": [
+    {
+      "id": "r.golem",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "blood"
+          ]
+        },
+        {
+          "accepts": [
+            "body"
+          ]
+        },
+        {
+          "accepts": [
+            "#kind:golem-heart"
+          ]
+        },
+        {
+          "accepts": [
+            "plate"
+          ]
+        },
+        {
+          "accepts": [
+            "bronze"
+          ],
+          "optional": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "golem"
+        }
+      ]
+    },
+    {
+      "id": "r.bread",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "flour"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bread"
+        }
+      ]
+    },
+    {
+      "id": "r.beer",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "malt"
+          ]
+        },
+        {
+          "accepts": [
+            "herbs"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "beer"
+        }
+      ]
+    },
+    {
+      "id": "r.blood",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "hg"
+          ]
+        },
+        {
+          "accepts": [
+            "ess"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "blood"
+        }
+      ]
+    },
+    {
+      "id": "r.body",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "soil"
+          ]
+        },
+        {
+          "accepts": [
+            "salt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "body"
+        }
+      ]
+    },
+    {
+      "id": "r.h1",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "was"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h1"
+        }
+      ]
+    },
+    {
+      "id": "r.h2",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "reg"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h2"
+        }
+      ]
+    },
+    {
+      "id": "r.h3",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bic"
+          ]
+        },
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "borax"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "h3"
+        }
+      ]
+    },
+    {
+      "id": "r.plate",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "brass"
+          ]
+        },
+        {
+          "accepts": [
+            "aqf"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "plate"
+        }
+      ]
+    },
+    {
+      "id": "r.bronze",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "isn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bronze"
+        }
+      ]
+    },
+    {
+      "id": "r.flour",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "flour"
+        }
+      ]
+    },
+    {
+      "id": "r.salt",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "slt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "salt"
+        }
+      ]
+    },
+    {
+      "id": "r.malt",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "malt"
+        }
+      ]
+    },
+    {
+      "id": "r.hg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cin"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "hg"
+        }
+      ]
+    },
+    {
+      "id": "r.was",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "rea"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "was"
+        }
+      ]
+    },
+    {
+      "id": "r.brass",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "icu"
+          ]
+        },
+        {
+          "accepts": [
+            "izn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "brass"
+        }
+      ]
+    },
+    {
+      "id": "r.borax",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "tinc"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "borax"
+        }
+      ]
+    },
+    {
+      "id": "r.reg",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "stb"
+          ]
+        },
+        {
+          "accepts": [
+            "ife"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "reg"
+        }
+      ]
+    },
+    {
+      "id": "r.bic",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "bis"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bic"
+        }
+      ]
+    },
+    {
+      "id": "r.aqf",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nitre"
+          ]
+        },
+        {
+          "accepts": [
+            "oov"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "aqf"
+        }
+      ]
+    },
+    {
+      "id": "r.icu",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "cu"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "icu"
+        }
+      ]
+    },
+    {
+      "id": "r.isn",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "sn"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "isn"
+        }
+      ]
+    },
+    {
+      "id": "r.izn",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "zn"
+          ]
+        },
+        {
+          "accepts": [
+            "coal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "izn"
+        }
+      ]
+    },
+    {
+      "id": "r.ife",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "fe"
+          ]
+        },
+        {
+          "accepts": [
+            "coal",
+            "charcoal"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ife"
+        }
+      ]
+    },
+    {
+      "id": "r.nitre",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "nit"
+          ]
+        },
+        {
+          "accepts": [
+            "ash"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "nitre"
+        }
+      ]
+    },
+    {
+      "id": "r.oov",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "vit",
+            "copperas"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "oov"
+        }
+      ]
+    },
+    {
+      "id": "r.charcoal",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "charcoal"
+        }
+      ]
+    },
+    {
+      "id": "r.ash",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ash"
+        }
+      ]
+    },
+    {
+      "id": "r.copperas",
+      "name": "",
+      "note": "",
+      "inputs": [
+        {
+          "accepts": [
+            "pyr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "copperas"
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "id": "c.food",
+      "name": "Food",
+      "note": "",
+      "accepts": [
+        "#need:food"
+      ]
+    },
+    {
+      "id": "c.intoxicants",
+      "name": "Intoxicants and physic",
+      "note": "",
+      "accepts": [
+        "#need:intoxicants-and-physic"
+      ]
+    }
+  ],
+  "layout": {
+    "aqf": [1770, 799],
+    "ash": [590, 974],
+    "beer": [1180, 530],
+    "bic": [590, 494],
+    "bis": [0, 358],
+    "blood": [1180, 694],
+    "body": [1180, 1287],
+    "borax": [590, 1294],
+    "brass": [1180, 975],
+    "bread": [1180, 1055],
+    "bronze": [1180, 774],
+    "c.food": [3250, 1048],
+    "c.intoxicants": [3250, 525],
+    "charcoal": [590, 1054],
+    "cin": [0, 615],
+    "coal": [0, 1415],
+    "copperas": [590, 169],
+    "cu": [0, 935],
+    "ess": [0, 695],
+    "fe": [0, 1575],
+    "flour": [590, 814],
+    "golem": [2950, 954],
+    "grain": [0, 855],
+    "h1": [1770, 1030],
+    "h2": [2360, 1047],
+    "h3": [1770, 938],
+    "herbs": [0, 278],
+    "hg": [590, 574],
+    "icu": [590, 894],
+    "ife": [1180, 1207],
+    "isn": [590, 654],
+    "izn": [590, 1214],
+    "malt": [590, 734],
+    "nit": [0, 535],
+    "nitre": [1180, 854],
+    "oov": [1180, 450],
+    "plate": [2360, 925],
+    "pyr": [0, 0],
+    "r.aqf": [1480, 684],
+    "r.ash": [300, 977],
+    "r.beer": [890, 465],
+    "r.bic": [300, 383],
+    "r.blood": [890, 591],
+    "r.body": [890, 1371],
+    "r.borax": [300, 1359],
+    "r.brass": [890, 991],
+    "r.bread": [890, 1103],
+    "r.bronze": [890, 707],
+    "r.charcoal": [300, 1067],
+    "r.copperas": [300, 80],
+    "r.flour": [300, 797],
+    "r.golem": [2660, 905],
+    "r.h1": [1480, 1079],
+    "r.h2": [2070, 1115],
+    "r.h3": [1480, 896],
+    "r.hg": [300, 512],
+    "r.icu": [300, 887],
+    "r.ife": [890, 1259],
+    "r.isn": [300, 617],
+    "r.izn": [300, 1247],
+    "r.malt": [300, 707],
+    "r.nitre": [890, 819],
+    "r.oov": [890, 243],
+    "r.plate": [2070, 882],
+    "r.reg": [1480, 1358],
+    "r.salt": [300, 1499],
+    "r.was": [300, 1157],
+    "rea": [0, 1175],
+    "reg": [1770, 1257],
+    "salt": [590, 1436],
+    "slt": [0, 1495],
+    "sn": [0, 775],
+    "soil": [0, 1335],
+    "stb": [0, 1665],
+    "timber": [0, 1015],
+    "tinc": [0, 1255],
+    "vit": [0, 121],
+    "was": [590, 1134],
+    "zn": [0, 1095]
+  }
+}

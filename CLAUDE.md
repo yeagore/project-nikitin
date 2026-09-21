@@ -8,7 +8,8 @@ in-fiction Age of Exploration driven by opening links between Domains.
 
 **Documentation split:** the **Notion wiki is the design overview** (premise,
 concepts, glossary, decisions); see **Design source of truth** below. **Technical
-detail lives in this repo**: this file for orientation, `docs/*.md` for specs.
+detail lives in this repo**: this file for orientation, `docs/*.md` for specs
+(`docs/economy-lab.md` is the economy lab's manual and its data format).
 `docs/island-generation-plain.md` is a plain-language retelling for Maxim: not
 a source for you, but a document you owe an update to whenever a change alters
 what the spec or the dev-scenes manual say.
@@ -41,8 +42,9 @@ D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   #
 
 It runs headless, so the dev scenes can be executed from a shell and their
 output read without a window. **`docs/dev-scenes.md`** is the manual for the
-five of them: the island lab (F6 in the editor), the audit, the checksum, the
-mesh bench, and the Domains bench. The two commands that matter after touching
+five terrain ones: the island lab (F6 in the editor), the audit, the checksum,
+the mesh bench, and the Domains bench. The sixth, the economy lab, has its own
+manual (see **The economy lab** below). The two commands that matter after touching
 the generator, and the two after touching the renderer:
 
 ```
@@ -258,6 +260,47 @@ which multiply geometry cost, are the first knob if it is ever needed.
 
 ---
 
+## The economy lab
+
+Manual and data format: **`docs/economy-lab.md`**. `scenes/dev/economy_lab.tscn`
+(F6) is an editor of production **webs**, the first stage of an economy
+constructor; amounts, proportions and time are not modelled yet.
+
+- The **catalogue** (`resources/economy/catalogue.json`) is every good: id, name,
+  note, namespaced tags, an icon and a sign. It is shared. A **web**
+  (`resources/economy/webs/<id>.json`) is one version of the economy: which goods
+  are in it, the **recipes** between them, the **consumers**, and the canvas
+  layout. Recipes belong to the web, so two webs can make a good differently.
+- A recipe has input **slots** and outputs. A slot lists what it **accepts**, any
+  one of which fills it: a good's id, or a tag behind a hash
+  (`#kind:golem-heart`), which admits whatever carries it; a slot may be
+  optional. A **consumer** is a sink that accepts the same way (`#need:food`); a
+  good that reaches one is a consumable. Sources, final goods, depth, hubs and
+  issues are read off the links by `WebAnalysis` and never stored.
+- The model is `scripts/economy/` (`ProjectNikitin.Economy`), with no Godot types
+  in it, so the game can load a web as it is. Every change is a plain function
+  in `EconomyEdit`. Files keep fields they do not know (`JsonExtensionData`), and
+  inputs and outputs are objects so an amount can join them without a format
+  break.
+- The lab is `scripts/dev/EconomyLab*.cs` on a `GraphEdit`. The web is the truth
+  and the canvas follows it: every gesture becomes a change through
+  `EconomyLab.Change` (undo, autosave, re-analysis, `SyncGraph`). Do not edit
+  the canvas directly, and do not hold a `Good` or a `Recipe` across a change.
+- Three shell runs. The self-test is the regression gate for the lab and the
+  model: it works on a scratch copy and exits non-zero on a failure.
+
+```
+godot --path . --headless scenes/dev/economy_lab.tscn -- selftest    # 49 checks: links, tags, undo, cut, copy, files, canvas
+godot --path . scenes/dev/economy_lab.tscn -- shot web=starter select=r.golem zoom=1 out=/tmp/lab.png   # windowed; never writes data
+godot --path . --headless scenes/dev/economy_lab.tscn -- bake        # arrange webs with no layout, rewrite every file in the lab's format
+```
+
+The data came from a chat export by `tools/import_economy_export.py` (a one-off;
+re-running it overwrites lab edits). Icons and signs are 16 px placeholders
+generated in chat: pre-production material.
+
+---
+
 ## Repository layout
 
 ```
@@ -270,6 +313,7 @@ scenes/
   dev/generation_checksum.tscn Headless bit-for-bit checksum.
   dev/mesh_bench.tscn          Headless mesher measure: triangles, times, winding probe, voxel oracle, colliders.
   dev/domains_bench.tscn       Windowed: N Domains in view, the frame rate.
+  dev/economy_lab.tscn         The economy lab: an editor of production webs (docs/economy-lab.md).
 scripts/
   Main.cs                      The game scene's script: generate, show, frame.
   CameraRig.cs                 Strategy camera: pan / yaw / pitch / zoom, LookAt-aimed.
@@ -298,7 +342,22 @@ scripts/
     LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
     FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs
     Grid.cs, SeedHash.cs, Flood.cs, Noise.cs, FieldOps.cs
+  economy/                     Namespace ProjectNikitin.Economy; no Godot types (see The economy lab)
+    Catalogue.cs, Good.cs, SpriteRef.cs, TagDef.cs, AtlasDef.cs
+                               The shared catalogue of goods, tags and sprite sheets.
+    EconomyWeb.cs, Recipe.cs, RecipeInput.cs, RecipeOutput.cs, Consumer.cs,
+    Acceptor.cs, Spot.cs       One web: goods, recipes with slots, consumers, layout.
+    EconomyStore.cs            The JSON files: load, save, list.
+    WebAnalysis.cs, WebLink.cs, LinkKind.cs, GoodRole.cs, WebIssue.cs, IssueLevel.cs
+                               A web read back: links, roles, depth, hubs, issues.
+    EconomyEdit.cs             Every change as a plain function; copy a chain, cut a web.
+    WebArrange.cs, LayeredLayout.cs
+                               The left-to-right arrangement.
   dev/
+    EconomyLab*.cs             The economy lab: core (Change, undo, files), Graph, Bar,
+                               Palette, Inspector, SelfTest.
+    GoodNode.cs, RecipeNode.cs, ConsumerNode.cs, WebGraph.cs, PickPopup.cs,
+    LabLook.cs, SpriteBank.cs  Its nodes, canvas, pop-up, colours and sprites.
     IslandLab*.cs              The lab.
     GenerationAudit*.cs        The audit.
     GenerationChecksum.cs      The checksum.
@@ -307,6 +366,8 @@ scripts/
     DevPalette.cs, TinyFont.cs The shared colours, and a 5x7 bitmap font so a
                                headless PNG can carry its own labels.
 resources/island_default.tres  The IslandParams preset every dev scene and the game scene load.
+resources/economy/             catalogue.json, webs/*.json, sprites/: the economy lab's data.
+tools/import_economy_export.py The one-off converter from the chat export to resources/economy.
 docs/
   island-generation.md         The generation spec, and the renderer in §4.
   island-generation-appendix.md  Why, what was tried, the audit, the ideas.
@@ -315,6 +376,7 @@ docs/
                                is the source); do keep it true when the generator
                                or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit, checksum and mesh bench manual.
+  economy-lab.md               The economy lab's manual and data format.
   delegation.md                Which chores go to which sibling model, and how; a guide for a newbie.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
@@ -412,15 +474,20 @@ specific page.
   [#1](https://github.com/yeagore/project-nikitin/pull/1),
   [#3](https://github.com/yeagore/project-nikitin/pull/3),
   [#4](https://github.com/yeagore/project-nikitin/pull/4),
-  [#5](https://github.com/yeagore/project-nikitin/pull/5) (the magick layer) and
-  [#7](https://github.com/yeagore/project-nikitin/pull/7). Every generation
-  stage is done and audited at all three footprints.
+  [#5](https://github.com/yeagore/project-nikitin/pull/5) (the magick layer),
+  [#7](https://github.com/yeagore/project-nikitin/pull/7) and
+  [#8](https://github.com/yeagore/project-nikitin/pull/8) (fjords, estuaries,
+  water depth, the keel's root, the soil glossary). Every generation stage is
+  done and audited at all three footprints.
 - **The mesher**, branch `mesher`, PR
   [#6](https://github.com/yeagore/project-nikitin/pull/6): the chunked
   span-aware renderer with colliders, drawing the main scene and the lab, with
   its two benches and the lab's cursor pick as the colliders' first reader.
   Built, measured and checked; the performance question is answered.
-- What comes after, in rough order, is in `docs/island-generation.md` §6:
+- **The economy lab**, branch `economy-lab`: stage one, the editor of production
+  webs and the data model under it. Next: amounts, time, buildings and labour on
+  the recipes, rates at the sources and consumers, a balance per web.
+- What comes after on the terrain side, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.
 
