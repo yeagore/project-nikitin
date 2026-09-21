@@ -7,9 +7,9 @@ namespace ProjectNikitin.Economy;
 /// <summary>
 /// A web read back: every link it implies (the drawn ones and the ones a tag brings),
 /// what each good is here (a source, an intermediate, a final good, or loose), how many
-/// steps it is from the ground, what uses it, and what is wrong. Nothing here is stored;
-/// build a new one after any change. It is what the lab draws and what a future
-/// simulation would walk.
+/// steps it is from the ground, what uses it, which varieties of it the web can make, and
+/// what is wrong. Nothing here is stored; build a new one after any change. It is what the
+/// lab draws and what a future simulation would walk.
 /// </summary>
 public sealed class WebAnalysis
 {
@@ -27,17 +27,18 @@ public sealed class WebAnalysis
 	private readonly Dictionary<string, int> _depth = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, List<string>> _next = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, List<string>> _prev = new(StringComparer.Ordinal);
-	private readonly Catalogue _catalogue;
+	private readonly Palette _palette;
 	private readonly EconomyWeb _web;
+	private readonly Dictionary<string, VarietySet> _varieties = new(StringComparer.Ordinal);
 
 	private static readonly List<Recipe> NoRecipes = new();
 	private static readonly List<Consumer> NoConsumers = new();
 
-	public static WebAnalysis Of(Catalogue catalogue, EconomyWeb web) => new(catalogue, web);
+	public static WebAnalysis Of(EconomyWeb web) => new(web);
 
-	private WebAnalysis(Catalogue catalogue, EconomyWeb web)
+	private WebAnalysis(EconomyWeb web)
 	{
-		_catalogue = catalogue;
+		_palette = web.Palette;
 		_web = web;
 		ReadLinks();
 		foreach (string id in web.Goods) DepthOf(id, new HashSet<string>(StringComparer.Ordinal));
@@ -92,9 +93,9 @@ public sealed class WebAnalysis
 		var goods = new List<Good>();
 		foreach (string id in _web.Goods)
 		{
-			Good? good = _catalogue.Find(id);
+			Good? good = _palette.Find(id);
 			if (good != null) goods.Add(good);
-			else _issues.Add(new WebIssue(IssueLevel.Error, id, $"\"{id}\" is in this web but not in the catalogue."));
+			else _issues.Add(new WebIssue(IssueLevel.Error, id, $"\"{id}\" is on the canvas but not in the palette."));
 		}
 
 		foreach (Recipe recipe in _web.Recipes)
@@ -155,7 +156,7 @@ public sealed class WebAnalysis
 		var found = new List<(Good, string)>();
 		foreach (string acceptor in accepts.Where(a => !Acceptor.IsTag(a)))
 		{
-			Good? good = inWeb.Contains(acceptor) ? _catalogue.Find(acceptor) : null;
+			Good? good = inWeb.Contains(acceptor) ? _palette.Find(acceptor) : null;
 			if (good == null) _issues.Add(new WebIssue(IssueLevel.Error, node, $"{title} accepts \"{acceptor}\", which is not in this web."));
 			else if (seen.Add(good.Id)) found.Add((good, acceptor));
 		}
@@ -240,7 +241,7 @@ public sealed class WebAnalysis
 				else if (seen == 1 && notes < 5)
 				{
 					notes++;
-					IEnumerable<string> loop = path.Skip(path.IndexOf(next)).Where(k => _catalogue.Find(k) != null).Select(k => _catalogue.Find(k)!.Name);
+					IEnumerable<string> loop = path.Skip(path.IndexOf(next)).Where(k => _palette.Find(k) != null).Select(k => _palette.Find(k)!.Name);
 					_issues.Add(new WebIssue(IssueLevel.Note, next, "A loop: " + string.Join(" → ", loop) + " → and round again."));
 				}
 			}
@@ -252,11 +253,81 @@ public sealed class WebAnalysis
 			if (state.GetValueOrDefault(id) == 0) Walk(id);
 	}
 
+	// ---- varieties -------------------------------------------------------------
+
+	/// <summary>
+	/// The varieties of a good this web can make, each a set of variety tags. A good's own variety
+	/// tags are on every one; its authored varieties (rye, wheat) are alternatives; and each recipe
+	/// that makes it multiplies in, for every slot that passes variety on, the varieties of whatever
+	/// can fill that slot, with "nothing" as one more choice if the slot is optional. So a golem
+	/// recipe with a three-heart slot and one optional fitting yields six golems from one node.
+	/// The list is capped at <see cref="VarietySet.Cap"/>; past it only the count is kept, as "at least".
+	/// </summary>
+	public VarietySet VarietiesOf(string goodId)
+	{
+		if (_varieties.TryGetValue(goodId, out VarietySet? known)) return known;
+		return Varieties(goodId, new HashSet<string>(StringComparer.Ordinal));
+	}
+
+	private VarietySet Varieties(string goodId, HashSet<string> walking)
+	{
+		if (_varieties.TryGetValue(goodId, out VarietySet? known)) return known;
+		Good? good = _palette.Find(goodId);
+		if (good == null) return VarietySet.Plain;
+		if (!walking.Add(goodId)) return VarietySet.Plain; // a loop: this way round adds nothing
+
+		var own = new SortedSet<string>(good.Tags.Where(_palette.IsVariety), StringComparer.Ordinal);
+		var bases = new List<SortedSet<string>>();
+		if (good.VarietyList.Count == 0) bases.Add(own);
+		else
+			foreach (Variety variety in good.VarietyList)
+			{
+				var tags = new SortedSet<string>(own, StringComparer.Ordinal);
+				tags.UnionWith(variety.Tags.Where(_palette.IsVariety));
+				bases.Add(tags);
+			}
+
+		var builder = new VarietySet.Builder();
+		IReadOnlyList<Recipe> makers = MakersOf(goodId);
+		if (makers.Count == 0) foreach (SortedSet<string> b in bases) builder.Add(b);
+
+		foreach (Recipe recipe in makers)
+		{
+			// Start from the good's own varieties and multiply in each passing slot.
+			var product = new VarietySet.Builder();
+			foreach (SortedSet<string> b in bases) product.Add(b);
+
+			for (int i = 0; i < recipe.Inputs.Count; i++)
+			{
+				RecipeInput slot = recipe.Inputs[i];
+				if (!slot.Passes) continue;
+				var choices = new VarietySet.Builder();
+				if (slot.Optional) choices.Add(new SortedSet<string>(StringComparer.Ordinal));
+				foreach (WebLink link in _links)
+					if (link.Kind == LinkKind.Input && link.To == recipe.Id && link.Port == i)
+						choices.Add(Varieties(link.From, walking));
+				if (choices.Count == 0) continue; // nothing fills it: the issue list says so
+				product = product.Times(choices);
+			}
+			builder.Add(product);
+		}
+
+		walking.Remove(goodId);
+		VarietySet result = builder.Build();
+		// A result reached through a loop is partial, so it is kept only when the walk is back at the top.
+		if (walking.Count == 0) _varieties[goodId] = result;
+		return result;
+	}
+
+	/// <summary>The goods that can fill a slot, in link order.</summary>
+	public IEnumerable<string> FillersOf(string recipeId, int port) =>
+		_links.Where(l => l.Kind == LinkKind.Input && l.To == recipeId && l.Port == port).Select(l => l.From);
+
 	/// <summary>A recipe's label, or "→ what it makes" when it has none.</summary>
 	public string TitleOf(Recipe recipe)
 	{
 		if (recipe.Name.Length > 0) return recipe.Name;
 		if (recipe.Outputs.Count == 0) return "→ ?";
-		return "→ " + string.Join(", ", recipe.Outputs.Select(o => _catalogue.Find(o.Good)?.Name ?? o.Good));
+		return "→ " + string.Join(", ", recipe.Outputs.Select(o => _palette.Find(o.Good)?.Name ?? o.Good));
 	}
 }

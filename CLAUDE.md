@@ -1,4 +1,4 @@
-﻿# Project Nikitin
+# Project Nikitin
 
 A single-player economic/exploration strategy game built in **Godot 4.7**. The
 player is a merchant-pioneer running a trading company across the **Ecumene**, a
@@ -6,15 +6,30 @@ tree of floating-island worlds (**Domains**) connected by **Gates**. Think Anno 
 early Paradox economy sim, fantasy setting, procedurally generated worlds, an
 in-fiction Age of Exploration driven by opening links between Domains.
 
+This file holds only what is true of the whole project. What is particular to one
+part lives beside that part, in a `CLAUDE.md` of its own that loads when you read
+files there, and in `docs/`.
+
+## Where things are written down
+
+| Working on | Read first | Spec and manual |
+|---|---|---|
+| The island generator (`scripts/generation/`) | `scripts/generation/CLAUDE.md`: the pipeline, the knobs, the two regression gates, determinism | `docs/island-generation.md`, `docs/island-generation-appendix.md` |
+| The terrain renderer (`scripts/terrain/`) | `scripts/terrain/CLAUDE.md`: the mesher, the measurements, many Domains | `docs/island-generation.md` §4 |
+| The economy model (`scripts/economy/`) | `scripts/economy/CLAUDE.md`: webs, palettes, slots, tags, varieties | `docs/economy-lab.md` |
+| Any dev scene (`scripts/dev/`) | `scripts/dev/CLAUDE.md`: which files are which tool, the economy lab's house rules, shell runs | `docs/dev-scenes.md`, `docs/economy-lab.md` |
+| Handing chores to cheaper models | **Delegating**, below | `docs/delegation.md` |
+
 **Documentation split:** the **Notion wiki is the design overview** (premise,
 concepts, glossary, decisions); see **Design source of truth** below. **Technical
-detail lives in this repo**: this file for orientation, `docs/*.md` for specs
-(`docs/economy-lab.md` is the economy lab's manual and its data format).
-`docs/island-generation-plain.md` is a plain-language retelling for Maxim: not
-a source for you, but a document you owe an update to whenever a change alters
-what the spec or the dev-scenes manual say.
-When a task needs a design fact that is not written down, ask rather than
-invent, and offer to log the answer in the Notion Decision Log.
+detail lives in this repo.** `docs/island-generation-plain.md` is a plain-language
+retelling for Maxim: not a source for you, but a document you owe an update to
+whenever a change alters what the generation spec or the dev-scenes manual say.
+When a task needs a design fact that is not written down, ask rather than invent,
+and offer to log the answer in the Notion Decision Log.
+
+Keep it this way: a fact about one subsystem goes in that subsystem's file, and
+this one stays short.
 
 ---
 
@@ -27,8 +42,9 @@ invent, and offer to log the answer in the Notion Decision Log.
 | Main scene | `res://scenes/main/main.tscn` |
 | Platform | Two machines: a Mac (zsh; Godot at `/Applications/Godot_mono.app`) and a Windows box (PowerShell; Godot on `D:`). The checksum reproduces bit-for-bit across both. |
 
-`.godot/` is generated and git-ignored; never edit or commit it. `*.uid`
-sidecars are tracked.
+`.godot/` is generated and git-ignored; never edit or commit it. `*.uid` and
+`*.import` sidecars are tracked (a headless `--editor --quit-after 3` run writes
+the `.uid` files for new scripts, `--import` the `.import` files).
 
 ### Building & running
 
@@ -40,30 +56,12 @@ this after editing any `.cs`. Godot is off `PATH` on both machines:
 D:\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe   # Windows
 ```
 
-It runs headless, so the dev scenes can be executed from a shell and their
-output read without a window. **`docs/dev-scenes.md`** is the manual for the
-five terrain ones: the island lab (F6 in the editor), the audit, the checksum,
-the mesh bench, and the Domains bench. The sixth, the economy lab, has its own
-manual (see **The economy lab** below). The two commands that matter after touching
-the generator, and the two after touching the renderer:
-
-```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 458 islands moved?
-godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
-godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
-godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
-```
-
-Run the first two under a timeout (headless Godot does not always exit; macOS
-has no `timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`), and note
-the Windows machine prints decimals with a comma. The headless runs are separate
-processes and can run at once. To *look* at a shape headless, the audit's
-`Gallery=<dir> GalleryShapes=Isthmus,Quarters` writes a contact sheet of sixteen
-seeds per arrangement, captioned with the landmass count. To look at the
-*rendered* island without a hand on the keys, the lab takes a screenshot from a
-shell and quits: `godot --path . scenes/dev/island_lab.tscn -- shot nopanel
-zoom=4` (windowed, since a screenshot needs a viewport; a window opens for a
-few seconds on the machine it runs on).
+It runs headless, so the dev scenes can be executed from a shell and their output
+read without a window; each subsystem's `CLAUDE.md` names the runs that matter
+after touching it. Run headless scenes under a timeout (Godot does not always
+exit; macOS has no `timeout`, use `perl -e 'alarm 900; exec @ARGV' <godot> ...`).
+The Windows machine prints decimals with a comma. A windowed run from a shell
+(a `shot`) opens a window for a few seconds on the machine it runs on.
 
 ### Delegating
 
@@ -83,7 +81,8 @@ asked for by name: **`runner`** (haiku) builds, runs the dev scenes under a
 timeout and reports the verdict, not the transcript; **`scout`** (haiku)
 answers a question about the code by reading it, and changes nothing. For
 other chores, `Explore` or `general-purpose` with `model` set. A subagent
-sees this file, its own file and the brief, so the brief carries the paths,
+sees this file, its own file and the brief (not the nested `CLAUDE.md` files unless it reads there),
+so the brief carries the paths,
 the seed, the command and what done looks like. Independent delegations go
 out in one message so they run at once. `docs/delegation.md` is the guide.
 
@@ -135,256 +134,29 @@ translation-only transforms and orient cameras and lights in code (`LookAt`).
 
 ---
 
-## Island generation
-
-Full spec: **`docs/island-generation.md`**. Reasoning, things tried and removed,
-the audit and the ideas not taken: **`docs/island-generation-appendix.md`**.
-
-`IslandGenerator.Generate(seed, IslandParams)` is a pure function producing the
-columnar `IslandData`; it re-rolls (from a derived seed) a Domain that comes out
-unplayable. `IslandGenerator` is the orchestrator; each stage is a static class
-under `scripts/generation/`, in the order they run:
-
-| Stage | Class | What it settles |
-|---|---|---|
-| Footprint | `Footprint`, `Fjords`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, cut with fjords (winding inlets of aether along one grain per Domain into the largest landmass, never through it; rifts were tried and removed), huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
-| Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
-| Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
-| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; each bed flat or a bathymetry (a bowl, a shelf with a drop-off, a plunge, to 20 slabs at 128²; the deepest cell a deep, the bed tiered by the water over it: shallow to two slabs, mid to eight, deep of ooze from nine); on about one Domain in ten a great lake, two to five patches on one rung flooded as one site; goo puddles that never touch water (off by default since 2026-09-15). |
-| Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; a plunge pool dug under most inner falls and a deep middle on half the long reaches (the bed, never the water); occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
-| Keel | `Keel` | The underside, a level hung under the surface; then a root pass brings every column to at least the edge thickness under the lowest ground beside it and tapers the push outward three slabs a cell, so a deep bed never hangs clear of the island (2026-09-19; the audit holds `hangingColumns` and `waterOpenBelow` at 0). The columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by ladders, stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
-| Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
-| Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column, named and coloured by the soil glossary (a four-by-three climate grid of plain soil names, frostearth to redearth, with murkearth on the cold-to-cool half and muckearth on the warm-to-hot, floodearth along hot water, tors in soft country, a delta's fan the wet ground of its row), names. |
-| Magicks | `Magicks` | The magickal density byte, grown rather than sampled: a Turing reaction (Gray–Scott) between the magick, which makes more of itself, and the inhibitor it feeds on, which is replenished everywhere and spreads faster — so the field breaks into spots, worms, mazes or lace instead of settling flat. Its coefficients are not knobs: the settings that pattern at all are islands in a sea of dead and flooded ones, so six of them are named as `MagickPattern` (motes, wells, veins, labyrinth, lace, hollows) and the stage shows two parameters — which pattern, and `MagickDensity`, how much magick the Domain holds. The reaction runs on its own lattice, three ground cells to the side, and is enlarged back onto the columns, so a feature is three cells across for every cell it would have been — magick is a place, not a texture. Read by nothing. |
-| Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
-
-Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
-`SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
-
-**Auto knobs.** The twelve 0–1 knobs in `IslandParams` (fjords, relief, hilliness, mix,
-rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick density)
-accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
-then rolls them from the seed before anything runs, and the values used are
-`IslandData.Settings`. `MagickPattern` is resolved there too, `Auto` picking one
-of the six evenly — it is a named point on the reaction's plane, not a number to
-roll over a range. The preset leaves all of them on Auto, so the audit's default
-seeds sample the whole knob space; a sweep pins the knob it sweeps.
-
-**Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 458 islands against `docs/checksum-baseline.txt`: a change
-meant to leave generation alone must report zero moved; one meant to change it
-re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
-measured guarantees and diffs its headline numbers (forty-six) against
-`docs/audit-baseline.json`. Determinism hangs on details a refactor can break
-silently: hash salts, `Noise` seed offsets, float expression order, scan and
-neighbour order, `List.Sort` (unstable) versus `OrderBy`, and dictionary
-insertion order. When in doubt, run the checksum.
-
-Newer content ships behind a toggle that takes it out of `Auto`'s dice without
-taking it out of the code (`NewArrangements`, `NewLandforms`).
-
-**The knob matrix.** `generation_audit.tscn -- Seeds=1 KnobMatrix` steps every
-0–1 knob over the same seeds against twenty-six outcomes, paired per seed, and
-prints what each knob moves, whether it reverses and what else it moves. Run it
-after touching a knob; the 2026-09-07 reading is in the appendix.
-
----
-
-## Rendering
-
-Spec: **`docs/island-generation.md` §4**. Code under `scripts/terrain/`,
-namespace **`ProjectNikitin.Meshing`**, not `.Terrain`: a namespace of that name
-would shadow the `Terrain` constants class for every file under
-`ProjectNikitin`.
-
-`IslandRenderer` is the terrain renderer: a `Node3D` that draws an `IslandData`
-as `TerrainChunk`s of 16 × 16 columns, each a `StaticBody3D` holding a ground
-`ArrayMesh`, a liquid `ArrayMesh` (water, goo and falling water as three surfaces) and a trimesh
-collider over the ground. `ChunkMesher` is the pure part: per column per span it
-emits the top at `Top + 1`, the underside at `Bottom` and a side wherever the
-neighbouring column's spans do not fill that slab range, merged over the range
-so a cliff is one quad; water gets its top at `WaterLevel + 1` and a wall
-wherever it meets anything that is neither solid nor the same water, which is
-what the lip of a fall and a cataract are; the fall itself is a fourth surface,
-a sheet down the rock from the lip's bed to what it lands on, one per `Fall` and
-one per two-slab cataract (`FaceKind.Fall`, `TerrainMaterials.Falls`). Nothing
-buried is emitted, and the bench's voxel oracle checks that to 0.000 m², with a
-second oracle for the falling water. Vertices are flat-shaded quads with a normal, a
-UV in metres, UV2 = (material or fluid byte, `FaceKind`) for a shader to read,
-and a colour from an `IslandTint`: two callbacks the lab swaps per view and the
-game leaves at `IslandTint.Default` (the column's `SurfaceMaterial` through
-`SurfacePalette`, stone for a lip and every underside). `TerrainMaterials` holds
-the four materials; the lab's boxes use the same factories. The ground reads its
-vertex colour as sRGB (`VertexColorIsSrgb`), as the palettes are written, so a
-face draws its legend swatch's hex; the water still reads its tint as linear. In the renderer's
-local space cell (x, z) is centred on `(x · CellSize, ·, z · CellSize)`, the grid
-→ world rule above. `Show(data)` builds everything; `RebuildAround(x, z)`
-remeshes the chunk holding a column and the neighbours its border faces depend
-on, the hook a build or a terraform will call.
-
-Measured by `mesh_bench.tscn` on the Mac: a 128² island is about 50,000 ground
-triangles (62% of what the boxes drew) meshed in 9 ms, with meshes, colliders
-and nodes in another 40 ms, about 6 MB. Triangles were never the cost; the
-performance question the mesher was to answer is answered, yes with room to
-spare. Greedy merging of coplanar faces is not done and not needed. `main.tscn`
-(F5) shows one generated Domain through the renderer (`Main.cs`: N for a new
-seed, F to frame); the lab draws through it too, Z for the old boxes, and reads
-the column under the cursor off the colliders with a ray (`IslandLab.Pick.cs`),
-the pattern a settlement placer's cell pick will follow. The bench casts rays
-at every third column from above and below and expects the top and the keel.
-
-**Many Domains.** `godot --path . scenes/dev/domains_bench.tscn -- domains=20`
-(windowed) lays out N Domains on consecutive seeds in a grid a quarter footprint
-apart, frames them all, and after six seconds with vsync off prints the frame
-rate, draw calls, primitives, the render thread's CPU time and memory, then
-quits (the GPU time
-reads 0 on Metal; past 150 Domains it builds no colliders, since Jolt's default
-cap of 10,240 bodies is 160 Domains × 64 chunk bodies, a project setting).
-Measured on the Mac (M2, 16 GB, a 4K display) on 2026-09-06 with every Domain
-in view: 1, 20, 40 and 80 Domains all hold the display's 120 Hz; 80 is 4,173
-draw calls and 3.0 million triangles. The knee is between 80 and 160: 160
-Domains (8,300 draw calls, 6.1 million triangles) run at 65 fps, 320 at 33,
-640 at 17, the frame time growing about 0.1 ms per Domain in view with draw
-submission about 0.65 µs a call. Per Domain: about 52 draw calls, 50,000
-triangles, 3.5 MB of video memory, 1 MB of data and 2 MB of collider, over a
-170 MB engine baseline. Rendering the terrain of twenty Domains is not the
-constraint; generating them is 3.3 s for twenty on one thread at load, and
-`Generate` is pure, so that parallelises. The budget the biome layer inherits
-with one Domain in view is some 4 million triangles a frame at 120 Hz on this
-machine, on two conditions: features are drawn by instancing (`MultiMesh`),
-never a node or a draw call per tree, and the directional shadow's cascades,
-which multiply geometry cost, are the first knob if it is ever needed.
-
----
-
-## The economy lab
-
-Manual and data format: **`docs/economy-lab.md`**. `scenes/dev/economy_lab.tscn`
-(F6) is an editor of production **webs**, the first stage of an economy
-constructor; amounts, proportions and time are not modelled yet.
-
-- The **catalogue** (`resources/economy/catalogue.json`) is every good: id, name,
-  note, namespaced tags, an icon and a sign. It is shared. A **web**
-  (`resources/economy/webs/<id>.json`) is one version of the economy: which goods
-  are in it, the **recipes** between them, the **consumers**, and the canvas
-  layout. Recipes belong to the web, so two webs can make a good differently.
-- A recipe has input **slots** and outputs. A slot lists what it **accepts**, any
-  one of which fills it: a good's id, or a tag behind a hash
-  (`#kind:golem-heart`), which admits whatever carries it; a slot may be
-  optional. A **consumer** is a sink that accepts the same way (`#need:food`); a
-  good that reaches one is a consumable. Sources, final goods, depth, hubs and
-  issues are read off the links by `WebAnalysis` and never stored.
-- The model is `scripts/economy/` (`ProjectNikitin.Economy`), with no Godot types
-  in it, so the game can load a web as it is. Every change is a plain function
-  in `EconomyEdit`. Files keep fields they do not know (`JsonExtensionData`), and
-  inputs and outputs are objects so an amount can join them without a format
-  break.
-- The lab is `scripts/dev/EconomyLab*.cs` on a `GraphEdit`. The web is the truth
-  and the canvas follows it: every gesture becomes a change through
-  `EconomyLab.Change` (undo, autosave, re-analysis, `SyncGraph`). Do not edit
-  the canvas directly, and do not hold a `Good` or a `Recipe` across a change.
-- Three shell runs. The self-test is the regression gate for the lab and the
-  model: it works on a scratch copy and exits non-zero on a failure.
-
-```
-godot --path . --headless scenes/dev/economy_lab.tscn -- selftest    # 49 checks: links, tags, undo, cut, copy, files, canvas
-godot --path . scenes/dev/economy_lab.tscn -- shot web=starter select=r.golem zoom=1 out=/tmp/lab.png   # windowed; never writes data
-godot --path . --headless scenes/dev/economy_lab.tscn -- bake        # arrange webs with no layout, rewrite every file in the lab's format
-```
-
-The data came from a chat export by `tools/import_economy_export.py` (a one-off;
-re-running it overwrites lab edits). Icons and signs are 16 px placeholders
-generated in chat: pre-production material.
-
----
-
 ## Repository layout
 
 ```
 project.godot                  Engine config. run/main_scene points at main.tscn.
 Project Nikitin.csproj / .sln   .NET project (Godot.NET.Sdk 4.7.2, net8.0).
-scenes/
-  main/main.tscn               The game scene: one generated Domain through IslandRenderer.
-  dev/island_lab.tscn          Island generation harness (see docs/dev-scenes.md).
-  dev/generation_audit.tscn    Headless guarantee audit.
-  dev/generation_checksum.tscn Headless bit-for-bit checksum.
-  dev/mesh_bench.tscn          Headless mesher measure: triangles, times, winding probe, voxel oracle, colliders.
-  dev/domains_bench.tscn       Windowed: N Domains in view, the frame rate.
-  dev/economy_lab.tscn         The economy lab: an editor of production webs (docs/economy-lab.md).
+scenes/main/main.tscn          The game scene: one generated Domain through IslandRenderer.
+scenes/dev/                    Six dev scenes: island_lab, generation_audit, generation_checksum,
+                               mesh_bench, domains_bench, economy_lab.
 scripts/
-  Main.cs                      The game scene's script: generate, show, frame.
-  CameraRig.cs                 Strategy camera: pan / yaw / pitch / zoom, LookAt-aimed.
-  terrain/                     Namespace ProjectNikitin.Meshing (see Rendering)
-    IslandRenderer.cs          The terrain renderer: the chunk grid; Show and RebuildAround.
-    TerrainChunk.cs            One 16 × 16 tile: ground mesh, liquid mesh, trimesh collider.
-    ChunkMesher.cs             The pure mesher: the exposed faces of one chunk.
-    MeshBuffer.cs              Quads into ArrayMesh arrays and collider faces; the winding rule.
-    IslandTint.cs, FaceKind.cs, SurfacePalette.cs, TerrainMaterials.cs
-                               Colour per face, which side a face is, the provisional
-                               material palette (the soil glossary's colours), the materials.
-  generation/                  Namespace ProjectNikitin.Generation
-    IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
-    Footprint.cs, Fjords.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
-    Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
-    Roster.cs                  The terrain stages (see the table above).
-    Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,
-                               deltas and springs, the lake that swallows a river.
-    Traversal*.cs, WalkArea.cs, Crossing.cs, BridgeEase.cs
-                               The read-back analysis and its value types.
-    Passage.cs, Works.cs       The roads between the Gates.
-    Gate.cs, GatePlacement.cs, GateSites.cs
-    Habitat.cs, Magicks.cs, MagickPattern.cs, Surfaces.cs, SurfaceMaterial.cs,
-    Names.cs, Overhangs.cs
-    IslandData.cs, IslandParams.cs, Span.cs, Terrain.cs
-    LandformType.cs, TerrainCharacter.cs, ReliefStyle.cs, IslandArrangement.cs,
-    FluidKind.cs, Geyser.cs, Fall.cs, RegionPlan.cs
-    Grid.cs, SeedHash.cs, Flood.cs, Noise.cs, FieldOps.cs
-  economy/                     Namespace ProjectNikitin.Economy; no Godot types (see The economy lab)
-    Catalogue.cs, Good.cs, SpriteRef.cs, TagDef.cs, AtlasDef.cs
-                               The shared catalogue of goods, tags and sprite sheets.
-    EconomyWeb.cs, Recipe.cs, RecipeInput.cs, RecipeOutput.cs, Consumer.cs,
-    Acceptor.cs, Spot.cs       One web: goods, recipes with slots, consumers, layout.
-    EconomyStore.cs            The JSON files: load, save, list.
-    WebAnalysis.cs, WebLink.cs, LinkKind.cs, GoodRole.cs, WebIssue.cs, IssueLevel.cs
-                               A web read back: links, roles, depth, hubs, issues.
-    EconomyEdit.cs             Every change as a plain function; copy a chain, cut a web.
-    WebArrange.cs, LayeredLayout.cs
-                               The left-to-right arrangement.
-  dev/
-    EconomyLab*.cs             The economy lab: core (Change, undo, files), Graph, Bar,
-                               Palette, Inspector, SelfTest.
-    GoodNode.cs, RecipeNode.cs, ConsumerNode.cs, WebGraph.cs, PickPopup.cs,
-    LabLook.cs, SpriteBank.cs  Its nodes, canvas, pop-up, colours and sprites.
-    IslandLab*.cs              The lab.
-    GenerationAudit*.cs        The audit.
-    GenerationChecksum.cs      The checksum.
-    MeshBench*.cs, DomainsBench.cs
-                               The mesh bench and the Domains bench.
-    DevPalette.cs, TinyFont.cs The shared colours, and a 5x7 bitmap font so a
-                               headless PNG can carry its own labels.
+  Main.cs, CameraRig.cs        The game scene's script; the strategy camera.
+  generation/                  ProjectNikitin.Generation: the island generator.      CLAUDE.md inside.
+  terrain/                     ProjectNikitin.Meshing: the terrain renderer.         CLAUDE.md inside.
+  economy/                     ProjectNikitin.Economy: webs, palettes, recipes.      CLAUDE.md inside.
+  dev/                         ProjectNikitin.Dev: the dev scenes' scripts.          CLAUDE.md inside.
 resources/island_default.tres  The IslandParams preset every dev scene and the game scene load.
-resources/economy/             catalogue.json, webs/*.json, sprites/: the economy lab's data.
-tools/import_economy_export.py The one-off converter from the chat export to resources/economy.
-docs/
-  island-generation.md         The generation spec, and the renderer in §4.
-  island-generation-appendix.md  Why, what was tried, the audit, the ideas.
-  island-generation-plain.md   The spec, appendix and manual retold in plain words,
-                               for Maxim. Do not read it for orientation (the spec
-                               is the source); do keep it true when the generator
-                               or the audit changes, in the same plain register.
-  dev-scenes.md                The lab, audit, checksum and mesh bench manual.
-  economy-lab.md               The economy lab's manual and data format.
-  delegation.md                Which chores go to which sibling model, and how; a guide for a newbie.
-  audit-baseline.json          The last accepted audit numbers.
-  checksum-baseline.txt        The last accepted island hashes.
-CLAUDE.md                      This file.
-.claude/agents/                The subagents the main model delegates chores to (see Delegating).
-  runner.md                    haiku: builds, runs the dev scenes under a timeout, reports the verdict.
-  scout.md                     haiku: answers a question about the code by reading it; changes nothing.
+resources/economy/             webs/*.json (each a whole web with its palette) and sprites/.
+tools/                         One-off data scripts (the economy import, the tagged ledger).
+docs/                          Specs, manuals, baselines (see the table above), delegation.md.
+.claude/agents/                runner and scout, the two packaged subagents (see Delegating).
 ```
+
+Namespace `ProjectNikitin.Meshing`, not `.Terrain`: a namespace of that name would
+shadow the `Terrain` constants class for every file under `ProjectNikitin`.
 
 Planned, create as needed and keep the tree shallow: `resources/` for biome,
 archetype and goods data, `addons/` for plugins.
@@ -395,7 +167,8 @@ archetype and goods data, `addons/` for plugins.
 - C# files `PascalCase`, one type per file, file name = type name; a class split
   across files uses `Name.Part.cs`. Namespace `ProjectNikitin` or a sub-namespace.
 - Use the design vocabulary in code: `Domain`, `Slab`, `Gate`, `Link`, `Polity`,
-  `Settlement`, `Essence`, not "block", "portal", "faction", "town".
+  `Settlement`, `Essence`, not "block", "portal", "faction", "town"; in the
+  economy, `Web`, `Palette`, `Good`, `Recipe`, `Slot`, `Consumer`, `Variety`.
 
 ---
 
@@ -431,6 +204,11 @@ archetype and goods data, `addons/` for plugins.
 - **Player Avatar**: the on-map character, a mobile order relay. **Pioneers /
   Aethernaut / Aethership**: expedition crew, scout and vessel. **Aspiration**:
   the run's win condition.
+- **Web / Palette / Recipe / Slot / Consumer / Variety**: the economy lab's words.
+  A web is one version of the economy with its own palette of goods and tags; a
+  recipe's slots accept goods or tags; a consumer marks consumables; a variety is
+  a good's particular kind, authored (rye) or derived from what went in (an
+  arsenic-hearted golem). `scripts/economy/CLAUDE.md` has them exactly.
 
 ---
 
@@ -485,8 +263,10 @@ specific page.
   its two benches and the lab's cursor pick as the colliders' first reader.
   Built, measured and checked; the performance question is answered.
 - **The economy lab**, branch `economy-lab`: stage one, the editor of production
-  webs and the data model under it. Next: amounts, time, buildings and labour on
-  the recipes, rates at the sources and consumers, a balance per web.
+  webs and the data model under it: a palette per web, tag slots, tag namespaces
+  with roles, varieties that ride from inputs to outputs. Next: amounts, time,
+  buildings and labour on the recipes, rates at the sources and consumers, a
+  balance per web, and variety tags read by prices and uses.
 - What comes after on the terrain side, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.
@@ -502,7 +282,7 @@ Flagged so they are not silently hard-coded:
 2. **Domains loaded at once.** Whether only the active Domain is simulated and
    rendered, or several. Drives the streaming and LOD approach. The renderer
    does not constrain it: forty 128² Domains in view hold 120 Hz (see
-   Rendering); generation time and the simulation are what would.
+   `scripts/terrain/CLAUDE.md`); generation time and the simulation are what would.
 3. **Camera.** `CameraRig` pans, yaws, pitches and wheel-zooms, aimed with
    `LookAt`; it polls physical keys. Undesigned: edge-scroll, orthographic, pan
    bounds, an InputMap.

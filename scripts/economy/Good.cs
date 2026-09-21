@@ -5,9 +5,8 @@ using System.Text.Json.Serialization;
 namespace ProjectNikitin.Economy;
 
 /// <summary>
-/// One good of the catalogue: what it is called, what it is, what it looks like.
-/// How it is made is not here; that is a <see cref="Recipe"/>, and recipes belong
-/// to a web, so the same good can be made differently in two versions of the economy.
+/// One good of a web's palette: what it is called, what it is, what it looks like.
+/// How it is made is not here; that is a <see cref="Recipe"/>.
 /// </summary>
 public sealed class Good
 {
@@ -30,9 +29,25 @@ public sealed class Good
 	/// <summary>The alchemical sign, a second 16 px sprite beside the icon.</summary>
 	public SpriteRef? Sign { get; set; }
 
+	/// <summary>Varieties authored by hand (rye and wheat of grain), or null for a good that has none. Read through <see cref="VarietyList"/>.</summary>
+	public List<Variety>? Varieties { get; set; }
+
 	/// <summary>Fields this build does not know, kept so a load and a save lose nothing.</summary>
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }
 
 	public bool Has(string tag) => Tags.Contains(tag);
+
+	/// <summary>The authored varieties, never null.</summary>
+	[JsonIgnore]
+	public IReadOnlyList<Variety> VarietyList => Varieties ?? (IReadOnlyList<Variety>)System.Array.Empty<Variety>();
+
+	/// <summary>The good's own tags and those of its authored varieties.</summary>
+	public IEnumerable<string> AllTags()
+	{
+		foreach (string tag in Tags) yield return tag;
+		if (Varieties == null) yield break;
+		foreach (Variety variety in Varieties)
+			foreach (string tag in variety.Tags) yield return tag;
+	}
 }

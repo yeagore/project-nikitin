@@ -21,7 +21,7 @@ public partial class EconomyLab
 	private LineEdit _goodName = null!, _webName = null!;
 	private Label _goodId = null!, _webHint = null!;
 	private OptionButton _webFrom = null!;
-	private CheckBox _webOptional = null!;
+	private CheckBox _webOptional = null!, _webLean = null!;
 	private Spot _goodAt;
 	private Action<string>? _goodThen;
 	private ulong _saidAt;
@@ -72,11 +72,11 @@ public partial class EconomyLab
 		_webPick = new OptionButton { CustomMinimumSize = new Vector2(260, 0), FocusMode = FocusModeEnum.None, TooltipText = "Which version of the economy is open. Each is a file under resources/economy/webs." };
 		_webPick.ItemSelected += index => OpenWeb(_webPick.GetItemMetadata((int)index).AsString());
 		row.AddChild(_webPick);
-		row.AddChild(Press("New…", "A new web: empty, a copy of this one, or the selected goods with everything upstream of them.", AskNewWeb));
+		row.AddChild(Press("New…", "A new web with its own palette: clean, this web's, a copy of this web, or the selected goods with everything upstream of them.", AskNewWeb));
 		row.AddChild(Press("Bin…", "Move this web's file to the system trash.", AskBinWeb));
 		row.AddChild(new VSeparator());
 
-		_saveButton = Press("Save", "Write the web and the catalogue to disk now (Cmd/Ctrl+S).", Save);
+		_saveButton = Press("Save", "Write the web to disk now (Cmd/Ctrl+S).", Save);
 		row.AddChild(_saveButton);
 		var auto = new CheckBox { Text = "Autosave", ButtonPressed = _autosave, TooltipText = "Save a moment after every change. The files are in the repository, so git is the safety net." };
 		auto.Toggled += on =>
@@ -106,6 +106,17 @@ public partial class EconomyLab
 		row.AddChild(Press("Find…", "Go to a good, a recipe or a consumer of this web by name (Cmd/Ctrl+F).", Find));
 
 		row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+
+		// The interface's scale and the window: per machine, since screens differ.
+		var scale = new OptionButton { FocusMode = FocusModeEnum.None, TooltipText = "How large the lab's interface is drawn on this machine. Auto follows the screen." };
+		float[] scales = { 0f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f };
+		foreach (float option in scales) scale.AddItem(option == 0f ? "UI auto" : $"UI {option * 100:0}%");
+		scale.Select(Math.Max(0, Array.IndexOf(scales, _uiScale)));
+		scale.ItemSelected += index => SetUiScale(scales[index]);
+		row.AddChild(scale);
+		row.AddChild(Press("Full screen", "Full screen, or back to a maximised window (F11).", ToggleFullscreen));
+		row.AddChild(new VSeparator());
+
 		_issuesButton = Press("No issues", "What the web's analysis found wrong or unfinished. Pick one to go to it.", ShowIssues);
 		row.AddChild(_issuesButton);
 		row.AddChild(Press("Help", "What the mouse and the keys do (F1).", ToggleHelp));
@@ -155,7 +166,7 @@ public partial class EconomyLab
 	{
 		if (_webPick == null) return;
 		if (_webPick.Selected >= 0 && _webPick.GetItemText(_webPick.Selected) != Web.Name) _webPick.SetItemText(_webPick.Selected, Web.Name);
-		bool dirty = _webDirty || _catalogueDirty;
+		bool dirty = _webDirty;
 		_saveButton.Text = dirty ? "Save •" : "Saved";
 		_saveButton.Disabled = !dirty;
 		_undoButton.Disabled = _undo.Count == 0;
@@ -171,7 +182,7 @@ public partial class EconomyLab
 		_issuesButton.Disabled = Analysis.Issues.Count == 0;
 
 		int sources = Web.Goods.Count(g => Analysis.RoleOf(g) == GoodRole.Source), finals = Web.Goods.Count(g => Analysis.RoleOf(g) == GoodRole.Final);
-		_counts.Text = $"{Web.Goods.Count} goods ({sources} sources, {finals} final) · {Web.Recipes.Count} recipes · {Web.Consumers.Count} consumers · {Analysis.Links.Count} links · catalogue {Catalogue.Goods.Count}";
+		_counts.Text = $"{Web.Goods.Count} goods ({sources} sources, {finals} final) · {Web.Recipes.Count} recipes · {Web.Consumers.Count} consumers · {Analysis.Links.Count} links · palette {Palette.Goods.Count}";
 	}
 
 	private void RefreshWebList()
@@ -200,8 +211,9 @@ public partial class EconomyLab
 		"""
 		THE ECONOMY LAB
 
-		A web is one version of the economy: some goods of the catalogue, the recipes between
-		them, and the consumers they lead to. Goods are shared by all webs; recipes belong to one.
+		A web is one version of the economy, whole in one file: its own palette of goods and tags,
+		the recipes between them, and the consumers they lead to. Nothing is shared between webs:
+		what you do here stays here. Goods cross from web to web only by the palette's Import.
 
 		CANVAS
 		  Drag a node to move it; drag on empty canvas for a rubber band; wheel to zoom;
@@ -213,24 +225,29 @@ public partial class EconomyLab
 		  Drag from a good to a consumer: the good is a consumable.
 		  Drag a link off a left port to cut it, or right-click the link.
 		  Let a link go over empty canvas for a menu: a new recipe, a new good, a tag.
-		  Right-click the canvas or a node for more. Delete removes the selected nodes
-		  from the web (goods stay in the catalogue).
+		  Right-click the canvas or a node for more. Delete (Backspace on a Mac) takes the
+		  selected nodes off the canvas; goods stay in the palette.
 
-		TAGS
-		  A slot can accept a tag instead of a good (amber). Every good in the web that carries
+		TAGS AND VARIETIES
+		  A slot can accept a tag instead of a good (amber): every good on the canvas that carries
 		  the tag links itself in. Give a new heart the tag kind:golem-heart and it fits the golem.
+		  A tag's namespace (the word before the colon) has a role. Core: what slots accept.
+		  Variety (violet): what is particular. A slot marked "passes variety" (») stamps the
+		  variety tags of whatever fills it on the output, so one recipe makes every variety its
+		  inputs allow. A good's line on the canvas says how many; the inspector lists them.
 
 		DOCKS
-		  Left: the catalogue. Drag goods onto the canvas, or double-click. "With its chain"
-		  brings the recipes and everything upstream from another web. The Tags tab renames
-		  and deletes tags.
+		  Left: this web's palette. Drag goods onto the canvas, or double-click. "With its chain"
+		  brings the recipes and everything upstream from another web. Import brings goods or a
+		  whole palette from another web. The Tags tab edits tags and namespaces.
 		  Right: whatever is selected, for editing. Nothing selected shows the web itself.
 
 		KEYS
-		  Cmd/Ctrl+S save · Cmd/Ctrl+Z undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+F find · F frame · F1 this sheet
+		  Cmd/Ctrl+S save · Cmd/Ctrl+Z undo · Shift+Cmd/Ctrl+Z redo · Cmd/Ctrl+F find · F frame · F11 full screen · F1 this sheet
 
 		FILES
-		  resources/economy/catalogue.json, webs/*.json, sprites/. Commit them like code.
+		  resources/economy/webs/<web>.json, one per web, saved as you work. Commit and push them
+		  like code: that is how they reach your other machine, and how any day's web comes back.
 		""";
 
 	private void BuildHelp()
@@ -268,7 +285,7 @@ public partial class EconomyLab
 		goodRows.AddChild(_goodName);
 		_goodId = LabLook.Text(" ", 12, LabLook.Faint);
 		goodRows.AddChild(_goodId);
-		_goodName.TextChanged += text => _goodId.Text = text.Trim().Length == 0 ? " " : "id: " + EconomyEdit.FreeGoodId(Catalogue, text) + "   (it goes into the catalogue and into this web)";
+		_goodName.TextChanged += text => _goodId.Text = text.Trim().Length == 0 ? " " : "id: " + EconomyEdit.FreeGoodId(Palette, text) + "   (it goes into this web's palette and onto its canvas)";
 		_goodName.TextSubmitted += _ =>
 		{
 			_goodDialog.Hide();
@@ -285,12 +302,16 @@ public partial class EconomyLab
 		webRows.AddChild(_webName);
 		webRows.AddChild(LabLook.Text("Start from", 13, LabLook.Dim));
 		_webFrom = new OptionButton();
-		_webFrom.AddItem("Nothing: an empty web");
+		_webFrom.AddItem("Nothing: an empty canvas and a clean palette");
+		_webFrom.AddItem("An empty canvas, with this web's palette");
 		_webFrom.AddItem("A copy of the open web");
 		_webFrom.AddItem("The selected goods and everything upstream of them");
 		webRows.AddChild(_webFrom);
 		_webOptional = new CheckBox { Text = "bring optional inputs and their chains too", ButtonPressed = false };
 		webRows.AddChild(_webOptional);
+		_webLean = new CheckBox { Text = "a lean palette: only the goods the cut uses", ButtonPressed = true };
+		_webLean.Toggled += _ => HintNewWeb();
+		webRows.AddChild(_webLean);
 		_webHint = LabLook.Text(" ", 12, LabLook.Faint);
 		_webHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_webHint.CustomMinimumSize = new Vector2(430, 40);
@@ -306,7 +327,7 @@ public partial class EconomyLab
 	}
 
 	/// <summary>
-	/// Asks for a name, then makes a good in the catalogue and puts it in the web at <paramref name="at"/>.
+	/// Asks for a name, then makes a good in the palette and puts it on the canvas at <paramref name="at"/>.
 	/// <paramref name="then"/> runs inside the same change with the new id, so a link to it is part of one undo step.
 	/// </summary>
 	internal void AskNewGood(Spot at, Action<string> then)
@@ -323,10 +344,10 @@ public partial class EconomyLab
 	{
 		string name = _goodName.Text.Trim();
 		if (name.Length == 0) return;
-		string id = EconomyEdit.FreeGoodId(Catalogue, name);
-		Change($"new good {name}", Touch.Both, () =>
+		string id = EconomyEdit.FreeGoodId(Palette, name);
+		Change($"new good {name}", () =>
 		{
-			Catalogue.Add(new Good { Id = id, Name = name });
+			Palette.Add(new Good { Id = id, Name = name });
 			EconomyEdit.AddGood(Web, id, _goodAt);
 			_goodThen?.Invoke(id);
 			SelectNew(id);
@@ -336,7 +357,7 @@ public partial class EconomyLab
 	private void AskNewWeb()
 	{
 		_webName.Text = "";
-		_webFrom.Select(SelectedKeys().Any(Web.Holds) ? 2 : 0);
+		_webFrom.Select(SelectedKeys().Any(Web.Holds) ? 3 : 0);
 		HintNewWeb();
 		_webDialog.PopupCentered();
 		_webName.GrabFocus();
@@ -346,13 +367,16 @@ public partial class EconomyLab
 	{
 		int goods = SelectedKeys().Count(Web.Holds);
 		string file = "webs/" + EconomyEdit.Free(EconomyEdit.Slug(_webName.Text), Store.HasWeb) + ".json";
-		_webOptional.Visible = _webFrom.Selected == 2;
+		_webOptional.Visible = _webLean.Visible = _webFrom.Selected == 3;
+		const string own = "Whatever you do in it stays in it: every web has its own goods and tags.";
 		_webHint.Text = _webFrom.Selected switch
 		{
-			2 when goods == 0 => "Nothing is selected. Select the final goods you want on the canvas first (a rubber band, or Shift-click), then come back.",
-			2 => $"{goods} selected good{(goods == 1 ? "" : "s")}, their recipes, and everything those need, down to the ground. Saved as {file}.",
-			1 => $"Every good, recipe and consumer of {Web.Name}, to change freely. Saved as {file}.",
-			_ => $"An empty canvas; drag goods in from the catalogue. Saved as {file}.",
+			3 when goods == 0 => "Nothing is selected. Select the final goods you want on the canvas first (a rubber band, or Shift-click), then come back.",
+			3 => $"{goods} selected good{(goods == 1 ? "" : "s")}, their recipes, and everything those need, down to the ground; the palette is "
+			     + (_webLean.ButtonPressed ? "just those goods" : $"all {Palette.Goods.Count} goods of this web") + $". {own} Saved as {file}.",
+			2 => $"Every good, recipe and consumer of {Web.Name}, palette and all, to change freely. {own} Saved as {file}.",
+			1 => $"An empty canvas, with copies of all {Palette.Goods.Count} goods and the tags of {Web.Name} in the palette. {own} Saved as {file}.",
+			_ => $"An empty canvas and an empty palette. Make goods, or bring them from other webs with the palette's Import. {own} Saved as {file}.",
 		};
 	}
 
@@ -365,22 +389,28 @@ public partial class EconomyLab
 		switch (_webFrom.Selected)
 		{
 			case 1:
+				made = new EconomyWeb { Id = id, Name = name };
+				EconomyEdit.ImportPalette(Web, made);
+				break;
+			case 2:
 				made = EconomyStore.Clone(Web);
 				made.Id = id;
 				made.Name = name;
 				break;
-			case 2:
+			case 3:
 				List<string> goods = SelectedKeys().Where(Web.Holds).ToList();
 				if (goods.Count == 0)
 				{
 					Say("No goods are selected, so there was nothing to cut a web from.");
 					return;
 				}
-				made = EconomyEdit.Cut(Catalogue, Web, goods, id, name, _webOptional.ButtonPressed);
-				made.Note = $"Cut from {Web.Name}: " + string.Join(", ", goods.Select(g => Catalogue.Find(g)?.Name ?? g)) + ".";
+				made = EconomyEdit.Cut(Web, goods, id, name, _webOptional.ButtonPressed, _webLean.ButtonPressed);
+				made.Note = $"Cut from {Web.Name}: " + string.Join(", ", goods.Select(g => Palette.Find(g)?.Name ?? g)) + ".";
 				break;
 			default:
 				made = new EconomyWeb { Id = id, Name = name };
+				// A clean palette still knows where the sprite sheets are, so a new good can be given an icon.
+				foreach (AtlasDef sheet in Palette.Atlases) made.Palette.Atlases.Add(EconomyStore.Clone(sheet));
 				break;
 		}
 		Store.SaveWeb(made);
@@ -390,7 +420,7 @@ public partial class EconomyLab
 
 	private void AskBinWeb()
 	{
-		_binDialog.DialogText = $"Move \"{Web.Name}\" ({Web.Id}.json) to the system trash?\nThe catalogue and the other webs are not touched.";
+		_binDialog.DialogText = $"Move \"{Web.Name}\" ({Web.Id}.json) to the system trash?\nIts palette goes with it. The other webs are not touched.";
 		_binDialog.PopupCentered();
 	}
 

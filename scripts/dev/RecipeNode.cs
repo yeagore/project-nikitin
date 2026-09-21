@@ -11,7 +11,8 @@ namespace ProjectNikitin.Dev;
 /// A recipe on the canvas. Each row is an input slot on the left and an output on the right;
 /// the last row is a pair of open ports, so a link dropped there makes a new slot or a new
 /// output. A slot says what it accepts: a good, several ("or"), or a tag in amber, which
-/// links itself to whatever in the web carries it.
+/// links itself to whatever in the web carries it; a chevron marks a slot whose filling
+/// passes its variety on to the output.
 /// </summary>
 public partial class RecipeNode : GraphNode
 {
@@ -38,7 +39,7 @@ public partial class RecipeNode : GraphNode
 		}
 	}
 
-	internal void Show(Recipe recipe, Catalogue catalogue, WebAnalysis analysis, SpriteBank sprites)
+	internal void Show(Recipe recipe, Palette palette, WebAnalysis analysis, SpriteBank sprites)
 	{
 		RecipeId = recipe.Id;
 		string title = analysis.TitleOf(recipe);
@@ -46,11 +47,11 @@ public partial class RecipeNode : GraphNode
 		var shown = new StringBuilder(title).Append('|').Append(recipe.Note);
 		foreach (RecipeInput slot in recipe.Inputs)
 		{
-			shown.Append("|i").Append(slot.Optional ? '?' : '!');
-			foreach (string acceptor in slot.Accepts) shown.Append(acceptor).Append('=').Append(catalogue.Find(acceptor)?.Name).Append(',');
+			shown.Append("|i").Append(slot.Optional ? '?' : '!').Append(slot.Passes ? '>' : '.');
+			foreach (string acceptor in slot.Accepts) shown.Append(acceptor).Append('=').Append(palette.Find(acceptor)?.Name).Append(',');
 		}
 		foreach (RecipeOutput output in recipe.Outputs)
-			shown.Append("|o").Append(output.Good).Append('=').Append(catalogue.Find(output.Good)?.Name);
+			shown.Append("|o").Append(output.Good).Append('=').Append(palette.Find(output.Good)?.Name);
 		if (shown.ToString() == _shown) return;
 		_shown = shown.ToString();
 
@@ -78,7 +79,7 @@ public partial class RecipeNode : GraphNode
 			{
 				RecipeInput slot = recipe.Inputs[i];
 				left = SlotColour(slot);
-				FillInput(row, slot, catalogue, sprites);
+				FillInput(row, slot, palette, sprites);
 			}
 			else if (i == Inputs) row.AddChild(LabLook.Text("+ input", 11, LabLook.Faint));
 
@@ -86,7 +87,7 @@ public partial class RecipeNode : GraphNode
 
 			if (i < Outputs)
 			{
-				Good? made = catalogue.Find(recipe.Outputs[i].Good);
+				Good? made = palette.Find(recipe.Outputs[i].Good);
 				row.AddChild(LabLook.Text(made?.Name ?? recipe.Outputs[i].Good, 11, LabLook.ProductPort, trim: false));
 				row.AddChild(LabLook.Sprite(sprites.Get(made?.Icon), 16));
 			}
@@ -103,7 +104,7 @@ public partial class RecipeNode : GraphNode
 	}
 
 	/// <summary>The slot in words: "Copper", "Coal or Charcoal", "#golem-heart", with "(opt)" in front of an optional one.</summary>
-	private static void FillInput(HBoxContainer row, RecipeInput slot, Catalogue catalogue, SpriteBank sprites)
+	private static void FillInput(HBoxContainer row, RecipeInput slot, Palette palette, SpriteBank sprites)
 	{
 		if (slot.Accepts.Count == 0)
 		{
@@ -112,12 +113,13 @@ public partial class RecipeNode : GraphNode
 		}
 
 		string? single = slot.Accepts.Count == 1 && !Acceptor.IsTag(slot.Accepts[0]) ? slot.Accepts[0] : null;
-		if (single != null) row.AddChild(LabLook.Sprite(sprites.Get(catalogue.Find(single)?.Icon), 16));
+		if (single != null) row.AddChild(LabLook.Sprite(sprites.Get(palette.Find(single)?.Icon), 16));
 
 		var words = new List<string>();
 		foreach (string acceptor in slot.Accepts)
-			words.Add(Acceptor.IsTag(acceptor) ? "#" + LabLook.Short(Acceptor.TagOf(acceptor)) : catalogue.Find(acceptor)?.Name ?? acceptor);
-		string text = (slot.Optional ? "(opt) " : "") + string.Join(" or ", words);
+			words.Add(Acceptor.IsTag(acceptor) ? "#" + LabLook.Short(Acceptor.TagOf(acceptor)) : palette.Find(acceptor)?.Name ?? acceptor);
+		// A slot that passes variety on wears a chevron: what goes in here shows in what comes out.
+		string text = (slot.Optional ? "(opt) " : "") + string.Join(" or ", words) + (slot.Passes ? "  »" : "");
 
 		Label label = LabLook.Text(text, 11, SlotColour(slot) == LabLook.InputPort ? LabLook.Ink : SlotColour(slot), trim: true);
 		label.CustomMinimumSize = new Vector2(Math.Min(120, 20 + text.Length * 6), 0);

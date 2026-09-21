@@ -7,14 +7,14 @@ using System.Text.Json.Serialization;
 namespace ProjectNikitin.Economy;
 
 /// <summary>
-/// One version of the economy: which goods of the catalogue are in it, the recipes that
-/// join them, the consumers they lead to, and where each node sits on the canvas. One
-/// file per web under <c>webs/</c>. Raw inputs are simply the goods nothing here makes,
-/// and final goods the ones nothing here uses; neither is stored.
+/// One version of the economy, whole in one file under <c>webs/</c>: its own palette of goods
+/// and tags, which of those goods are on the canvas, the recipes that join them, the consumers
+/// they lead to, and where each node sits. Nothing is shared between webs. Raw inputs are simply
+/// the goods nothing here makes, and final goods the ones nothing here uses; neither is stored.
 /// </summary>
 public sealed class EconomyWeb
 {
-	public int Format { get; set; } = 1;
+	public int Format { get; set; } = EconomyStore.Format;
 
 	/// <summary>Lowercase with hyphens; the file is <c>webs/&lt;id&gt;.json</c>.</summary>
 	public string Id { get; set; } = "";
@@ -22,7 +22,10 @@ public sealed class EconomyWeb
 	public string Name { get; set; } = "";
 	public string Note { get; set; } = "";
 
-	/// <summary>Ids of the catalogue goods in this web.</summary>
+	/// <summary>The web's own goods, tags and sprite sheets.</summary>
+	public Palette Palette { get; set; } = new();
+
+	/// <summary>Ids of the palette goods that are on the canvas.</summary>
 	public List<string> Goods { get; set; } = new();
 
 	public List<Recipe> Recipes { get; set; } = new();

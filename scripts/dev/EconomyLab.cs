@@ -10,8 +10,8 @@ namespace ProjectNikitin.Dev;
 /// <summary>
 /// The economy lab: an editor of production webs. Goods are draggable nodes, recipes sit
 /// between them, links are drawn by hand or implied by a tag, and a consumer blob marks the
-/// consumables. The catalogue of goods is shared; each web is a version of the economy made
-/// from it, saved as JSON under <c>resources/economy/</c> so it is versioned with the code.
+/// consumables. Each web is a version of the economy with its own palette of goods and tags,
+/// saved whole as one JSON file under <c>resources/economy/webs/</c>, versioned with the code.
 ///
 /// This file is the lab's core: what is open, the one door every change goes through
 /// (<see cref="Change"/>, which also makes undo and autosave work), loading and saving.
@@ -20,24 +20,18 @@ namespace ProjectNikitin.Dev;
 /// </summary>
 public partial class EconomyLab : Control
 {
-	/// <summary>What a change touches, which is what undo must put back and what a save must write.</summary>
-	[Flags]
-	internal enum Touch
-	{
-		Web = 1,
-		Catalogue = 2,
-		Both = Web | Catalogue,
-	}
-
-	private sealed record Step(string What, string? Merge, Touch Touch, byte[]? Web, byte[]? Catalogue, string? Selected);
+	private sealed record Step(string What, string? Merge, byte[] Web, string? Selected);
 
 	private const int UndoDepth = 100;
 	private const double AutosaveAfter = 1.2;
 	private const string PrefsPath = "user://economy_lab.cfg";
 
 	internal EconomyStore Store { get; private set; } = null!;
-	internal Catalogue Catalogue { get; private set; } = null!;
 	internal EconomyWeb Web { get; private set; } = null!;
+
+	/// <summary>The open web's own goods and tags. Every web has its own, so nothing done here reaches another web.</summary>
+	internal Palette Palette => Web.Palette;
+
 	internal WebAnalysis Analysis { get; private set; } = null!;
 	internal SpriteBank Sprites { get; private set; } = null!;
 
@@ -46,7 +40,11 @@ public partial class EconomyLab : Control
 
 	private readonly Stack<Step> _undo = new(), _redo = new();
 	private readonly ConfigFile _prefs = new();
-	private bool _webDirty, _catalogueDirty, _autosave = true, _trace = true, _changing;
+	private bool _webDirty, _autosave = true, _trace = true, _changing, _fullscreen;
+
+	/// <summary>The interface's scale; 0 asks the screen. Per machine, since a 4K panel and a laptop want different answers.</summary>
+	private float _uiScale;
+
 	private double _saveIn = -1;
 	private ulong _lastChangeAt;
 	private ulong _shotAt;
@@ -60,12 +58,6 @@ public partial class EconomyLab : Control
 		string[] args = OS.GetCmdlineUserArgs();
 		bool selfTest = args.Contains("selftest");
 		Store = new EconomyStore(selfTest ? SelfTestRoot() : ProjectSettings.GlobalizePath("res://resources/economy"));
-		if (!Store.HasCatalogue)
-		{
-			AddChild(LabLook.Text($"No catalogue at {Store.CataloguePath}.\nSee docs/economy-lab.md.", 18));
-			return;
-		}
-		Catalogue = Store.LoadCatalogue();
 		if (args.Contains("bake"))
 		{
 			Bake();
@@ -73,11 +65,14 @@ public partial class EconomyLab : Control
 			return;
 		}
 
-		Sprites = new SpriteBank(Store, Catalogue);
+		Sprites = new SpriteBank(Store, () => Web.Palette);
 		if (!selfTest) _prefs.Load(PrefsPath);
 		_autosave = _prefs.GetValue("lab", "autosave", true).AsBool();
 		_trace = _prefs.GetValue("lab", "trace", true).AsBool();
+		_uiScale = _prefs.GetValue("lab", "ui_scale", 0f).AsSingle();
+		_fullscreen = _prefs.GetValue("lab", "fullscreen", false).AsBool();
 		GetTree().AutoAcceptQuit = false;
+		ApplyWindow(args.Contains("shot") || selfTest);
 
 		BuildUi();
 		if (selfTest)
@@ -143,7 +138,7 @@ public partial class EconomyLab : Control
 		if (what != NotificationWMCloseRequest) return;
 		RememberView();
 		SavePrefs();
-		if (_webDirty || _catalogueDirty) Save();
+		if (_webDirty) Save();
 		GetTree().Quit();
 	}
 
@@ -173,6 +168,11 @@ public partial class EconomyLab : Control
 			ToggleHelp();
 			GetViewport().SetInputAsHandled();
 		}
+		else if (key.Keycode == Key.F11)
+		{
+			ToggleFullscreen();
+			GetViewport().SetInputAsHandled();
+		}
 		else if (key.Keycode == Key.F && onCanvas)
 		{
 			FrameAll();
@@ -189,16 +189,15 @@ public partial class EconomyLab : Control
 	// ---- the door --------------------------------------------------------------
 
 	/// <summary>
-	/// Every change to the web or the catalogue goes through here: the state before is kept
+	/// Every change to the web or its palette goes through here: the state before is kept
 	/// for undo, <paramref name="edit"/> runs, the web is read again, and the canvas, the docks
 	/// and the bars are brought into line. <paramref name="merge"/> names a run of like changes
 	/// (typing in one field) that undo takes back as one. With <paramref name="keepInspector"/>
 	/// the inspector is not rebuilt, so the field being typed in keeps its caret.
 	/// Look goods and recipes up by id inside <paramref name="edit"/>: objects held from before
-	/// an undo are no longer the ones in the web. A change that touches the catalogue anywhere
-	/// inside it must say so in <paramref name="touch"/> at the top.
+	/// an undo are no longer the ones in the web.
 	/// </summary>
-	internal void Change(string what, Touch touch, Action edit, string? merge = null, bool keepInspector = false)
+	internal void Change(string what, Action edit, string? merge = null, bool keepInspector = false)
 	{
 		// A change made from inside another is part of it: one step to undo, one refresh at the end.
 		if (_changing)
@@ -209,10 +208,10 @@ public partial class EconomyLab : Control
 
 		ulong now = Time.GetTicksMsec();
 		bool merged = merge != null && _redo.Count == 0 && _undo.Count > 0 && _undo.Peek().Merge == merge
-		              && _undo.Peek().Touch == touch && now - _lastChangeAt < 4000;
+		              && now - _lastChangeAt < 4000;
 		if (!merged)
 		{
-			_undo.Push(Snap(what, merge, touch));
+			_undo.Push(Snap(what, merge));
 			if (_undo.Count > UndoDepth) Trim(_undo);
 		}
 		_redo.Clear();
@@ -227,7 +226,7 @@ public partial class EconomyLab : Control
 		{
 			_changing = false;
 		}
-		Touched(touch, keepInspector);
+		Touched(keepInspector);
 		Say(char.ToUpperInvariant(what[0]) + what[1..] + ".");
 	}
 
@@ -243,23 +242,17 @@ public partial class EconomyLab : Control
 			return;
 		}
 		Step step = from.Pop();
-		onto.Push(Snap(step.What, null, step.Touch));
-		if (step.Web != null) Web = EconomyStore.FromJson<EconomyWeb>(Encoding.UTF8.GetString(step.Web));
-		if (step.Catalogue != null)
-		{
-			Catalogue = EconomyStore.FromJson<Catalogue>(Encoding.UTF8.GetString(step.Catalogue));
-			Sprites = new SpriteBank(Store, Catalogue);
-		}
+		onto.Push(Snap(step.What, null));
+		string id = Web.Id;
+		Web = EconomyStore.FromJson<EconomyWeb>(Encoding.UTF8.GetString(step.Web));
+		Web.Id = id;
 		SelectedKey = step.Selected != null && Exists(step.Selected) ? step.Selected : null;
 		_lastChangeAt = 0;
-		Touched(step.Touch, keepInspector: false, rebuild: true);
+		Touched(keepInspector: false, rebuild: true);
 		Say($"{verb}: {step.What}.");
 	}
 
-	private Step Snap(string what, string? merge, Touch touch) => new(what, merge, touch,
-		touch.HasFlag(Touch.Web) ? Encoding.UTF8.GetBytes(EconomyStore.ToJson(Web)) : null,
-		touch.HasFlag(Touch.Catalogue) ? Encoding.UTF8.GetBytes(EconomyStore.ToJson(Catalogue)) : null,
-		SelectedKey);
+	private Step Snap(string what, string? merge) => new(what, merge, Encoding.UTF8.GetBytes(EconomyStore.ToJson(Web)), SelectedKey);
 
 	private static void Trim(Stack<Step> stack)
 	{
@@ -268,12 +261,11 @@ public partial class EconomyLab : Control
 		foreach (Step step in kept) stack.Push(step);
 	}
 
-	private void Touched(Touch touch, bool keepInspector, bool rebuild = false)
+	private void Touched(bool keepInspector, bool rebuild = false)
 	{
-		if (touch.HasFlag(Touch.Web)) _webDirty = true;
-		if (touch.HasFlag(Touch.Catalogue)) _catalogueDirty = true;
+		_webDirty = true;
 		_saveIn = AutosaveAfter;
-		Analysis = WebAnalysis.Of(Catalogue, Web);
+		Analysis = WebAnalysis.Of(Web);
 		if (rebuild) ResetGraph();
 		else SyncGraph();
 		if (SelectedKey != null && !Exists(SelectedKey)) SelectedKey = null;
@@ -309,7 +301,7 @@ public partial class EconomyLab : Control
 		ApplyTrace();
 	}
 
-	internal Texture2D? IconOf(string goodId) => Sprites.Get(Catalogue.Find(goodId)?.Icon);
+	internal Texture2D? IconOf(string goodId) => Sprites.Get(Palette.Find(goodId)?.Icon);
 
 	// ---- files -----------------------------------------------------------------
 
@@ -349,18 +341,18 @@ public partial class EconomyLab : Control
 		if (Web != null)
 		{
 			RememberView();
-			if (_webDirty || _catalogueDirty) Save();
+			if (_webDirty) Save();
 		}
 		Web = next;
 		id = Web.Id;
 		bool arranged = WebArrange.NeedsArranging(Web);
-		if (arranged) WebArrange.Arrange(Catalogue, Web);
+		if (arranged) WebArrange.Arrange(Web);
 		_undo.Clear();
 		_redo.Clear();
 		SelectedKey = null;
 		_webDirty = arranged;
 		_saveIn = arranged ? AutosaveAfter : -1;
-		Analysis = WebAnalysis.Of(Catalogue, Web);
+		Analysis = WebAnalysis.Of(Web);
 		_prefs.SetValue("lab", "web", id);
 
 		ResetGraph();
@@ -369,33 +361,23 @@ public partial class EconomyLab : Control
 		RefreshBar();
 		RefreshWebList();
 		RestoreView();
-		Say($"Opened {Web.Name}: {Web.Goods.Count} goods, {Web.Recipes.Count} recipes." + (arranged ? " It had no layout, so it was arranged." : ""));
+		Say($"Opened {Web.Name}: {Web.Goods.Count} goods on the canvas of {Palette.Goods.Count} in its palette, {Web.Recipes.Count} recipes." + (arranged ? " It had no layout, so it was arranged." : ""));
 	}
 
 	internal void Save()
 	{
 		_saveIn = -1;
 		if (_shooting) return;
-		if (!_webDirty && !_catalogueDirty)
+		if (!_webDirty)
 		{
 			Say("Nothing to save.");
 			return;
 		}
 		try
 		{
-			var wrote = new List<string>();
-			if (_catalogueDirty)
-			{
-				Store.SaveCatalogue(Catalogue);
-				wrote.Add("the catalogue");
-			}
-			if (_webDirty)
-			{
-				Store.SaveWeb(Web);
-				wrote.Add(Web.Name);
-			}
-			_webDirty = _catalogueDirty = false;
-			Say("Saved " + string.Join(" and ", wrote) + ".");
+			Store.SaveWeb(Web);
+			_webDirty = false;
+			Say($"Saved {Web.Name} to webs/{Web.Id}.json.");
 		}
 		catch (Exception e)
 		{
@@ -411,25 +393,72 @@ public partial class EconomyLab : Control
 	/// </summary>
 	private void Bake()
 	{
-		Store.SaveCatalogue(Catalogue);
 		foreach ((string id, string name) in Store.ListWebs())
 		{
 			EconomyWeb web = Store.LoadWeb(id);
 			bool arranged = WebArrange.NeedsArranging(web);
-			if (arranged) WebArrange.Arrange(Catalogue, web);
+			if (arranged) WebArrange.Arrange(web);
 			Store.SaveWeb(web);
-			WebAnalysis analysis = WebAnalysis.Of(Catalogue, web);
-			GD.Print($"Economy lab: baked {id} ({name}): {web.Goods.Count} goods, {web.Recipes.Count} recipes, " +
+			WebAnalysis analysis = WebAnalysis.Of(web);
+			GD.Print($"Economy lab: baked {id} ({name}): {web.Goods.Count} goods of {web.Palette.Goods.Count} in its palette, {web.Recipes.Count} recipes, " +
 			         $"{web.Consumers.Count} consumers, {analysis.Links.Count} links, {analysis.Issues.Count} issues" + (arranged ? ", arranged" : ""));
 			foreach (WebIssue issue in analysis.Issues.Where(i => i.Level != IssueLevel.Note))
 				GD.Print($"  {issue.Level}: {issue.Text}");
 		}
 	}
 
+	// ---- the window -------------------------------------------------------------
+
+	/// <summary>
+	/// The project stretches its 1920 by 1080 canvas to whatever the window is, which suits a game
+	/// and not an editor: a bigger window should mean more room, not bigger buttons. So the lab
+	/// turns the stretch off, opens maximised (or full screen), and scales its interface by a
+	/// factor of its own: the screen's, unless one was chosen. A shell run keeps the plain window,
+	/// so a shot is the same picture on every machine.
+	/// </summary>
+	private void ApplyWindow(bool plain = false)
+	{
+		Window window = GetWindow();
+		window.ContentScaleMode = Window.ContentScaleModeEnum.Disabled;
+		window.ContentScaleFactor = plain ? 1f : UiScale;
+		if (plain) return;
+		window.MinSize = new Vector2I(1100, 640);
+		window.Mode = _fullscreen ? Window.ModeEnum.Fullscreen : Window.ModeEnum.Maximized;
+	}
+
+	/// <summary>The scale in force: the chosen one, or the screen's own (a Retina panel says 2, a Windows screen says its DPI).</summary>
+	private float UiScale
+	{
+		get
+		{
+			if (_uiScale > 0) return _uiScale;
+			int screen = GetWindow().CurrentScreen;
+			float auto = OS.GetName() == "macOS" ? DisplayServer.ScreenGetScale(screen) : DisplayServer.ScreenGetDpi(screen) / 96f;
+			return Mathf.Clamp(Mathf.Snapped(auto, 0.25f), 1f, 3f);
+		}
+	}
+
+	internal void SetUiScale(float scale)
+	{
+		_uiScale = scale;
+		GetWindow().ContentScaleFactor = UiScale;
+		SavePrefs();
+		Say(scale > 0 ? $"Interface at {scale * 100:0}%." : $"Interface at the screen's own scale, {UiScale * 100:0}%.");
+	}
+
+	internal void ToggleFullscreen()
+	{
+		_fullscreen = !_fullscreen;
+		GetWindow().Mode = _fullscreen ? Window.ModeEnum.Fullscreen : Window.ModeEnum.Maximized;
+		SavePrefs();
+	}
+
 	private void SavePrefs()
 	{
 		_prefs.SetValue("lab", "autosave", _autosave);
 		_prefs.SetValue("lab", "trace", _trace);
+		_prefs.SetValue("lab", "ui_scale", _uiScale);
+		_prefs.SetValue("lab", "fullscreen", _fullscreen);
 		_prefs.Save(PrefsPath);
 	}
 }

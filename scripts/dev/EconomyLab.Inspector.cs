@@ -8,11 +8,12 @@ using ProjectNikitin.Economy;
 namespace ProjectNikitin.Dev;
 
 /// <summary>
-/// The right-hand dock: whatever is selected, laid out for editing. A good shows its name,
-/// its description, its tags, its two sprites and what makes, uses and eats it; a recipe its
-/// input slots and its outputs; a consumer what reaches it; several nodes what can be done to
-/// them all; and with nothing selected, the web itself — its numbers, its hubs, what the
-/// analysis found wrong, and the legend of the canvas's colours.
+/// The right-hand dock: whatever is selected, laid out for editing. A good shows its name, its
+/// description, its tags, the varieties of it this web can make and the ones written by hand,
+/// its two sprites and what makes, uses and eats it; a recipe its input slots — what each admits
+/// and whether it passes variety on — and its outputs; a consumer what reaches it; several nodes
+/// what can be done to them all; and with nothing selected, the web itself — its numbers, its
+/// hubs, what the analysis found wrong, and the legend of the canvas's colours.
 ///
 /// Every field and button goes through <see cref="Change"/>, so everything here is a step to
 /// undo and a moment later a save. Typing merges into one step and leaves the dock standing;
@@ -33,6 +34,12 @@ public partial class EconomyLab
 	private bool _inspShownMany;
 	private string _inspBinGood = "", _inspPngGood = "";
 
+	/// <summary>How many tag values one namespace's line of the varieties block names before it counts the rest.</summary>
+	private const int VarietyValuesShown = 20;
+
+	/// <summary>How many whole varieties the block lists before it counts the rest.</summary>
+	private const int VarietiesListed = 8;
+
 	private Control BuildInspector()
 	{
 		_inspScroll = new ScrollContainer
@@ -48,7 +55,7 @@ public partial class EconomyLab
 		_inspSheet = new IconPickPopup();
 		AddChild(_inspSheet);
 
-		_inspBin = new ConfirmationDialog { Title = "Delete from the catalogue", OkButtonText = "Delete" };
+		_inspBin = new ConfirmationDialog { Title = "Delete from this web's palette", OkButtonText = "Delete" };
 		_inspBin.Confirmed += BinGood;
 		AddChild(_inspBin);
 
@@ -88,7 +95,7 @@ public partial class EconomyLab
 
 		if (many) ShowSeveralInspector(selected);
 		else if (key == null) ShowWebInspector();
-		else if (Web.Holds(key) && Catalogue.Find(key) is { } good) ShowGoodInspector(good);
+		else if (Web.Holds(key) && Palette.Find(key) is { } good) ShowGoodInspector(good);
 		else if (Web.Recipe(key) is { } recipe) ShowRecipeInspector(recipe);
 		else if (Web.Consumer(key) is { } consumer) ShowConsumerInspector(consumer);
 		else ShowWebInspector();
@@ -132,16 +139,14 @@ public partial class EconomyLab
 		name.TextChanged += text =>
 		{
 			title.Text = text;
-			Change("renamed " + (text.Trim().Length > 0 ? text.Trim() : id), Touch.Catalogue,
-				() => { if (Catalogue.Find(id) is { } live) live.Name = text; },
+			Change("renamed " + (text.Trim().Length > 0 ? text.Trim() : id), () => { if (Palette.Find(id) is { } live) live.Name = text; },
 				merge: "good.name:" + id, keepInspector: true);
 		};
 		rows.AddChild(name);
 
 		rows.AddChild(InspectorLook.Caption("Description"));
 		TextEdit note = InspectorLook.Paragraph(good.Note, 5);
-		note.TextChanged += () => Change("described " + NameOf(id), Touch.Catalogue,
-			() => { if (Catalogue.Find(id) is { } live) live.Note = note.Text; },
+		note.TextChanged += () => Change("described " + NameOf(id), () => { if (Palette.Find(id) is { } live) live.Note = note.Text; },
 			merge: "good.note:" + id, keepInspector: true);
 		rows.AddChild(note);
 
@@ -151,13 +156,15 @@ public partial class EconomyLab
 		foreach (string tag in good.Tags)
 		{
 			string held = tag;
-			string meaning = Catalogue.NoteFor(held);
-			tags.AddChild(InspectorLook.Chip(held, InspectorLook.TagColour(held), null,
-				meaning.Length > 0 ? $"{held}\n{meaning}" : held,
-				() => Change($"took {held} off {NameOf(id)}", Touch.Catalogue, () => Catalogue.Find(id)?.Tags.Remove(held))));
+			tags.AddChild(InspectorLook.Chip(held, InspectorLook.TagFill(Palette, held), null,
+				InspectorLook.Lines(held, Palette.NoteFor(held), InspectorLook.RoleLine(Palette, held)),
+				() => Change($"took {held} off {NameOf(id)}", () => Palette.Find(id)?.Tags.Remove(held)),
+				InspectorLook.TagInk(Palette, held)));
 		}
 		tags.AddChild(InspectorLook.Small("+ tag", "Give it another property. A slot that accepts the tag then takes this good.",
 			() => AskTag($"Tag {NameOf(id)}…", tag => InspectorTagGood(id, tag))));
+
+		GoodVarieties(rows, id);
 
 		InspectorLook.Section(rows, "Sprites");
 		rows.AddChild(SpriteRow(Sprites.Get(good.Icon), "Icon from the sheet…",
@@ -172,8 +179,7 @@ public partial class EconomyLab
 			rows.AddChild(InspectorLook.Note("Nothing here makes it: it comes out of the ground, or in from another Domain.", LabLook.Faint, 12));
 		foreach (Recipe maker in makers) rows.AddChild(InspectorJump(Analysis.TitleOf(maker), maker.Id));
 		rows.AddChild(InspectorLook.Small("+ recipe that makes it", "A new recipe, empty, to the left of the good.", () =>
-			Change($"new recipe making {NameOf(id)}", Touch.Web,
-				() => SelectNew(EconomyEdit.NewRecipe(Web, id, null, LeftOf(id)).Id))));
+			Change($"new recipe making {NameOf(id)}", () => SelectNew(EconomyEdit.NewRecipe(Web, id, null, LeftOf(id)).Id))));
 
 		InspectorLook.Section(rows, "Used in");
 		IReadOnlyList<Recipe> users = Analysis.UsersOf(id);
@@ -188,15 +194,168 @@ public partial class EconomyLab
 		}
 
 		InspectorLook.Section(rows, "This good");
-		rows.AddChild(InspectorAct("Remove from this web", "It stays in the catalogue and in every other web.",
+		rows.AddChild(InspectorAct("Remove from this web", "It stays in this web's palette, so it can come back on the canvas.",
 			() => RemoveNodes(new List<string> { id })));
-		Label refusal = InspectorLook.Note("", LabLook.Error, 12);
-		refusal.Visible = false;
-		Button bin = InspectorAct("Delete from the catalogue…", "Out of the catalogue file altogether, if no other web holds it.",
-			() => AskBinGood(id, refusal));
+		Button bin = InspectorAct("Delete from this web's palette…", "Out of this web altogether. Every other web keeps its own.",
+			() => AskBinGood(id));
 		bin.AddThemeColorOverride("font_color", LabLook.Error);
 		rows.AddChild(bin);
-		rows.AddChild(refusal);
+	}
+
+	// ---- a good's varieties ----------------------------------------------------
+
+	/// <summary>
+	/// What this web can make of a good, and the kinds of it written by hand. The first part is
+	/// read off the analysis: every variety the passing slots upstream allow, which can run into
+	/// the hundreds, so it is counted and sampled rather than listed. The second is the good's
+	/// own list, one framed block each.
+	/// </summary>
+	private void GoodVarieties(VBoxContainer rows, string id)
+	{
+		InspectorLook.Section(rows, "Varieties");
+		VarietySet made = Analysis.VarietiesOf(id);
+		if (made.IsPlain)
+			rows.AddChild(InspectorLook.Note("One plain good: nothing it is made of passes variety on, and it carries no variety tag.", LabLook.Faint, 12));
+		else
+		{
+			string headline = made.Count == 1 ? "1 variety" : $"{(made.Capped ? "about " : "")}{made.Count} varieties";
+			rows.AddChild(LabLook.Text(headline, 13, LabLook.VarietyTag));
+			foreach ((string space, List<string> values) in made.ByNamespace()) rows.AddChild(VarietyValues(space, values));
+			if (made.Sets.Count > 1)
+			{
+				// One to a line, shortest first: a variety of five tags reads as a sentence, a dozen of them as a wall.
+				List<string> names = made.Sets.OrderBy(v => v.Count).Take(VarietiesListed).Select(v => "· " + LabLook.VarietyName(v)).ToList();
+				long more = made.Count - names.Count;
+				rows.AddChild(InspectorLook.Note(string.Join("\n", names) + (more > 0 ? $"\n  and {more} more" : ""), LabLook.Dim, 12));
+			}
+		}
+
+		rows.AddChild(InspectorLook.Caption("Authored varieties"));
+		rows.AddChild(InspectorLook.Note("Kinds of this good made by hand, like rye and wheat of grain. One node, the same slots; their variety tags travel downstream.", LabLook.Dim, 12));
+		if (Palette.Find(id) is { } good)
+			foreach (Variety variety in good.VarietyList) rows.AddChild(VarietyBlock(id, variety));
+
+		var adding = new HBoxContainer();
+		adding.AddThemeConstantOverride("separation", 4);
+		rows.AddChild(adding);
+		LineEdit named = InspectorLook.Field("", "rye");
+		named.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		named.TextSubmitted += _ => AddVariety(id, named);
+		adding.AddChild(named);
+		adding.AddChild(InspectorLook.Small("+ variety", "A kind of this good made by hand: the same node in the web, with its own tags.",
+			() => AddVariety(id, named)));
+	}
+
+	/// <summary>One namespace of a good's varieties: its name dim, then the values that turn up in it.</summary>
+	private static Control VarietyValues(string space, List<string> tags)
+	{
+		var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		row.AddThemeConstantOverride("separation", 4);
+		row.AddChild(LabLook.Text((space.Length > 0 ? space : "no namespace") + ":", 12, LabLook.Dim));
+		List<string> shown = tags.Take(VarietyValuesShown).Select(LabLook.Short).ToList();
+		int more = tags.Count - shown.Count;
+		row.AddChild(InspectorLook.Note(string.Join(", ", shown) + (more > 0 ? $", and {more} more" : ""), LabLook.VarietyTag, 12));
+		return row;
+	}
+
+	/// <summary>
+	/// One authored variety in a frame: its name, its id, the tags that set it apart, and a way
+	/// to take it off again. Nothing here holds the variety; every change finds it by its id.
+	/// </summary>
+	private Control VarietyBlock(string goodId, Variety variety)
+	{
+		string vid = variety.Id, vname = variety.Name;
+		var frame = new PanelContainer();
+		frame.AddThemeStyleboxOverride("panel", LabLook.Box(LabLook.Field, 6, 6, marginX: 8, marginY: 6));
+		var rows = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		rows.AddThemeConstantOverride("separation", 4);
+		frame.AddChild(rows);
+
+		var head = new HBoxContainer();
+		head.AddThemeConstantOverride("separation", 6);
+		rows.AddChild(head);
+		LineEdit name = InspectorLook.Field(vname, "rye");
+		name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		name.TextChanged += text => Change($"renamed a variety of {NameOf(goodId)} " + (text.Trim().Length > 0 ? text.Trim() : vid),
+			() => { if (VarietyOf(goodId, vid) is { } live) live.Name = text; },
+			merge: "variety.name:" + goodId + ":" + vid, keepInspector: true);
+		head.AddChild(name);
+		head.AddChild(InspectorLook.Small("remove", "Take this variety off the good.", () =>
+			Change($"took the {VarietyOf(goodId, vid)?.Name ?? vid} variety off {NameOf(goodId)}", () =>
+			{
+				if (Palette.Find(goodId) is not { } live) return;
+				live.Varieties?.RemoveAll(v => v.Id == vid);
+				if (live.Varieties is { Count: 0 }) live.Varieties = null;
+			})));
+		rows.AddChild(LabLook.Text(vid, 12, LabLook.Faint));
+
+		HFlowContainer tags = InspectorLook.Flow();
+		rows.AddChild(tags);
+		foreach (string tag in variety.Tags)
+		{
+			string held = tag;
+			tags.AddChild(InspectorLook.Chip(held, InspectorLook.TagFill(Palette, held), null,
+				InspectorLook.Lines(held, Palette.NoteFor(held), InspectorLook.RoleLine(Palette, held)),
+				() => Change($"took {held} off the {VarietyOf(goodId, vid)?.Name ?? vid} variety", () => VarietyOf(goodId, vid)?.Tags.Remove(held)),
+				InspectorLook.TagInk(Palette, held)));
+		}
+		tags.AddChild(InspectorLook.Small("+ tag", "What sets this variety apart. A variety tag rides from here downstream.",
+			() => AskTag($"Tag the {(vname.Length > 0 ? vname : vid)} of {NameOf(goodId)}…", tag => VarietyTagged(goodId, vid, tag))));
+		return frame;
+	}
+
+	/// <summary>One authored variety of a good, looked up afresh, or null if either has gone.</summary>
+	private Variety? VarietyOf(string goodId, string varietyId) =>
+		Palette.Find(goodId)?.VarietyList.FirstOrDefault(v => v.Id == varietyId);
+
+	/// <summary>
+	/// A new authored variety of a good, named as typed and with an id slugged from that name,
+	/// made unique among that good's own varieties. Its tags are for the designer to add.
+	/// </summary>
+	private void AddVariety(string goodId, LineEdit field)
+	{
+		string name = field.Text.Trim();
+		if (name.Length == 0)
+		{
+			Say("A variety wants a name: rye, wheat, arsenic.");
+			return;
+		}
+		if (Palette.Find(goodId) is not { } good) return;
+		string vid = EconomyEdit.Free(EconomyEdit.Slug(name), taken => good.VarietyList.Any(v => v.Id == taken));
+		Change($"{NameOf(goodId)} has a variety, {name}", () =>
+		{
+			if (Palette.Find(goodId) is not { } live) return;
+			live.Varieties ??= new List<Variety>();
+			live.Varieties.Add(new Variety { Id = vid, Name = name });
+		});
+	}
+
+	/// <summary>
+	/// Gives a good, or one of its authored varieties, a tag meant to travel. A tag only travels
+	/// if its namespace is a variety namespace, so one that plays no part yet is made one in the
+	/// same step, and the status line says so: it is a decision about every tag in that namespace.
+	/// </summary>
+	private void VarietyTagged(string goodId, string? varietyId, string tag)
+	{
+		if (tag.Length == 0) return;
+		string what = varietyId == null ? NameOf(goodId) : "the " + (VarietyOf(goodId, varietyId)?.Name ?? varietyId) + " variety";
+		List<string>? tags = varietyId == null ? Palette.Find(goodId)?.Tags : VarietyOf(goodId, varietyId)?.Tags;
+		if (tags == null) return;
+		if (tags.Contains(tag))
+		{
+			Say($"{what} carries {tag} already.");
+			return;
+		}
+
+		string space = Palette.NamespaceOf(tag);
+		bool teach = space.Length > 0 && !Palette.IsVariety(tag);
+		Change($"tagged {what} {tag}", () =>
+		{
+			if (teach) EconomyEdit.EnsureNamespace(Palette, space).Role = TagNamespace.Variety;
+			List<string>? live = varietyId == null ? Palette.Find(goodId)?.Tags : VarietyOf(goodId, varietyId)?.Tags;
+			live?.Add(tag);
+		});
+		if (teach) Say($"Tagged {what} {tag}. {space}: is a variety namespace now, so every tag in it rides from inputs to outputs.");
 	}
 
 	/// <summary>What this web makes of a good, in one line.</summary>
@@ -225,18 +384,18 @@ public partial class EconomyLab
 	private void InspectorTagGood(string id, string tag)
 	{
 		if (tag.Length == 0) return;
-		if (Catalogue.Find(id) is not { } good) return;
+		if (Palette.Find(id) is not { } good) return;
 		if (good.Tags.Contains(tag))
 		{
 			Say($"{good.Name} carries {tag} already.");
 			return;
 		}
-		Change($"tagged {good.Name} {tag}", Touch.Catalogue, () => Catalogue.Find(id)?.Tags.Add(tag));
+		Change($"tagged {good.Name} {tag}", () => Palette.Find(id)?.Tags.Add(tag));
 	}
 
 	private void PickSprite(string id, bool sign)
 	{
-		if (Catalogue.Find(id) is not { } good) return;
+		if (Palette.Find(id) is not { } good) return;
 		string atlas = sign ? "signs" : "icons";
 		SpriteRef? now = sign ? good.Sign : good.Icon;
 		int current = now != null && now.Atlas == atlas ? now.Index ?? -1 : -1;
@@ -245,9 +404,9 @@ public partial class EconomyLab
 	}
 
 	private void SetSprite(string id, bool sign, int cell) =>
-		Change($"gave {NameOf(id)} a new {(sign ? "sign" : "icon")}", Touch.Catalogue, () =>
+		Change($"gave {NameOf(id)} a new {(sign ? "sign" : "icon")}", () =>
 		{
-			if (Catalogue.Find(id) is not { } good) return;
+			if (Palette.Find(id) is not { } good) return;
 			if (!sign)
 			{
 				good.Icon = SpriteRef.Cell("icons", cell);
@@ -277,7 +436,7 @@ public partial class EconomyLab
 	private void ImportIcon(string path)
 	{
 		string id = _inspPngGood;
-		if (Catalogue.Find(id) == null) return;
+		if (Palette.Find(id) == null) return;
 		string relative = "sprites/custom/" + id + ".png";
 		try
 		{
@@ -292,53 +451,26 @@ public partial class EconomyLab
 			return;
 		}
 		Sprites.Forget(relative);
-		Change($"gave {NameOf(id)} an icon of its own", Touch.Catalogue,
-			() => { if (Catalogue.Find(id) is { } good) good.Icon = SpriteRef.Png(relative); });
+		Change($"gave {NameOf(id)} an icon of its own", () => { if (Palette.Find(id) is { } good) good.Icon = SpriteRef.Png(relative); });
 	}
 
 	/// <summary>
-	/// Offers to delete a good from the catalogue, but reads every other web on disk first: one
-	/// that another web holds cannot go, and the dock says in red which webs hold it.
+	/// Offers to delete a good from this web's palette. Every web keeps its own palette inside
+	/// its own file, so there is nothing to read elsewhere and nothing elsewhere to break: what
+	/// goes is this web's copy, and whatever here referred to it.
 	/// </summary>
-	private void AskBinGood(string id, Label refusal)
+	private void AskBinGood(string id)
 	{
-		var holders = new List<string>();
-		foreach ((string webId, string webName) in Store.ListWebs())
-		{
-			if (webId == Web.Id) continue;
-			try
-			{
-				if (Store.LoadWeb(webId).Holds(id)) holders.Add(webName);
-			}
-			catch (Exception e)
-			{
-				GD.PushWarning($"Economy lab: could not read {webId}.json: {e.Message}");
-			}
-		}
-
-		if (holders.Count > 0)
-		{
-			string held = string.Join(", ", holders);
-			refusal.Text = $"{NameOf(id)} is in {held}. Take it out of {(holders.Count == 1 ? "that web" : "those webs")} first.";
-			refusal.Visible = true;
-			Say($"{NameOf(id)} cannot leave the catalogue: {held} still holds it.");
-			return;
-		}
-		refusal.Visible = false;
 		_inspBinGood = id;
-		_inspBin.DialogText = $"Delete {NameOf(id)} from the catalogue?\nIt goes from this web and out of catalogue.json. Undo brings it back.";
+		_inspBin.DialogText = $"Delete {NameOf(id)} from {Web.Name}?\n\nIt leaves this web altogether: the canvas, this web's palette, any recipe that made nothing else, and its name in every slot that asked for it. Other webs have their own palettes and are untouched. Undo brings it back.";
 		_inspBin.PopupCentered();
 	}
 
 	private void BinGood()
 	{
 		string id = _inspBinGood;
-		if (Catalogue.Find(id) == null) return;
-		Change($"deleted {NameOf(id)} from the catalogue", Touch.Both, () =>
-		{
-			EconomyEdit.RemoveGood(Web, id);
-			Catalogue.Remove(id);
-		});
+		if (Palette.Find(id) == null) return;
+		Change($"deleted {NameOf(id)} from the palette", () => EconomyEdit.DeleteGood(Web, id));
 	}
 
 	// ---- a recipe --------------------------------------------------------------
@@ -356,8 +488,7 @@ public partial class EconomyLab
 		LineEdit label = InspectorLook.Field(recipe.Name, "blank reads as → what it makes");
 		label.TextChanged += text =>
 		{
-			Change("labelled the recipe " + (text.Trim().Length > 0 ? text.Trim() : rid), Touch.Web,
-				() => { if (Web.Recipe(rid) is { } live) live.Name = text; },
+			Change("labelled the recipe " + (text.Trim().Length > 0 ? text.Trim() : rid), () => { if (Web.Recipe(rid) is { } live) live.Name = text; },
 				merge: "recipe.name:" + rid, keepInspector: true);
 			if (Web.Recipe(rid) is { } named) title.Text = Analysis.TitleOf(named);
 		};
@@ -365,8 +496,7 @@ public partial class EconomyLab
 
 		rows.AddChild(InspectorLook.Caption("Note"));
 		TextEdit note = InspectorLook.Paragraph(recipe.Note, 3);
-		note.TextChanged += () => Change("noted " + NameOf(rid), Touch.Web,
-			() => { if (Web.Recipe(rid) is { } live) live.Note = note.Text; },
+		note.TextChanged += () => Change("noted " + NameOf(rid), () => { if (Web.Recipe(rid) is { } live) live.Note = note.Text; },
 			merge: "recipe.note:" + rid, keepInspector: true);
 		rows.AddChild(note);
 
@@ -409,7 +539,7 @@ public partial class EconomyLab
 			row.AddChild(InspectorLook.Small("change…", "Make it something else instead.",
 				() => AskGood("What does it make?", gid => SetOutput(rid, port, gid))));
 			row.AddChild(InspectorLook.Cross("Stop making this.", () =>
-				Change($"{NameOf(rid)} no longer makes {NameOf(made)}", Touch.Web, () =>
+				Change($"{NameOf(rid)} no longer makes {NameOf(made)}", () =>
 				{
 					if (Web.Recipe(rid) is { } live && port < live.Outputs.Count) live.Outputs.RemoveAt(port);
 				})));
@@ -426,8 +556,9 @@ public partial class EconomyLab
 	}
 
 	/// <summary>
-	/// One input slot in a frame: what fills it, whether the recipe runs without it, and what
-	/// each tag of it admits from this web as things stand.
+	/// One input slot in a frame: what fills it, whether the recipe runs without it, whether the
+	/// variety of what fills it passes on to the output, what each tag of it admits from this web
+	/// as things stand, and — when it passes — what each filler would pass.
 	/// </summary>
 	private Control SlotBlock(string rid, RecipeInput slot, int port)
 	{
@@ -443,36 +574,89 @@ public partial class EconomyLab
 		Label caption = InspectorLook.Caption($"Input {port + 1}");
 		caption.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		head.AddChild(caption);
-		var optional = new CheckBox
-		{
-			Text = "optional",
-			ButtonPressed = slot.Optional,
-			FocusMode = FocusModeEnum.None,
-			TooltipText = "An upgrade or a variant: the recipe runs without it, and it does not count towards depth.",
-		};
-		optional.AddThemeFontSizeOverride("font_size", 12);
-		optional.AddThemeColorOverride("font_color", LabLook.Dim);
-		optional.Toggled += on => Change($"input {port + 1} of {NameOf(rid)} is {(on ? "optional" : "required")}", Touch.Web, () =>
-		{
-			if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Optional = on;
-		});
-		head.AddChild(optional);
 		head.AddChild(InspectorLook.Small("remove", "Take this slot off the recipe.", () =>
-			Change($"took input {port + 1} off {NameOf(rid)}", Touch.Web, () =>
+			Change($"took input {port + 1} off {NameOf(rid)}", () =>
 			{
 				if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs.RemoveAt(port);
+			})));
+
+		// Two switches of their own row: the dock is too narrow to carry them beside the caption.
+		string named = SlotName(rid, port);
+		var switches = new HBoxContainer();
+		switches.AddThemeConstantOverride("separation", 10);
+		rows.AddChild(switches);
+		switches.AddChild(SlotSwitch("optional", slot.Optional, LabLook.Dim,
+			"An upgrade or a variant: the recipe runs without it, and it does not count towards depth.",
+			on => Change($"{named} of {NameOf(rid)} is {(on ? "optional" : "required")}", () =>
+			{
+				if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Optional = on;
+			})));
+		switches.AddChild(SlotSwitch("passes variety", slot.Passes, slot.Passes ? LabLook.VarietyTag : LabLook.Dim,
+			"What fills this slot marks what comes out: its variety tags are stamped on the output, and on whatever that goes into through other passing slots.",
+			on => Change($"{named} of {NameOf(rid)} {(on ? "now passes variety on" : "no longer passes variety on")}", () =>
+			{
+				if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Passes = on;
 			})));
 
 		rows.AddChild(AcceptorChips(slot.Accepts, rid, port));
 		if (slot.Accepts.Count == 0) rows.AddChild(InspectorLook.Note("accepts nothing", LabLook.Error, 12));
 		else if (slot.Accepts.Count > 1) rows.AddChild(InspectorLook.Note("any one of these", LabLook.Faint, 12));
 		foreach (string acceptor in slot.Accepts.Where(Acceptor.IsTag)) rows.AddChild(AdmitsLine(rid, port, acceptor));
+		if (slot.Passes)
+			foreach (string filler in Analysis.FillersOf(rid, port).Distinct())
+				rows.AddChild(FillerLine(filler));
 		rows.AddChild(AcceptorButtons(rid, port));
 		return frame;
 	}
 
+	/// <summary>One of a slot's two switches: small, quiet, and one change to undo when it is toggled.</summary>
+	private static CheckBox SlotSwitch(string text, bool on, Color ink, string tip, Action<bool> toggled)
+	{
+		var box = new CheckBox { Text = text, ButtonPressed = on, FocusMode = FocusModeEnum.None, TooltipText = tip };
+		box.AddThemeFontSizeOverride("font_size", 12);
+		box.AddThemeColorOverride("font_color", ink);
+		box.Toggled += pressed => toggled(pressed);
+		return box;
+	}
+
+	/// <summary>A slot in a sentence: "the heart slot" from the first thing it takes, or its number.</summary>
+	private string SlotName(string rid, int port)
+	{
+		if (Web.Recipe(rid) is not { } recipe || port >= recipe.Inputs.Count) return $"input {port + 1}";
+		List<string> accepts = recipe.Inputs[port].Accepts;
+		if (accepts.Count == 0) return $"input {port + 1}";
+		string first = accepts[0];
+		return "the " + (Acceptor.IsTag(first) ? LabLook.Short(Acceptor.TagOf(first)) : NameOf(first).ToLowerInvariant()) + " slot";
+	}
+
 	/// <summary>
-	/// The chips of one accept list, a good's with its icon and a tag's in amber, each with a ×.
+	/// What one good would pass into a slot that passes variety on: the variety tags it carries,
+	/// or how many varieties of it this web can make. A good with none passes nothing, which is
+	/// worth saying and worth mending, so that line comes with a way to give it a variety tag.
+	/// </summary>
+	private Control FillerLine(string goodId)
+	{
+		VarietySet varieties = Analysis.VarietiesOf(goodId);
+		if (!varieties.IsPlain)
+		{
+			string passed = varieties.Sets.Count == 1 && !varieties.Capped
+				? string.Join(", ", varieties.Sets[0])
+				: $"any of {(varieties.Capped ? "about " : "")}{varieties.Count} varieties";
+			return InspectorLook.Note($"{NameOf(goodId)} passes {passed}", LabLook.Dim, 12);
+		}
+
+		var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		row.AddThemeConstantOverride("separation", 4);
+		row.AddChild(InspectorLook.Note($"{NameOf(goodId)} carries no variety tag, so it passes nothing", LabLook.Warning, 12));
+		row.AddChild(InspectorLook.Small("+ variety tag…",
+			"A tag that travels: what fills this slot then marks what comes out. A namespace that is not a variety one yet becomes one.",
+			() => AskTag($"A variety tag for {NameOf(goodId)}…", tag => VarietyTagged(goodId, null, tag))));
+		return row;
+	}
+
+	/// <summary>
+	/// The chips of one accept list, a good's with its icon and a tag's in the colour of the part
+	/// its namespace plays — amber for a core tag, violet for a variety one — each with a ×.
 	/// The same list serves a recipe's slot and a consumer, which accept things the same way.
 	/// </summary>
 	private Control AcceptorChips(List<string> accepts, string nodeKey, int port)
@@ -484,15 +668,16 @@ public partial class EconomyLab
 			if (Acceptor.IsTag(held))
 			{
 				string tag = Acceptor.TagOf(held);
-				string meaning = Catalogue.NoteFor(tag);
-				flow.AddChild(InspectorLook.Chip("#" + tag, LabLook.TagPort.Darkened(0.62f), null,
-					meaning.Length > 0 ? $"{held}\n{meaning}" : $"{held}\nAnything in this web carrying it fits.",
-					() => DropAcceptor(nodeKey, port, held), LabLook.TagPort));
+				string meaning = Palette.NoteFor(tag);
+				flow.AddChild(InspectorLook.Chip("#" + tag, InspectorLook.TagFill(Palette, tag), null,
+					InspectorLook.Lines(held, meaning.Length > 0 ? meaning : "Anything in this web carrying it fits.",
+						InspectorLook.RoleLine(Palette, tag)),
+					() => DropAcceptor(nodeKey, port, held), InspectorLook.TagInk(Palette, tag)));
 				continue;
 			}
-			Good? good = Catalogue.Find(held);
+			Good? good = Palette.Find(held);
 			flow.AddChild(InspectorLook.Chip(good?.Name ?? held, LabLook.Body.Lightened(0.12f), IconOf(held),
-				good == null ? $"{held} is not in the catalogue." : good.Note.Length > 0 ? $"{good.Name}\n{good.Note}" : good.Name,
+				good == null ? $"{held} is not in the palette." : good.Note.Length > 0 ? $"{good.Name}\n{good.Note}" : good.Name,
 				() => DropAcceptor(nodeKey, port, held)));
 		}
 		return flow;
@@ -532,7 +717,7 @@ public partial class EconomyLab
 	/// </summary>
 	private void TakeGood(string nodeKey, int port, string goodId)
 	{
-		Change($"{NameOf(nodeKey)} takes {NameOf(goodId)}", Touch.Web, () =>
+		Change($"{NameOf(nodeKey)} takes {NameOf(goodId)}", () =>
 		{
 			if (!Web.Holds(goodId)) EconomyEdit.AddGood(Web, goodId, LeftOf(nodeKey));
 			if (Web.Consumer(nodeKey) is { } consumer) EconomyEdit.Accept(consumer.Accepts, goodId);
@@ -547,7 +732,7 @@ public partial class EconomyLab
 	private void DropAcceptor(string nodeKey, int port, string acceptor)
 	{
 		string what = Acceptor.IsTag(acceptor) ? "#" + Acceptor.TagOf(acceptor) : NameOf(acceptor);
-		Change($"{NameOf(nodeKey)} no longer takes {what}", Touch.Web, () =>
+		Change($"{NameOf(nodeKey)} no longer takes {what}", () =>
 		{
 			if (Web.Consumer(nodeKey) is { } consumer) consumer.Accepts.Remove(acceptor);
 			else if (Web.Recipe(nodeKey) is { } recipe && port < recipe.Inputs.Count) recipe.Inputs[port].Accepts.Remove(acceptor);
@@ -563,7 +748,7 @@ public partial class EconomyLab
 			Say($"{NameOf(rid)} makes {NameOf(goodId)} already.");
 			return;
 		}
-		Change($"{NameOf(rid)} makes {NameOf(goodId)}", Touch.Web, () =>
+		Change($"{NameOf(rid)} makes {NameOf(goodId)}", () =>
 		{
 			if (!Web.Holds(goodId)) EconomyEdit.AddGood(Web, goodId, RightOf(rid));
 			if (Web.Recipe(rid) is not { } live) return;
@@ -589,16 +774,14 @@ public partial class EconomyLab
 		name.TextChanged += text =>
 		{
 			title.Text = text.Trim().Length > 0 ? text : "The consumer";
-			Change("renamed the consumer " + (text.Trim().Length > 0 ? text.Trim() : cid), Touch.Web,
-				() => { if (Web.Consumer(cid) is { } live) live.Name = text; },
+			Change("renamed the consumer " + (text.Trim().Length > 0 ? text.Trim() : cid), () => { if (Web.Consumer(cid) is { } live) live.Name = text; },
 				merge: "consumer.name:" + cid, keepInspector: true);
 		};
 		rows.AddChild(name);
 
 		rows.AddChild(InspectorLook.Caption("Note"));
 		TextEdit note = InspectorLook.Paragraph(consumer.Note, 3);
-		note.TextChanged += () => Change("noted the consumer " + NameOf(cid), Touch.Web,
-			() => { if (Web.Consumer(cid) is { } live) live.Note = note.Text; },
+		note.TextChanged += () => Change("noted the consumer " + NameOf(cid), () => { if (Web.Consumer(cid) is { } live) live.Note = note.Text; },
 			merge: "consumer.note:" + cid, keepInspector: true);
 		rows.AddChild(note);
 
@@ -631,14 +814,12 @@ public partial class EconomyLab
 
 		rows.AddChild(InspectorLook.Caption("Name"));
 		LineEdit name = InspectorLook.Field(Web.Name);
-		name.TextChanged += text => Change("renamed the web " + (text.Trim().Length > 0 ? text.Trim() : Web.Id), Touch.Web,
-			() => Web.Name = text, merge: "web.name:" + Web.Id, keepInspector: true);
+		name.TextChanged += text => Change("renamed the web " + (text.Trim().Length > 0 ? text.Trim() : Web.Id), () => Web.Name = text, merge: "web.name:" + Web.Id, keepInspector: true);
 		rows.AddChild(name);
 
 		rows.AddChild(InspectorLook.Caption("Note"));
 		TextEdit note = InspectorLook.Paragraph(Web.Note, 4);
-		note.TextChanged += () => Change("noted the web", Touch.Web,
-			() => Web.Note = note.Text, merge: "web.note:" + Web.Id, keepInspector: true);
+		note.TextChanged += () => Change("noted the web", () => Web.Note = note.Text, merge: "web.note:" + Web.Id, keepInspector: true);
 		rows.AddChild(note);
 		rows.AddChild(InspectorLook.Note($"resources/economy/webs/{Web.Id}.json", LabLook.Faint, 12));
 
@@ -654,8 +835,10 @@ public partial class EconomyLab
 			}
 		rows.AddChild(InspectorLook.Note($"{Web.Goods.Count} goods: {sources} sources, {middles} intermediate, {finals} final, {loose} loose.", LabLook.Dim, 12));
 		rows.AddChild(InspectorLook.Note($"{Web.Recipes.Count} recipes · {Web.Consumers.Count} consumers · {Analysis.Links.Count} links", LabLook.Dim, 12));
+		int varied = Web.Goods.Count(goodId => !Analysis.VarietiesOf(goodId).IsPlain);
+		rows.AddChild(InspectorLook.Note(varied == 1 ? "1 good comes in varieties." : $"{varied} goods come in varieties.", LabLook.Dim, 12));
 
-		string? deepest = Web.Goods.Where(g => Catalogue.Find(g) != null)
+		string? deepest = Web.Goods.Where(g => Palette.Find(g) != null)
 			.OrderByDescending(Analysis.Depth).ThenBy(g => g, StringComparer.Ordinal).FirstOrDefault();
 		if (deepest != null)
 			rows.AddChild(InspectorJump($"deepest: {NameOf(deepest)}, {Analysis.Depth(deepest)} steps from the ground",
@@ -684,6 +867,9 @@ public partial class EconomyLab
 		rows.AddChild(InspectorLook.Swatch("admitted by a tag", LabLook.TagPort));
 		rows.AddChild(InspectorLook.Swatch("what a recipe makes", LabLook.ProductPort));
 		rows.AddChild(InspectorLook.Swatch("consumed", LabLook.EatenPort));
+		rows.AddChild(InspectorLook.Note("» on a slot: what fills it passes its variety on", LabLook.Dim, 12));
+		rows.AddChild(InspectorLook.Swatch("a variety tag", LabLook.VarietyTag));
+		rows.AddChild(InspectorLook.Swatch("a core tag", LabLook.CoreTag));
 	}
 
 	// ---- several nodes ---------------------------------------------------------
@@ -697,7 +883,7 @@ public partial class EconomyLab
 		rows.AddChild(InspectorLook.Note(string.Join(", ", keys.Take(14).Select(NameOf)) + (keys.Count > 14 ? ", …" : ""), LabLook.Faint, 12));
 
 		InspectorLook.Section(rows, "All of them");
-		rows.AddChild(InspectorAct("Remove them from this web", "Goods stay in the catalogue; recipes and consumers are deleted.",
+		rows.AddChild(InspectorAct("Remove them from this web", "Goods stay in this web's palette; recipes and consumers are deleted.",
 			() => RemoveNodes(SelectedKeys())));
 		Button cut = InspectorAct("New web from the selected goods…", "A web of these goods and everything upstream of them, down to the ground.", AskNewWeb);
 		cut.Disabled = goods == 0;

@@ -17,6 +17,13 @@ public sealed class RecipeInput
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public bool Optional { get; set; }
 
+	/// <summary>
+	/// The variety of what fills this slot passes on to the output: its variety tags are stamped on
+	/// what the recipe makes, so the same recipe fed an arsenic heart makes an arsenic-hearted golem.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool Passes { get; set; }
+
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }
 }

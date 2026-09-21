@@ -51,6 +51,8 @@ public partial class GoodNode : GraphNode
 		words.AddRange(good.Tags.Where(t => t.StartsWith("kind:")).Take(2).Select(LabLook.Short));
 		if (analysis.IsConsumed(good.Id)) words.Add("consumed");
 		if (analysis.IsHub(good.Id)) words.Add($"hub ×{uses}");
+		VarietySet varieties = analysis.VarietiesOf(good.Id);
+		if (!varieties.IsPlain) words.Add(varieties.Capped ? $"~{varieties.Count} varieties" : varieties.Count == 1 ? LabLook.VarietyName(varieties.Sets[0]) : $"{varieties.Count} varieties");
 		string line = string.Join(" · ", words);
 
 		Color stage = LabLook.StageColour(good);

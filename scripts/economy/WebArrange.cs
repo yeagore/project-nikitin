@@ -21,16 +21,16 @@ public static class WebArrange
 	/// Writes a position for every node of the web. <paramref name="sizeOf"/> may give a node's
 	/// real size on screen; without it the constants above stand in.
 	/// </summary>
-	public static void Arrange(Catalogue catalogue, EconomyWeb web, Func<string, (float W, float H)?>? sizeOf = null)
+	public static void Arrange(EconomyWeb web, Func<string, (float W, float H)?>? sizeOf = null)
 	{
-		WebAnalysis analysis = WebAnalysis.Of(catalogue, web);
+		WebAnalysis analysis = WebAnalysis.Of(web);
 		var nodes = new List<LayeredLayout.Node>();
 
 		(float W, float H) Size(string key, float w, float h) => sizeOf?.Invoke(key) ?? (w, h);
 
 		string Hint(string goodId)
 		{
-			Good? good = catalogue.Find(goodId);
+			Good? good = web.Palette.Find(goodId);
 			if (good == null) return goodId;
 			string shelf = good.Tags.FirstOrDefault(t => t.StartsWith("group:", StringComparison.Ordinal)) ?? "";
 			return shelf + "/" + good.Name;

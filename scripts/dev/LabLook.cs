@@ -32,6 +32,13 @@ internal static class LabLook
 	public static readonly Color OptionalPort = new("7d7d7d");
 	public static readonly Color TagPort = new("f2b13f");
 	public static readonly Color EatenPort = new("74d495");
+
+	/// <summary>A tag of a variety namespace: it rides from inputs to outputs.</summary>
+	public static readonly Color VarietyTag = new("d08be0");
+
+	/// <summary>A tag of a core namespace: what slots and consumers are meant to accept. The tag slots' amber.</summary>
+	public static readonly Color CoreTag = TagPort;
+
 	public static readonly Color Error = new("ff7a6b");
 	public static readonly Color Warning = new("f2b13f");
 	public static readonly Color Note = new("8fb6d9");
@@ -127,6 +134,14 @@ internal static class LabLook
 			SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
 		};
 	}
+
+	/// <summary>The colour a tag is written in, by the part its namespace plays: violet for variety, amber for core, plain otherwise.</summary>
+	public static Color TagColour(Palette palette, string tag) =>
+		palette.IsVariety(tag) ? VarietyTag : palette.IsCore(tag) ? CoreTag : Ink;
+
+	/// <summary>A variety in words: its tags without their namespaces, or "plain" for the good as it is.</summary>
+	public static string VarietyName(System.Collections.Generic.IReadOnlyList<string> tags) =>
+		tags.Count == 0 ? "plain" : string.Join(" · ", System.Linq.Enumerable.Select(tags, Short));
 
 	/// <summary>A tag without its namespace, as a node or a chip has room for.</summary>
 	public static string Short(string tag)

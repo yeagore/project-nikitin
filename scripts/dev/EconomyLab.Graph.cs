@@ -102,7 +102,7 @@ public partial class EconomyLab
 	private void SyncGraph()
 	{
 		var wanted = new List<string>();
-		wanted.AddRange(Web.Goods.Where(id => Catalogue.Find(id) != null));
+		wanted.AddRange(Web.Goods.Where(id => Palette.Find(id) != null));
 		wanted.AddRange(Web.Recipes.Select(r => r.Id));
 		wanted.AddRange(Web.Consumers.Select(c => c.Id));
 		var wantedSet = new HashSet<string>(wanted, StringComparer.Ordinal);
@@ -141,8 +141,8 @@ public partial class EconomyLab
 
 			switch (node)
 			{
-				case GoodNode good: good.Show(Catalogue.Find(key)!, IconOf(key), Analysis); break;
-				case RecipeNode recipe: recipe.Show(Web.Recipe(key)!, Catalogue, Analysis, Sprites); break;
+				case GoodNode good: good.Show(Palette.Find(key)!, IconOf(key), Analysis); break;
+				case RecipeNode recipe: recipe.Show(Web.Recipe(key)!, Palette, Analysis, Sprites); break;
 				case ConsumerNode consumer: consumer.Show(Web.Consumer(key)!, Analysis); break;
 			}
 		}
@@ -178,7 +178,7 @@ public partial class EconomyLab
 	{
 		List<KeyValuePair<string, GraphNode>> moved = _nodes.Where(p => Web.Layout.GetValueOrDefault(p.Key) != SpotOf(p.Value)).ToList();
 		if (moved.Count == 0) return;
-		Change(moved.Count == 1 ? "moved a node" : $"moved {moved.Count} nodes", Touch.Web, () =>
+		Change(moved.Count == 1 ? "moved a node" : $"moved {moved.Count} nodes", () =>
 		{
 			foreach ((string key, GraphNode node) in moved) Web.Layout[key] = SpotOf(node);
 		}, keepInspector: true);
@@ -268,8 +268,8 @@ public partial class EconomyLab
 		};
 	}
 
-	internal void ArrangeAll() => Change("arranged the web", Touch.Web, () =>
-		WebArrange.Arrange(Catalogue, Web, key => _nodes.TryGetValue(key, out GraphNode? node) && node.Size.Y > 1 ? (node.Size.X, node.Size.Y) : null),
+	internal void ArrangeAll() => Change("arranged the web", () =>
+		WebArrange.Arrange(Web, key => _nodes.TryGetValue(key, out GraphNode? node) && node.Size.Y > 1 ? (node.Size.X, node.Size.Y) : null),
 		keepInspector: true);
 
 	private void RememberView()
@@ -339,7 +339,7 @@ public partial class EconomyLab
 		switch (KindOf(from), KindOf(to))
 		{
 			case (Kind.Good, Kind.Recipe):
-				Change($"linked {NameOf(from)} into {NameOf(to)}", Touch.Web, () =>
+				Change($"linked {NameOf(from)} into {NameOf(to)}", () =>
 				{
 					Recipe recipe = Web.Recipe(to)!;
 					if (toPort < recipe.Inputs.Count) EconomyEdit.Accept(recipe.Inputs[toPort].Accepts, from);
@@ -347,10 +347,10 @@ public partial class EconomyLab
 				});
 				break;
 			case (Kind.Good, Kind.Consumer):
-				Change($"{NameOf(from)} is consumed by {NameOf(to)}", Touch.Web, () => EconomyEdit.Accept(Web.Consumer(to)!.Accepts, from));
+				Change($"{NameOf(from)} is consumed by {NameOf(to)}", () => EconomyEdit.Accept(Web.Consumer(to)!.Accepts, from));
 				break;
 			case (Kind.Recipe, Kind.Good):
-				Change($"{NameOf(from)} makes {NameOf(to)}", Touch.Web, () =>
+				Change($"{NameOf(from)} makes {NameOf(to)}", () =>
 				{
 					Recipe recipe = Web.Recipe(from)!;
 					if (fromPort < recipe.Outputs.Count) recipe.Outputs[fromPort].Good = to;
@@ -366,7 +366,7 @@ public partial class EconomyLab
 		if (from == null || to == null) return;
 		if (KindOf(from) == Kind.Recipe)
 		{
-			Change($"{NameOf(from)} no longer makes {NameOf(to)}", Touch.Web, () =>
+			Change($"{NameOf(from)} no longer makes {NameOf(to)}", () =>
 			{
 				Recipe recipe = Web.Recipe(from)!;
 				if (fromPort < recipe.Outputs.Count) recipe.Outputs.RemoveAt(fromPort);
@@ -381,7 +381,7 @@ public partial class EconomyLab
 			Say($"That link comes from the tag {link.Via}: {NameOf(from)} carries it and the slot accepts it. Take the tag off the good, or change what the slot accepts.");
 			return;
 		}
-		Change($"unlinked {NameOf(from)} from {NameOf(to)}", Touch.Web, () =>
+		Change($"unlinked {NameOf(from)} from {NameOf(to)}", () =>
 		{
 			if (Web.Consumer(to) is { } consumer) consumer.Accepts.Remove(from);
 			else if (Web.Recipe(to) is { } recipe && toPort < recipe.Inputs.Count)
@@ -400,8 +400,8 @@ public partial class EconomyLab
 		if (_nodes[from] is GoodNode)
 		{
 			ShowMenu(
-				($"New recipe that uses {NameOf(from)}", () => Change($"new recipe using {NameOf(from)}", Touch.Web, () => SelectNew(EconomyEdit.NewRecipe(Web, null, from, spot).Id))),
-				("New consumer of it", () => Change($"new consumer of {NameOf(from)}", Touch.Web, () =>
+				($"New recipe that uses {NameOf(from)}", () => Change($"new recipe using {NameOf(from)}", () => SelectNew(EconomyEdit.NewRecipe(Web, null, from, spot).Id))),
+				("New consumer of it", () => Change($"new consumer of {NameOf(from)}", () =>
 				{
 					Consumer consumer = EconomyEdit.NewConsumer(Web, "Consumers", spot);
 					consumer.Accepts.Add(from);
@@ -423,8 +423,7 @@ public partial class EconomyLab
 		Spot spot = SpotAt(at);
 		if (_nodes[to] is GoodNode)
 		{
-			ShowMenu(($"New recipe that makes {NameOf(to)}", () => Change($"new recipe making {NameOf(to)}", Touch.Web,
-				() => SelectNew(EconomyEdit.NewRecipe(Web, to, null, new Spot(spot.X - (int)WebArrange.RecipeWidth, spot.Y)).Id))));
+			ShowMenu(($"New recipe that makes {NameOf(to)}", () => Change($"new recipe making {NameOf(to)}", () => SelectNew(EconomyEdit.NewRecipe(Web, to, null, new Spot(spot.X - (int)WebArrange.RecipeWidth, spot.Y)).Id))));
 			return;
 		}
 		ShowMenu(
@@ -436,7 +435,7 @@ public partial class EconomyLab
 	/// <summary>Makes a slot (or the open port's new slot, or a consumer) accept a tag.</summary>
 	internal void AcceptTag(string nodeKey, int port, string tag)
 	{
-		Change($"{NameOf(nodeKey)} accepts #{tag}", Touch.Web, () =>
+		Change($"{NameOf(nodeKey)} accepts #{tag}", () =>
 		{
 			if (Web.Consumer(nodeKey) is { } consumer) EconomyEdit.Accept(consumer.Accepts, Acceptor.ForTag(tag));
 			else if (Web.Recipe(nodeKey) is { } recipe)
@@ -455,7 +454,7 @@ public partial class EconomyLab
 			link();
 			return;
 		}
-		Change($"added {NameOf(goodId)} and linked it", Touch.Web, () =>
+		Change($"added {NameOf(goodId)} and linked it", () =>
 		{
 			EconomyEdit.AddGood(Web, goodId, spot);
 			link();
@@ -464,7 +463,7 @@ public partial class EconomyLab
 
 	private void DropGoods(string[] ids, Vector2 at)
 	{
-		List<string> fresh = ids.Where(id => !Web.Holds(id) && Catalogue.Find(id) != null).ToList();
+		List<string> fresh = ids.Where(id => !Web.Holds(id) && Palette.Find(id) != null).ToList();
 		if (fresh.Count == 0)
 		{
 			if (ids.Length > 0) Select(ids[0], focus: true);
@@ -483,12 +482,12 @@ public partial class EconomyLab
 		Spot spot = at ?? new Spot((int)_graph.CanvasCentre.X, (int)_graph.CanvasCentre.Y);
 		EconomyWeb? source = ChainSource();
 		string what = ids.Count == 1 ? $"added {NameOf(ids[0])}" : $"added {ids.Count} goods";
-		Change(source == null ? what : what + $" with the chain from {source.Name}", Touch.Web, () =>
+		Change(source == null ? what : what + $" with the chain from {source.Name}", () =>
 		{
 			if (source != null)
 			{
 				Spot origin = source.Layout.GetValueOrDefault(ids[0]);
-				EconomyEdit.CopyChain(Catalogue, source, Web, ids, withOptional: true, new Spot(spot.X - origin.X, spot.Y - origin.Y));
+				EconomyEdit.CopyChain(source, Web, ids, withOptional: true, new Spot(spot.X - origin.X, spot.Y - origin.Y));
 			}
 			for (int i = 0; i < ids.Count; i++)
 				EconomyEdit.AddGood(Web, ids[i], new Spot(spot.X, spot.Y + i * (int)(WebArrange.GoodHeight + 16)));
@@ -502,7 +501,7 @@ public partial class EconomyLab
 		if (keys.Count == 0) keys = SelectedKeys();
 		if (keys.Count == 0) return;
 		string what = keys.Count == 1 ? $"removed {NameOf(keys[0])} from the web" : $"removed {keys.Count} nodes from the web";
-		Change(what, Touch.Web, () =>
+		Change(what, () =>
 		{
 			foreach (string key in keys)
 			{
@@ -525,7 +524,7 @@ public partial class EconomyLab
 	/// <summary>What to call a node in a sentence: the good's or consumer's name, a recipe's title.</summary>
 	internal string NameOf(string key)
 	{
-		if (Catalogue.Find(key) is { } good) return good.Name;
+		if (Palette.Find(key) is { } good) return good.Name;
 		if (Web.Recipe(key) is { } recipe) return "the recipe " + Analysis.TitleOf(recipe);
 		if (Web.Consumer(key) is { } consumer) return consumer.Name.Length > 0 ? consumer.Name : "the consumer";
 		return key;
@@ -553,8 +552,8 @@ public partial class EconomyLab
 		{
 			("Add a good from the catalogue…", () => AskGood("Add which good?", id => AddGoods(new List<string> { id }, spot), notInWeb: true)),
 			("New good…", () => AskNewGood(spot, _ => { })),
-			("New recipe", () => Change("new recipe", Touch.Web, () => SelectNew(EconomyEdit.NewRecipe(Web, null, null, spot).Id))),
-			("New consumer", () => Change("new consumer", Touch.Web, () => SelectNew(EconomyEdit.NewConsumer(Web, "Consumers", spot).Id))),
+			("New recipe", () => Change("new recipe", () => SelectNew(EconomyEdit.NewRecipe(Web, null, null, spot).Id))),
+			("New consumer", () => Change("new consumer", () => SelectNew(EconomyEdit.NewConsumer(Web, "Consumers", spot).Id))),
 		};
 		int selected = SelectedKeys().Count;
 		if (selected > 0) items.Add((selected == 1 ? "Remove the selected node from the web" : $"Remove the {selected} selected nodes from the web", () => RemoveNodes(SelectedKeys())));
@@ -573,10 +572,8 @@ public partial class EconomyLab
 		var items = new List<(string, Action)>();
 		if (node is GoodNode)
 		{
-			items.Add(("New recipe that makes it", () => Change($"new recipe making {NameOf(key)}", Touch.Web,
-				() => SelectNew(EconomyEdit.NewRecipe(Web, key, null, new Spot((int)before.X, (int)before.Y)).Id))));
-			items.Add(("New recipe that uses it", () => Change($"new recipe using {NameOf(key)}", Touch.Web,
-				() => SelectNew(EconomyEdit.NewRecipe(Web, null, key, new Spot((int)beside.X, (int)beside.Y)).Id))));
+			items.Add(("New recipe that makes it", () => Change($"new recipe making {NameOf(key)}", () => SelectNew(EconomyEdit.NewRecipe(Web, key, null, new Spot((int)before.X, (int)before.Y)).Id))));
+			items.Add(("New recipe that uses it", () => Change($"new recipe using {NameOf(key)}", () => SelectNew(EconomyEdit.NewRecipe(Web, null, key, new Spot((int)beside.X, (int)beside.Y)).Id))));
 			items.Add(("Remove from this web", () => RemoveNodes(new List<string> { key })));
 		}
 		else items.Add((node is RecipeNode ? "Delete this recipe" : "Delete this consumer", () => RemoveNodes(new List<string> { key })));
@@ -602,10 +599,10 @@ public partial class EconomyLab
 
 	// ---- pickers ---------------------------------------------------------------
 
-	/// <summary>Asks for a good of the catalogue. Goods not in this web say so; with <paramref name="notInWeb"/> only those are offered.</summary>
+	/// <summary>Asks for a good of the palette. Goods not in this web say so; with <paramref name="notInWeb"/> only those are offered.</summary>
 	internal void AskGood(string prompt, Action<string> then, bool notInWeb = false)
 	{
-		IEnumerable<(string, string, Texture2D?)> items = Catalogue.Goods
+		IEnumerable<(string, string, Texture2D?)> items = Palette.Goods
 			.Where(g => !notInWeb || !Web.Holds(g.Id))
 			.OrderBy(g => Web.Holds(g.Id) ? 0 : 1).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
 			.Select(g => (g.Id, Web.Holds(g.Id) || notInWeb ? g.Name : g.Name + "   (not in this web)", Sprites.Get(g.Icon)));
@@ -615,7 +612,7 @@ public partial class EconomyLab
 	/// <summary>Asks for a tag: one in use, or a new one typed in.</summary>
 	internal void AskTag(string prompt, Action<string> then)
 	{
-		IEnumerable<(string, string, Texture2D?)> items = Catalogue.TagsInUse().Select(t => (t.Tag, $"#{t.Tag}   ({t.Count})", (Texture2D?)null));
+		IEnumerable<(string, string, Texture2D?)> items = Palette.TagsInUse().Select(t => (t.Tag, $"#{t.Tag}   ({t.Count})", (Texture2D?)null));
 		_picker.Ask(prompt, items, GetViewport().GetMousePosition(), then, typed => then(TidyTag(typed)));
 	}
 
@@ -630,7 +627,7 @@ public partial class EconomyLab
 	/// <summary>Jump to a node of this web by name (⌘F).</summary>
 	internal void Find()
 	{
-		IEnumerable<(string, string, Texture2D?)> items = Web.Goods.Select(id => Catalogue.Find(id)).Where(g => g != null)
+		IEnumerable<(string, string, Texture2D?)> items = Web.Goods.Select(id => Palette.Find(id)).Where(g => g != null)
 			.Select(g => (g!.Id, g.Name, Sprites.Get(g.Icon)))
 			.Concat(Web.Recipes.Select(r => (r.Id, "recipe " + Analysis.TitleOf(r), (Texture2D?)null)))
 			.Concat(Web.Consumers.Select(c => (c.Id, "consumer " + c.Name, (Texture2D?)null)));

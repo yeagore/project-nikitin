@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Convert the Project Nikitin economy design export into the data files of
-the "economy lab" editor: a goods catalogue, and two "webs" (versions of the
+the "economy lab" editor: two "webs" (versions of the
 economy) built from it.
 
 Usage:
@@ -196,14 +196,14 @@ def main():
             }
         )
 
+    # The namespaces whose tags say what a good is, which is what slots and consumers accept.
+    for ns in tag_namespaces:
+        if ns["id"] in ("kind", "need"):
+            ns["role"] = "core"
+
+    # Every web carries its own palette (goods, tags, sprite sheets) inside its file, so each
+    # web below gets its own copy of this one.
     catalogue = {
-        "format": 1,
-        "title": "Project Nikitin goods catalogue",
-        "note": (
-            "Imported from the alchemical production tree export of 2026-09-21. "
-            "Icons and signs are 16 px concept placeholders generated in chat: "
-            "pre-production material."
-        ),
         "atlases": [
             {"id": "icons", "file": "sprites/icons.png", "cell": 16, "columns": 16},
             {"id": "signs", "file": "sprites/signs.png", "cell": 16, "columns": 16},
@@ -305,10 +305,14 @@ def main():
     all_ids_in_source_order = [g["id"] for g in source_goods]
 
     full_ledger = {
-        "format": 1,
+        "format": 2,
         "id": "full-ledger",
         "name": "The full ledger",
-        "note": "Every good and recipe of the 21 September 2026 brainstorm. A map to cut from, not a scope.",
+        "note": (
+            "Every good and recipe of the 21 September 2026 brainstorm. A map to cut from, not a scope. "
+            "Icons and signs are 16 px concept placeholders generated in chat: pre-production material."
+        ),
+        "palette": json.loads(json.dumps(catalogue)),
         "goods": list(all_ids_in_source_order),
         "recipes": full_recipes,
         "consumers": build_consumers(all_ids_in_source_order),
@@ -401,13 +405,14 @@ def main():
     starter_consumers = build_consumers(included)
 
     starter = {
-        "format": 1,
+        "format": 2,
         "id": "starter",
         "name": "Starter: a golem, bread and beer",
         "note": (
             "A small web cut from the full ledger: the golem with its three hearts "
             "and bronze joints, and two things people eat and drink."
         ),
+        "palette": json.loads(json.dumps(catalogue)),
         "goods": starter_goods,
         "recipes": starter_recipes,
         "consumers": starter_consumers,
@@ -479,7 +484,6 @@ def main():
     # write output
     # -----------------------------------------------------------------
 
-    write_json(catalogue, out_dir / "catalogue.json")
     write_json(full_ledger, out_dir / "webs" / "full-ledger.json")
     write_json(starter, out_dir / "webs" / "starter.json")
 
@@ -503,7 +507,7 @@ def main():
         return gid
 
     print("=" * 70)
-    print("catalogue.json")
+    print("the palette each web carries")
     print(f"  goods: {len(catalogue['goods'])}")
     print(f"  tag namespaces: {len(catalogue['tagNamespaces'])}")
     print(f"  tags: {len(catalogue['tags'])}")

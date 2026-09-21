@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using Godot;
+using ProjectNikitin.Economy;
 
 namespace ProjectNikitin.Dev;
 
@@ -151,11 +153,43 @@ internal static class InspectorLook
 	}
 
 	/// <summary>A tag's chip colour: a stage tag wears its stage's, everything else a neutral grey.</summary>
-	public static Color TagColour(string tag)
+	public static Color TagColour(string tag) => Stage(tag) ?? Plain;
+
+	/// <summary>The neutral fill of a chip that carries no colour of its own.</summary>
+	public static Color Plain => LabLook.Body.Lightened(0.12f);
+
+	/// <summary>The colour a <c>stage:</c> tag names, or null for every other tag.</summary>
+	private static Color? Stage(string tag)
 	{
-		if (tag.StartsWith("stage:", StringComparison.Ordinal))
-			foreach ((string stage, Color colour) in LabLook.Stages)
-				if (tag.AsSpan(6).SequenceEqual(stage)) return colour;
-		return LabLook.Body.Lightened(0.12f);
+		if (!tag.StartsWith("stage:", StringComparison.Ordinal)) return null;
+		foreach ((string stage, Color colour) in LabLook.Stages)
+			if (tag.AsSpan(6).SequenceEqual(stage)) return colour;
+		return null;
 	}
+
+	/// <summary>
+	/// A tag chip's fill: a stage tag keeps its stage's colour, a tag whose namespace plays a part
+	/// in the web gets a dark shade of that part's colour, and the rest the neutral grey.
+	/// </summary>
+	public static Color TagFill(Palette palette, string tag)
+	{
+		if (Stage(tag) is { } stage) return stage;
+		Color role = LabLook.TagColour(palette, tag);
+		return role == LabLook.Ink ? Plain : role.Darkened(0.62f);
+	}
+
+	/// <summary>
+	/// The words on a tag chip: the colour of the part its namespace plays, or the plain ink
+	/// over a stage's fill, which carries the meaning itself.
+	/// </summary>
+	public static Color TagInk(Palette palette, string tag) => Stage(tag) != null ? LabLook.Ink : LabLook.TagColour(palette, tag);
+
+	/// <summary>The part a tag's namespace plays, in a line for a tooltip; "" for one that only describes.</summary>
+	public static string RoleLine(Palette palette, string tag) =>
+		palette.IsVariety(tag) ? "a variety tag: it rides from inputs to outputs"
+		: palette.IsCore(tag) ? "a core tag: what slots accept"
+		: "";
+
+	/// <summary>A tooltip of as many lines as have something to say; the empty ones are left out.</summary>
+	public static string Lines(params string[] lines) => string.Join("\n", lines.Where(line => line.Length > 0));
 }

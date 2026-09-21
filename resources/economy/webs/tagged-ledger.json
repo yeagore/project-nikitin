@@ -1,8 +1,8 @@
 {
   "format": 2,
-  "id": "full-ledger",
-  "name": "The full ledger",
-  "note": "Every good and recipe of the 21 September 2026 brainstorm. A map to cut from, not a scope. Icons and signs are 16 px concept placeholders generated in chat: pre-production material.",
+  "id": "tagged-ledger",
+  "name": "The full ledger, tagged",
+  "note": "The full ledger with its either-or slots turned into tag slots wherever a tag can carry the meaning, and with varieties switched on as a worked example: hearts, fittings and soils on the golem, grain down to the loaf and the beer, fats in soap and candles, cloth, dye colours, gemstones. It has its own palette, so nothing here touches the full ledger. Made by tools/make_tagged_ledger.py; every choice is there to overrule.",
   "palette": {
     "atlases": [
       {
@@ -56,6 +56,46 @@
       {
         "id": "origin",
         "note": "Earth region the good is historically tied to, for mapping onto archetypes later."
+      },
+      {
+        "id": "heart",
+        "note": "Which heart a golem was given.",
+        "role": "variety"
+      },
+      {
+        "id": "fit",
+        "note": "An optional fitting built into a golem.",
+        "role": "variety"
+      },
+      {
+        "id": "soil",
+        "note": "Which of the seventeen soils: it travels from the clay to the golem's body to the golem.",
+        "role": "variety"
+      },
+      {
+        "id": "grain",
+        "note": "Which grain: it travels to the flour, the malt, the loaf and the beer.",
+        "role": "variety"
+      },
+      {
+        "id": "fat",
+        "note": "Which fat or wax a soap or a candle was made from.",
+        "role": "variety"
+      },
+      {
+        "id": "cloth",
+        "note": "Which cloth clothes were cut from.",
+        "role": "variety"
+      },
+      {
+        "id": "colour",
+        "note": "Which dye a cloth took.",
+        "role": "variety"
+      },
+      {
+        "id": "gem",
+        "note": "Which stone a jewel was set with.",
+        "role": "variety"
       }
     ],
     "tags": [
@@ -418,6 +458,82 @@
       {
         "id": "group:works-and-arms",
         "note": ""
+      },
+      {
+        "id": "kind:vitriol",
+        "note": "The vitriols: metal sulphates that give oil of vitriol when roasted."
+      },
+      {
+        "id": "kind:tannin",
+        "note": "Anything that tans a hide."
+      },
+      {
+        "id": "kind:plant-fibre",
+        "note": "Fibre from a plant, for paper and rope; not wool, not silk."
+      },
+      {
+        "id": "kind:varnish-resin",
+        "note": "A resin that dissolves into a varnish or melts into a wax."
+      },
+      {
+        "id": "kind:fat",
+        "note": "Fats and oils, for the soap kettle."
+      },
+      {
+        "id": "kind:candle-stock",
+        "note": "What a candle can be dipped from."
+      },
+      {
+        "id": "kind:writing-surface",
+        "note": "What is written or drawn on."
+      },
+      {
+        "id": "kind:plain-cloth",
+        "note": "Undyed everyday cloth."
+      },
+      {
+        "id": "kind:gemstone",
+        "note": "A stone a jeweller sets. Not the finished jewellery, which would feed on itself."
+      },
+      {
+        "id": "kind:incense-resin",
+        "note": "A resin burnt for its smoke."
+      },
+      {
+        "id": "kind:red-dyestuff",
+        "note": "A plant that dyes red."
+      },
+      {
+        "id": "kind:scarlet-insect",
+        "note": "An insect that dyes scarlet."
+      },
+      {
+        "id": "kind:ammonia-source",
+        "note": "Anything the ammonia salts and spirits can be got from."
+      },
+      {
+        "id": "kind:lime-source",
+        "note": "Anything that burns to quicklime."
+      },
+      {
+        "id": "kind:soda-source",
+        "note": "Anything that burns or boils to soda ash."
+      },
+      {
+        "id": "kind:chloride",
+        "note": "A source of the muriatic part of aqua regia."
+      },
+      {
+        "id": "kind:tar-stock",
+        "note": "Anything that boils down to pitch."
+      },
+      {
+        "id": "kind:soot-fuel",
+        "note": "Anything burnt under a hood for its soot."
+      },
+      {
+        "id": "kind:lens-stock",
+        "note": "Clear enough to grind a lens from."
       }
     ],
     "goods": [
@@ -666,7 +782,8 @@
           "source:mined",
           "group:mined",
           "nature:alchemical",
-          "kind:salt"
+          "kind:salt",
+          "kind:vitriol"
         ],
         "icon": {
           "atlas": "icons",
@@ -807,7 +924,8 @@
           "group:mined",
           "nature:alchemical",
           "kind:salt",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:ammonia-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -829,7 +947,8 @@
           "stage:raw",
           "source:mined",
           "group:mined",
-          "nature:alchemical"
+          "nature:alchemical",
+          "kind:lime-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -905,7 +1024,8 @@
           "nature:alchemical",
           "kind:alkali",
           "origin:sub-saharan-africa",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:soda-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -1042,7 +1162,145 @@
           "source": "historical",
           "reading": "earth (U+1F703)",
           "parts": null
-        }
+        },
+        "varieties": [
+          {
+            "id": "frostearth",
+            "name": "Frostearth",
+            "note": "",
+            "tags": [
+              "soil:frostearth"
+            ]
+          },
+          {
+            "id": "bleachearth",
+            "name": "Bleachearth",
+            "note": "",
+            "tags": [
+              "soil:bleachearth"
+            ]
+          },
+          {
+            "id": "shadowearth",
+            "name": "Shadowearth",
+            "note": "",
+            "tags": [
+              "soil:shadowearth"
+            ]
+          },
+          {
+            "id": "murkearth",
+            "name": "Murkearth",
+            "note": "",
+            "tags": [
+              "soil:murkearth"
+            ]
+          },
+          {
+            "id": "dryearth",
+            "name": "Dryearth",
+            "note": "",
+            "tags": [
+              "soil:dryearth"
+            ]
+          },
+          {
+            "id": "blackearth",
+            "name": "Blackearth",
+            "note": "",
+            "tags": [
+              "soil:blackearth"
+            ]
+          },
+          {
+            "id": "brownearth",
+            "name": "Brownearth",
+            "note": "",
+            "tags": [
+              "soil:brownearth"
+            ]
+          },
+          {
+            "id": "muckearth",
+            "name": "Muckearth",
+            "note": "",
+            "tags": [
+              "soil:muckearth"
+            ]
+          },
+          {
+            "id": "dustearth",
+            "name": "Dustearth",
+            "note": "",
+            "tags": [
+              "soil:dustearth"
+            ]
+          },
+          {
+            "id": "yellowearth",
+            "name": "Yellowearth",
+            "note": "",
+            "tags": [
+              "soil:yellowearth"
+            ]
+          },
+          {
+            "id": "redearth",
+            "name": "Redearth",
+            "note": "",
+            "tags": [
+              "soil:redearth"
+            ]
+          },
+          {
+            "id": "floodearth",
+            "name": "Floodearth",
+            "note": "",
+            "tags": [
+              "soil:floodearth"
+            ]
+          },
+          {
+            "id": "stone",
+            "name": "Stone",
+            "note": "",
+            "tags": [
+              "soil:stone"
+            ]
+          },
+          {
+            "id": "scree",
+            "name": "Scree",
+            "note": "",
+            "tags": [
+              "soil:scree"
+            ]
+          },
+          {
+            "id": "silt",
+            "name": "Silt",
+            "note": "",
+            "tags": [
+              "soil:silt"
+            ]
+          },
+          {
+            "id": "sand",
+            "name": "Sand",
+            "note": "",
+            "tags": [
+              "soil:sand"
+            ]
+          },
+          {
+            "id": "snow",
+            "name": "Snow",
+            "note": "",
+            "tags": [
+              "soil:snow"
+            ]
+          }
+        ]
       },
       {
         "id": "kaolin",
@@ -1106,7 +1364,9 @@
           "source:quarried",
           "group:quarried-and-dug",
           "nature:alchemical",
-          "kind:resin"
+          "kind:resin",
+          "kind:tar-stock",
+          "kind:soot-fuel"
         ],
         "icon": {
           "atlas": "icons",
@@ -1134,7 +1394,9 @@
           "nature:alchemical",
           "kind:gem",
           "trait:luxury",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:gemstone",
+          "gem:lapis"
         ],
         "icon": {
           "atlas": "icons",
@@ -1165,7 +1427,9 @@
           "trait:luxury",
           "folk:lakefolk",
           "folk:jadefolk",
-          "origin:east-asia"
+          "origin:east-asia",
+          "kind:gemstone",
+          "gem:jade"
         ],
         "icon": {
           "atlas": "icons",
@@ -1194,7 +1458,9 @@
           "nature:alchemical",
           "kind:resin",
           "kind:gem",
-          "trait:luxury"
+          "trait:luxury",
+          "kind:gemstone",
+          "gem:amber"
         ],
         "icon": {
           "atlas": "icons",
@@ -1222,7 +1488,9 @@
           "nature:alchemical",
           "kind:gem",
           "folk:lakefolk",
-          "origin:new-world"
+          "origin:new-world",
+          "kind:gemstone",
+          "gem:obsidian"
         ],
         "icon": {
           "atlas": "icons",
@@ -1249,7 +1517,10 @@
           "group:quarried-and-dug",
           "nature:alchemical",
           "kind:optics",
-          "kind:gem"
+          "kind:gem",
+          "kind:gemstone",
+          "kind:lens-stock",
+          "gem:rock-crystal"
         ],
         "icon": {
           "atlas": "icons",
@@ -1293,7 +1564,33 @@
             "GR",
             "GR"
           ]
-        }
+        },
+        "varieties": [
+          {
+            "id": "wheat",
+            "name": "Wheat",
+            "note": "The temperate staple.",
+            "tags": [
+              "grain:wheat"
+            ]
+          },
+          {
+            "id": "rye",
+            "name": "Rye",
+            "note": "Grows where wheat will not: cold, poor ground.",
+            "tags": [
+              "grain:rye"
+            ]
+          },
+          {
+            "id": "barley",
+            "name": "Barley",
+            "note": "The brewer's grain.",
+            "tags": [
+              "grain:barley"
+            ]
+          }
+        ]
       },
       {
         "id": "rice",
@@ -1660,7 +1957,8 @@
           "group:farmed",
           "nature:mundane",
           "kind:dyestuff",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:red-dyestuff"
         ],
         "icon": {
           "atlas": "icons",
@@ -1766,7 +2064,8 @@
           "source:farmed",
           "group:farmed",
           "nature:mundane",
-          "kind:dyestuff"
+          "kind:dyestuff",
+          "kind:tannin"
         ],
         "icon": {
           "atlas": "icons",
@@ -1791,7 +2090,8 @@
           "stage:raw",
           "source:farmed",
           "group:farmed",
-          "nature:mundane"
+          "nature:mundane",
+          "kind:tannin"
         ],
         "icon": {
           "atlas": "icons",
@@ -1817,7 +2117,10 @@
           "source:farmed",
           "group:farmed",
           "nature:mundane",
-          "kind:resin"
+          "kind:resin",
+          "kind:varnish-resin",
+          "kind:tar-stock",
+          "kind:soot-fuel"
         ],
         "icon": {
           "atlas": "icons",
@@ -1898,7 +2201,8 @@
           "source:farmed",
           "group:farmed",
           "nature:mundane",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:soda-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -2007,7 +2311,8 @@
           "group:farmed",
           "nature:mundane",
           "kind:resin",
-          "origin:southeast-asia"
+          "origin:southeast-asia",
+          "kind:varnish-resin"
         ],
         "icon": {
           "atlas": "icons",
@@ -2038,7 +2343,8 @@
           "kind:incense",
           "trait:luxury",
           "origin:east-asia",
-          "origin:southeast-asia"
+          "origin:southeast-asia",
+          "kind:incense-resin"
         ],
         "icon": {
           "atlas": "icons",
@@ -2066,7 +2372,8 @@
           "nature:mundane",
           "kind:resin",
           "kind:incense",
-          "origin:southeast-asia"
+          "origin:southeast-asia",
+          "kind:incense-resin"
         ],
         "icon": {
           "atlas": "icons",
@@ -2095,7 +2402,8 @@
           "kind:resin",
           "kind:incense",
           "trait:luxury",
-          "origin:horn-of-africa-and-arabia"
+          "origin:horn-of-africa-and-arabia",
+          "kind:incense-resin"
         ],
         "icon": {
           "atlas": "icons",
@@ -2124,7 +2432,8 @@
           "kind:fibre",
           "folk:jadefolk",
           "origin:east-asia",
-          "origin:southeast-asia"
+          "origin:southeast-asia",
+          "kind:plant-fibre"
         ],
         "icon": {
           "atlas": "icons",
@@ -2154,7 +2463,8 @@
           "kind:fibre",
           "kind:food",
           "trait:perishable",
-          "origin:southeast-asia"
+          "origin:southeast-asia",
+          "kind:plant-fibre"
         ],
         "icon": {
           "atlas": "icons",
@@ -2212,7 +2522,8 @@
           "folk:lakefolk",
           "origin:new-world",
           "origin:southeast-asia",
-          "origin:sub-saharan-africa"
+          "origin:sub-saharan-africa",
+          "kind:red-dyestuff"
         ],
         "icon": {
           "atlas": "icons",
@@ -2241,7 +2552,11 @@
           "nature:mundane",
           "kind:flux",
           "kind:food",
-          "origin:sub-saharan-africa"
+          "origin:sub-saharan-africa",
+          "kind:fat",
+          "kind:candle-stock",
+          "kind:soot-fuel",
+          "fat:palm"
         ],
         "icon": {
           "atlas": "icons",
@@ -2297,7 +2612,8 @@
           "nature:mundane",
           "kind:dyestuff",
           "origin:southeast-asia",
-          "origin:south-asia"
+          "origin:south-asia",
+          "kind:tannin"
         ],
         "icon": {
           "atlas": "icons",
@@ -2382,7 +2698,11 @@
           "nature:mundane",
           "kind:animal",
           "kind:lighting",
-          "trait:by-product"
+          "trait:by-product",
+          "kind:fat",
+          "kind:candle-stock",
+          "kind:soot-fuel",
+          "fat:tallow"
         ],
         "icon": {
           "atlas": "icons",
@@ -2436,7 +2756,8 @@
           "group:herded-and-gathered",
           "nature:mundane",
           "kind:animal",
-          "trait:by-product"
+          "trait:by-product",
+          "kind:ammonia-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -2491,7 +2812,8 @@
           "group:herded-and-gathered",
           "nature:mundane",
           "kind:animal",
-          "trait:by-product"
+          "trait:by-product",
+          "kind:ammonia-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -2515,7 +2837,8 @@
           "group:herded-and-gathered",
           "nature:mundane",
           "kind:animal",
-          "trait:by-product"
+          "trait:by-product",
+          "kind:ammonia-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -2595,7 +2918,8 @@
           "kind:dyestuff",
           "kind:animal",
           "folk:lakefolk",
-          "origin:new-world"
+          "origin:new-world",
+          "kind:scarlet-insect"
         ],
         "icon": {
           "atlas": "icons",
@@ -2764,7 +3088,8 @@
           "kind:dyestuff",
           "kind:animal",
           "origin:southeast-asia",
-          "origin:south-asia"
+          "origin:south-asia",
+          "kind:scarlet-insect"
         ],
         "icon": {
           "atlas": "icons",
@@ -2791,7 +3116,8 @@
           "group:herded-and-gathered",
           "nature:mundane",
           "kind:animal",
-          "origin:sub-saharan-africa"
+          "origin:sub-saharan-africa",
+          "kind:lime-source"
         ],
         "icon": {
           "atlas": "icons",
@@ -3222,7 +3548,8 @@
           "nature:alchemical",
           "kind:salt",
           "kind:flux",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:chloride"
         ],
         "icon": {
           "atlas": "icons",
@@ -3364,7 +3691,8 @@
           "group:salts-and-earths",
           "nature:alchemical",
           "kind:salt",
-          "kind:mordant"
+          "kind:mordant",
+          "kind:vitriol"
         ],
         "icon": {
           "atlas": "icons",
@@ -3635,7 +3963,10 @@
           "need:food",
           "nature:mundane",
           "kind:food",
-          "origin:mediterranean-and-near-east"
+          "origin:mediterranean-and-near-east",
+          "kind:fat",
+          "kind:soot-fuel",
+          "fat:olive"
         ],
         "icon": {
           "atlas": "icons",
@@ -3658,7 +3989,8 @@
           "group:farm-and-herd-goods",
           "nature:mundane",
           "kind:fibre",
-          "folk:steelfolk"
+          "folk:steelfolk",
+          "kind:plant-fibre"
         ],
         "icon": {
           "atlas": "icons",
@@ -3705,7 +4037,8 @@
           "group:farm-and-herd-goods",
           "nature:mundane",
           "kind:fibre",
-          "kind:naval"
+          "kind:naval",
+          "kind:plant-fibre"
         ],
         "icon": {
           "atlas": "icons",
@@ -3731,7 +4064,8 @@
           "group:farm-and-herd-goods",
           "nature:mundane",
           "kind:fibre",
-          "origin:south-asia"
+          "origin:south-asia",
+          "kind:plant-fibre"
         ],
         "icon": {
           "atlas": "icons",
@@ -4048,7 +4382,9 @@
           "stage:processed",
           "group:farm-and-herd-goods",
           "nature:mundane",
-          "kind:lighting"
+          "kind:lighting",
+          "kind:candle-stock",
+          "fat:beeswax"
         ],
         "icon": {
           "atlas": "icons",
@@ -4118,7 +4454,8 @@
           "stage:processed",
           "group:farm-and-herd-goods",
           "nature:mundane",
-          "kind:writing"
+          "kind:writing",
+          "kind:writing-surface"
         ],
         "icon": {
           "atlas": "icons",
@@ -4281,7 +4618,8 @@
           "nature:mundane",
           "kind:resin",
           "origin:southeast-asia",
-          "origin:south-asia"
+          "origin:south-asia",
+          "kind:varnish-resin"
         ],
         "icon": {
           "atlas": "icons",
@@ -4306,7 +4644,8 @@
           "stage:compound",
           "group:alloys-and-metalwork",
           "nature:alchemical",
-          "kind:metal"
+          "kind:metal",
+          "fit:bronze-joints"
         ],
         "icon": {
           "atlas": "icons",
@@ -4662,7 +5001,8 @@
           "group:waters-and-spirits",
           "nature:alchemical",
           "kind:acid",
-          "trait:corrosive"
+          "trait:corrosive",
+          "kind:chloride"
         ],
         "icon": {
           "atlas": "icons",
@@ -4861,7 +5201,8 @@
           "nature:alchemical",
           "kind:pigment",
           "kind:glass",
-          "origin:europe"
+          "origin:europe",
+          "fit:smalt-eyes"
         ],
         "icon": {
           "atlas": "icons",
@@ -5057,7 +5398,8 @@
           "stage:compound",
           "group:powders-and-pigments",
           "nature:alchemical",
-          "kind:dye"
+          "kind:dye",
+          "colour:red"
         ],
         "icon": {
           "atlas": "icons",
@@ -5083,7 +5425,8 @@
           "group:powders-and-pigments",
           "nature:alchemical",
           "kind:dye",
-          "origin:south-asia"
+          "origin:south-asia",
+          "colour:blue"
         ],
         "icon": {
           "atlas": "icons",
@@ -5108,7 +5451,8 @@
           "stage:compound",
           "group:powders-and-pigments",
           "nature:alchemical",
-          "kind:dye"
+          "kind:dye",
+          "colour:yellow"
         ],
         "icon": {
           "atlas": "icons",
@@ -5135,7 +5479,8 @@
           "nature:alchemical",
           "kind:dye",
           "folk:lakefolk",
-          "origin:new-world"
+          "origin:new-world",
+          "colour:scarlet"
         ],
         "icon": {
           "atlas": "icons",
@@ -5160,7 +5505,8 @@
           "stage:compound",
           "group:powders-and-pigments",
           "nature:alchemical",
-          "kind:dye"
+          "kind:dye",
+          "colour:black"
         ],
         "icon": {
           "atlas": "icons",
@@ -5237,7 +5583,8 @@
           "stage:compound",
           "group:materials",
           "nature:mundane",
-          "kind:glass"
+          "kind:glass",
+          "kind:lens-stock"
         ],
         "icon": {
           "atlas": "icons",
@@ -5368,7 +5715,8 @@
           "nature:mundane",
           "kind:writing",
           "folk:jadefolk",
-          "origin:east-asia"
+          "origin:east-asia",
+          "kind:writing-surface"
         ],
         "icon": {
           "atlas": "icons",
@@ -5655,7 +6003,9 @@
           "nature:mundane",
           "kind:cloth",
           "trait:staple",
-          "folk:steelfolk"
+          "folk:steelfolk",
+          "kind:plain-cloth",
+          "cloth:linen"
         ],
         "icon": {
           "atlas": "icons",
@@ -5683,7 +6033,9 @@
           "nature:mundane",
           "kind:cloth",
           "trait:staple",
-          "folk:steelfolk"
+          "folk:steelfolk",
+          "kind:plain-cloth",
+          "cloth:wool"
         ],
         "icon": {
           "atlas": "icons",
@@ -5710,7 +6062,9 @@
           "need:clothing",
           "nature:mundane",
           "kind:cloth",
-          "origin:south-asia"
+          "origin:south-asia",
+          "kind:plain-cloth",
+          "cloth:cotton"
         ],
         "icon": {
           "atlas": "icons",
@@ -6087,7 +6441,8 @@
         "tags": [
           "stage:magistery",
           "group:magisteries",
-          "nature:alchemical"
+          "nature:alchemical",
+          "fit:caustic-nerves"
         ],
         "icon": {
           "atlas": "icons",
@@ -6287,7 +6642,8 @@
           "nature:mundane",
           "kind:golem-part",
           "trait:toxic",
-          "kind:golem-heart"
+          "kind:golem-heart",
+          "heart:arsenic"
         ],
         "icon": {
           "atlas": "icons",
@@ -6313,7 +6669,8 @@
           "group:golem-works",
           "nature:mundane",
           "kind:golem-part",
-          "kind:golem-heart"
+          "kind:golem-heart",
+          "heart:antimony"
         ],
         "icon": {
           "atlas": "icons",
@@ -6339,7 +6696,8 @@
           "group:golem-works",
           "nature:mundane",
           "kind:golem-part",
-          "kind:golem-heart"
+          "kind:golem-heart",
+          "heart:bismuth"
         ],
         "icon": {
           "atlas": "icons",
@@ -6389,7 +6747,8 @@
           "stage:assembly",
           "group:golem-works",
           "nature:mundane",
-          "kind:golem-part"
+          "kind:golem-part",
+          "fit:clockwork-hands"
         ],
         "icon": {
           "atlas": "icons",
@@ -8174,8 +8533,7 @@
         },
         {
           "accepts": [
-            "coal",
-            "charcoal"
+            "#kind:fuel"
           ]
         }
       ],
@@ -8333,8 +8691,7 @@
       "inputs": [
         {
           "accepts": [
-            "vit",
-            "copperas"
+            "#kind:vitriol"
           ]
         }
       ],
@@ -8463,8 +8820,7 @@
       "inputs": [
         {
           "accepts": [
-            "sam",
-            "dung"
+            "#kind:ammonia-source"
           ]
         }
       ],
@@ -8481,8 +8837,7 @@
       "inputs": [
         {
           "accepts": [
-            "lim",
-            "shells"
+            "#kind:lime-source"
           ]
         },
         {
@@ -8538,8 +8893,7 @@
       "inputs": [
         {
           "accepts": [
-            "nat",
-            "kelp"
+            "#kind:soda-source"
           ]
         }
       ],
@@ -8730,7 +9084,8 @@
         {
           "accepts": [
             "grain"
-          ]
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -8747,7 +9102,8 @@
         {
           "accepts": [
             "grain"
-          ]
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -8950,8 +9306,7 @@
       "inputs": [
         {
           "accepts": [
-            "resin",
-            "bitu"
+            "#kind:tar-stock"
           ]
         }
       ],
@@ -8985,8 +9340,7 @@
       "inputs": [
         {
           "accepts": [
-            "resin",
-            "oil"
+            "#kind:soot-fuel"
           ]
         }
       ],
@@ -9137,8 +9491,7 @@
         },
         {
           "accepts": [
-            "bark",
-            "cutch"
+            "#kind:tannin"
           ]
         },
         {
@@ -9545,8 +9898,7 @@
         },
         {
           "accepts": [
-            "sama",
-            "sos"
+            "#kind:chloride"
           ]
         }
       ],
@@ -9658,8 +10010,28 @@
       "inputs": [
         {
           "accepts": [
-            "horn",
-            "sama",
+            "#kind:ammonia-source"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "harts"
+        }
+      ]
+    },
+    {
+      "id": "r.harts.2",
+      "name": "",
+      "note": "From sal ammoniac and lime.",
+      "inputs": [
+        {
+          "accepts": [
+            "sama"
+          ]
+        },
+        {
+          "accepts": [
             "qlime"
           ]
         }
@@ -9919,8 +10291,7 @@
       "inputs": [
         {
           "accepts": [
-            "madder",
-            "dyewood"
+            "#kind:red-dyestuff"
           ]
         },
         {
@@ -9947,8 +10318,8 @@
         },
         {
           "accepts": [
-            "urine",
-            "lye"
+            "#kind:alkali",
+            "urine"
           ]
         }
       ],
@@ -9987,8 +10358,7 @@
       "inputs": [
         {
           "accepts": [
-            "coch",
-            "lac"
+            "#kind:scarlet-insect"
           ]
         },
         {
@@ -10187,8 +10557,7 @@
       "inputs": [
         {
           "accepts": [
-            "crystal",
-            "rockc"
+            "#kind:lens-stock"
           ]
         },
         {
@@ -10271,9 +10640,7 @@
       "inputs": [
         {
           "accepts": [
-            "linthr",
-            "hempf",
-            "bamboo"
+            "#kind:plant-fibre"
           ]
         },
         {
@@ -10377,9 +10744,7 @@
       "inputs": [
         {
           "accepts": [
-            "resin",
-            "dammar",
-            "shellac"
+            "#kind:varnish-resin"
           ]
         },
         {
@@ -10433,8 +10798,7 @@
         },
         {
           "accepts": [
-            "resin",
-            "shellac"
+            "#kind:varnish-resin"
           ]
         },
         {
@@ -10456,10 +10820,9 @@
       "inputs": [
         {
           "accepts": [
-            "tallow",
-            "wax",
-            "palmoil"
-          ]
+            "#kind:candle-stock"
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -10480,10 +10843,9 @@
         },
         {
           "accepts": [
-            "tallow",
-            "oil",
-            "palmoil"
-          ]
+            "#kind:fat"
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -10499,8 +10861,7 @@
       "inputs": [
         {
           "accepts": [
-            "hempf",
-            "coconut"
+            "#kind:plant-fibre"
           ]
         },
         {
@@ -10644,8 +11005,7 @@
         },
         {
           "accepts": [
-            "coal",
-            "peat"
+            "#kind:fuel"
           ]
         }
       ],
@@ -10718,7 +11078,8 @@
         {
           "accepts": [
             "flour"
-          ]
+          ],
+          "passes": true
         },
         {
           "accepts": [
@@ -10740,7 +11101,8 @@
         {
           "accepts": [
             "malt"
-          ]
+          ],
+          "passes": true
         },
         {
           "accepts": [
@@ -11084,7 +11446,8 @@
         {
           "accepts": [
             "soil"
-          ]
+          ],
+          "passes": true
         },
         {
           "accepts": [
@@ -11236,12 +11599,14 @@
         {
           "accepts": [
             "body"
-          ]
+          ],
+          "passes": true
         },
         {
           "accepts": [
             "#kind:golem-heart"
-          ]
+          ],
+          "passes": true
         },
         {
           "accepts": [
@@ -11252,25 +11617,29 @@
           "accepts": [
             "bronze"
           ],
-          "optional": true
+          "optional": true,
+          "passes": true
         },
         {
           "accepts": [
             "smalt"
           ],
-          "optional": true
+          "optional": true,
+          "passes": true
         },
         {
           "accepts": [
             "lunar"
           ],
-          "optional": true
+          "optional": true,
+          "passes": true
         },
         {
           "accepts": [
             "clockw"
           ],
-          "optional": true
+          "optional": true,
+          "passes": true
         }
       ],
       "outputs": [
@@ -11406,8 +11775,7 @@
       "inputs": [
         {
           "accepts": [
-            "paper",
-            "parch"
+            "#kind:writing-surface"
           ]
         },
         {
@@ -11760,10 +12128,9 @@
       "inputs": [
         {
           "accepts": [
-            "linen",
-            "woolc",
-            "cottonc"
-          ]
+            "#kind:plain-cloth"
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -11789,11 +12156,9 @@
         },
         {
           "accepts": [
-            "madderl",
-            "weldd",
-            "indigod",
-            "ironblk"
-          ]
+            "#kind:dye"
+          ],
+          "passes": true
         }
       ],
       "outputs": [
@@ -12193,10 +12558,9 @@
         },
         {
           "accepts": [
-            "lapis",
-            "jade",
-            "amber"
-          ]
+            "#kind:gemstone"
+          ],
+          "passes": true
         },
         {
           "accepts": [
@@ -12468,8 +12832,7 @@
       "inputs": [
         {
           "accepts": [
-            "frank",
-            "benzoin"
+            "#kind:incense-resin"
           ]
         },
         {
@@ -12978,6 +13341,7 @@
     "r.h2": [2070, 6635],
     "r.h3": [1480, 6252],
     "r.harts": [890, 6681],
+    "r.harts.2": [890, 6791],
     "r.hats": [3250, 5088],
     "r.hempf": [300, 3225],
     "r.hg": [300, 5937],

@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
 namespace ProjectNikitin.Economy;
 
 /// <summary>
-/// The economy folder on disk: <c>catalogue.json</c>, <c>webs/*.json</c> and <c>sprites/</c>.
+/// The economy folder on disk: <c>webs/*.json</c>, each a whole web with its palette, and <c>sprites/</c>.
 /// Plain JSON in the repository, so a web saved in the lab is versioned with the code and
 /// reaches the other machine by a pull. Files are written whole to a sibling and moved
 /// into place, so a crash mid-save leaves the old file rather than half a new one.
@@ -28,25 +28,18 @@ public sealed class EconomyStore
 	};
 
 	/// <summary>The newest file format this build writes and fully understands.</summary>
-	public const int Format = 1;
+	public const int Format = 2;
 
 	/// <summary>The economy folder, absolute.</summary>
 	public string Root { get; }
 
 	public EconomyStore(string root) => Root = root;
 
-	public string CataloguePath => Path.Combine(Root, "catalogue.json");
 	public string WebsDir => Path.Combine(Root, "webs");
 	public string WebPath(string id) => Path.Combine(WebsDir, id + ".json");
 
-	/// <summary>A sprite's or an atlas's file, which the catalogue names relative to the economy folder.</summary>
+	/// <summary>A sprite's or an atlas's file, which a palette names relative to the economy folder.</summary>
 	public string Resolve(string relative) => Path.Combine(Root, relative.Replace('/', Path.DirectorySeparatorChar));
-
-	public bool HasCatalogue => File.Exists(CataloguePath);
-
-	public Catalogue LoadCatalogue() => FromJson<Catalogue>(File.ReadAllText(CataloguePath));
-
-	public void SaveCatalogue(Catalogue catalogue) => WriteWhole(CataloguePath, ToJson(catalogue));
 
 	/// <summary>Every web on disk by id, with its name, sorted by name. A file that does not parse is skipped.</summary>
 	public List<(string Id, string Name)> ListWebs()
@@ -80,6 +73,7 @@ public sealed class EconomyStore
 	{
 		EconomyWeb web = FromJson<EconomyWeb>(File.ReadAllText(WebPath(id)));
 		web.Id = id;
+		web.Format = Format;
 		return web;
 	}
 

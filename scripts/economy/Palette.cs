@@ -7,19 +7,16 @@ using System.Text.Json.Serialization;
 namespace ProjectNikitin.Economy;
 
 /// <summary>
-/// Every good there is, with the tags' notes and the sprite atlases: the palette
-/// the webs are painted from. One file, <c>catalogue.json</c>, shared by all webs,
-/// so a good renamed or redrawn is renamed and redrawn everywhere.
+/// A web's own goods, tags and sprite sheets: what its canvas is painted from. Every web
+/// carries its palette inside its file, so an experiment in one web cannot touch another;
+/// goods travel between webs only by being imported, which copies them.
 /// </summary>
-public sealed class Catalogue
+public sealed class Palette
 {
-	public int Format { get; set; } = 1;
-	public string Title { get; set; } = "";
-	public string Note { get; set; } = "";
 	public List<AtlasDef> Atlases { get; set; } = new();
 
-	/// <summary>What each tag prefix means (<c>kind</c>, <c>need</c>, <c>trait</c>).</summary>
-	public List<TagDef> TagNamespaces { get; set; } = new();
+	/// <summary>The tag prefixes (<c>kind</c>, <c>need</c>, <c>heart</c>), what each means, and its role.</summary>
+	public List<TagNamespace> TagNamespaces { get; set; } = new();
 
 	/// <summary>The tags with a note of their own. A tag can be in use without being listed here.</summary>
 	public List<TagDef> Tags { get; set; } = new();
@@ -60,27 +57,42 @@ public sealed class Catalogue
 
 	public AtlasDef? Atlas(string id) => Atlases.FirstOrDefault(a => a.Id == id);
 
-	/// <summary>Every tag some good carries or the tag list names, sorted; the count is how many goods carry it.</summary>
+	/// <summary>
+	/// Every tag some good or variety carries or the tag list names, sorted; the count is how many goods carry it
+	/// (a good counts once, whether the tag is its own or one of its varieties').
+	/// </summary>
 	public List<(string Tag, int Count)> TagsInUse()
 	{
 		var counts = new Dictionary<string, int>(StringComparer.Ordinal);
 		foreach (TagDef def in Tags) counts.TryAdd(def.Id, 0);
 		foreach (Good good in Goods)
-			foreach (string tag in good.Tags)
+			foreach (string tag in good.AllTags().Distinct())
 				counts[tag] = counts.GetValueOrDefault(tag) + 1;
 		return counts.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => (p.Key, p.Value)).ToList();
 	}
 
 	public IEnumerable<Good> GoodsWith(string tag) => Goods.Where(g => g.Tags.Contains(tag));
 
+	/// <summary>The part of a tag before its colon, or "" for a tag with none.</summary>
+	public static string NamespaceOf(string tag)
+	{
+		int colon = tag.IndexOf(':');
+		return colon <= 0 ? "" : tag[..colon];
+	}
+
+	public TagNamespace? Namespace(string id) => TagNamespaces.FirstOrDefault(n => n.Id == id);
+
+	/// <summary>True for a tag whose namespace is marked as a variety namespace: it rides along from inputs to outputs.</summary>
+	public bool IsVariety(string tag) => Namespace(NamespaceOf(tag))?.Role == TagNamespace.Variety;
+
+	/// <summary>True for a tag whose namespace is marked core: the kind of tag slots and consumers are meant to accept.</summary>
+	public bool IsCore(string tag) => Namespace(NamespaceOf(tag))?.Role == TagNamespace.Core;
+
 	/// <summary>The tag's own note, or failing that the note of its namespace.</summary>
 	public string NoteFor(string tag)
 	{
 		string? own = Tags.FirstOrDefault(t => t.Id == tag)?.Note;
 		if (!string.IsNullOrEmpty(own)) return own;
-		int colon = tag.IndexOf(':');
-		if (colon <= 0) return "";
-		string space = tag[..colon];
-		return TagNamespaces.FirstOrDefault(n => n.Id == space)?.Note ?? "";
+		return Namespace(NamespaceOf(tag))?.Note ?? "";
 	}
 }

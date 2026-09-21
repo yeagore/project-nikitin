@@ -6,9 +6,10 @@ using System.Text;
 namespace ProjectNikitin.Economy;
 
 /// <summary>
-/// The changes a designer makes to a web or to the catalogue, as plain functions over the
-/// data, so the lab's buttons stay thin and a script or a test can make the same changes.
-/// None of them touches the disk.
+/// The changes a designer makes to a web and its palette, as plain functions over the data,
+/// so the lab's buttons stay thin and a script or a test can make the same changes. None of
+/// them touches the disk, and none reaches outside the web it is given: goods cross from
+/// one web to another only by <see cref="ImportGoods"/> and <see cref="CopyChain"/>, which copy.
 /// </summary>
 public static class EconomyEdit
 {
@@ -33,8 +34,8 @@ public static class EconomyEdit
 			if (!taken(stem + joint + n)) return stem + joint + n;
 	}
 
-	public static string FreeGoodId(Catalogue catalogue, string name) =>
-		Free(Slug(name), id => catalogue.Find(id) != null);
+	public static string FreeGoodId(Palette palette, string name) =>
+		Free(Slug(name), id => palette.Find(id) != null);
 
 	public static string FreeRecipeId(EconomyWeb web, string hint) =>
 		Free("r." + (hint.Length > 0 ? hint : "new"), id => web.Recipe(id) != null, ".");
@@ -109,15 +110,76 @@ public static class EconomyEdit
 		return true;
 	}
 
+	/// <summary>Takes a good off the canvas and out of the palette: it is gone from this web altogether.</summary>
+	public static void DeleteGood(EconomyWeb web, string goodId)
+	{
+		RemoveGood(web, goodId);
+		web.Palette.Remove(goodId);
+	}
+
+	// ---- between webs ----------------------------------------------------------
+
 	/// <summary>
-	/// Brings goods into <paramref name="to"/> with everything upstream of them as <paramref name="from"/>
-	/// has it: the recipes that make them, those recipes' inputs, and so on down to the ground. A tag
-	/// slot brings every good of the source web that carries the tag. Optional slots come only when
-	/// asked; a recipe already present (by id) is left alone. Positions are copied, shifted by
-	/// <paramref name="shift"/>. Returns the keys of the nodes that arrived.
+	/// Copies goods from another web's palette into this one's, with the notes of the tags they
+	/// carry, the namespaces (and their roles) of those tags, and the sprite sheets they point at.
+	/// A good this palette already has is left as it is, unless <paramref name="overwrite"/>.
+	/// They land in the palette only; the canvas is not touched. Returns how many arrived.
 	/// </summary>
-	public static List<string> CopyChain(Catalogue catalogue, EconomyWeb from, EconomyWeb to,
-	                                     IEnumerable<string> goodIds, bool withOptional, Spot shift = default)
+	public static int ImportGoods(EconomyWeb from, EconomyWeb to, IEnumerable<string> goodIds, bool overwrite = false)
+	{
+		int arrived = 0;
+		foreach (string id in goodIds)
+		{
+			Good? theirs = from.Palette.Find(id);
+			if (theirs == null) continue;
+			Good? ours = to.Palette.Find(id);
+			if (ours != null && !overwrite) continue;
+
+			Good copy = EconomyStore.Clone(theirs);
+			if (ours == null) to.Palette.Add(copy);
+			else
+			{
+				to.Palette.Goods[to.Palette.Goods.IndexOf(ours)] = copy;
+				to.Palette.Reindex();
+			}
+			arrived++;
+
+			foreach (string tag in copy.AllTags().Distinct())
+			{
+				if (to.Palette.Tags.All(t => t.Id != tag) && from.Palette.Tags.FirstOrDefault(t => t.Id == tag) is { } def)
+					to.Palette.Tags.Add(EconomyStore.Clone(def));
+				string space = Palette.NamespaceOf(tag);
+				if (space.Length > 0 && to.Palette.Namespace(space) == null && from.Palette.Namespace(space) is { } ns)
+					to.Palette.TagNamespaces.Add(EconomyStore.Clone(ns));
+			}
+			foreach (SpriteRef? sprite in new[] { copy.Icon, copy.Sign })
+				if (sprite?.Atlas is { } atlas && to.Palette.Atlas(atlas) == null && from.Palette.Atlas(atlas) is { } sheet)
+					to.Palette.Atlases.Add(EconomyStore.Clone(sheet));
+		}
+		return arrived;
+	}
+
+	/// <summary>The whole of another web's palette: every good, every tag note, every namespace, every sprite sheet.</summary>
+	public static int ImportPalette(EconomyWeb from, EconomyWeb to, bool overwrite = false)
+	{
+		int arrived = ImportGoods(from, to, from.Palette.Goods.Select(g => g.Id).ToList(), overwrite);
+		foreach (TagDef def in from.Palette.Tags.Where(d => to.Palette.Tags.All(t => t.Id != d.Id)))
+			to.Palette.Tags.Add(EconomyStore.Clone(def));
+		foreach (TagNamespace ns in from.Palette.TagNamespaces.Where(n => to.Palette.Namespace(n.Id) == null))
+			to.Palette.TagNamespaces.Add(EconomyStore.Clone(ns));
+		foreach (AtlasDef sheet in from.Palette.Atlases.Where(a => to.Palette.Atlas(a.Id) == null))
+			to.Palette.Atlases.Add(EconomyStore.Clone(sheet));
+		return arrived;
+	}
+
+	/// <summary>
+	/// Brings goods onto <paramref name="to"/>'s canvas with everything upstream of them as <paramref name="from"/>
+	/// has it: the recipes that make them, those recipes' inputs, and so on down to the ground. Goods the
+	/// palette lacks are imported on the way. A tag slot brings every good of the source web that carries
+	/// the tag. Optional slots come only when asked; a recipe already present (by id) is left alone.
+	/// Positions are copied, shifted by <paramref name="shift"/>. Returns the keys of the nodes that arrived.
+	/// </summary>
+	public static List<string> CopyChain(EconomyWeb from, EconomyWeb to, IEnumerable<string> goodIds, bool withOptional, Spot shift = default)
 	{
 		var arrived = new List<string>();
 		var walked = new HashSet<string>(StringComparer.Ordinal);
@@ -132,7 +194,9 @@ public static class EconomyEdit
 		while (queue.Count > 0)
 		{
 			string goodId = queue.Dequeue();
-			if (!walked.Add(goodId) || catalogue.Find(goodId) == null) continue;
+			if (!walked.Add(goodId)) continue;
+			if (to.Palette.Find(goodId) == null) ImportGoods(from, to, new[] { goodId });
+			if (to.Palette.Find(goodId) == null) continue;
 			if (AddGood(to, goodId)) Place(goodId);
 
 			foreach (Recipe recipe in from.Recipes.Where(r => r.Makes(goodId)))
@@ -148,7 +212,7 @@ public static class EconomyEdit
 				{
 					if (!Acceptor.IsTag(acceptor)) queue.Enqueue(acceptor);
 					else
-						foreach (string carrier in from.Goods.Where(g => catalogue.Find(g)?.Has(Acceptor.TagOf(acceptor)) == true))
+						foreach (string carrier in from.Goods.Where(g => from.Palette.Find(g)?.Has(Acceptor.TagOf(acceptor)) == true))
 							queue.Enqueue(carrier);
 				}
 			}
@@ -157,77 +221,95 @@ public static class EconomyEdit
 	}
 
 	/// <summary>
-	/// A new web cut from another: the chosen goods, everything upstream of them, and the
-	/// consumers that anything in the cut still reaches. How a vertical slice is made from the full ledger.
+	/// A new web cut from another: the chosen goods, everything upstream of them, and the consumers
+	/// that anything in the cut still reaches. Its palette is the source's whole palette, or with
+	/// <paramref name="leanPalette"/> only the goods the cut uses. How a vertical slice is made from the full ledger.
 	/// </summary>
-	public static EconomyWeb Cut(Catalogue catalogue, EconomyWeb from, IEnumerable<string> goodIds, string id, string name, bool withOptional)
+	public static EconomyWeb Cut(EconomyWeb from, IEnumerable<string> goodIds, string id, string name, bool withOptional, bool leanPalette)
 	{
 		var web = new EconomyWeb { Id = id, Name = name };
-		CopyChain(catalogue, from, web, goodIds, withOptional);
+		if (!leanPalette) ImportPalette(from, web);
+		CopyChain(from, web, goodIds, withOptional);
 
 		foreach (Consumer consumer in from.Consumers)
 		{
 			Consumer copy = EconomyStore.Clone(consumer);
 			copy.Accepts.RemoveAll(a => !Acceptor.IsTag(a) && !web.Goods.Contains(a));
-			bool reached = copy.Accepts.Any(a => web.Goods.Any(g => catalogue.Find(g) is { } good && Acceptor.Admits(a, good)));
+			bool reached = copy.Accepts.Any(a => web.Goods.Any(g => web.Palette.Find(g) is { } good && Acceptor.Admits(a, good)));
 			if (!reached) continue;
 			web.Consumers.Add(copy);
 			if (from.Layout.TryGetValue(copy.Id, out Spot spot)) web.Layout[copy.Id] = spot;
 		}
 
-		// Catalogue order, so two cuts of the same goods are the same file.
+		// The source's order, so two cuts of the same goods are the same file.
 		var order = new Dictionary<string, int>(StringComparer.Ordinal);
-		for (int i = 0; i < catalogue.Goods.Count; i++) order[catalogue.Goods[i].Id] = i;
+		for (int i = 0; i < from.Palette.Goods.Count; i++) order[from.Palette.Goods[i].Id] = i;
 		web.Goods = web.Goods.OrderBy(g => order.GetValueOrDefault(g, int.MaxValue)).ToList();
+		web.Palette.Goods = web.Palette.Goods.OrderBy(g => order.GetValueOrDefault(g.Id, int.MaxValue)).ToList();
+		web.Palette.Reindex();
 		return web;
 	}
 
 	// ---- tags ----------------------------------------------------------------
 
-	/// <summary>Renames a tag on every good and in the tag list. The webs need <see cref="RenameTag(EconomyWeb,string,string)"/> too.</summary>
-	public static void RenameTag(Catalogue catalogue, string from, string to)
+	/// <summary>Renames a tag everywhere in the web: on its goods and their varieties, in the tag list, and wherever a slot or a consumer accepts it.</summary>
+	public static void RenameTag(EconomyWeb web, string from, string to)
 	{
-		foreach (Good good in catalogue.Goods)
+		foreach (List<string> tags in TagLists(web.Palette)) Swap(tags, from, to);
+		TagDef? def = web.Palette.Tags.FirstOrDefault(t => t.Id == from);
+		if (def != null)
 		{
-			int at = good.Tags.IndexOf(from);
-			if (at < 0) continue;
-			if (good.Tags.Contains(to)) good.Tags.RemoveAt(at);
-			else good.Tags[at] = to;
+			if (web.Palette.Tags.Any(t => t.Id == to)) web.Palette.Tags.Remove(def);
+			else def.Id = to;
 		}
-		TagDef? def = catalogue.Tags.FirstOrDefault(t => t.Id == from);
-		if (def == null) return;
-		if (catalogue.Tags.Any(t => t.Id == to)) catalogue.Tags.Remove(def);
-		else def.Id = to;
+		foreach (List<string> accepts in AcceptLists(web)) Swap(accepts, Acceptor.ForTag(from), Acceptor.ForTag(to));
 	}
 
-	/// <summary>Renames a tag wherever a slot or a consumer of the web accepts it; true if anything changed.</summary>
-	public static bool RenameTag(EconomyWeb web, string from, string to)
+	/// <summary>Takes a tag off every good and variety, out of the tag list, and out of every slot and consumer that accepted it.</summary>
+	public static void RemoveTag(EconomyWeb web, string tag)
 	{
-		bool changed = false;
-		foreach (List<string> accepts in AcceptLists(web))
-		{
-			int at = accepts.IndexOf(Acceptor.ForTag(from));
-			if (at < 0) continue;
-			changed = true;
-			if (accepts.Contains(Acceptor.ForTag(to))) accepts.RemoveAt(at);
-			else accepts[at] = Acceptor.ForTag(to);
-		}
-		return changed;
+		foreach (List<string> tags in TagLists(web.Palette)) tags.Remove(tag);
+		web.Palette.Tags.RemoveAll(t => t.Id == tag);
+		foreach (List<string> accepts in AcceptLists(web)) accepts.Remove(Acceptor.ForTag(tag));
 	}
 
-	public static void RemoveTag(Catalogue catalogue, string tag)
+	/// <summary>Renames a namespace: its entry, and the prefix of every tag in it, wherever the tag appears.</summary>
+	public static void RenameNamespace(EconomyWeb web, string from, string to)
 	{
-		foreach (Good good in catalogue.Goods) good.Tags.Remove(tag);
-		catalogue.Tags.RemoveAll(t => t.Id == tag);
+		if (from == to || to.Length == 0) return;
+		string prefix = from + ":";
+		List<string> tags = web.Palette.TagsInUse().Select(t => t.Tag).Where(t => t.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+		foreach (string acceptor in AcceptLists(web).SelectMany(a => a).Where(Acceptor.IsTag).ToList())
+			if (Acceptor.TagOf(acceptor).StartsWith(prefix, StringComparison.Ordinal) && !tags.Contains(Acceptor.TagOf(acceptor)))
+				tags.Add(Acceptor.TagOf(acceptor));
+		foreach (string tag in tags) RenameTag(web, tag, to + ":" + tag[prefix.Length..]);
+
+		TagNamespace? ns = web.Palette.Namespace(from);
+		if (ns == null) return;
+		if (web.Palette.Namespace(to) != null) web.Palette.TagNamespaces.Remove(ns);
+		else ns.Id = to;
 	}
 
-	public static bool RemoveTag(EconomyWeb web, string tag)
+	/// <summary>The namespace's entry, made if the palette has none yet.</summary>
+	public static TagNamespace EnsureNamespace(Palette palette, string id)
 	{
-		bool changed = false;
-		foreach (List<string> accepts in AcceptLists(web))
-			changed |= accepts.Remove(Acceptor.ForTag(tag));
-		return changed;
+		TagNamespace? ns = palette.Namespace(id);
+		if (ns != null) return ns;
+		ns = new TagNamespace { Id = id };
+		palette.TagNamespaces.Add(ns);
+		return ns;
 	}
+
+	private static void Swap(List<string> list, string from, string to)
+	{
+		int at = list.IndexOf(from);
+		if (at < 0) return;
+		if (list.Contains(to)) list.RemoveAt(at);
+		else list[at] = to;
+	}
+
+	private static IEnumerable<List<string>> TagLists(Palette palette) =>
+		palette.Goods.Select(g => g.Tags).Concat(palette.Goods.SelectMany(g => g.VarietyList).Select(v => v.Tags));
 
 	/// <summary>True if any slot or consumer of the web accepts the tag.</summary>
 	public static bool UsesTag(EconomyWeb web, string tag) =>
