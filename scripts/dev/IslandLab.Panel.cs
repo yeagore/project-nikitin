@@ -6,29 +6,38 @@ using ProjectNikitin.Generation;
 namespace ProjectNikitin.Dev;
 
 /// <summary>
-/// The control panel and the two text plates. Every widget and every key write the
-/// same <see cref="Params"/>; <see cref="Sync"/> pulls the widgets back into line.
+/// The control panel and the three text plates, kept to the edges so the island has
+/// the middle: the controls down the left, the island's readout along the top (two
+/// lines until it is opened), the legend and the cell under the cursor down the right.
+/// Each plate scrolls rather than grows. Every widget and every key write the same
+/// <see cref="Params"/>; <see cref="Sync"/> pulls the widgets back into line.
 /// </summary>
 public partial class IslandLab
 {
 	/// <summary>Pixels of screen the control column takes, whatever the window is.</summary>
 	private const int PanelWidth = 330;
 
-	private Label _status = null!;
+	/// <summary>Pixels the legend and the cell readout take down the right edge.</summary>
+	private const int SideWidth = 300;
+
+	private Label _status = null!, _title = null!, _cell = null!;
 	private RichTextLabel _legend = null!;
-	private PanelContainer _panel = null!;
+	private PanelContainer _panel = null!, _statusPlate = null!, _legendPlate = null!, _cellPlate = null!;
+	private ScrollContainer _statusScroll = null!, _legendScroll = null!, _cellScroll = null!;
+	private Button _statusMore = null!;
+	private bool _statusOpen;
 	private OptionButton _viewPick = null!, _arrangePick = null!, _characterPick = null!;
 	private OptionButton _entryKind = null!, _entryEdge = null!, _crossings = null!;
 	private OptionButton _exitKind = null!, _magickPattern = null!;
 	private HSlider _hilliness = null!, _mix = null!, _relief = null!, _wet = null!;
 	private HSlider _lakes = null!, _valleys = null!, _moisture = null!, _warmth = null!, _wind = null!;
-	private HSlider _magickDensity = null!;
+	private HSlider _magickDensity = null!, _fjords = null!;
 	private SpinBox _rungs = null!, _cliff = null!, _patch = null!, _exits = null!;
 	private OptionButton _size = null!;
 	private Label _sizeCaption = null!, _poolNote = null!;
 	private CheckBox _gooBox = null!;
 	private CheckBox _newShapes = null!, _bridgeBox = null!, _stripBox = null!;
-	private CheckBox _ferryBox = null!, _roadBox = null!, _compassBox = null!, _fordBox = null!;
+	private CheckBox _roadBox = null!, _compassBox = null!, _fordBox = null!;
 	private CheckBox _liquidBox = null!, _meshBox = null!;
 	private Label _fps = null!;
 	private LineEdit _seedField = null!;
@@ -146,6 +155,12 @@ public partial class IslandLab
 		_poolNote.AddThemeColorOverride("font_color", new Color(0.62f, 0.78f, 0.95f));
 		_poolNote.AddThemeFontSizeOverride("font_size", 12);
 		rows.AddChild(_poolNote);
+		_fjords = Slide(rows, "Fjords", 0f, 1f, 0.05f,
+			() => Params.Fjords, v => Params.Fjords = v, q => q.Fjords,
+			"How cut about the largest landmass's coast is. 0 none; 1 an inlet on every "
+			+ "Domain with room for one and a second on about a third, all along one grain "
+			+ "per Domain. A crossing where an inlet narrows to a bridge span, a walk round "
+			+ "the head elsewhere.");
 
 		Heading(rows, "relief");
 		_hilliness = Slide(rows, "Hilliness  (H)", 0f, 1f, 0.05f,
@@ -251,16 +266,13 @@ public partial class IslandLab
 		_stripBox = Check(rows, "Gate landings  (J)",
 			() => _showLandings, on => { _showLandings = on; Redraw(); },
 			"The 1 × 3 strip running inland from each Gate, levelled for it.");
-		_ferryBox = Check(rows, "Ferry berths  (K)",
-			() => _showFerries, on => { _showFerries = on; Redraw(); },
-			"Each berth as a pair: the quay on land, the hull on the water in front of it.");
 		_roadBox = Check(rows, "Roads between gates  (P)",
 			() => _showRoutes, on => { _showRoutes = on; Redraw(); },
 			"The least-works road from the Entry to each Exit: pale yellow walk, red stair, "
-			+ "gold bridge, cyan ferry.");
+			+ "gold bridge.");
 		_fordBox = Check(rows, "Fords  (O)",
 			() => _showFords, on => { _showFords = on; Redraw(); },
-			"Stream cells crossable on foot: one at the head of each course and one every "
+			"Stream cells crossable on foot: one every "
 			+ "11 cells along it. A stream is an obstacle everywhere else.");
 		_compassBox = Check(rows, "Compass, wind and gate vectors  (X)",
 			() => _showCompass, on => { _showCompass = on; Redraw(); },
@@ -282,50 +294,128 @@ public partial class IslandLab
 		{
 			Text = "WASD move   Q/E rotate   MMB-drag rotate and tilt\n"
 				 + "arrows tilt   wheel zoom   Shift faster\n"
-				 + "Tab or F1 hides this panel   F2 saves a screenshot",
+				 + "Tab or F1 hides every plate   F2 saves a screenshot\n"
+				 + "F3 opens the island readout   F4 hides the legend",
 			AutowrapMode = TextServer.AutowrapMode.WordSmart,
 		};
 		keys.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.78f));
 		rows.AddChild(keys);
 
-		// ---- right: what the island turned out to be ---------------------------
-		var right = new VBoxContainer
+		// ---- top: what the island turned out to be -----------------------------
+		// Nothing sits along the bottom: the editor's chrome hides the bottom of the embedded game.
+		var middle = new VBoxContainer
 		{
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
-		right.AddThemeConstantOverride("separation", 8);
-		columns.AddChild(right);
+		columns.AddChild(middle);
 
-		// Both plates at the top: the editor's chrome hides the bottom of the embedded game.
-		_legend = PanelledRich(right, new Color(0.82f, 0.92f, 1f));
-		// The frame rate, refreshed by _Process: with the mesh on, the one number the renderer is for.
-		_fps = new Label
+		(_statusPlate, VBoxContainer statusRows) = Plated(middle);
+		var titleRow = new HBoxContainer();
+		titleRow.AddThemeConstantOverride("separation", 10);
+		statusRows.AddChild(titleRow);
+		_title = new Label
 		{
-			HorizontalAlignment = HorizontalAlignment.Right,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			ClipText = true,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
+		_title.AddThemeColorOverride("font_color", new Color(1f, 0.93f, 0.72f));
+		titleRow.AddChild(_title);
+		// The frame rate, refreshed by _Process: with the mesh on, the one number the renderer is for.
+		_fps = new Label { MouseFilter = Control.MouseFilterEnum.Ignore };
 		_fps.AddThemeColorOverride("font_color", new Color(0.72f, 0.74f, 0.78f));
-		right.AddChild(_fps);
-		_status = Panelled(right, Control.SizeFlags.ExpandFill, new Color(1f, 0.93f, 0.72f));
-		right.AddChild(new Control
+		titleRow.AddChild(_fps);
+		_statusMore = new Button { FocusMode = Control.FocusModeEnum.None, Flat = true };
+		_statusMore.AddThemeFontSizeOverride("font_size", 12);
+		_statusMore.Pressed += () => OpenStatus(!_statusOpen);
+		titleRow.AddChild(_statusMore);
+
+		(_statusScroll, _status) = Scrolled(statusRows, new Color(1f, 0.93f, 0.72f), 13);
+		middle.AddChild(new Control
 		{
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		});
 
-		_status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		// ---- right: the legend, and the cell under the cursor -------------------
+		var edge = new VBoxContainer
+		{
+			CustomMinimumSize = new Vector2(SideWidth, 0),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		edge.AddThemeConstantOverride("separation", 8);
+		columns.AddChild(edge);
+
+		(_legendPlate, VBoxContainer legendRows) = Plated(edge);
+		_legendScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+		legendRows.AddChild(_legendScroll);
+		_legend = new RichTextLabel
+		{
+			BbcodeEnabled = true,
+			FitContent = true,
+			ScrollActive = false,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			// Pass, not the default Stop: the wheel has to reach the scroll container round it.
+			MouseFilter = Control.MouseFilterEnum.Pass,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+		};
+		_legend.AddThemeColorOverride("default_color", new Color(0.82f, 0.92f, 1f));
+		_legend.AddThemeFontSizeOverride("normal_font_size", 13);
+		_legend.AddThemeFontSizeOverride("bold_font_size", 13);
+		_legendScroll.AddChild(_legend);
+
+		(_cellPlate, VBoxContainer cellRows) = Plated(edge);
+		(_cellScroll, _cell) = Scrolled(cellRows, new Color(0.88f, 0.98f, 0.86f), 13);
+		edge.AddChild(new Control
+		{
+			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		});
+
 		ShowLegend(ViewLegend(_view));
 		_status.Text = "";
+		OpenStatus(false);
 		Sync();
 	}
 
+	/// <summary>The island readout, open or folded to its first two lines. F3, or the button on its plate.</summary>
+	private void OpenStatus(bool open)
+	{
+		_statusOpen = open;
+		_statusMore.Text = open ? "fold  (F3)" : "more  (F3)";
+	}
+
 	/// <summary>
-	/// Lays the legend out: BBCode text, and an inline image tinted to the colour
-	/// wherever the markup says <c>{#rrggbb}</c>. An image, unlike a run of
-	/// background-coloured spaces, survives being at a line wrap.
+	/// Holds each plate's scroll area to what it has to say, up to a share of the window:
+	/// a scroll container has no size of its own, and one left to grow with its text is
+	/// the wall of words that used to stand in front of the island. Called every frame;
+	/// it moves nothing unless a text or the window changed.
 	/// </summary>
-	private void ShowLegend(string markup)
+	private void FitPlates()
+	{
+		float tall = GetViewport().GetVisibleRect().Size.Y;
+		_cellPlate.Visible = _showPanel && _showMesh;
+		_cell.Text = _pickText.Length > 0 ? _pickText : "point at a cell";
+		Fit(_statusScroll, _status, _statusOpen ? tall * 0.45f : 40f);
+		Fit(_legendScroll, _legend, tall * 0.42f);
+		Fit(_cellScroll, _cell, tall * 0.4f);
+	}
+
+	private static void Fit(ScrollContainer scroll, Control content, float cap)
+	{
+		float want = Mathf.Min(content.GetCombinedMinimumSize().Y, cap);
+		if (!Mathf.IsEqualApprox(scroll.CustomMinimumSize.Y, want))
+			scroll.CustomMinimumSize = new Vector2(0, want);
+	}
+
+	/// <summary>
+	/// Lays the legend out: the view's name, what it asks, its colours one to a line and
+	/// the small print. BBCode text, and an inline image tinted to the colour wherever
+	/// the markup says <c>{#rrggbb}</c>. An image, unlike a run of background-coloured
+	/// spaces, survives being at a line wrap.
+	/// </summary>
+	private void ShowLegend(Legend legend)
 	{
 		if (_swatch == null)
 		{
@@ -333,6 +423,11 @@ public partial class IslandLab
 			white.Fill(Colors.White);
 			_swatch = ImageTexture.CreateFromImage(white);
 		}
+
+		string markup = $"[b]{legend.Title.ToUpperInvariant()}[/b]  (C)"
+			+ (legend.Intro.Length > 0 ? $"\n{legend.Intro}" : "")
+			+ "\n" + string.Join("\n", legend.Items)
+			+ (legend.Note.Length > 0 ? $"\n[color=#9fb0c0]{legend.Note}[/color]" : "");
 
 		_legend.Clear();
 		int at = 0;
@@ -346,9 +441,10 @@ public partial class IslandLab
 				break;
 			}
 			if (open > at) _legend.AppendText(markup[at..open]);
-			_legend.AddImage(_swatch, 14, 14, Color.FromHtml(markup[(open + 1)..close]));
+			_legend.AddImage(_swatch, 13, 13, Color.FromHtml(markup[(open + 1)..close]));
 			at = close + 1;
 		}
+		_legendScroll.ScrollVertical = 0;
 	}
 
 	private ImageTexture? _swatch;
@@ -410,7 +506,6 @@ public partial class IslandLab
 		_poolNote.Text = PoolNote();
 		_bridgeBox.ButtonPressed = _showBridges;
 		_stripBox.ButtonPressed = _showLandings;
-		_ferryBox.ButtonPressed = _showFerries;
 		_roadBox.ButtonPressed = _showRoutes;
 		_compassBox.ButtonPressed = _showCompass;
 		_fordBox.ButtonPressed = _showFords;
@@ -635,48 +730,32 @@ public partial class IslandLab
 		CornerRadiusBottomRight = 5,
 	};
 
-	/// <summary>The legend: BBCode on a dark plate, so its colour swatches are the view's own colours.</summary>
-	private static RichTextLabel PanelledRich(Container into, Color tint)
+	/// <summary>A dark plate as wide as its container and as tall as its rows, so text stays readable over pale terrain.</summary>
+	private static (PanelContainer Plate, VBoxContainer Rows) Plated(Container into)
 	{
-		var panel = new PanelContainer
-		{
-			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			SizeFlagsVertical = Control.SizeFlags.ShrinkEnd,
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-		};
+		var panel = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		panel.AddThemeStyleboxOverride("panel", Plate());
 		into.AddChild(panel);
-
-		var label = new RichTextLabel
-		{
-			BbcodeEnabled = true,
-			FitContent = true,
-			ScrollActive = false,
-			AutowrapMode = TextServer.AutowrapMode.WordSmart,
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(420, 0),
-		};
-		label.AddThemeColorOverride("default_color", tint);
-		panel.AddChild(label);
-		return label;
+		var rows = new VBoxContainer();
+		rows.AddThemeConstantOverride("separation", 2);
+		panel.AddChild(rows);
+		return (panel, rows);
 	}
 
-	/// <summary>One label on a dark plate, so text stays readable over pale terrain.</summary>
-	private static Label Panelled(Container into, Control.SizeFlags flags, Color tint)
+	/// <summary>A wrapping label in a scroll area; <see cref="FitPlates"/> sizes the area to the text, up to its cap.</summary>
+	private static (ScrollContainer Scroll, Label Text) Scrolled(Container into, Color tint, int fontSize)
 	{
-		var panel = new PanelContainer
+		var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+		into.AddChild(scroll);
+		var label = new Label
 		{
-			SizeFlagsHorizontal = flags,
-			SizeFlagsVertical = Control.SizeFlags.ShrinkEnd,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
-		panel.AddThemeStyleboxOverride("panel", Plate());
-		into.AddChild(panel);
-
-		var label = new Label { MouseFilter = Control.MouseFilterEnum.Ignore };
 		label.AddThemeColorOverride("font_color", tint);
-		panel.AddChild(label);
-		return label;
+		label.AddThemeFontSizeOverride("font_size", fontSize);
+		scroll.AddChild(label);
+		return (scroll, label);
 	}
 }

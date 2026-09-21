@@ -718,26 +718,26 @@ public partial class GenerationAudit
     /// Wind 0..1: what exposure moves. On flat ground (rugged under 64), mean
     /// moisture and warmth in the lee (exposure under 128) against the open (224 and
     /// over): the rain shadow and the milder lee. On sheltered broken ground (rugged
-    /// 128 and over): the gorge damp. Then the marsh and bog shares, which read the
+    /// 128 and over): the gorge damp. Then the muckearth and murkearth shares, which read the
     /// moisture. At 0 the lee and the open should agree but for the sun and the
     /// water; at 1 the flat lee should be markedly drier and milder and the gorge floors wetter.
     /// </summary>
     private void PrintWindSweep(float[] steps)
     {
-        GD.Print("  wind   flat lee moist  flat open moist   gorge moist   flat lee warm  flat open warm   marsh%   bog%");
+        GD.Print("  wind   flat lee moist  flat open moist   gorge moist   flat lee warm  flat open warm   muckearth%   murkearth%");
         foreach (float v in steps)
         {
             IslandParams p = Variant(q => q.Wind = v);
             long leeM = 0, leeW = 0, lee = 0, openM = 0, openW = 0, open = 0, gorgeM = 0, gorge = 0;
-            long land = 0, marsh = 0, bog = 0;
+            long land = 0, muckearth = 0, murkearth = 0;
             foreach (IslandData d in Sweep(p, SweepSeeds))
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
                 {
                     if (!d.HasLand(x, z)) continue;
                     land++;
-                    if (d.Material[x, z] == (byte)SurfaceMaterial.Marsh) marsh++;
-                    if (d.Material[x, z] == (byte)SurfaceMaterial.Bog) bog++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Muckearth) muckearth++;
+                    if (d.Material[x, z] == (byte)SurfaceMaterial.Murkearth) murkearth++;
                     bool flat = d.Ruggedness[x, z] < 64;
                     if (d.Exposure[x, z] < 128 && flat) { leeM += d.Moisture[x, z]; leeW += d.Warmth[x, z]; lee++; }
                     else if (d.Exposure[x, z] < 128 && d.Ruggedness[x, z] >= 128) { gorgeM += d.Moisture[x, z]; gorge++; }
@@ -746,7 +746,7 @@ public partial class GenerationAudit
             GD.Print($"  {v,4:0.00} {(lee > 0 ? leeM / (double)lee : 0),15:0.0} {(open > 0 ? openM / (double)open : 0),16:0.0} "
                 + $"{(gorge > 0 ? gorgeM / (double)gorge : 0),13:0.0} "
                 + $"{(lee > 0 ? leeW / (double)lee : 0),14:0.0} {(open > 0 ? openW / (double)open : 0),15:0.0} "
-                + $"{100.0 * marsh / Math.Max(1, land),8:0.00} {100.0 * bog / Math.Max(1, land),6:0.00}");
+                + $"{100.0 * muckearth / Math.Max(1, land),12:0.00} {100.0 * murkearth / Math.Max(1, land),12:0.00}");
         }
     }
 
@@ -797,12 +797,12 @@ public partial class GenerationAudit
     /// <summary>Lakes 0..1: water-only lake cells, bodies as distinct regions, the biggest.</summary>
     private void PrintLakesSweep(float[] steps)
     {
-        GD.Print($"\n  {"lakes",6} {"lake cells",11} {"lakes",7} {"biggest",8}   "
-            + "(area, not just how many)");
+        GD.Print($"\n  {"lakes",6} {"lake cells",11} {"lakes",7} {"biggest",8} {"great",6} {"deepest",8}   "
+            + "(area, not just how many; great lakes over the seeds; the deepest cell, in slabs)");
         foreach (float v in steps)
         {
             IslandParams p = Variant(q => q.Lakes = v);
-            long cells = 0, bodies = 0, biggest = 0;
+            long cells = 0, bodies = 0, biggest = 0, great = 0, deepest = 0;
             foreach (IslandData d in Sweep(p, SweepSeeds))
             {
                 var perRegion = new Dictionary<int, int>();
@@ -812,14 +812,16 @@ public partial class GenerationAudit
                     if (d.WaterLevel[x, z] == IslandData.NoLand || d.River[x, z]) continue;
                     if (d.Fluid[x, z] != (byte)FluidKind.Water) continue;   // goo ignores this knob
                     cells++;
+                    deepest = Math.Max(deepest, d.WaterDepth(x, z));
                     int r = d.Region[x, z];
                     perRegion[r] = perRegion.GetValueOrDefault(r) + 1;
                 }
                 bodies += perRegion.Count;
+                great += d.GreatLakes.Count;
                 foreach (int area in perRegion.Values) biggest = Math.Max(biggest, area);
             }
             GD.Print($"  {v,6:0.00} {cells / (float)SweepSeeds,11:0.0} "
-                + $"{bodies / (float)SweepSeeds,7:0.0} {biggest,8}");
+                + $"{bodies / (float)SweepSeeds,7:0.0} {biggest,8} {great,6} {deepest,8}");
         }
     }
 
@@ -879,18 +881,17 @@ public partial class GenerationAudit
     private void PrintValleysSweep(float[] steps)
     {
         GD.Print($"\n  {"valleys",7} {"rise 1->5",10} {"valleyed",12} {"deepest",8} "
-            + $"{"2-slab",7} {"walk%",7} {"berths",7}");
+            + $"{"2-slab",7} {"walk%",7}");
         foreach (float v in steps)
         {
             IslandParams p = Variant(q => q.Valleys = v);
             double total = 0;
             int counted = 0;
-            long steep = 0, berths = 0, walk = 0, dry = 0;
+            long steep = 0, walk = 0, dry = 0;
             var each = new List<double>();
             foreach (IslandData d in Sweep(p, SweepSeeds))
             {
                 if (ValleyRise(d, out double rise, each)) { total += rise; counted++; }
-                berths += d.Berths.Count;
 
                 for (int x = 0; x < d.Size; x++)
                 for (int z = 0; z < d.Size; z++)
@@ -917,8 +918,7 @@ public partial class GenerationAudit
 
             GD.Print($"  {v,7:0.00} {(counted > 0 ? total / counted : 0),10:0.00} "
                 + $"{$"{withValley}/{each.Count}",12} {deepest,8:0.0} "
-                + $"{steep / (float)SweepSeeds,7:0.0} {(dry > 0 ? 100.0 * walk / dry : 0),7:0.0} "
-                + $"{berths / (float)SweepSeeds,7:0.0}");
+                + $"{steep / (float)SweepSeeds,7:0.0} {(dry > 0 ? 100.0 * walk / dry : 0),7:0.0}");
         }
     }
 }

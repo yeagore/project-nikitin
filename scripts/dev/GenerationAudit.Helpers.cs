@@ -191,7 +191,7 @@ public partial class GenerationAudit
 
     /// <summary>
     /// Can the walled river reaches be bridged, by the reach flood's own deck rule? A gorge
-    /// cell has dry ground 3+ slabs over its water on both sides of one axis; a reach is 3+ of
+    /// cell has dry ground a cliff (<see cref="Traversal.CliffFace"/>) over its water on both sides of one axis; a reach is 3+ of
     /// them 4-connected; sealed = no legal deck on any cell; Skew = a deck fit and only the rims refused.
     /// </summary>
     private static GorgeStats AnalyseGorges(IslandData d)
@@ -217,7 +217,7 @@ public partial class GenerationAudit
                 if (!InBounds(n, nx, nz)) return false;
                 if (!d.HasLand(nx, nz)) return false;              // the island's rim
                 if (d.WaterLevel[nx, nz] != IslandData.NoLand) continue;
-                return d.SurfaceLevel(nx, nz) - w >= 3;
+                return d.SurfaceLevel(nx, nz) - w >= Traversal.CliffFace;
             }
             return false;
         }

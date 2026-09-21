@@ -48,11 +48,11 @@ public partial class GenerationAudit
         public Tally(IslandParams p) { _p = p; }
 
         // ---- step grammar
-        public long Free, Ambiguous, Cliff;
+        public long Free, Ambiguous, Three, Cliff;
         public long AmbiguousOffMountain, PairsOffMountain;
         public readonly Dictionary<string, int> CliffByBorder = new();
         public readonly Dictionary<string, int> AmbiguousWhere = new();
-        public long Pairs => Free + Ambiguous + Cliff;
+        public long Pairs => Free + Ambiguous + Three + Cliff;
 
         // ---- patches, mesas and basins, hills, mountains
         public readonly List<int> PatchSizes = new();
@@ -76,16 +76,19 @@ public partial class GenerationAudit
         public readonly List<int> StraightRuns = new();
         public int ReachCells => RiverStraight + RiverBends;
         public int TerminalLakes, TerminalInflows, TerminalIslands;
-        public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable;
+        public int Deltas, DeltaFanCells, DeltaIslands, Springs, SpringsOnNavigable, SpringsForded;
+        public int Estuaries, EstuaryIslands, EstuaryCells;
         public long FordsFlat, StreamFlat, FordsRugged, StreamRugged;
 
-        // ---- ferries, surfaces, anchors, habitat
+        // ---- water bodies, surfaces, anchors, habitat
         public const int RuggedBins = 7;
-        public int Berths, WaterBodies, IslandsWithBerth, BadQuay, BerthSites;
+        public int WaterBodies;
         public readonly long[] MaterialCells = new long[Enum.GetValues<SurfaceMaterial>().Length];
         public long CoastAnchors, CliffAnchors, BeachCells, FordCells, LandingCells;
         public long CliffFootAnchors, BankAnchors, SummitAnchors, RiverBedAnchors, LakeBedAnchors;
+        public long ShallowBedAnchors, MidBedAnchors, DeepBedAnchors;
         public long BrinksBesideWater, BeachedCoast;
+        public long ScarpAnchors, ScarpFootAnchors;
         public int IslandsWithoutBeach;
         public readonly List<int> MoistureMeans = new();
         public readonly List<int> WarmthMeans = new();
@@ -104,12 +107,12 @@ public partial class GenerationAudit
         /// has fallen out of its band.
         /// </summary>
         public readonly List<int> MagickCover = new();
-        public readonly List<int> QuayRise = new();
         public long SunnyWarmth, SunnyCells, ShadedWarmth, ShadedCells;
         public long LeeMoisture, LeeWarmth, LeeCells, OpenMoisture, OpenWarmth, OpenCells;
         public long DampMoisture, DampCells;
         public long HollowWarmth, HollowCells, TorCells, SeaStackCells;
         public int TorIslands, SeaStackIslands;
+        public int Fjords, FjordIslands, FjordCells, FjordBridged;
         public long HotWaterCells;
         public int HotIslands, ColdIslands, ColdIslandsWithHot;
 
@@ -119,7 +122,7 @@ public partial class GenerationAudit
 
         // ---- roads
         public int ExitsWithoutRoad, RoadsFree, RoadJumps, RoughIslands, Flights;
-        public int RoadStairs, RoadBridges, RoadFerries;
+        public int RoadLadders, RoadStairs, RoadBridges;
         public readonly List<int> RoadCosts = new();
         public readonly List<int> RoadLengths = new();
 
@@ -133,9 +136,16 @@ public partial class GenerationAudit
         public int Lakes, LakeCells, Leaks, WaterAtVoid, IslandsWithLake;
         public readonly List<int> ShoreSteps = new();
         public readonly List<int> LakeBodySizes = new();
+        // The beds: the deepest cell per body, the great lakes, the deeps and the river beds dug below their kind.
+        public readonly List<int> LakeDepths = new();
+        public int LakeDeepest, GreatLakes, GreatLakeIslands, GreatLakeCells, Deeps, PlungePools, DeepRiverCells;
+        public readonly List<string> GreatLakeSeeds = new();
         public int GooCells, GooIslands, GooTouchesWater;
         public readonly List<int> AltSpans = new();
         public int AltOverCap;
+
+        /// <summary>Columns whose ground span shares no slab with a neighbour's, and wet columns whose water stands beside the air under a neighbour's keel.</summary>
+        public int HangingColumns, WaterOpenBelow;
         public int GorgeCells, GorgeReaches, GorgeCrossable, GorgeSealed;
         public int GorgeMisaligned, GorgeIslands;
         public readonly List<int> GorgeLengths = new();
@@ -205,7 +215,7 @@ public partial class GenerationAudit
             MeasureStraightness(v);
             MeasureEyots(v);
             MeasureOverhangs(v);
-            MeasureFerries(v);
+            MeasureWaterBodies(v);
             MeasureSurfaces(v);
             MeasureRoads(v);
             MeasureSculpts(v);
@@ -233,8 +243,9 @@ public partial class GenerationAudit
                     if (!v.Ground(nx, nz)) continue;
 
                     int diff = Math.Abs(v.Cross(x, z) - v.Cross(nx, nz));
-                    if (diff <= 1) Free++;
+                    if (diff <= Traversal.FreeStep) Free++;
                     else if (diff == 2) Ambiguous++;
+                    else if (diff < Traversal.CliffFace) Three++;
                     else Cliff++;
 
                     bool mountain = v.Form(x, z) == LandformType.Mountain
@@ -254,7 +265,7 @@ public partial class GenerationAudit
                         }
                     }
 
-                    if (diff >= 3 && d.Region[x, z] != d.Region[nx, nz])
+                    if (diff >= Traversal.CliffFace && d.Region[x, z] != d.Region[nx, nz])
                     {
                         int a = (int)v.Form(x, z), b = (int)v.Form(nx, nz);
                         // Canyon walls and mountain flanks are deliberate cliffs, bucketed
@@ -436,10 +447,42 @@ public partial class GenerationAudit
             int bodies = Label(n, (x, z) => d.WaterLevel[x, z] != IslandData.NoLand && !d.River[x, z]
                                             && d.Fluid[x, z] == (byte)FluidKind.Water, bodyOf);
             var size = new int[bodies];
+            var deepest = new int[bodies];
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
-                if (bodyOf[x, z] >= 0) size[bodyOf[x, z]]++;
+            {
+                if (bodyOf[x, z] < 0) continue;
+                size[bodyOf[x, z]]++;
+                deepest[bodyOf[x, z]] = Math.Max(deepest[bodyOf[x, z]], d.WaterDepth(x, z));
+            }
             LakeBodySizes.AddRange(size);
+            LakeDepths.AddRange(deepest);
+            foreach (int depth in deepest) LakeDeepest = Math.Max(LakeDeepest, depth);
+
+            // A great lake is one lake over several patches: the headline count is per site.
+            GreatLakes += d.GreatLakes.Count;
+            if (d.GreatLakes.Count > 0)
+            {
+                GreatLakeIslands++;
+                GreatLakeSeeds.Add($"{v.Seed} ({d.Arrangement}, {d.Character}, lakes {d.Settings.Lakes:0.00})");
+            }
+            foreach (Vector2I c in d.GreatLakes)
+            {
+                int body = bodyOf[c.X, c.Y];
+                if (body < 0) continue;
+                GreatLakeCells += size[body];
+                var under = new HashSet<int>();
+                for (int x = 0; x < n; x++)
+                for (int z = 0; z < n; z++)
+                    if (bodyOf[x, z] == body) under.Add(d.Region[x, z]);
+                Lakes -= under.Count - 1;
+            }
+
+            Deeps += d.Deeps.Count;
+            foreach (Vector2I c in d.Deeps) if (d.River[c.X, c.Y]) PlungePools++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.River[x, z] && d.WaterDepth(x, z) > (d.Navigable[x, z] ? 2 : 1)) DeepRiverCells++;
         }
 
         /// <summary>Goo cells, and whether any stands within a king's move of water — it never mixes.</summary>
@@ -475,6 +518,36 @@ public partial class GenerationAudit
             {
                 AltSpans.Add(crest - bilge);
                 if (crest - bilge > v.N) AltOverCap++;
+            }
+            MeasureUnderside(v.D);
+        }
+
+        /// <summary>
+        /// The landmass in one piece from underneath: a column hangs clear when its top is
+        /// under a neighbour's keel (a deep bed once did, with the keel a level that only
+        /// its own column followed down), and its water is open below when any of it
+        /// stands against the air under that keel. <c>Keel.Root</c> is what holds both at nought.
+        /// </summary>
+        private void MeasureUnderside(IslandData d)
+        {
+            int n = d.Size;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+            {
+                if (!d.HasLand(x, z)) continue;
+                Span s = d.Spans[x, z][0];
+                bool wet = d.WaterLevel[x, z] != IslandData.NoLand && d.WaterLevel[x, z] > s.Top;
+                bool hangs = false, open = false;
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = x + Dx[k], nz = z + Dz[k];
+                    if (!InBounds(n, nx, nz) || !d.HasLand(nx, nz)) continue;
+                    int keel = d.Spans[nx, nz][0].Bottom;
+                    if (keel > s.Top) hangs = true;
+                    if (wet && keel > s.Top + 1) open = true;
+                }
+                if (hangs) HangingColumns++;
+                if (open) WaterOpenBelow++;
             }
         }
 
@@ -616,8 +689,17 @@ public partial class GenerationAudit
 
             Deltas += d.Deltas.Count;
             if (d.Deltas.Count > 0) DeltaIslands++;
+            Estuaries += d.Estuaries.Count;
+            if (d.Estuaries.Count > 0) EstuaryIslands++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.Estuary[x, z]) EstuaryCells++;
             Springs += d.Springs.Count;
-            foreach (Vector2I c in d.Springs) if (d.Navigable[c.X, c.Y]) SpringsOnNavigable++;
+            foreach (Vector2I c in d.Springs)
+            {
+                if (d.Navigable[c.X, c.Y]) SpringsOnNavigable++;
+                if (d.Ford[c.X, c.Y]) SpringsForded++;
+            }
             for (int x = 0; x < n; x++)
             for (int z = 0; z < n; z++)
             {
@@ -692,21 +774,7 @@ public partial class GenerationAudit
             }
         }
 
-        private void MeasureFerries(Island v)
-        {
-            IslandData d = v.D;
-            Berths += d.Berths.Count;
-            BerthSites += d.BerthSites;
-            WaterBodies += d.WaterBodies;
-            if (d.Berths.Count > 0) IslandsWithBerth++;
-            foreach (FerryBerth berth in d.Berths)
-            {
-                int rise = v.Cross(berth.Land.X, berth.Land.Y) - berth.Level;
-                if (rise < 0 || rise > Traversal.MaxQuayRise) BadQuay++;
-                if (!Traversal.Sailable(d, berth.Water.X, berth.Water.Y)) BadQuay++;
-                QuayRise.Add(rise);
-            }
-        }
+        private void MeasureWaterBodies(Island v) => WaterBodies += v.D.WaterBodies;
 
         /// <summary>The anchor lists, the material tally and the habitat means: what the biome layer will read.</summary>
         private void MeasureSurfaces(Island v)
@@ -716,13 +784,18 @@ public partial class GenerationAudit
             CoastAnchors += d.CoastCells.Count;
             CliffAnchors += d.CliffCells.Count;
             CliffFootAnchors += d.CliffFootCells.Count;
+            ScarpAnchors += d.ScarpCells.Count;
+            ScarpFootAnchors += d.ScarpFootCells.Count;
             BankAnchors += d.BankCells.Count;
             SummitAnchors += d.Summits.Count;
             RiverBedAnchors += d.RiverBedCells.Count;
             LakeBedAnchors += d.LakeBedCells.Count;
+            ShallowBedAnchors += d.ShallowBedCells.Count;
+            MidBedAnchors += d.MidBedCells.Count;
+            DeepBedAnchors += d.DeepBedCells.Count;
             foreach (Vector2I c in d.CoastCells) if (d.Beach[c.X, c.Y]) BeachedCoast++;
 
-            // Brinks that are gorge rims: dry ground three slabs over the water itself.
+            // Brinks that are gorge rims: dry ground a cliff over the water itself.
             foreach (Vector2I c in d.CliffCells)
             {
                 for (int k = 0; k < 4; k++)
@@ -790,6 +863,11 @@ public partial class GenerationAudit
             if (torsHere > 0) TorIslands++;
             SeaStackCells += d.SeaStacks.Count;
             if (d.SeaStacks.Count > 0) SeaStackIslands++;
+            Fjords += d.Fjords.Count;
+            if (d.Fjords.Count > 0) FjordIslands++;
+            for (int x = 0; x < n; x++)
+            for (int z = 0; z < n; z++)
+                if (d.Fjord[x, z]) FjordCells++;
             HotWaterCells += d.HotWater.Count;
             if (d.HotWater.Count > 0) HotIslands++;
             if (d.Settings.Warmth < 0.35f)
@@ -841,22 +919,20 @@ public partial class GenerationAudit
                 if (road.Cost == 0) RoadsFree++;
                 foreach (Works w in road.Built)
                 {
-                    if (w.Kind == WorksKind.Stair) RoadStairs++;
-                    else if (w.Kind == WorksKind.Bridge) RoadBridges++;
-                    else RoadFerries++;
+                    if (w.Kind == WorksKind.Ladder) RoadLadders++;
+                    else if (w.Kind == WorksKind.Stair) RoadStairs++;
+                    else
+                    {
+                        RoadBridges++;
+                        if (SpansFjord(d, w)) FjordBridged++;
+                    }
                 }
-                // A ferry is the one hop that may cover any distance, so hops are checked
-                // against the Works the passage recorded, not guessed from the geometry.
-                var sailed = new HashSet<(Vector2I, Vector2I)>();
-                foreach (Works w in road.Built)
-                    if (w.Kind == WorksKind.Ferry) sailed.Add((w.From, w.To));
 
                 // A road walks by king's moves, so a one-cell diagonal is a step; works
                 // stay cardinal, so anything longer must be straight and within a bridge.
                 for (int hop = 1; hop < road.Path.Count; hop++)
                 {
                     Vector2I a = road.Path[hop - 1], b = road.Path[hop];
-                    if (sailed.Contains((a, b))) continue;
                     int dx = Math.Abs(a.X - b.X), dz = Math.Abs(a.Y - b.Y);
                     int reach = Math.Max(dx, dz);
                     bool diagonal = dx != 0 && dz != 0;
@@ -1161,5 +1237,16 @@ public partial class GenerationAudit
             DiagonalWater += DiagonalOnly(n, (x, z) =>
                 InBounds(n, x, z) && d.WaterLevel[x, z] != IslandData.NoLand);
         }
+    }
+
+    /// <summary>Whether a bridge's gap holds a cell a fjord took, so a road crossing an inlet is counted.</summary>
+    private static bool SpansFjord(IslandData d, Works w)
+    {
+        var step = new Vector2I(Math.Sign(w.To.X - w.From.X), Math.Sign(w.To.Y - w.From.Y));
+        if (step == Vector2I.Zero) return false;
+        Vector2I c = w.From + step;
+        for (int i = 0; i <= d.BridgeSpan && c != w.To; i++, c += step)
+            if (InBounds(d.Size, c.X, c.Y) && d.Fjord[c.X, c.Y]) return true;
+        return false;
     }
 }

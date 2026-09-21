@@ -6,7 +6,7 @@ namespace ProjectNikitin.Generation;
 /// <summary>Gentle coasts stepped down a slab, so a shallow shore meets the aether instead of stopping at a cliff.</summary>
 internal static class Beaches
 {
-    /// <summary>Cells of coast a beach takes: a strand, not a shelf. Berth placement does not read beaches.</summary>
+    /// <summary>Cells of coast a beach takes: a strand, not a shelf.</summary>
     private const int BeachWidth = 1;
 
     /// <summary>

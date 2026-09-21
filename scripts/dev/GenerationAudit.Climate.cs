@@ -395,24 +395,24 @@ public partial class GenerationAudit
         {
             ("COLD", new[]
             {
-                Of("TUNDRA (DRY; ALL IF FRIGID)", SurfaceMaterial.Tundra),
-                Of("HEATH (MID)", SurfaceMaterial.Heath),
-                Of("MOORLAND (WET)", SurfaceMaterial.Moorland),
-                Of("BOG (EXCESS, COLD TO COOL)", SurfaceMaterial.Bog),
+                Of("FROSTEARTH (DRY; ALL IF FRIGID)", SurfaceMaterial.Frostearth),
+                Of("BLEACHEARTH (MID)", SurfaceMaterial.Bleachearth),
+                Of("SHADOWEARTH (WET)", SurfaceMaterial.Shadowearth),
+                Of("MURKEARTH (EXCESS, COLD TO COOL)", SurfaceMaterial.Murkearth),
             }),
             ("TEMPERATE", new[]
             {
-                Of("STEPPE (DRY)", SurfaceMaterial.Steppe),
-                Of("MEADOW (MID)", SurfaceMaterial.Meadow),
-                Of("GRASS (WET)", SurfaceMaterial.Grass),
-                Of("MARSH (EXCESS, WARM TO HOT)", SurfaceMaterial.Marsh),
+                Of("DRYEARTH (DRY)", SurfaceMaterial.Dryearth),
+                Of("BLACKEARTH (MID)", SurfaceMaterial.Blackearth),
+                Of("BROWNEARTH (WET)", SurfaceMaterial.Brownearth),
+                Of("MUCKEARTH (EXCESS, WARM TO HOT)", SurfaceMaterial.Muckearth),
             }),
             ("HOT", new[]
             {
-                Of("DUST (DRY)", SurfaceMaterial.Dust),
-                Of("SAVANNA (MID)", SurfaceMaterial.Savanna),
-                Of("VERDURE (WET)", SurfaceMaterial.Verdure),
-                Of("FLOODPLAIN (WET, BY WATER)", SurfaceMaterial.Floodplain),
+                Of("DUSTEARTH (DRY)", SurfaceMaterial.Dustearth),
+                Of("YELLOWEARTH (MID)", SurfaceMaterial.Yellowearth),
+                Of("REDEARTH (WET)", SurfaceMaterial.Redearth),
+                Of("FLOODEARTH (WET, BY WATER)", SurfaceMaterial.Floodearth),
             }),
             ("BARE", new[]
             {
@@ -421,6 +421,7 @@ public partial class GenerationAudit
                 Of("SNOW", SurfaceMaterial.Snow),
                 Of("SAND", SurfaceMaterial.Sand),
                 Of("SILT (BED)", SurfaceMaterial.Silt),
+                Of("OOZE (DEEP BED)", SurfaceMaterial.Ooze),
             }),
             ("WATER", new[]
             {

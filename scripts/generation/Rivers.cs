@@ -52,11 +52,15 @@ internal static partial class Rivers
     /// <param name="delta">Out: the fan of every delta.</param>
     /// <param name="deltas">Out: the apex of every delta.</param>
     /// <param name="springs">Out: where each stream begins.</param>
+    /// <param name="estuary">Out: every cell of an estuary's funnel, the axis and its old partner included.</param>
+    /// <param name="estuaries">Out: the mouth of every estuary.</param>
+    /// <param name="deeps">Out: the plunge pool under each fall that dug one, appended to the lakes' deeps.</param>
     public static void Carve(int seed, IslandParams p, bool[,] land, short[,] surface,
                              short[,] water, bool[,] river, bool[,] navigable,
                              int[,] flow, List<Fall> falls, int bridgeSpan, byte[,] form,
                              bool[,] keep, byte[,] fluid, List<Vector2I> terminal,
-                             bool[,] delta, List<Vector2I> deltas, List<Vector2I> springs)
+                             bool[,] delta, List<Vector2I> deltas, List<Vector2I> springs,
+                             bool[,] estuary, List<Vector2I> estuaries, List<Vector2I> deeps)
     {
         int n = p.Size;
         float strength = Math.Clamp(p.Rivers, 0f, 1f);
@@ -112,6 +116,10 @@ internal static partial class Rivers
         var eyot = new bool[n, n];
         Braid(seed, n, land, water, surface, down, channel, navigable, twin, keep, eyot);
 
+        // Some navigable mouths open into a funnel; a delta's arms find its water and give up.
+        Estuaries(seed, n, land, water, surface, down, flow, channel, navigable, twin, keep, eyot,
+                  navigableAt, estuary, estuaries);
+
         // A delta's arms branch off the pair; each arm's head is held to the cell it leaves.
         var arm = new bool[n, n];
         var branch = new Vector2I[n, n];
@@ -133,7 +141,11 @@ internal static partial class Rivers
         // Flattening a reach lowers the water round an eyot Beach had already stood clear of it.
         Beach(n, water, river, surface, eyot);
         CutBanks(n, land, surface, water, river, form, keep);
+        // The beds dug below their kind: the deep middle of a long reach, then the pool
+        // under each fall once the falls are known. Neither moves the water.
+        DeepenReaches(seed, n, land, river, navigable, water, surface);
         FindFalls(n, land, surface, water, river, down, falls);
+        DigPlungePools(seed, n, river, water, surface, down, falls, deeps);
         FindSprings(n, river, navigable, water, down, arm, springs);
     }
 

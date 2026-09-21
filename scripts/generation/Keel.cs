@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using static ProjectNikitin.Generation.Grid;
 
@@ -7,10 +8,14 @@ namespace ProjectNikitin.Generation;
 /// <summary>The underside: a thin lip at the coastline descending inland to a deep keel.</summary>
 internal static class Keel
 {
+    /// <summary>Slabs the underside may rise per cell away from ground it was pushed down under; half as much again on a diagonal.</summary>
+    private const int RootRise = 3;
+
     /// <summary>
     /// Hangs the underside below the surface as an absolute level, not a thickness
     /// subtracted from the surface (that would mirror the relief downward); a
-    /// minimum-thickness clamp keeps every column solid.
+    /// minimum-thickness clamp keeps every column solid, and <see cref="Root"/> keeps
+    /// every column in the rock of the ones beside it.
     /// </summary>
     internal static short[,] BuildKeel(int seed, IslandParams p, bool[,] land, short[,] surface,
                                       float[,] toCoast)
@@ -54,7 +59,61 @@ internal static class Keel
             int k = Math.Min(floorY, surface[x, z] - (int)edge);          // keep columns solid
             keel[x, z] = Terrain.SlabClamp(Math.Min(k, surface[x, z] - 1));
         }
+        Root(n, land, surface, keel, (int)edge);
         return keel;
+    }
+
+    /// <summary>
+    /// Keeps the landmass in one piece under deep-cut ground. The keel is a level, and a
+    /// bed dug below it — a deep lake, a plunge pool, a canyon floor near a thin rim —
+    /// took its own column down and left the ones beside it where they hung, so the bed
+    /// stood clear of the island with its water open to the aether. Every column's
+    /// underside is brought to at least <paramref name="edge"/> slabs under the lowest
+    /// ground beside it (king's moves), so the rock round a bed reaches under the bed;
+    /// then the push spreads outward through the land, rising <see cref="RootRise"/>
+    /// slabs a cell, so the bed sits in a tapering root rather than on a sheer plug.
+    /// Only lowers, and the result does not depend on the order cells are visited in:
+    /// each ends at the least of its own level and every push's level plus its walk.
+    /// </summary>
+    private static void Root(int n, bool[,] land, short[,] surface, short[,] keel, int edge)
+    {
+        var queue = new Queue<Vector2I>();
+        var queued = new bool[n, n];
+
+        for (int x = 0; x < n; x++)
+        for (int z = 0; z < n; z++)
+        {
+            if (!land[x, z]) continue;
+            int low = keel[x, z];
+            for (int k = 0; k < 8; k++)
+            {
+                int nx = x + Dx8[k], nz = z + Dz8[k];
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
+                low = Math.Min(low, surface[nx, nz] - edge);
+            }
+            if (low >= keel[x, z]) continue;
+            keel[x, z] = Terrain.SlabClamp(low);
+            queue.Enqueue(new Vector2I(x, z));
+            queued[x, z] = true;
+        }
+
+        while (queue.Count > 0)
+        {
+            Vector2I c = queue.Dequeue();
+            queued[c.X, c.Y] = false;
+            for (int k = 0; k < 8; k++)
+            {
+                int nx = c.X + Dx8[k], nz = c.Y + Dz8[k];
+                if (!InBounds(n, nx, nz) || !land[nx, nz]) continue;
+                int rise = Dx8[k] != 0 && Dz8[k] != 0 ? RootRise + RootRise / 2 : RootRise;
+                int level = keel[c.X, c.Y] + rise;
+                if (level >= keel[nx, nz]) continue;
+                keel[nx, nz] = Terrain.SlabClamp(level);
+                if (queued[nx, nz]) continue;
+                queue.Enqueue(new Vector2I(nx, nz));
+                queued[nx, nz] = true;
+            }
+        }
     }
 
     /// <summary>

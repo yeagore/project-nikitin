@@ -120,7 +120,7 @@ internal static class Habitat
     /// <summary>
     /// Below this warmth knob a Domain may have hot water, the chance growing as
     /// the knob falls toward 0: a hot spring in a temperate country is a curiosity,
-    /// in a frigid one the only meadow there is.
+    /// in a frigid one the only blackearth there is.
     /// </summary>
     private const float HotClimateBelow = 0.35f;
 
@@ -134,7 +134,7 @@ internal static class Habitat
     private const float HotBloom = 90f, HotFalloff = 4f;
     private const int HotReach = 24;
 
-    /// <summary>The warmest the bloom can lift a cell to: the temperate band, so a hot spring makes a meadow in the tundra and never a floodplain.</summary>
+    /// <summary>The warmest the bloom can lift a cell to: the temperate band, so a hot spring makes blackearth in the frostearth and never floodearth.</summary>
     private const float HotBloomCap = 160f;
 
     /// <summary>Cells upwind a cell looks for cover.</summary>
@@ -333,7 +333,7 @@ internal static class Habitat
     /// rung; the lee a little warmer; the rim a little colder; the bloom of any
     /// hot water (<see cref="FindHotWater"/>), <see cref="HotBloom"/> at the source
     /// decaying over <see cref="HotFalloff"/> cells of walk cost and never past
-    /// <see cref="HotBloomCap"/>, so a frigid Domain keeps a meadow round its hot
+    /// <see cref="HotBloomCap"/>, so a frigid Domain keeps blackearth round its hot
     /// spring and no hot ground appears in a cold country; and wet ground pulled toward
     /// <see cref="Temperate"/> from either side. No land leaves it all zero.
     /// </summary>

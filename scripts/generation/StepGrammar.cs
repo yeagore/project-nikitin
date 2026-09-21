@@ -92,9 +92,9 @@ internal static class StepGrammar
     }
 
     /// <summary>
-    /// Removes two-slab steps outside mountains: too tall to walk, too short to
-    /// read as a cliff. A cell is never lowered into its own lake or to within a
-    /// cliff of a basin floor it looks down on.
+    /// Removes two-slab steps outside mountains — the lowest scarp, too tall to walk
+    /// and kept rare. A cell is never lowered into its own lake or to within three
+    /// slabs of a basin floor it looks down on.
     /// </summary>
     /// <returns>Whether anything was lowered.</returns>
     internal static bool ResolveAmbiguousSteps(short[,] h, int[,] region, bool[,] land,

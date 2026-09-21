@@ -94,6 +94,9 @@ public partial class GenerationAudit : Node
     /// <summary>Sweep Lakes, Rivers, Crossings, Valleys and Wind with everything else held, so a knob that does nothing shows.</summary>
     [Export] public bool Knobs { get; set; } = false;
 
+    /// <summary>Every 0–1 knob at five steps over the same seeds against a fixed vector of outcomes, paired per seed: what each knob moves, whether it reverses, and what else it moves.</summary>
+    [Export] public bool KnobMatrix { get; set; } = false;
+
     /// <summary>Material shares at the four climate corners (dry/wet x cold/warm) and the preset: the rebalancing check.</summary>
     [Export] public bool Climate { get; set; } = false;
 
@@ -170,7 +173,6 @@ public partial class GenerationAudit : Node
         PrintPatches(t);
         PrintLandforms(t);
         PrintRivers(t);
-        PrintFerries(t);
         PrintOverhangs(t);
         PrintSurfaces(t);
         PrintHabitat(t);
@@ -211,6 +213,7 @@ public partial class GenerationAudit : Node
                 case nameof(GateRequests): GateRequests = true; break;
                 case nameof(GateMatrix): GateMatrix = true; break;
                 case nameof(Knobs): Knobs = true; break;
+                case nameof(KnobMatrix): KnobMatrix = true; break;
                 case nameof(Climate): Climate = true; break;
                 case nameof(ClimateGrid): ClimateGrid = value; break;
                 case nameof(ClimateGridSize): ClimateGridSize = int.Parse(value); break;
@@ -228,6 +231,9 @@ public partial class GenerationAudit : Node
                 // The preset's shape knobs, so a collage can be drawn for the island someone named in the lab.
                 case "Arrangement": Params.Arrangement = Enum.Parse<IslandArrangement>(value, true); break;
                 case "Character": Params.Character = Enum.Parse<TerrainCharacter>(value, true); break;
+                // And the fjords knob, so a gallery can show every tile cut (or none).
+                case "Fjords": Params.Fjords = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
+                case "Rivers": Params.Rivers = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture); break;
                 case nameof(AcceptBaseline): AcceptBaseline = true; break;
                 case nameof(Portraits): Portraits = value; break;
                 case nameof(FieldMaps): FieldMaps = value; break;
@@ -257,6 +263,7 @@ public partial class GenerationAudit : Node
         if (GateRequests) PrintGateRequests();
         if (GateMatrix) PrintGateMatrix();
         if (Knobs) PrintKnobs();
+        if (KnobMatrix) PrintKnobMatrix();
         if (Climate) PrintClimate();
         if (ClimateScout > 0) PrintClimateScout();
         if (Bulk) PrintBulk();

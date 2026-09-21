@@ -13,15 +13,18 @@ internal static class DevPalette
     public static readonly Color Goo = new(0.52f, 0.14f, 0.72f, 0.9f);
 
     public const int Coast = 1, Brink = 2, Overhang = 3, Beach = 4, Ford = 5,
-                     Landing = 6, Quay = 7, CliffFoot = 8, Bank = 9, Summit = 10,
+                     Landing = 6, CliffFoot = 8, Bank = 9, Summit = 10,
                      RiverBed = 11, LakeBed = 12, GooBed = 13, Ledge = 14,
-                     Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18;
+                     Spring = 15, FallLip = 16, SeaStack = 17, HotSpring = 18,
+                     ScarpBrink = 19, ScarpFoot = 20, ScarpLedge = 21, Deep = 22,
+                     ShallowBed = 23, DeepBed = 24, MidBed = 25;
 
     /// <summary>The anchor kinds in the order a legend reads them: shore, water, rock, built, high, and the stacks off the coast.</summary>
     public static readonly int[] LegendOrder =
     {
-        Coast, Beach, Bank, RiverBed, LakeBed, GooBed, Spring, HotSpring, FallLip, Ford, Quay,
-        Brink, CliffFoot, Ledge, Overhang, Landing, Summit, SeaStack,
+        Coast, Beach, Bank, RiverBed, LakeBed, ShallowBed, MidBed, DeepBed, Deep, GooBed, Spring, HotSpring, FallLip, Ford,
+        Brink, CliffFoot, Ledge, ScarpBrink, ScarpFoot, ScarpLedge,
+        Overhang, Landing, Summit, SeaStack,
     };
 
     /// <summary>The landform view's colours: plains green, hills darker, mountain grey, mesa rust, basin blue, the sculpted ones their own.</summary>
@@ -45,6 +48,12 @@ internal static class DevPalette
     public static readonly Color Broken = new(0.34f, 0.34f, 0.36f);
     public static readonly Color WalkWater = new(0.16f, 0.34f, 0.52f);
     public static Color District(int id) => Color.FromHsv((0.08f + id * 0.61803399f) % 1f, 0.62f, 0.88f);
+
+    /// <summary>A hue per body of sailable water, starting at the water's own cyan; the same golden-ratio step keeps two bodies that meet at a fall apart.</summary>
+    public static Color Body(int id) => Color.FromHsv((0.47f + id * 0.61803399f) % 1f, 0.72f, 0.95f);
+
+    /// <summary>Water no hull uses: a stream to be forded, a puddle too small to matter.</summary>
+    public static readonly Color Unsailable = new(0.30f, 0.37f, 0.44f);
 
     /// <summary>The height view's ramp: deep dirt, then grass, then highlands.</summary>
     public static readonly Color HeightLow = new(0.24f, 0.20f, 0.13f);
@@ -92,16 +101,27 @@ internal static class DevPalette
         if (d.Fluid[x, z] == (byte)FluidKind.Goo) return Goo;
         if (d.Hot[x, z]) return HotTint;
         if (d.Ford[x, z]) return FordTint;
-        if (d.Navigable[x, z]) return ReachTint;
-        if (d.River[x, z]) return StreamTint;
-        return LakeTint;
+        Color kind = d.Navigable[x, z] ? ReachTint : d.River[x, z] ? StreamTint : LakeTint;
+        return Deepened(kind, d.WaterDepth(x, z), d.Navigable[x, z] ? 2 : d.River[x, z] ? 1 : 3);
     }
 
     /// <summary>
-    /// Seventeen materials. The climate grid reads as a grid: the cold row is
-    /// mint, heather-brown, mauve and a dark bog; the temperate row straw,
-    /// yellow-green, green and a blue-green marsh; the hot row red-brown, gold, a
-    /// deep verdure and the emerald floodplain. Sand pale, snow white, silt brown.
+    /// Water darkened by how far its bed lies under the depth its kind is cut to —
+    /// a slab of extra depth is 8% darker, to half at six and over — so a bathymetry,
+    /// a plunge pool and a deep reach read through the surface. At or above the usual
+    /// depth the colour is the kind's own.
+    /// </summary>
+    public static Color Deepened(Color kind, int depth, int usual)
+        => depth <= usual ? kind : kind.Darkened(Mathf.Min(0.5f, 0.08f * (depth - usual)));
+
+    /// <summary>
+    /// Eighteen materials, in the soil glossary's alchemical colours, three of them
+    /// nudged (<see cref="Meshing.SurfacePalette"/>). The cold row is cool-grey
+    /// frostearth, ash-mauve bleachearth, violet-slate shadowearth and sage
+    /// murkearth; the temperate row tan dryearth, dark-umber blackearth, brown
+    /// brownearth and teal muckearth; the hot row bone dustearth, ochre yellowearth,
+    /// red redearth and plum floodearth. Stone dark grey, scree pale warm grey, silt
+    /// khaki, sand yellow, snow white, ooze near-black.
     /// </summary>
     public static Color Material(SurfaceMaterial m) => Meshing.SurfacePalette.Of(m);
 
@@ -140,18 +160,24 @@ internal static class DevPalette
         Beach => new Color(0.94f, 0.87f, 0.62f),
         Ford => new Color(0.88f, 1.00f, 0.45f),
         Landing => new Color(0.98f, 0.78f, 0.15f),
-        Quay => new Color(0.30f, 0.50f, 1.00f),
         CliffFoot => new Color(0.96f, 0.58f, 0.16f),
         Bank => new Color(0.38f, 0.80f, 0.36f),
         Summit => new Color(1f, 1f, 1f),
         RiverBed => new Color(0.22f, 0.40f, 0.66f),
         LakeBed => new Color(0.14f, 0.44f, 0.50f),
+        ShallowBed => new Color(0.46f, 0.74f, 0.70f), // the bed's teal lightened: wading depth
+        MidBed => new Color(0.18f, 0.46f, 0.50f),     // the bed's teal itself, a shade off the plain lake bed
+        DeepBed => new Color(0.07f, 0.22f, 0.36f),    // the bed's teal darkened: nine slabs down and more
+        Deep => new Color(0.05f, 0.14f, 0.42f),       // navy: the deepest cell of all
         GooBed => new Color(0.42f, 0.12f, 0.52f),
         Ledge => new Color(0.98f, 0.72f, 0.58f),      // between the brink's red and the foot's orange
         Spring => new Color(0.62f, 0.95f, 1.00f),     // a pale spark at the head of a stream
         FallLip => new Color(0.80f, 0.90f, 1.00f),    // white water
         SeaStack => StackTint,
         HotSpring => new Color(1.00f, 0.50f, 0.20f),  // steam-orange
+        ScarpBrink => new Color(0.52f, 0.38f, 0.88f),   // the cliff triplet's cool mirror: violet brink
+        ScarpFoot => new Color(0.56f, 0.68f, 0.96f),    // periwinkle foot
+        ScarpLedge => new Color(0.78f, 0.64f, 0.98f),   // lilac, between the two
         _ => new Color(0.26f, 0.26f, 0.27f),
     };
 
@@ -164,18 +190,24 @@ internal static class DevPalette
         Beach => "beach",
         Ford => "ford",
         Landing => "gate landing",
-        Quay => "ferry quay",
         CliffFoot => "cliff foot",
         Bank => "bank",
         Summit => "summit",
         RiverBed => "river bed",
         LakeBed => "lake bed",
+        ShallowBed => $"shallow lake bed (under {Surfaces.ShallowBed} slabs of water or fewer)",
+        MidBed => $"mid lake bed ({Surfaces.ShallowBed + 1} to {Surfaces.DeepBed - 1})",
+        DeepBed => $"deep lake bed ({Surfaces.DeepBed} or more: ooze)",
+        Deep => "deep (the deepest cell of a lake with a bathymetry, or the pool under a fall)",
         GooBed => "goo bed",
         Ledge => "brink and foot (a ledge)",
         Spring => "spring",
         FallLip => "fall",
         SeaStack => "sea stack (in the aether)",
         HotSpring => "hot spring or pool",
+        ScarpBrink => "scarp brink",
+        ScarpFoot => "scarp foot",
+        ScarpLedge => "scarp brink and foot",
         _ => "unremarkable",
     };
 }

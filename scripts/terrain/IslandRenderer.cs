@@ -40,7 +40,7 @@ public partial class IslandRenderer : Node3D
 
     private TerrainChunk[,]? _chunks;
     private bool _liquidVisible = true;
-    private readonly MeshBuffer _ground = new(), _water = new(), _goo = new();
+    private readonly MeshBuffer _ground = new(), _water = new(), _goo = new(), _falls = new();
 
     public bool LiquidVisible
     {
@@ -106,8 +106,8 @@ public partial class IslandRenderer : Node3D
 
     private void Build(int cx, int cz)
     {
-        ChunkMesher.Build(Data!, cx, cz, Tint, _ground, _water, _goo);
-        _chunks![cx, cz].Apply(_ground, _water, _goo, Materials, Colliders, _liquidVisible);
+        ChunkMesher.Build(Data!, cx, cz, Tint, _ground, _water, _goo, _falls);
+        _chunks![cx, cz].Apply(_ground, _water, _goo, _falls, Materials, Colliders, _liquidVisible);
     }
 
     private void Tally()

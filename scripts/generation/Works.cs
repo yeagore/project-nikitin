@@ -5,14 +5,14 @@ namespace ProjectNikitin.Generation;
 /// <summary>A piece of built infrastructure a route depends on; the routing counts these, not cells.</summary>
 public enum WorksKind
 {
-    /// <summary>A stair or hoist up a face of at most <see cref="Traversal.InfrastructureStep"/> slabs.</summary>
+    /// <summary>A stair or an elevator up a cliff: a face of <see cref="Traversal.CliffFace"/> slabs up to <see cref="Traversal.InfrastructureStep"/>.</summary>
     Stair = 0,
 
     /// <summary>A level deck across aether, water or a chasm — see <see cref="Crossing"/>.</summary>
     Bridge = 1,
 
-    /// <summary>A ferry between two quays on one body of water — see <see cref="FerryBerth"/>.</summary>
-    Ferry = 2,
+    /// <summary>A ladder up a scarp: a face taller than the free step and short of a cliff, two or three slabs.</summary>
+    Ladder = 2,
 }
 
 /// <summary>One work on a route: its kind, the cell you leave and the cell you arrive at.</summary>

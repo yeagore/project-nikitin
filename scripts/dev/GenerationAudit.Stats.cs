@@ -13,9 +13,9 @@ public partial class GenerationAudit
     /// <summary>The materials the statistics read, in the grid's order: the cold row, the temperate, the hot, then the ends and the rock. Silt is a bed and goes with the water.</summary>
     private static readonly SurfaceMaterial[] StatMaterials =
     {
-        SurfaceMaterial.Tundra, SurfaceMaterial.Heath, SurfaceMaterial.Moorland, SurfaceMaterial.Bog,
-        SurfaceMaterial.Steppe, SurfaceMaterial.Meadow, SurfaceMaterial.Grass, SurfaceMaterial.Marsh,
-        SurfaceMaterial.Dust, SurfaceMaterial.Savanna, SurfaceMaterial.Verdure, SurfaceMaterial.Floodplain,
+        SurfaceMaterial.Frostearth, SurfaceMaterial.Bleachearth, SurfaceMaterial.Shadowearth, SurfaceMaterial.Murkearth,
+        SurfaceMaterial.Dryearth, SurfaceMaterial.Blackearth, SurfaceMaterial.Brownearth, SurfaceMaterial.Muckearth,
+        SurfaceMaterial.Dustearth, SurfaceMaterial.Yellowearth, SurfaceMaterial.Redearth, SurfaceMaterial.Floodearth,
         SurfaceMaterial.Snow, SurfaceMaterial.Sand, SurfaceMaterial.Stone, SurfaceMaterial.Scree,
     };
 
@@ -135,16 +135,18 @@ public partial class GenerationAudit
 
     private static string Abbrev(SurfaceMaterial m) => m switch
     {
-        SurfaceMaterial.Floodplain => "flod",
-        SurfaceMaterial.Moorland => "moor",
-        SurfaceMaterial.Savanna => "sava",
-        SurfaceMaterial.Verdure => "verd",
-        SurfaceMaterial.Steppe => "step",
-        SurfaceMaterial.Meadow => "mead",
-        SurfaceMaterial.Tundra => "tund",
-        SurfaceMaterial.Marsh => "mars",
-        SurfaceMaterial.Heath => "heat",
-        SurfaceMaterial.Grass => "gras",
+        SurfaceMaterial.Frostearth => "frst",
+        SurfaceMaterial.Bleachearth => "blch",
+        SurfaceMaterial.Shadowearth => "shdw",
+        SurfaceMaterial.Murkearth => "murk",
+        SurfaceMaterial.Dryearth => "dry",
+        SurfaceMaterial.Blackearth => "blck",
+        SurfaceMaterial.Brownearth => "brwn",
+        SurfaceMaterial.Muckearth => "muck",
+        SurfaceMaterial.Dustearth => "dust",
+        SurfaceMaterial.Yellowearth => "yelw",
+        SurfaceMaterial.Redearth => "red",
+        SurfaceMaterial.Floodearth => "flod",
         SurfaceMaterial.Stone => "ston",
         SurfaceMaterial.Scree => "scre",
         _ => m.ToString().ToLowerInvariant()[..Math.Min(4, m.ToString().Length)],
@@ -159,7 +161,7 @@ public partial class GenerationAudit
     {
         int steps = ClimateSteps.Length;
         int mats = Enum.GetValues<SurfaceMaterial>().Length;
-        const int TileW = 252, TileH = 196, Gap = 12, Pad = 16, Gutter = 96, Lead = 26;
+        const int TileW = 284, TileH = 196, Gap = 12, Pad = 16, Gutter = 96, Lead = 26;
         const int BarW = 30, BarH = 160, Rows = 8, RowLead = 19;
         int gridW = steps * TileW + (steps - 1) * Gap;
 
@@ -267,12 +269,12 @@ public partial class GenerationAudit
         static (string, Color) Of(string name, SurfaceMaterial m) => (name, DevPalette.Material(m));
         return new (string, (string, Color)[])[]
         {
-            ("FRIGID AND COLD", new[] { Of("TUNDRA", SurfaceMaterial.Tundra), Of("HEATH", SurfaceMaterial.Heath),
-                Of("MOORLAND", SurfaceMaterial.Moorland), Of("BOG", SurfaceMaterial.Bog) }),
-            ("TEMPERATE", new[] { Of("STEPPE", SurfaceMaterial.Steppe), Of("MEADOW", SurfaceMaterial.Meadow),
-                Of("GRASS", SurfaceMaterial.Grass), Of("MARSH", SurfaceMaterial.Marsh) }),
-            ("HOT", new[] { Of("DUST", SurfaceMaterial.Dust), Of("SAVANNA", SurfaceMaterial.Savanna),
-                Of("VERDURE", SurfaceMaterial.Verdure), Of("FLOODPLAIN", SurfaceMaterial.Floodplain) }),
+            ("FRIGID AND COLD", new[] { Of("FROSTEARTH", SurfaceMaterial.Frostearth), Of("BLEACHEARTH", SurfaceMaterial.Bleachearth),
+                Of("SHADOWEARTH", SurfaceMaterial.Shadowearth), Of("MURKEARTH", SurfaceMaterial.Murkearth) }),
+            ("TEMPERATE", new[] { Of("DRYEARTH", SurfaceMaterial.Dryearth), Of("BLACKEARTH", SurfaceMaterial.Blackearth),
+                Of("BROWNEARTH", SurfaceMaterial.Brownearth), Of("MUCKEARTH", SurfaceMaterial.Muckearth) }),
+            ("HOT", new[] { Of("DUSTEARTH", SurfaceMaterial.Dustearth), Of("YELLOWEARTH", SurfaceMaterial.Yellowearth),
+                Of("REDEARTH", SurfaceMaterial.Redearth), Of("FLOODEARTH", SurfaceMaterial.Floodearth) }),
             ("THE ENDS AND THE ROCK", new[] { Of("SNOW", SurfaceMaterial.Snow), Of("SAND", SurfaceMaterial.Sand),
                 Of("STONE", SurfaceMaterial.Stone), Of("SCREE", SurfaceMaterial.Scree) }),
         };

@@ -89,7 +89,7 @@ Its two cells are one surface, and three passes could move one without the
 other. `LevelPairs` brings the higher cell down to the lower; the valley cuts
 the pair once, both cells taking the smaller want; and `FlattenReaches` makes a
 barge river a stair of pools, dead level between falls, which is also what a
-reach is to a ferry. `Settle` cycles these against `Descend` until all hold;
+reach is to a hull. `Settle` cycles these against `Descend` until all hold;
 each only lowers, so it terminates.
 
 ### Water pours every way it plausibly can
@@ -100,16 +100,48 @@ ways and the level partner of a navigable pair pours beside its axis. Sheets
 land only on water or in aether, never on dry ground: a sheet onto dry land
 would be a course the drainage never routed, so nothing new gets wet. The
 lab's sub-fall cataract sheets are renderer-side only; the falls list stays the
-falls, because `Traversal` cuts ferry bodies at falls.
+falls, because `Traversal` cuts the bodies of water at falls.
 
-### Wide rivers, and the idle ferries
+### Wide rivers, and the ferries that went
 
 A course turns navigable below its first real confluence (`NavigableShare`),
 where a barge would in fact get in; tuned any stricter, a median island had one
-short reach and read as having none. In the audited sample every body of water
-can be bridged, so berth pruning keeps none and `berths` is 0 in the baseline:
-the ferry machinery is intact and idle, and earns its keep on low-`Crossings`
-Domains where a two-cell river is already past the span.
+short reach and read as having none.
+
+Ferries were a third kind of work: a domino rule found every quay (a walkable
+shore cell within two slabs of sailable water with a yard behind it), the reach
+flood was run once without ferries, and a body of water kept its quays only if
+they landed in two or more pieces of that answer. The reasoning was sound and
+the machinery was idle. A bridge spans three cells of water and a navigable
+river is two cells wide, so no river ever needs a ferry, and a lake sits inside
+its patch's rim, so it is walked round. The 2026-09-07 audit found 5,326 quay
+sites over sixty islands of which 90 survived pruning, all on one island, and
+no road out of 180 ever used one. Making them occur would have meant widening
+rivers past the span or narrowing the span, which is changing the world to
+justify a tool. The berths, the pruning, the ferry hop in the reach flood and
+on the roads, the lab overlay and the audit section were removed that day; the
+water bodies stay, since the names read them and vessels, when the economy has
+them, will too. Removing the hop changed no island's playability: the one
+island with berths kept its heartland.
+
+### Fords start at the source, and never on it
+
+The ford marker walked each course in breadth-first order from whichever
+stream cell the scan met first and let that cell "qualify at once", so a course
+got a ford wherever the scan happened to enter it, and since a spring is one
+cell of water with dry land round it, that was the spring about as often as
+not: 103 of the audit's 218 springs were fords, and the anchors view showed
+fords where springs should have been. A course is now ordered from its springs
+downstream (a course with none, a lake's outflow or a delta's arm, keeps the
+scan order), the spacing counts from the source, and the spring itself is never
+a ford. The head ford stays, one cell below the spring: dropping it altogether
+was tried first and cost the mainland walk share two points (42.5% to 40.7%)
+and five of the 68 roads that need nothing built, because at some heads the
+spring was the only crossable cell and the ground round it does not walk. With
+the head ford kept below the spring the share is 41.9% and 66 roads walk free;
+fords per hundred stream cells went from 11.2 to 10.2 on the flat and 6.1 to
+5.8 in broken ground, the head fords that were springs now one cell down. The
+audit's `springsForded` is 0 and stays in the baseline as a want-0.
 
 ### Lakes that are not one big lake
 
@@ -137,6 +169,11 @@ drains through a puddle and a goo body has no spill. `gooTouchesWater` counts
 the failures and wants 0. `Sailable` and `Walkable` both refuse it. Geysers were
 pure scenery with no rules and were binned; the hook (`Geyser`,
 `IslandData.Geysers`, the lab's jets) stays for the biome layer to fill.
+
+Turned off by default on 2026-09-15 (`IslandParams.Goo`, the preset with it),
+at Maxim's asking: the puddles stay in the code and the lab's toggle, the
+checksum hashes two seeds with them on, and the audit's goo rows read 0 until
+the preset says otherwise.
 
 ### The cube has a lid, and Gates hang inside it
 
@@ -269,7 +306,7 @@ that shears rims apart will shout; see the open gaps.
 
 `Surfaces.Pick` once had a ternary with one answer, two moisture bands
 returning the same material, and an unreached cell given exactly the threshold
-value, and between them Heath (now moorland) was 0.0% of every island ever generated. Nothing
+value, and between them the material then called heath (now shadowearth) was 0.0% of every island ever generated. Nothing
 broke a guarantee. What found it was printing a share per category with `NEVER`
 beside the empty ones, which the audit does for every enum the generator
 assigns. A branch that never fires looks exactly like a branch that works.
@@ -307,16 +344,16 @@ the coldest setting froze the coast and not the peaks, the opposite of the
 knob's own doc. Now the label is the open lowland: the lee gains up to 10, the
 rim loses 6 over four cells, and the mean reads 153 at the knob's middle. The
 grid's bands moved up to meet it (cold below 115, hot from 185, sand from 220,
-floodplain from 170), which is why a knob of 0.85 is still hot country and not
+floodearth from 170), which is why a knob of 0.85 is still hot country and not
 a desert.
 
 ### Beaches are ground, and the sculpted rock is scree
 
-A beach was sand, which on a cold Domain drew a yellow strand round tundra;
+A beach was sand, which on a cold Domain drew a yellow strand round frostearth;
 nothing washes a beach, so it is now whatever the climate grid says a slab
-lower, and the anchor is unchanged. Badlands, karst and sinkholes were dust
-before the grid was consulted, so a cold karst Domain was 10% dust beside 53%
-tundra; they are scree, a rock, until the biome layer decides otherwise.
+lower, and the anchor is unchanged. Badlands, karst and sinkholes were dustearth
+before the grid was consulted, so a cold karst Domain was 10% dustearth beside 53%
+frostearth; they are scree, a rock, until the biome layer decides otherwise.
 
 ### The knobs roll
 
@@ -332,8 +369,7 @@ pins the knob it sweeps, and the checksum's knob cases pin theirs.
 The outer two cells of a gentle coast step down one slab, which is free-step
 ground. A graduated two-slab beach spends the whole tolerance a landing strip
 has, and hanging Gates fell to a quarter when it was tried. A beach is the
-normal coast rather than a special one, so it is a weak anchor; berth placement
-does not read it.
+normal coast rather than a special one, so it is a weak anchor.
 
 ### Four hanging Gates, chosen as a set
 
@@ -393,7 +429,7 @@ same time — `Wind`, the tenth 0–1 knob, rolled per seed like the rest — si
 model. `2 × Wind` multiplies every modifier exposure drives: the rain shadow
 (30 in the lee at the nominal 0.5), the milder lee (10) and the **gorge damp**
 (70 × shelter × ruggedness), added in the same change so that a gorge floor
-under its walls goes mossy while the plateau above it stays steppe. The
+under its walls goes mossy while the plateau above it stays dryearth. The
 exposure byte is geometry and does not move, so the collage's field strip
 holds across a wind sweep. In the `Knobs` sweep, from wind 0 to 1, flat lee
 ground dries by 32, gorge floors wet by 41 and the lee warms by 15 while open
@@ -437,7 +473,7 @@ until it meets the rim, over ground that never climbs and never drops more
 than the free step, and is refused if it meets water, a bridgehead, an eyot or
 the river itself. The arm is a stream with the pair cell as its head, and
 `Descend` holds that head to the pair, since no `down` joins them. The dry
-ground between the mouths is the fan, floodplain whatever the climate. Two
+ground between the mouths is the fan, the wet ground of its row. Two
 things kept the first version at zero deltas: the mouth cell has no partner
 (`Widen` needs a downstream cell to find the side), so "an axis cell with a
 mate" found no mouths at all — a mouth is an axis cell with nothing
@@ -446,6 +482,122 @@ sideways step — the river running along the coast — made a one-cell notch
 beside the pair; an arm now needs two cells forward before the rim. Seventeen
 on sixty seeds, on twelve islands, with fans of about four cells: a navigable
 river has to meet the rim over a plain for one to exist at all.
+
+### The bank cut stopped at the landform
+
+*2026-09-11.* In the anchors view a reach of river through a basin — and another
+through karst — had grey ground down both sides: no bank, no brink, nothing. The
+ground stood **exactly two slabs** above the water, which is the one height the
+anchors have no name for. A bank is at most one over its water (the free step
+off it); a brink is three or more (`CliffFace`); two is neither, so the content
+layer sees plain ground where the map plainly shows a shore.
+
+Two slabs is not where the channel leaves its banks. `CutBeds` cuts the bed two
+down (three where navigable) and fills it to one below the ground it crosses, so
+a fresh bank stands exactly one proud. It is the profile that moves afterwards:
+`Descend`, `FlattenReaches` and `LevelPairs` settle the **water** down a slab to
+make the course run downhill and hold a navigable pair level, and the dry ground
+beside it does not follow. `CutBanks` is the repair — and it was refusing two
+thirds of the work:
+
+- Its cuttable test was `Plain`, `Hills` or `Dunes`, "not a landform whose height
+  is the point of it". But a river crosses whatever is in its way, and the
+  landform is not what put the bank two above the water — the profile pass is.
+  Basin floor, karst floor, a mesa top the course cut into: all refused. That
+  was 436 of the 525 offending cells over sixty 128² islands.
+- Its floor rule refused any cell within a cliff of a basin floor, copied from
+  `StepGrammar.BasinFloorNear` — which every other caller applies only to ground
+  *outside* the basin, so that a rim cannot be cut down into the bowl. Applied to
+  a cell standing on the floor itself it refused every bank in a basin twice over.
+- The remaining 86 the pass made itself. The outward correction lowers a cell
+  standing two above the one just cut, and it checked nothing else: a gorge wall
+  three above the water, standing two above a bank that had just come down, was
+  walked down into the middle the pass exists to remove.
+
+So the pass now cuts whatever it stands on, treats a basin floor as floor and a
+basin rim as rim, and **never leaves a cell in the middle**: a wall the
+correction reaches beside water comes down to the free step instead of into it.
+What it still refuses is a bridgehead (a bridge's two ends are levelled to each
+other), a real basin rim, and the water itself. The residue is 3 cells in sixty
+islands, from 525.
+
+The measured effect, at 128² over the audit's sixty seeds: waterside cells
+standing in the middle 4.3% → 0.02%; `twoSlabOffMountain` 586 → 346 (the
+riverbank bucket 441 → 182, and no other bucket worse than it was); `free%`
+92.7 → 92.8; `fords` 341 → 359, since a ford wants both banks within a slab of
+the water; `gorgeReaches` 66 → 61, five borderline reaches whose wall was three
+on one side only and is now a shore. No guarantee moved off 0, and both baselines
+were re-accepted.
+
+### Scarps: two and three slabs get a name
+
+*2026-09-14.* The ladder of faces was free step (1), nothing (2), cliff (3+). Two
+had no list — the anchors view painted it as unremarkable ground — and the audit
+called it "ambiguous". Maxim's call: **1 a free step, 2–3 a scarp, 4+ a
+cliff.** A ladder climbs a scarp, a stair or an elevator a cliff. Both are
+still walls to walking, so walk areas, districts, mainland and heartland come out
+of the flood exactly as before.
+
+What changed is what things are called, and nothing else. `Traversal.FreeStep`
+(1) and `Traversal.CliffFace` (4) hold the two lines. `Surfaces` writes two pairs
+of lists: `CliffCells` and `CliffFootCells` from four slabs, `ScarpCells` and
+`ScarpFootCells` for two or three — each face read on its own, so a cell over a
+cliff one way and a scarp another is both kinds of brink. The lab flattens
+them scarp first and cliff over it, a ledge within one kind. `WorksKind.Ladder`
+joins `Stair` and `Bridge`; a road prices a ladder and a stair alike, so a face
+names its work without moving a road, and both count toward a flight. The rule
+that bares rock on a rocky landform keeps its old threshold of three
+(`RockFace`), so no column changed colour with the name.
+
+Checked three ways over 180 islands at the three footprints. A fingerprint per
+concern, before and after: terrain, water, walk and reach, roads, materials and
+every anchor list but the cliff pair identical on all 180; the cliff lists moved
+on 154 and the kinds of work on 9, where a ladder appeared. The four face lists
+rebuilt from the columns alone: 0 mismatches. Every ladder on a road climbs 2–3
+and every stair 4–8: 0 exceptions. 7,596 cells have a tallest drop of exactly
+three, a cliff brink before and a scarp brink now, and of 26,235 dry cells
+beside water not one is anchored to nothing. The step grammar reads free 92.8%,
+scarp of two 0.9%, of three 1.3%, cliff 5.0% (6.3% when a cliff began at
+three). Gorges are walled by a cliff now, so on the same water and the same rims
+`gorgeReaches` went 61 → 39 and `gorgeSealed` 2 → 4.
+
+Left for the question of how rare scarps should be, since each moves terrain:
+the mesa and basin clamps (`Math.Max(3, MesaHeight)` and `Math.Max(3,
+BasinDepth)`, which the checksum sweeps down to three), the basin-floor rule that
+keeps a cell three above a basin floor (`StepGrammar.BasinFloorNear` and its copy
+in `CutBanks`), `FallDepth` (3), and `ResolveAmbiguousSteps`, which still takes
+out twos.
+
+### An estuary is the reach opened, not a new kind of water
+
+Maxim's next ask after the fjords (2026-09-10) was wider rivers: estuaries and
+the like. A navigable river was two cells wide from its first confluence to the
+rim, which a deck spans anywhere, so no reach was ever a barrier and no mouth
+ever read as one. `Rivers.Estuaries` opens half the navigable mouths over
+gentle ground into a funnel: the main stem walked upstream from the rim for a
+rolled length, the land within a half-width of each axis cell stamped into the
+river, the half-width from a rolled four-to-six-cell mouth down to the pair's
+two over the length. Nothing new was taught to the profile: every cell taken
+is twinned to its axis cell, the debt `Widen` records for a partner, so
+`LevelPairs`, `CutBeds` and the valleys' `EqualisePairs` treat a funnel as a
+pair with more partners and the stair of pools runs through it a step at a
+time. Ground more than a slab above the axis is a bank the funnel narrows
+round; where under 60% of a stamp's land is that gentle the funnel ends, so a
+gorge mouth has none; an eyot in the funnel is drowned; a funnel shorter than
+three axis cells is put back. It runs between the braid and the deltas, and a
+delta's arms find the funnel's water and give up, so a mouth is one or the
+other; the chance is a coin so the deltas keep half the gentle mouths.
+
+Past three cells across no deck spans water (`WaterBridgeSpan`), whatever the
+Crossings setting, so the lower reach is crossed nowhere: a road walks round the
+funnel's head to where the river is two wide again. That is the estuary as a
+barrier, and the same objection as the fjords' applies until walking has a
+price (§E). Measured on the sixty (2026-09-10): 38 estuaries on 27 islands,
+1,579 cells of funnel; navigable cells 3,090 to 3,869 and river cells 7,180 to
+7,914, giving back a quarter of what the fjords had drained; deltas 17 to 8;
+falls 776 to 952, since every rim cell of a funnel pours its own sheet, which
+is the wide fall a mouth wanted; sealed gorge reaches 1 to 2, a funnel between
+banks that disagree by three slabs; no water uphill, every seed in one attempt.
 
 ### Sea stacks are aether
 
@@ -459,26 +611,26 @@ than the rule suggests: on most seeds the crop leaves no speck to keep, so the
 audit found them on nine islands of sixty. If every Domain should have them,
 they will have to be placed, not salvaged.
 
-### Bog on the cold side, marsh on the warm, and the hot row's grass
+### Murkearth on the cold side, muckearth on the warm, and the hot row's brownearth
 
-The first cut put marsh in the temperate row and bog in the cold one, as
+The first cut put muckearth in the temperate row and murkearth in the cold one, as
 "past wet" cells. The second, later the same day, split them by warmth
-instead: **bog** is water in excess on the cold-to-cool half (warmth under
-140, moisture 190 or more, a noise field over 0.66) and **marsh** on the
+instead: **murkearth** is water in excess on the cold-to-cool half (warmth under
+140, moisture 190 or more, a noise field over 0.66) and **muckearth** on the
 warm-to-hot half (140 and over, moisture 230 or more — extreme, which takes a
 high background and the water's strip both — within two cells of water, flat,
-a noise field over 0.62). So there are more bogs than marshes, a marsh shares
-the floodplain's ground on a hot Domain and takes a few percent of it, and a
-warm temperate Domain gets no bog. The line at 140 rather than 150 is the
+a noise field over 0.62). So there is more murkearth than muckearth, muckearth shares
+the floodearth's ground on a hot Domain and takes a few percent of it, and a
+warm temperate Domain gets no murkearth. The line at 140 rather than 150 is the
 water's tempering: at a knob of 0.5 a wet bank is pulled to about 145, and at
-150 the whole riverside of a temperate Domain went bog-side. At 0.6 the bog
+150 the whole riverside of a temperate Domain went murkearth-side. At 0.6 the murkearth
 was a fifth of the wet cool corners; 0.66 makes it a tenth. The hot row also
-got its own wet cell, **verdure**, at moisture 200 or more, a higher bar than
-grass because heat is the less forgiving side: at 0.75 moisture a hot Domain
-is half savanna and a quarter verdure, at 1.0 it is verdure where it was all
-savanna. And the cold row got **heath** between tundra and moorland, with a
-**frigid** band under 85 that is tundra whatever the moisture: a knob of 0 is
-mostly tundra, and the heath and the moor are a knob of 0.25.
+got its own wet cell, **redearth**, at moisture 200 or more, a higher bar than
+brownearth because heat is the less forgiving side: at 0.75 moisture a hot Domain
+is half yellowearth and a quarter redearth, at 1.0 it is redearth where it was all
+yellowearth. And the cold row got **bleachearth** between frostearth and shadowearth, with a
+**frigid** band under 85 that is frostearth whatever the moisture: a knob of 0 is
+mostly frostearth, and the bleachearth and the shadowearth are a knob of 0.25.
 
 ### Hot water on a cold Domain
 
@@ -487,35 +639,35 @@ Now, on a Domain whose warmth knob is under 0.35, each spring has a chance
 (40% at a knob of 0, nothing at 0.35) and each pool of standing water with no
 watercourse through it and at most sixty cells a chance (35%) of running hot,
 and a hot source adds 90 warmth at the source, decaying to 1/e over four cells
-of the same walk cost the moisture uses. That is a meadow round a spring in
-the tundra, which is what the extremes wanted. Eleven of the twenty cold
+of the same walk cost the moisture uses. That is blackearth round a spring in
+the frostearth, which is what the extremes wanted. Eleven of the twenty cold
 islands in the audit have some; the collages show them as orange water in
 the cold columns.
 
-### Cold sand, and floodplain in the tundra
+### Cold sand, and floodearth in the frostearth
 
-The co-occurrence matrix caught two things the grid did not. Floodplain
-turned up on one tundra island in a hundred: a delta's fan was floodplain in
+The co-occurrence matrix caught two things the grid did not. Floodearth
+turned up on one frostearth island in a hundred: a delta's fan was floodearth in
 any climate, and a hot spring's bloom on a cool Domain could lift a bank past
-the hot line. Now a fan is the wet ground of its row — floodplain on a hot
-Domain, grass on a temperate, moorland on a cold, tundra where it is frigid —
+the hot line. Now a fan is the wet ground of its row — floodearth on a hot
+Domain, brownearth on a temperate, shadowearth on a cold, frostearth where it is frigid —
 and the bloom never lifts a cell past 160, the temperate band, so a hot spring
-makes a meadow in the tundra and nothing hotter. And sand held at 3% of land
+makes blackearth in the frostearth and nothing hotter. And sand held at 3% of land
 in every tile of the shares sheet, the frigid ones included: not the beaches,
 which have not been sand since the climate grid went in, but the Dunes
 character, rolled by one seed in eight whatever the climate, its fields sand
-in the tundra. A dune field is sand now only where the warmth is at least the
+in the frostearth. A dune field is sand now only where the warmth is at least the
 cold line; colder, the ridges stay and wear the climate's ground, a frozen
 dune field. A sliver survives at a knob near 0.3, where the lee of a ridge is
 warm enough and its windward face is not; steering the character roll away
 from cold seeds would remove that too, at the cost of the dice.
 
-### Marsh past grass, and rarer bogs
+### Muckearth past brownearth, and rarer murkearth
 
-The temperate row had no cell for water in excess where the cold row had bog
-and the hot row floodplain. Marsh is that cell: moisture 205 or more, fresh
+The temperate row had no cell for water in excess where the cold row had murkearth
+and the hot row floodearth. Muckearth is that cell: moisture 205 or more, fresh
 water within two cells, flat ground (so it is low as well as near) and a noise
-field over 0.62 — 0.4% of land over sixty seeds, which is "occasionally". Bog
+field over 0.62 — 0.4% of land over sixty seeds, which is "occasionally". Murkearth
 was a third of cold wet ground; it now needs moisture past 190 and a noise
 field over 0.7, and is a sixteenth of that corner and 0.7% of all land, from
 2.1%. Tors — stone on plains and hills where a fine noise clears 0.87, about
@@ -711,6 +863,65 @@ because the island is sixteen times smaller in reaction cells and the step count
 did not have to move. It is the cheap end of the pipeline, and
 being able to name the pattern is worth the seconds.
 
+### Fjords: inlets along a grain
+
+The arrangements make every kind of coast but one: the long narrow inlet. And
+the works already knew how to cross a gap of aether within a bridge span and
+how to walk round a wider one, so an inlet was a barrier for free — the
+non-water version of the estuary the ferries would have wanted. `Fjords`
+(2026-09-07, reworked 2026-09-09) cuts them into the mask after the bites and
+before the islet filter, on the largest landmass only and never through it.
+One **grain** per Domain, rolled from the seed and not the wind's (fjords follow
+a structural grain; dunes follow the air). A mouth is where a line along the
+grain, offset across it within the landmass's own width, first meets the
+landmass marching in from outside; from there the inlet walks inland.
+
+The first sheets were knife cuts: straight, one width end to end, on three
+islands in four. The second were better and still, in Maxim's words, rather
+straight. What straightened them was the noise: simplex hugs the middle of its
+range, so a heading steered by the raw value wandered by a few degrees. The
+walker now pushes the noise toward its extremes, holds a curve the whole way
+(up to a radian over the length, so an inlet can hook), grows the bend with the
+length (half a radian more over the first forty cells), and ramps the bend in
+over the first eight steps so a mouth heads inland where the land ahead was
+measured — without the ramp seven islands in sixteen at 128² got no inlet at
+all, the walk having turned along the coast and run out of land before it had
+cut seven cells. The length is drawn evenly from 15% to 75% of the land ahead
+of the mouth, so one island's inlets differ; one of sixteen steps or more
+throws a side arm half the time. The half-width flares at the mouth, tapers
+toward the head and wobbles between.
+
+Two walls. The land ahead stops the walk five cells before any far coast or
+strait, so an inlet never severs on its own. The land beside it went unchecked
+at first, and a fjord running near a coast or down a peninsula could break
+through its side wall; the sliver rule then deleted what it had cut off, so the
+result was a bay with two mouths or a peninsula eaten whole. The walls are
+checked now, six steps in from the mouth, where a coast is thin by nature: the
+inlet narrows to keep three cells of land on either side, and stops where even
+a one-cell inlet would thin a wall three steps running — one bay beside it is
+coast, a run of them is a peninsula. (A stop on the first thin step killed most
+inlets at the mouth of a lobed coast.) What remains is tried on the mask: if
+what is left of the landmass is not one piece apart from slivers under islet
+size, or is no longer the largest, the cut is put back and another mouth tried,
+up to six.
+
+Rifts — the same crack opened inland, with land at both ends — shipped beside
+the fjords on 2026-09-07 and went on 2026-09-09: they read as knife cuts
+through the country whatever the bends, where a fjord reads as coast (§C).
+
+Measured on the sixty (2026-09-09): 41 fjords on 39 islands, two of them with
+two, 2,925 cells of inlet, every seed built in one attempt. Only the largest
+landmass is cut, and a mouth with under fourteen cells of land behind it is
+passed over, so satellites, islets and scatters stay whole: the archipelago and
+the thousand isles get none. The knock-on is the rivers: an inlet is rim, the
+routing flood starts from the rim, so courses that ran to the coast run into
+the inlet instead, and river cells went from 7,871 to 7,180, navigable cells
+3,565 to 3,090, water bodies 257 to 244, gorge reaches 74 to 65; the deltas
+held at 17. That is the fjord draining its hinterland, which is what a fjord
+does. And **a road bridges an inlet once in 180**: walking is free in the road
+search, so an inlet open at one end is walked round however far round is. A
+fjord is a place and not yet a challenge; making it one is the cost model (§E).
+
 ### The mesh is the exposed faces, and a bench says so
 
 The renderer (spec §4) could have been checked by looking. It is checked by
@@ -728,6 +939,152 @@ without noticing. Merging coplanar faces into larger quads (greedy meshing)
 would take the count down by another large factor and was not done: it
 complicates per-cell texture tiling and vertex colours for nothing measurable.
 The cost of a Domain will be its features, not its ground.
+
+### The bed is not one depth
+
+Every lake was two or three slabs deep, one sheet at one depth, and every
+river its kind's depth: a stream one slab, a navigable river two. That was fine
+while water was a level to walk round; it is nothing to put a biome under. The
+biome layer wants shallows and deeps, and the renderer draws the water at 0.66
+alpha, so the bed shows through — a lake with a bed was always going to read
+better than a lake without one.
+
+The design rule was that **depth is the bed's, never the water's.** The water
+level is what every rule above the surface reads: the shore steps down to it,
+the outflow spills from it, the routing floods through it, the traversal walks
+round it, the habitat measures against it. So a bathymetry moves the ground
+under the water and nothing else, and the checks ran to see what read the
+ground under water anyway. Three things did. The overhang stage measured a face
+to the bed and laid its lip four slabs over the bed, so a plain's shore beside
+a twelve-slab bed became a face to undercut, with the lip in the water; now
+the face is still the bed's (a gorge wall over a river is a face) but the lip's
+air and an arch's daylight are the water's. The ford was placed by the banks
+alone, so a plunge pool was fordable; now a ford wants no more water than a
+stream is cut to hold. The keel hangs below whatever the bed is and needed no
+telling; a deep lake bulges the underside a little, which is right.
+
+A profile is rolled per lake on the pool's own depth field, the same field the
+ring and crescent shapes are drawn from, and the floor is set by the pool's
+inset, so a puddle cannot be deep and a broad lake is. "Not every lake is
+special" is a rule, not a hope: a pool with no inside is flat, two ordinary
+lakes in five are flat on the very roll they always had, and a flat lake's
+cells hash the same as before. On the sixty audited seeds 54 of 155 bodies
+carry a profile.
+
+The first cut capped a lake at a tenth of the cube (12 slabs at 128²) with a
+bowl falling a slab per cell, and the lakes still read flat: a 1:4 slope under
+water is a ramp, not a bowl, and a floor of six or eight slabs is a puddle
+with pretensions. Raised the next day at Maxim's asking: the cap is 10, 15 and
+20 slabs by footprint (`MaxLakeDepth`, five metres of water at the largest),
+the profiles fall two slabs per cell of inset (three for a plunge) and the
+noise on the floor grows with it. The altitude cap holds — the keel under a
+twenty-slab bed is still inside the cube on every seed — and the deepest cell
+per body now runs 2 to 20 slabs, median still 3, since the median lake is a
+flat one. With that came the bed tiers, since a bathymetry is only worth
+having if the biome can ask which part it is standing on: shallow to two slabs
+of water (the shelf and the shore ring), mid to eight, deep from nine — three
+tiers at Maxim's asking, two at first with the deep from six — and a deep bed
+is ooze rather than silt, a near-black plum, so a deep floor reads dark through
+the water before any biome does. The numbers are in §D.
+
+### A great lake is several sites made one
+
+The patchwork's grain is `RegionScale`, and a lake was one patch's interior,
+so no lake could be bigger than a patch whatever the knob said. The way to a
+bigger lake without a bigger patch was to let the stage work on a *site* that
+is a union of patches, and the reason it could is that the containment
+argument never depended on the patch: a lake needs a dry rim all the way
+round, and the union's rim is as much a rim as a patch's. So the union is made
+first (`GreatLakeSite` relabels the members to the seed's id), and every pass
+after it — the interior, the lowest rim cell, the wander, the shape, the islet,
+the beds, the diagonal and shore passes — runs on the site map unchanged. The
+only pass that had to know is the neighbour rule, which keeps the great lake
+before the scan so the patches round it are the ones that give way.
+
+Which Domains: the knob from 0.3 up and a share per character, so a wet
+Plains Domain has one four times in five and a Dunes Domain almost never; the
+seed patch on a landmass of 3,600 cells, which is what "big landmasses" means
+in cells — a 96² Single qualifies, no 64² does, a 128² Twins does on each half
+and `Quarters` on none. Members are plain, hills or basin on the seed's
+plateau rung and the same landmass, so no cliff runs through the union, and the
+lake's level is the union's lowest rim cell as any lake's is. On the sixty
+seeds the gates fell as: 25 too dry, 28 lost the dice, 3 had no seed patch
+(no plain or basin with forty cells of interior on a landmass that size), and
+all 4 unions that formed became lakes of 2, 2, 2 and 4 patches, 1,537 cells
+between them, the largest body 514 cells. The dice are the gate, which is the
+intended shape: about one Domain in ten at the audited footprint, fewer over a
+game where a third of Domains are 64².
+
+The cost is rivers. A great lake lies where two or three patches were, and any
+course through them is lake now: the sixty seeds lost 347 river cells and 300
+navigable, 15 bodies of water, 2 deltas and 12 fords to their four great lakes,
+and 17 cells of hot water because the pools on those islands are labelled in
+scan order and a merged body shifts every id after it. None of that is a fault
+— a river that ends in an inland sea is the point — but it is why the headline
+numbers moved by more than four lakes' worth, and why `lakes` counts a great
+lake once (its patches are subtracted) rather than once per patch it spans.
+
+### Plunge pools dig the bed, not new water
+
+§E had plunge pools as a small pool of standing water on dry ground under a
+fall, which would have been a lake in every respect — a rim to hold it, a
+level, the traversal to re-run. The cheaper version is the true one: a fall
+lands on water already (the course below it, a lake, the river under a lake's
+spill — `Fall.Bottom` is that water's level), so the pool is the bed under the
+landing cell dug half the drop deeper, two to four slabs, tailing off a slab or
+two on the next cell down. Nothing above the water moves, so the profile, the
+falls and the springs are what they were, and the only reader told is the
+ford. Three inner falls in four dig one, so a fall without a pool is still a
+thing you can find. On the sixty seeds: 201 pools under the 268 inner falls,
+54 lake deeps beside them, 1,414 river cells dug below their kind (the pools
+and the deep middles of half the long navigable reaches), fords 359 → 347.
+
+### The keel takes its neighbours down with it
+
+The depth work above said the keel "hangs below whatever the bed is", and that
+was the bug: it was true of the bed's own column and of no other. The keel is a
+level, shallow at the coast, and the only thing tying it to the ground was a
+clamp per column (never less than the edge thickness under *its own* surface).
+So a bed dug below the level took one column down and left the ones beside it
+hanging where they were. On seed 608982959 (a 128² Ring of plains with a great
+lake twenty slabs deep near a thin rim) the bed stood at −20…−17 and the shore
+beside it at −8…1: the lake's floor clear of the island by up to fifteen slabs,
+and a wall of water open to the aether under the shore, which is what it looked
+like from the side. Not only lakes: over 300 swept islands 164 had some column
+whose top lay under a neighbour's keel (3,592 pairs — plunge pools, canyon and
+sinkhole floors, river beds in valleys near the rim, mostly by a slab or two),
+and 110 had water open underneath (1,309 cells). It had been there since the
+first canyon; the deep lakes made it a gap you could see through.
+
+`Keel.Root` is the rule that should have been there: a column's underside is at
+least the edge thickness under the lowest ground *beside* it (king's moves), and
+that push spreads outward through the land rising three slabs a cell. The taper
+is for looks — without it a deep lake sits on a sheer plug the shape of the lake
+plus one cell — and three slabs a cell is steeper than the keel's own gradient
+inland, so the root dies out within a few cells and the underside elsewhere is
+untouched. It is a propagation that only lowers from fixed sources, so it has
+one answer whatever order the queue runs in; the checksum moved on 351 of 458
+islands, and a fingerprint per concern over 180 of them showed the span bottoms
+moving on 167 and nothing else at all — water, walk and reach areas, roads and
+their works, materials, every anchor list. After it both counts are nought over
+the 300 and over the audit's sixty, and the audit carries them as guarantees
+(`hangingColumns`, `waterOpenBelow`), which is the part that makes it "never"
+rather than "not on the seeds looked at".
+
+### A fall is a sheet, not the side of the water
+
+The mesher draws water as a volume: a top, and a wall where the water's own
+slabs meet air. A river is one slab of water, so at the lip of a ten-slab fall
+that wall is one slab tall, and the nine slabs of rock under it were drawn as
+bare rock. The lab had covered for this with its own fall sheets since the box
+days, and hid them whenever the mesh was on, on the note that the mesh's water
+"stands in for the sheets, falls included" — which it never did. The fall is
+now a surface of its own in the chunk mesh: a quad down the face from what the
+fall lands on to the lip's bed, a whisker proud of the rock, one per recorded
+`Fall` (so a rim fall runs past the keel, as its `Bottom` says) and one per
+two-slab step between waters, where the higher bed would otherwise show as a
+dry stair in the middle of a river. It is geometry the data already described;
+nothing was added to `IslandData`.
 
 ## C. Tried and removed
 
@@ -767,6 +1124,7 @@ The cost of a Domain will be its features, not its ground.
 | **Dropping the Gate edge band outright** | Removing "stay near your own edge" at the relaxed rung put most of the Domain behind the player as they arrived. The band widens and never disappears. |
 | **A four-cell floor under Gate separation** | Not a relaxation of "keep your distance" but a repeal of it. The floor is a third of the footprint. |
 | **Geysers as terrain** | Jets placed where the rock was; where a jet belongs is a fact about the biome. The hook stays empty. |
+| **Rifts** | The same crack as a fjord opened inland, with land at both ends, so the keel showed through it. Read as a knife cut through the country whatever the bends, where a fjord reads as coast. Removed 2026-09-09 at Maxim's call; the walker stayed and became `Fjords`. |
 
 ---
 
@@ -787,16 +1145,110 @@ vary one thing, which is what makes their columns comparable; the ordinary audit
 rolls from `Auto`, where every request is trivially satisfied because nothing
 was asked for.
 
-**The baseline** (`docs/audit-baseline.json`) holds thirty headline numbers
+**The baseline** (`docs/audit-baseline.json`) holds forty-six headline numbers
 from the last accepted run and every run prints what moved. It is a diff, not a
 test: numbers are expected to move when the generator changes, and the point is
 to see them move and decide whether you meant it.
 
 **The checksum** (`docs/checksum-baseline.txt`) hashes every field of
-`IslandData` for 442 islands across the parameter matrix. It is the bit-for-bit
-gate: a change meant to leave generation alone reports `0 of 442 islands moved`;
+`IslandData` for 458 islands across the parameter matrix. It is the bit-for-bit
+gate: a change meant to leave generation alone reports `0 of 458 islands moved`;
 a change meant to alter it re-baselines with `-- accept` and says so in its
 commit. `docs/dev-scenes.md` has both scenes in detail.
+
+### The knob matrix: what each knob moves, and what else
+
+`KnobMatrix` (2026-09-07) is the answer to three questions asked of every 0–1
+knob at once: does it move what it promises, in one direction; does anything
+reverse along its travel; and what else does it move. Every knob is stepped
+0, ¼, ½, ¾, 1 over the same sixteen seeds with the other knobs rolled by the
+seed, twenty-eight outcomes are measured on every island (twenty-six until the
+beds, 2026-09-14), and each seed is
+compared with itself at 0, so the spread the rolled knobs put between seeds
+cancels; effects are read in units of that spread. 880 islands, three minutes.
+
+What it found, on the first run:
+
+- **Every knob moves its own promise, monotonically.** Mix takes high ground
+  from 3% to 23% of land; relief the crest-to-floor spread from 21 to 25 slabs
+  and the mean step from 0.4 to 0.7; hilliness the step inside the Hills from
+  0.1 to 0.4; rivers 0 to 244 river cells and 0 to 139 navigable; lakes 0 to
+  262 lake cells and 0 to 5 lakes; moisture the mean byte 35 to 251; warmth
+  76 to 216 with snow 1.7% to 0.2%; wind the flat lee from 22 wetter than open
+  ground to 3 drier; overhangs 0 to 21 columns; magick density 0 to 193 (a
+  convex ramp by design: half the slider is a quarter of the mean).
+- **No reversal worth the name.** Every `!` the matrix flags sits on an effect
+  of 0.2 spreads or less, a single noise-sized step against a flat trend.
+- **Nothing touches playability.** Land share, the cliff and two-slab shares,
+  the mainland and heartland shares, districts and attempts are `·` for all
+  eleven knobs: a knob changes the country, never whether it can be played.
+- **The cross-effects are consequences, not couplings.** Rivers carry springs,
+  falls, fords and valleys with them (+3.7, +3.5, +2.7, +0.7 spreads) and water
+  the land a little (moisture +0.4): a wetter island has more of everything a
+  river makes. Lakes cost springs (−0.9): a stream that begins at a lake's
+  shore is an outflow, not a spring, by definition, and the more lakes the more
+  heads are shores. Lakes do *not* cost rivers (river cells −0.1, within noise):
+  more lakes means fewer springs, not less river. Relief scales the Hills'
+  relief and the valleys (+1.1, +0.6), since it is the exaggeration of every
+  landform, and spaces fords wider (−0.3) because fords space by ruggedness.
+  Mix adds slope (+0.5) and takes a lake or so (−0.3), since high ground is not
+  flat. Moisture widens the rain-shadow gap (+1.0): the lee dries by a share of
+  what there is to dry. Warmth moves the wet-material share non-monotonically
+  (+0.5!), which is the climate grid's rows having different wet thresholds,
+  an artefact of summing "wet" across rows and not a fault.
+- **One soft knob.** Valleys reads flat over its lower half: the mean rise from
+  one cell off a river to five is 0.9 slabs at 0, ¼ and ½, then 1.1 and 1.5.
+  The mapping is `carve = 3s − 2·rank` with `s = Valleys / 2` and a hashed rank
+  per basin, so at ½ only the best-ranked 37% of basins are cut at all and
+  none fully; the average over rivers does not move until the window has
+  opened. The fix is a square root on the knob before the window
+  (`s = √Valleys / 2`): the top end is untouched, so 1 is still "the most
+  valley worth having", and the low end opens at once. It is the next section.
+
+The matrix is the check to rerun after any knob is touched: its cost is three
+minutes and its reading is a glance down one column.
+
+Rerun on 2026-09-09 with the twelfth knob, fjords (720 islands at 128² over
+twelve seeds, 146 s): the knob moves the cells of inlet 0, 45, 94, 113, 148 up
+its five steps, monotonically and +1.6 spreads end to end; what else it moves
+is fords, −0.4 spreads, the hinterland draining into the inlet (§B), and a lake
+or so (−0.1, a noise-sized step the matrix flags); no other knob touches the
+inlet cells, and the playability row stays `·`.
+
+Rerun on 2026-09-10 after the estuaries (720 islands, 134 s): the rivers knob
+still moves its two promises monotonically, river cells 0 to 233 and navigable
+0 to 137 up its five steps, the navigable end a fifth higher than before since
+a funnel is navigable water; falls, springs and fords ride with it (+4.2, +4.0,
++3.1 spreads), and the playability row stays `·`.
+
+Rerun on 2026-09-14 after the beds (720 islands, 133 s), with two outcomes
+added, the great lakes and the deepest lake cell: the lakes knob moves lake
+cells 0, 57, 148, 247, 323 and lakes 0 to 5.3 up its five steps, monotonically
+as before, and now the deepest lake cell with them (+1.9 spreads; +1.8 on the
+rerun of 2026-09-15 after the cap went to 20), since the
+floor is set by the pool's inset and the knob widens the pools; great lakes
+read 0, 0, 0.1, 0.2, 0.2 per island, in the intended direction but under the
+matrix's bar over twelve seeds (two or three islands at the top step), which
+is the count to watch with `SweepSeeds=32` if the shares are ever tuned.
+Springs still fall with the lakes (−1.3), and the playability row stays `·`.
+
+### The valleys knob wakes from a quarter up
+
+`CutValleys` maps the knob to a window strength of `Valleys / 2` (the top half
+of the raw range was all trenches) and each basin cuts `3 × strength − 2 ×
+rank` of a full valley, so below a strength of a third only the best-ranked
+basins are touched and none fully. Over the paired matrix the mean rise from
+one cell off a river to five read 0.9, 0.9, 0.9, 1.1, 1.5 slabs at the five
+steps: half the slider did nothing on average. A square root on the knob
+before the window (`√Valleys / 2`) leaves 1 where it was and opens the window
+sooner; the same matrix now reads 0.9, 0.9, 1.1, 1.3, 1.5, and the `Knobs`
+sweep's per-river rise 0.59, 0.64, 0.88, 1.05, 1.30 with 23, 23, 32, 35, 40 of
+83 courses valleyed. The first quarter is still flat in the mean: at ¼ the
+window admits the best-ranked 37% of basins at three quarters of a valley at
+most, which the average over every river barely sees. A cube root would open
+it further at the cost of crowding most of the range near the top; the root
+is where it stands, and the flat first quarter is a known softness rather than
+a dead knob.
 
 ### What the baseline does not carry
 
@@ -806,45 +1258,58 @@ measured a fixed preset are kept where they still say something.
 
 | | |
 |---|---|
-| surface, the sixty rolled seeds, after marsh, tors and the rarer bog | grass 22.1%, moorland 10.6%, meadow 9.7%, dust 8.4%, tundra 7.2%, savanna 6.6%, steppe 4.4%, floodplain 2.3%, bog 0.7% (from 2.1%), marsh 0.4%, stone 11.2% (from 9.5%: the tors, 6718 cells on all sixty islands), scree 5.7%, sand 5.3%, silt 4.7%, snow 0.8% |
-| the climate corners after the change (`Climate`, 12 seeds each) | cold wet: moorland 69%, bog 6% (was 22%). Temperate balanced: meadow 61%, grass 12%, marsh 0.8%. Temperate wet: grass 73%, marsh 0.9%. The other corners within a point of before, stone a point higher everywhere (the tors) |
-| the wind (`Knobs`, 6 seeds, wind 0 → 1) | flat lee moisture 188 → 156 against flat open 151 held; gorge floors 160 → 201; flat lee warmth 156 → 172 against open 160 held; marsh 0.62% → 0.55%, bog 0.74% → 0.72% |
+| surface, the sixty rolled seeds, after muckearth, tors and the rarer murkearth | brownearth 22.1%, shadowearth 10.6%, blackearth 9.7%, dustearth 8.4%, frostearth 7.2%, yellowearth 6.6%, dryearth 4.4%, floodearth 2.3%, murkearth 0.7% (from 2.1%), muckearth 0.4%, stone 11.2% (from 9.5%: the tors, 6718 cells on all sixty islands), scree 5.7%, sand 5.3%, silt 4.7%, snow 0.8% |
+| the climate corners after the change (`Climate`, 12 seeds each) | cold wet: shadowearth 69%, murkearth 6% (was 22%). Temperate balanced: blackearth 61%, brownearth 12%, muckearth 0.8%. Temperate wet: brownearth 73%, muckearth 0.9%. The other corners within a point of before, stone a point higher everywhere (the tors) |
+| the wind (`Knobs`, 6 seeds, wind 0 → 1) | flat lee moisture 188 → 156 against flat open 151 held; gorge floors 160 → 201; flat lee warmth 156 → 172 against open 160 held; muckearth 0.62% → 0.55%, murkearth 0.74% → 0.72% |
 | the sun and the hollows | warmth on slopes turned to the sun 141.6, turned away 133.5 (n≈18.8k each); basin floors 147.0 against an island median of 154 |
 | rivers after the terminal lakes and deltas | 7876 river cells (from 7812), 3565 navigable, 778 falls; 8 lakes swallow a river on 8 islands, fed by 16 channel cells; 17 deltas on 12 islands, 70 cells of fan; 218 springs, none on a navigable cell; fords per 100 stream cells 11.2 on flat ground and 6.1 on broken; every island's rivers still reach the rim |
 | districts | 455 on the heartland over 60 islands, every island with at least one; median 7 districts per island; the largest district median 2535 cells |
 | the new bytes | water distance (walk cost) per-island mean 7–204, median 25; magick per-island mean 1–183, median 98, and a saturated share of 0–92% of the land, median 40% — the mean is the density knob's own claim, so it spans nearly the whole byte across rolled seeds, and the saturated share is what the pattern and the level make of it; a run where the share stops moving is a run where the reaction has fallen out of its band |
 | sea stacks | 52 cells on 9 of 60 islands: the crop rarely leaves a speck to keep |
-| the second climate grid, sixty rolled seeds | grass 21.5%, meadow 9.8%, tundra 8.2%, dust 8.4%, heath 4.5%, moorland 4.4%, steppe 4.4%, savanna 4.3%, verdure 2.4%, bog 2.1%, floodplain 2.0%, marsh 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
-| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 tundra 77%, tundra 68%, steppe 68%, dust 66%, sand 77%; at 0.5 tundra 70%, heath 55%, meadow 58%, savanna 32% with meadow 27%, sand 52%; at 1.0 tundra 52% with bog 14%, moorland 50% with grass 14% and bog 13%, grass 74%, grass 63% with floodplain 10%, verdure 64% with floodplain 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |
-| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: grass 67%, meadow 52%, bog 33%, floodplain 30%, moorland 28%, savanna 28%, marsh 27%, steppe 26%, heath 25%, tundra 23%, snow 21%, sand 17%, dust 14%, verdure 11%; stone 100%, scree 81%. Given tundra: heath 79%, moorland 84%, bog 58%, sand 3%, no hot ground at all. Given verdure: floodplain 100%, savanna 92%, marsh 75%. Given dust: savanna 91%, floodplain 87%. Given bog: grass 76%, moorland 63%, marsh 4%. Given marsh: grass 78%, floodplain 59%, savanna 52%, bog 5%. The cold row and the hot row never share an island |
-| its corners (`Climate`, 12 seeds each) | cold dry: tundra 62%, heath 8%. Cold balanced: heath 60%, moorland 10%. Cold wet: moorland 63%, bog 9%. Cool wet (0.35): grass 64%, bog 9%. Temperate wet: grass 73%, marsh 0.8%. Warm wet (0.65): grass 72%, marsh 0.9%. Hot wet: savanna 43%, verdure 21%, floodplain 9%, marsh 1%. Frigid wet (0.05): tundra 38%, moorland 26% (the tempered banks), bog 9%. Snow end: tundra 69%, bog 2% |
-| surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | meadow 61.8%, grass 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, steppe 0.6%, dust 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
-| the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave moorland 58%; the mesas were cold at every setting. After: meadow 58%, grass 18%, and no tundra or moorland at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
+| the beds (2026-09-14, the cap raised 2026-09-15) | lake depth, the deepest cell per body, 2–20 slabs, median 3, over 155 bodies, 54 of them with a profile; lake bed 6,740 cells, 4,037 shallow (two slabs of water or fewer), 1,942 mid (three to eight) and 761 deep (nine or more), ooze 0.3% of land; great lakes 4 on 4 of 60 islands, 1,537 cells, the largest body 514; deeps 255, of which 201 plunge pools under falls; 1,414 river cells dug below their kind; the gates 25 dry, 28 dice, 3 no seed, 4 unions of 2–4 patches |
+| the second climate grid, sixty rolled seeds | brownearth 21.5%, blackearth 9.8%, frostearth 8.2%, dustearth 8.4%, bleachearth 4.5%, shadowearth 4.4%, dryearth 4.4%, yellowearth 4.3%, redearth 2.4%, murkearth 2.1%, floodearth 2.0%, muckearth 0.4%; hot water 109 cells on 11 islands, 11 of the 20 with a warmth knob under 0.35 |
+| the twenty-five knob positions (`ClimateStats`, 30 seeds each, 128²) | the largest ground per tile, warmth across: at moisture 0 frostearth 77%, frostearth 68%, dryearth 68%, dustearth 66%, sand 77%; at 0.5 frostearth 70%, bleachearth 55%, blackearth 58%, yellowearth 32% with blackearth 27%, sand 52%; at 1.0 frostearth 52% with murkearth 14%, shadowearth 50% with brownearth 14% and murkearth 13%, brownearth 74%, brownearth 63% with floodearth 10%, redearth 64% with floodearth 10%. Stone 12–14% and scree 7% in every tile, the rock the knobs do not move; sand 3% in every tile the cold line and warmer, the dune fields, and none colder |
+| what occurs together (`ClimateStats`, 500 rolled seeds, present = 20+ cells) | present at all: brownearth 67%, blackearth 52%, murkearth 33%, floodearth 30%, shadowearth 28%, yellowearth 28%, muckearth 27%, dryearth 26%, bleachearth 25%, frostearth 23%, snow 21%, sand 17%, dustearth 14%, redearth 11%; stone 100%, scree 81%. Given frostearth: bleachearth 79%, shadowearth 84%, murkearth 58%, sand 3%, no hot ground at all. Given redearth: floodearth 100%, yellowearth 92%, muckearth 75%. Given dustearth: yellowearth 91%, floodearth 87%. Given murkearth: brownearth 76%, shadowearth 63%, muckearth 4%. Given muckearth: brownearth 78%, floodearth 59%, yellowearth 52%, murkearth 5%. The cold row and the hot row never share an island |
+| its corners (`Climate`, 12 seeds each) | cold dry: frostearth 62%, bleachearth 8%. Cold balanced: bleachearth 60%, shadowearth 10%. Cold wet: shadowearth 63%, murkearth 9%. Cool wet (0.35): brownearth 64%, murkearth 9%. Temperate wet: brownearth 73%, muckearth 0.8%. Warm wet (0.65): brownearth 72%, muckearth 0.9%. Hot wet: yellowearth 43%, redearth 21%, floodearth 9%, muckearth 1%. Frigid wet (0.05): frostearth 38%, shadowearth 26% (the tempered banks), murkearth 9%. Snow end: frostearth 69%, murkearth 2% |
+| surface, at the preset (moisture 0.45, warmth 0.5: temperate and balanced) | blackearth 61.8%, brownearth 11.8%, stone 8.9%, scree 4.5%, sand 6.4%, silt 4.6%, snow 0.9%, dryearth 0.6%, dustearth 0.5%. The whole cold row and the whole hot row are `NEVER` here because the preset is temperate and the lapse only bites above the plateau ceiling, where a mountain is stone and then snow: they are the other rows of the grid, below. Before rock was tied to rock landforms and tall faces stone was 10.6%, scree 8.0% |
+| the plateau ceiling, seed 1220260150 as Single Tablelands at 72² | before, with the lapse starting at 30% of a 22-slab cap: warmth 0.5 and moisture 0.5 gave shadowearth 58%; the mesas were cold at every setting. After: blackearth 58%, brownearth 18%, and no frostearth or shadowearth at any warmth above 0.25. The same seed as Highlands keeps snow on its summits — 2% at 72², 6% at 128², at temperate |
 | walking by king's moves | against four-way walking on the same islands: land on the mainland 40.8% → 42.8%, heartland 94.9% → 95.0%, roads that can simply be walked 45 → 50 of 121. Cutting corners joins a few scraps to their districts and lets a few roads round a cliff; nothing large moves |
 | habitat, per-island means | moisture 32–254 (median 183), warmth 75–225 (median 153: the knob's middle reads at its label; it was 118–133 with the chills), rugged 25–213, exposure 134–245, rim distance 1–13 cells |
-| surface, the sixty rolled seeds | grass 23.8%, meadow 10.5%, savanna 6.4%, moorland 9.4%, tundra 7.0%, steppe 4.1%, dust 8.3%, floodplain 2.3%, bog 2.1%, stone 9.5%, scree 5.8%, sand 5.1%, silt 5.0%, snow 0.8%: every row of the grid present, because every seed is its own climate |
+| surface, the sixty rolled seeds | brownearth 23.8%, blackearth 10.5%, yellowearth 6.4%, shadowearth 9.4%, frostearth 7.0%, dryearth 4.1%, dustearth 8.3%, floodearth 2.3%, murkearth 2.1%, stone 9.5%, scree 5.8%, sand 5.1%, silt 5.0%, snow 0.8%: every row of the grid present, because every seed is its own climate |
 | snow at every footprint (`Sizes`, 12 seeds each) | share of land under snow 0.8 / 0.7 / 0.5 / 0.4 / 1.0% at 48 / 64 / 72 / 96 / 128², and every island with a mountain carries some at every size (3 of 3, 3 of 3, 4 of 4, 3 of 3, 4 of 4). Under the parameter ceiling it was 128² only |
-| the climate grid, re-tuned (`Climate`, 12 seeds each) | cold dry: tundra 62%, moorland 14%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 56%, bog 22%. Temperate dry: steppe 62%, meadow 11%. Temperate balanced: meadow 62%, grass 15%. Temperate wet: grass 76%. Hot dry: dust 62%, savanna 11%, floodplain 5%. Hot balanced: savanna 66%, floodplain 11%. Hot wet: savanna 66%, floodplain 11%. Sand end: sand 63%, floodplain 11%, savanna 7%. Snow end: moorland 72%, bog 4%, snow 1.6%. Stone, scree and silt hold at 9 / 4 / 5.5% in all eleven |
+| the climate grid, re-tuned (`Climate`, 12 seeds each) | cold dry: frostearth 62%, shadowearth 14%. Cold balanced: shadowearth 72%, murkearth 4%. Cold wet: shadowearth 56%, murkearth 22%. Temperate dry: dryearth 62%, blackearth 11%. Temperate balanced: blackearth 62%, brownearth 15%. Temperate wet: brownearth 76%. Hot dry: dustearth 62%, yellowearth 11%, floodearth 5%. Hot balanced: yellowearth 66%, floodearth 11%. Hot wet: yellowearth 66%, floodearth 11%. Sand end: sand 63%, floodearth 11%, yellowearth 7%. Snow end: shadowearth 72%, murkearth 4%, snow 1.6%. Stone, scree and silt hold at 9 / 4 / 5.5% in all eleven |
 | road hops no work explains | 0 of 121 roads; the old diagonal-counting check read 4110 |
-| the climate grid (`Climate`, 6 seeds each) | cold dry: tundra 64%, moorland 13%. Cold balanced: moorland 72%, bog 4%. Cold wet: moorland 55%, bog 21%. Temperate dry: steppe 59%, meadow 10%, grass 4% (along the water). Temperate balanced: meadow 59%, grass 13%. Temperate wet: grass 72%. Hot dry: dust 58%, savanna 10%, floodplain 4% (along the water). Hot balanced: savanna 62%, floodplain 10%. Hot wet: savanna 55%, floodplain 11%, grass 8% (the tempered riverside). The sand end (warmth 1): sand 43%, savanna 27%, floodplain 10%. Every floodplain touches its water: the tempered bank used to turn to grass with the floodplain starting a cell behind it, until the floodplain got its own warmth line and stranded patches were wiped. The snow end (warmth 0): moorland 72%, snow 5% — the lowland stays liveable. Rock, silt, beaches and snow make up the rest of each |
+| the climate grid (`Climate`, 6 seeds each) | cold dry: frostearth 64%, shadowearth 13%. Cold balanced: shadowearth 72%, murkearth 4%. Cold wet: shadowearth 55%, murkearth 21%. Temperate dry: dryearth 59%, blackearth 10%, brownearth 4% (along the water). Temperate balanced: blackearth 59%, brownearth 13%. Temperate wet: brownearth 72%. Hot dry: dustearth 58%, yellowearth 10%, floodearth 4% (along the water). Hot balanced: yellowearth 62%, floodearth 10%. Hot wet: yellowearth 55%, floodearth 11%, brownearth 8% (the tempered riverside). The sand end (warmth 1): sand 43%, yellowearth 27%, floodearth 10%. All floodearth touches its water: the tempered bank used to turn to brownearth with the floodearth starting a cell behind it, until the floodearth got its own warmth line and stranded patches were wiped. The snow end (warmth 0): shadowearth 72%, snow 5% — the lowland stays liveable. Rock, silt, beaches and snow make up the rest of each |
 | rugged by cells from fresh water | bank 87, then 95 · 99 · 98 · 98 · 96, seven cells and further 81. With water read as its surface rather than its bank the bank was 118 and the second cell 124: the shore read a slab rougher than its country |
 | anchors | 34.5k coast (30% beached, one cell deep; it was 84% and two deep), 20.4k cliff brink (2.2k honest gorge rims), 20.0k cliff foot, 9.5k bank, 6.4k river bed, 6.6k lake bed, 121 summits, 390 overhang, 381 ford, 543 Gate landing, 0 quay |
 | Gates | one Entry and one to three Exits on every island, none on a shared edge, off the heartland, outside the box, or not outermost on its own axis; every landing exactly 3 cells and level |
 | roads | one per Exit; median one work; roughly a third can simply be walked |
 | requests | `GateRequests` and `GateMatrix` report every edge, kind and count delivered on every seed, and four hanging Gates on every arrangement × character |
 
-### Feasibility
+### Feasibility, and how often a seed re-rolls
 
 `Feasibility` runs every arrangement against every character. `ThousandIsles`
 is the hard one (the most attempts; a piece the linker cannot always nudge into
 range; `BrokenFractal` was the other until it was removed); everything else
 runs at one attempt with most of the island reachable.
 
+Measured on 2026-09-07 (`Sizes`, `Strain`, `Debut`, twelve seeds a cell, and
+the sixty default seeds): at 128² and 96² no seed of the sixty, and none of
+the twelve per arrangement, needed a second attempt, except `NShape` at 128²
+at 1.08 (one seed in twelve). At 64² the mean is 1.17 attempts: the four
+broken layouts (`BrokenRing`, `BrokenL`, `BrokenT`, `BrokenCross`) re-roll one
+seed in six, `Archipelago` and `ThousandIsles` one in twelve, the other
+twenty-four never. No seed anywhere gave up: `unmet` is 0 in every cell, so
+the four-attempt budget has never been spent and the "best failure ships"
+branch has never run in an audited seed. Re-rolling is a 64² phenomenon of
+the fragmented shapes, where a piece that the linker leaves a bridge span off
+its neighbour is a larger share of a smaller island.
+
 ### Open gaps
 
 | | |
 |---|---|
-| two-slab steps at a riverbank or valley side | `twoSlabOffMountain` in the baseline: all where the ground the pass would have to cut is a landform, a bridgehead or standing water. The alternative is eating the landform. |
+| two-slab steps at a riverbank or valley side | `twoSlabOffMountain` in the baseline. Most of what was here was the bank cut backing off a landform (see "The bank cut stopped at the landform"); what is left is a bridgehead, a basin rim or standing water, three waterside cells in sixty islands. |
 | a landmass adrift on the most broken layout | `ThousandIsles`. The guarantees still hold; it is one islet of thirty. |
 | basins on a `Highlands` island | About nine islands in ten, not all: adjacency cannot always place one beside a massif. Accepted. |
 | undersized patches on `ThousandIsles` and `Atoll` | The coast, not the merge rule, sets the patch size on a small islet. Accepted. |
@@ -852,20 +1317,20 @@ runs at one attempt with most of the island reachable.
 | `Halves` and `Triplets` fuse on one 128² seed in twelve | Ungrouped layouts, so not the seam bug; the re-roll absorbs it. Logged by `Strain`. |
 | deltas are small, and rare | 17 on 60 seeds, fans of about four cells: a navigable river has to meet the rim over a plain. A longer arm walk or a wider fan would make more of each; more deltas need more navigable mouths on gentle coasts, which is the terrain's doing. |
 | sea stacks on one island in seven | The islet filter usually has nothing under thirty cells to drop. Placing pillars deliberately off the rim would put them on every Domain; salvaging keeps them honest and rare. |
-| 5 sealed gorge reaches | Misaligned rims, 4–19 cells, on which a deck fits but the banks disagree by three or more. Nothing is cut off, but a 19-cell reach with no deck is a real detour. A pass that re-levels the two rims at the least-misaligned cell would close it; it is the same class of surgery as `LevelBridgeheads` and worth doing deliberately. |
+| 4 sealed gorge reaches | 3 of them misaligned rims, 3–5 cells, on which a deck fits but the banks disagree by three or more. Nothing is cut off, and no reach is long, but a sealed reach is a real detour. A pass that re-levels the two rims at the least-misaligned cell would close it; it is the same class of surgery as `LevelBridgeheads` and worth doing deliberately. (Counted against a wall of four since 2026-09-14; against three it read 2, and 5 reaches of 4–19 cells before the fjords and the estuaries reworked the mouths.) |
 
 ---
 
 ## E. Ideas not taken yet
 
-1. **Settlement placement.** Everything it needs exists: districts, berths,
+1. **Settlement placement.** Everything it needs exists: districts, water bodies,
    roads, Gate aprons, the water-distance byte. It will want a stricter reading
    of level ground within a district than "walk-connected" — that is where the
    old shelf idea belongs, if anywhere. It is the first thing that would show whether the terrain rules
    make good play rather than good pictures.
 2. **A real cost model for works.** Every work costs one point today, so
-   `Passage.Cost` means "how many projects". Pricing by span, climb and ferry
-   distance turns it into a budget the settlement layer will want.
+   `Passage.Cost` means "how many projects". Pricing by span and climb
+   turns it into a budget the settlement layer will want.
 3. **The world-tree.** `EntryEdge` and `EntryGate` exist so a Domain can be
    generated to match the one that sent you. Missing is the layer above: which
    Domains exist, their characters and arrangements, and how difficulty moves
@@ -873,14 +1338,49 @@ runs at one attempt with most of the island reachable.
 4. **Span-aware pathing**, which is what would make an overhang or an arch
    walkable, and what a natural-bridge shortcut needs to matter.
 5. **Re-levelling a sealed gorge**, per the open gaps.
-6. **Fjords.** Long narrow inlets cut into one landmass along a grain, the one
-   obvious coastline the arrangements do not produce. A mask operation, so it
-   belongs with `Footprint`.
+6. **Closing an inlet's loop.** Fjords exist (§B); a road bridges one once in
+   180, because walking is free and every inlet is open at one end. Two ways
+   to make one a barrier rather than a detour: a cost of walking against a work,
+   so a crack that saves eighty cells earns its bridge; and joining a crack's
+   head to something else you cannot walk — a cliff, a massif's foot, a lake —
+   so the two banks are different walk areas, which the traversal already
+   measures.
 7. **Size-gating the arrangement pool.** One filter on `ArrangementPool` by
    `Size`, to be wired when the ladder is chosen; `Strain` names the layouts.
-8. **Plunge pools.** A small pool dug under a fall onto dry ground, fed by it.
-   Standing water on ground the traversal already counted, so it wants the same
-   guards as a lake and a re-run of the analysis. For water's content pass.
+8. ~~**Plunge pools.**~~ Done 2026-09-14, and differently from the idea as
+   logged (a small pool of standing water dug on dry ground under a fall, which
+   wanted a lake's guards and a re-run of the analysis): the pool is the bed
+   under the landing cell, dug deeper, on water the routing already put there,
+   so nothing above the surface moved. See "Plunge pools dig the bed" in §B.
+9. **Cataracts as a feature.** A fall is a step of three slabs or more
+   (`Rivers.FallDepth`); a smaller step between two waters is drawn (a wall of
+   water, and since 2026-09-19 a sheet where it bares rock) but recorded
+   nowhere and cuts nothing. Measured over 300 islands (`step_probe.tscn --
+   mode=watersteps`, 2026-09-19): no step of three or more is without its fall;
+   there are 2,981 smaller ones, ten an island and on 97% of islands, 84% of
+   them one slab and the rest two. Nine in ten run *along* a course and three
+   quarters are stream to stream: a stream coming down a slope a slab at a
+   time, which is what a stream is. Another 456 are a stream stepping into a
+   navigable reach (a tributary's mouth), 31 a lake and a stream. What matters
+   to a hull is the rest: 246 steps (0.8 an island) lie *inside one sailable
+   body* — 218 of them a lake standing a slab or two over the navigable reach
+   that drains it, never the other way up, and 28 between two reaches (a
+   confluence, a funnel's edge). Today a hull sails over those. If a cataract
+   cut a body as a fall does: at every step, 57 of 934 bodies (6.1%) break, the
+   count rises 7% to 998, the mean body falls from 36.6 cells to 34.2, and of
+   the 129 pieces 25 are under four cells; at two-slab steps only, 20 bodies
+   (2.1%) break, the count rises 2%, and 3 of 41 pieces are specks. So it would
+   not shred navigation; what it would mostly do is part a lake from its river
+   at the outflow. The alternative for those 218 is to level them instead — the
+   reach is already a stair of pools, and the lake's outflow cell could take the
+   lake's level as `FlattenReaches` does between reaches — which removes the
+   step rather than naming it. Which of the two is a design call: a cataract is
+   a place (portage, a mill, a weir, a lock later), a levelled outflow is one
+   more body a barge can use end to end. Examples to look at, lab `seed=N
+   at=X,Z`: 164926 at 34,81 (128², Bram Water: a lake 2 over its reach, 274
+   cells that would part 212 / 53 / 9); 109567 at 45,8 (64², Rath Mere, 1 slab,
+   108 → 73 / 19 / 15 / 1); 171077 at 34,16 (96², two reaches 2 apart); 5000 at
+   21,56 (64², streams stepping down a slope).
 
 ---
 

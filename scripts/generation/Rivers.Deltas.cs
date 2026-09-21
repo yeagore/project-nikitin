@@ -27,7 +27,9 @@ internal static partial class Rivers
     /// water, or take a bridgehead, an eyot or a cell the river already holds, or
     /// that finds no rim inside <see cref="DeltaReach"/> cells, is not cut: a cliff
     /// coast has no delta. The dry ground between the mouths, apex to rim, is the
-    /// fan, and the surface stage makes it floodplain whatever the climate.
+    /// fan, and the surface stage gives it the wet ground of its row: floodearth on a
+    /// hot Domain, brownearth on a temperate, shadowearth on a cold, frostearth where
+    /// it is frigid.
     /// </summary>
     private static void Fan(int n, bool[,] land, short[,] water, short[,] surface,
                             Vector2I[,] down, int[,] flow, bool[,] channel, bool[,] navigable,

@@ -70,6 +70,7 @@ public partial class IslandLab
 	{
 		_terrain.Visible = !_showMesh;
 		_mesh.Visible = _showMesh;
+		ApplyWaterMaterial();
 		if (!_showMesh) return RenderSpans(d);
 
 		// The renderer's origin is its corner column; the boxes centre the island on the lab's.
@@ -80,6 +81,20 @@ public partial class IslandLab
 		_islandCenter = _mesh.Position + _mesh.Center;
 		_islandRadius = _mesh.Radius;
 		return _mesh.GroundTriangles + _mesh.LiquidTriangles;
+	}
+
+	/// <summary>
+	/// Which water material the view wants: the navigable view colours the water by the
+	/// body it belongs to, and the water's own blue multiplies a warm hue down to
+	/// nothing, so that view gets water of a white albedo — the mesh's and the boxes'
+	/// alike, and the fall sheets with them.
+	/// </summary>
+	private void ApplyWaterMaterial()
+	{
+		bool flat = _view == View.Navigable;
+		_waterQuad.Material = flat ? _flatWater : _blueWater;
+		_fallQuad.Material = flat ? _flatFall : _blueFall;
+		_mesh.Materials = flat ? _flatMaterials : _blueMaterials;
 	}
 
 	/// <summary>The current view as a tint for the mesh: every face of a span in the span's colour, water by kind.</summary>
@@ -128,6 +143,12 @@ public partial class IslandLab
 				return WalkColor(d, d.Walk[x, z]);
 			case View.Reach:
 				return ReachColor(d, d.Reach[x, z]);
+			case View.Navigable:
+				// The ground is a backdrop here, but the bed under a body keeps its colour
+				// dimmed, so turning the liquid off (I) still shows the regions.
+				return i == 0 && d.WaterBody[x, z] >= 0
+					? DevPalette.Body(d.WaterBody[x, z]).Darkened(0.4f)
+					: Unremarkable;
 			case View.Surface:
 				// Material is the ground's; a lip is a rock roof.
 				return MaterialColor(i > 0 ? SurfaceMaterial.Stone : (SurfaceMaterial)d.Material[x, z]);
@@ -400,7 +421,6 @@ public partial class IslandLab
 		if (_showBridges) DrawBridges(d, m);
 		if (_showLandings) DrawLandings(d, m);
 		if (_showFords) DrawFords(d, m);
-		if (_showFerries) DrawFerries(d, m);
 		if (_showRoutes) DrawRoads(d, m);
 		if (_showCompass)
 		{
@@ -522,21 +542,6 @@ public partial class IslandLab
 		}
 	}
 
-	/// <summary>Each ferry berth as a domino: the quay and the hull on the water before it.</summary>
-	private static void DrawFerries(IslandData d, MarkList m)
-	{
-		const float sh = Terrain.SlabHeight;
-		const float cs = Terrain.CellSize;
-		foreach (FerryBerth berth in d.Berths)
-		{
-			m.Add(berth.Land.X,
-				  (Traversal.CrossLevel(d, berth.Land.X, berth.Land.Y) + 1) * sh + sh * 0.25f,
-				  berth.Land.Y, new Vector3(cs * 0.55f, sh * 0.5f, cs * 0.55f), QuayTint);
-			m.Add(berth.Water.X, (berth.Level + 1) * sh + sh * 0.1f, berth.Water.Y,
-				  new Vector3(cs * 0.4f, sh * 0.3f, cs * 0.4f), HullTint);
-		}
-	}
-
 	/// <summary>The roads between the Gates: the walk, and every work on it in its kind's colour.</summary>
 	private static void DrawRoads(IslandData d, MarkList m)
 	{
@@ -552,9 +557,9 @@ public partial class IslandLab
 			{
 				Color tint = works.Kind switch
 				{
-					WorksKind.Stair => StairTint,
 					WorksKind.Bridge => SpanTint,
-					_ => CrossingTint,
+					WorksKind.Ladder => LadderTint,
+					_ => StairTint,
 				};
 				foreach (Vector2I cell in new[] { works.From, works.To })
 					m.Add(cell.X,

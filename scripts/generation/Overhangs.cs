@@ -114,8 +114,8 @@ internal static class Overhangs
             int cx = lx + Dx[k] * step, cz = lz + Dz[k] * step;
             if (!InBounds(n, cx, cz)) break;
             if (!d.HasLand(cx, cz) || d.Spans[cx, cz].Length > 1) break;
-            // Two spans in a column must not touch.
-            if (bottom - d.SurfaceLevel(cx, cz) < Headroom) break;
+            // Two spans in a column must not touch, and a lip does not dip into water.
+            if (bottom - d.EffectiveLevel(cx, cz) < Headroom) break;
 
             d.Spans[cx, cz] = new[]
             {
@@ -157,13 +157,15 @@ internal static class Overhangs
                     if (!Backed(d, x, z, -1) || !Backed(d, fx, fz, -1)) break;
                     short top = Math.Min(here, far);
 
-                    // Every column under the deck is untouched and leaves daylight.
+                    // Every column under the deck is untouched and leaves daylight, and the
+                    // deck clears any water under it: a bed dug deep is not a gap to arch.
                     bool hollow = true;
                     for (int step = 1; step <= gap && hollow; step++)
                     {
                         int mx = x + dx * step, mz = z + dz * step;
                         hollow = d.Spans[mx, mz] is { Length: 1 }
-                                 && top - LipThickness - d.SurfaceLevel(mx, mz) >= Headroom;
+                                 && top - LipThickness - d.SurfaceLevel(mx, mz) >= Headroom
+                                 && top - LipThickness > d.EffectiveLevel(mx, mz);
                     }
                     if (!hollow) continue;
                     if (where.At(x + dx * gap * 0.5f, z + dz * gap * 0.5f) < bar) continue;

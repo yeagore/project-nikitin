@@ -60,7 +60,8 @@ internal static partial class Rivers
                                    Vector2I[,] twin)
     {
         // × 0.5: the top half of the slider's range was all trenches.
-        float strength = Math.Clamp(p.Valleys, 0f, 1f) * 0.5f;
+        // A square root on the knob: the window below opens at once instead of from the half, and 1 is unchanged.
+        float strength = MathF.Sqrt(Math.Clamp(p.Valleys, 0f, 1f)) * 0.5f;
         if (strength <= 0.001f) return;
 
         // Per watercourse, not per island: each basin keeps a rank and `Valleys` slides a window across them.

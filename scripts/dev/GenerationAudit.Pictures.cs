@@ -511,7 +511,16 @@ public partial class GenerationAudit
 
         Mark(d.RiverBedCells, DevPalette.Anchor(DevPalette.RiverBed));
         Mark(d.LakeBedCells, DevPalette.Anchor(DevPalette.LakeBed));
+        Mark(d.ShallowBedCells, DevPalette.Anchor(DevPalette.ShallowBed));
+        Mark(d.MidBedCells, DevPalette.Anchor(DevPalette.MidBed));
+        Mark(d.DeepBedCells, DevPalette.Anchor(DevPalette.DeepBed));
+        Mark(d.Deeps, DevPalette.Anchor(DevPalette.Deep));
         Mark(d.CoastCells, DevPalette.Anchor(DevPalette.Coast));
+        // Scarps under cliffs, in the lab's anchor-view order.
+        Mark(d.ScarpFootCells, DevPalette.Anchor(DevPalette.ScarpFoot));
+        var scarpFeet = new HashSet<Vector2I>(d.ScarpFootCells);
+        foreach (Vector2I p in d.ScarpCells)
+            img.SetPixel(p.X, p.Y, DevPalette.Anchor(scarpFeet.Contains(p) ? DevPalette.ScarpLedge : DevPalette.ScarpBrink));
         Mark(d.CliffFootCells, DevPalette.Anchor(DevPalette.CliffFoot));
         var feet = new HashSet<Vector2I>(d.CliffFootCells);
         foreach (Vector2I p in d.CliffCells)
@@ -522,7 +531,6 @@ public partial class GenerationAudit
         MarkMask(d.Beach, DevPalette.Anchor(DevPalette.Beach));
         MarkMask(d.Ford, DevPalette.Anchor(DevPalette.Ford));
         MarkMask(d.Landings, DevPalette.Anchor(DevPalette.Landing));
-        MarkMask(d.Ferry, DevPalette.Anchor(DevPalette.Quay));
         Mark(d.Overhangs, DevPalette.Anchor(DevPalette.Overhang));
         Mark(d.Summits, DevPalette.Anchor(DevPalette.Summit));
         Mark(d.SeaStacks, DevPalette.Anchor(DevPalette.SeaStack));

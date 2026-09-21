@@ -16,6 +16,6 @@ namespace ProjectNikitin.Generation;
 public readonly record struct WalkArea(int Id, int Area, short Low, short High,
                                        Vector2I Min, Vector2I Max, Vector2I Seat)
 {
-    /// <summary>Big enough to be a place; under <see cref="Traversal.MinDistrictArea"/> it is broken ground (benches, ledges). A district is also somewhere to build: walk-connected ground, no works.</summary>
+    /// <summary>Big enough to be a place; under <see cref="Traversal.MinDistrictArea"/> it is broken ground (scraps between faces). A district is also somewhere to build: walk-connected ground, no works.</summary>
     public bool IsDistrict => Area >= Traversal.MinDistrictArea;
 }

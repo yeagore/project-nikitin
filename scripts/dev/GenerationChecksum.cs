@@ -93,6 +93,8 @@ public partial class GenerationChecksum : Node
 
         for (int i = 0; i < 4; i++) Case("oldArrangements", Seed(i + 7), At(96, p => p.NewArrangements = false));
         for (int i = 0; i < 4; i++) Case("oldLandforms", Seed(i + 7), At(96, p => p.NewLandforms = false));
+        // Goo is off by default; two cases keep its placement and its guards hashed.
+        for (int i = 0; i < 2; i++) Case("goo", Seed(i + 9), At(64, p => p.Goo = true));
 
         GD.Print($"checksum: {_islands} islands, {_total:x16}, {Time.GetTicksMsec() - t0} ms");
         Baseline();
@@ -170,24 +172,28 @@ public partial class GenerationChecksum : Node
             h.Add(d.Land[x, z]); h.Add(d.Region[x, z]); h.Add(d.Material[x, z]);
             h.Add(d.Landform[x, z]); h.Add(d.WaterLevel[x, z]); h.Add(d.Fluid[x, z]);
             h.Add(d.Canyon[x, z]); h.Add(d.Pass[x, z]); h.Add(d.Landings[x, z]);
-            h.Add(d.WaterBody[x, z]); h.Add(d.Ferry[x, z]); h.Add(d.Beach[x, z]);
+            h.Add(d.WaterBody[x, z]); h.Add(d.Beach[x, z]);
             h.Add(d.Ford[x, z]); h.Add(d.River[x, z]); h.Add(d.Navigable[x, z]);
             h.Add(d.Flow[x, z]); h.Add(d.Walk[x, z]); h.Add(d.Reach[x, z]);
-            h.Add(d.Delta[x, z]); h.Add(d.Hot[x, z]); h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
+            h.Add(d.Delta[x, z]); h.Add(d.Hot[x, z]); h.Add(d.Fjord[x, z]); h.Add(d.Estuary[x, z]);
+            h.Add(d.Moisture[x, z]); h.Add(d.Warmth[x, z]);
             h.Add(d.Ruggedness[x, z]); h.Add(d.Exposure[x, z]); h.Add(d.RimDistance[x, z]);
             h.Add(d.WaterDistance[x, z]); h.Add(d.Magick[x, z]);
             Span[] spans = d.Spans[x, z];
             h.Add(spans?.Length ?? -1);
             if (spans != null) foreach (Span s in spans) { h.Add(s.Bottom); h.Add(s.Top); }
         }
-        foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells, d.BankCells,
+        foreach (var list in new[] { d.CoastCells, d.CliffCells, d.CliffFootCells,
+                                     d.ScarpCells, d.ScarpFootCells, d.BankCells,
                                      d.Summits, d.Passes, d.Overhangs, d.RiverBedCells, d.LakeBedCells,
-                                     d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater })
+                                     d.Springs, d.SeaStacks, d.TerminalLakes, d.Deltas, d.HotWater,
+                                     d.Fjords, d.Estuaries, d.Deeps, d.GreatLakes,
+                                     d.ShallowBedCells, d.MidBedCells, d.DeepBedCells })
         {
             h.Add(list.Count);
             foreach (Vector2I c in list) h.Add(c);
         }
-        h.AddAll(d.Geysers); h.AddAll(d.Bridges); h.AddAll(d.Berths); h.AddAll(d.Falls);
+        h.AddAll(d.Geysers); h.AddAll(d.Bridges); h.AddAll(d.Falls);
         h.AddAll(d.Areas); h.AddAll(d.Reaches); h.AddAll(d.Gates);
         h.Add(d.Passages.Count);
         foreach (Passage p in d.Passages)
@@ -199,7 +205,7 @@ public partial class GenerationChecksum : Node
         }
         h.Add(d.Name);
         h.AddAll(d.Districts); h.AddAll(d.WaterNames);
-        h.Add(d.DuneGrain); h.Add(d.Sun); h.Add(d.BridgeSpan); h.Add(d.WaterBodies); h.Add(d.BerthSites);
+        h.Add(d.DuneGrain); h.Add(d.Sun); h.Add(d.BridgeSpan); h.Add(d.WaterBodies);
         h.Add(d.Mainland); h.Add(d.Heartland); h.Add((int)d.Style); h.Add((int)d.Arrangement);
         h.Add((int)d.Character); h.Add(d.Attempts); h.Add(d.Unmet); h.Add(d.Rough);
         return h.Value;

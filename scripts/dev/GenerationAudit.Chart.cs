@@ -10,9 +10,9 @@ public partial class GenerationAudit
     /// <summary>
     /// The climate grid as an area chart: warmth across, moisture down, every
     /// byte pair coloured with the ground it gives. Two panels — open ground away
-    /// from water, and flat ground beside it, where the floodplain and the marsh
+    /// from water, and flat ground beside it, where floodearth and muckearth
     /// can be — with the band lines drawn on the axes and the knobs' own range
-    /// bracketed. The patches (bog, marsh) are a checker of their colour over the
+    /// bracketed. The patches (murkearth, muckearth) are a checker of their colour over the
     /// ground they sit in, since a noise field decides them cell by cell. Drawn
     /// straight from <see cref="Surfaces.Climate"/>, so it is the rule, not a
     /// picture of the rule.
@@ -39,8 +39,8 @@ public partial class GenerationAudit
         const int Side = 256 * Zoom;
         var panels = new (string Title, string Note, int Near)[]
         {
-            ("OPEN GROUND, AWAY FROM WATER", "THE GRID ON ITS OWN. THE BOG IS A PATCH.", int.MaxValue),
-            ("FLAT GROUND BESIDE THE WATER", "WITHIN TWO CELLS: THE FLOODPLAIN, AND THE MARSH AS A PATCH.", 1),
+            ("OPEN GROUND, AWAY FROM WATER", "THE GRID ON ITS OWN. MURKEARTH IS A PATCH.", int.MaxValue),
+            ("FLAT GROUND BESIDE THE WATER", "WITHIN TWO CELLS: FLOODEARTH, AND MUCKEARTH AS A PATCH.", 1),
         };
 
         string title = "CLIMATE CHART";
@@ -191,24 +191,24 @@ public partial class GenerationAudit
         {
             ("FRIGID AND COLD", new[]
             {
-                Of("TUNDRA", SurfaceMaterial.Tundra),
-                Of("HEATH", SurfaceMaterial.Heath),
-                Of("MOORLAND", SurfaceMaterial.Moorland),
-                Of("BOG (A PATCH)", SurfaceMaterial.Bog, true),
+                Of("FROSTEARTH", SurfaceMaterial.Frostearth),
+                Of("BLEACHEARTH", SurfaceMaterial.Bleachearth),
+                Of("SHADOWEARTH", SurfaceMaterial.Shadowearth),
+                Of("MURKEARTH (A PATCH)", SurfaceMaterial.Murkearth, true),
             }),
             ("TEMPERATE", new[]
             {
-                Of("STEPPE", SurfaceMaterial.Steppe),
-                Of("MEADOW", SurfaceMaterial.Meadow),
-                Of("GRASS", SurfaceMaterial.Grass),
-                Of("MARSH (A PATCH, BY WATER)", SurfaceMaterial.Marsh, true),
+                Of("DRYEARTH", SurfaceMaterial.Dryearth),
+                Of("BLACKEARTH", SurfaceMaterial.Blackearth),
+                Of("BROWNEARTH", SurfaceMaterial.Brownearth),
+                Of("MUCKEARTH (A PATCH, BY WATER)", SurfaceMaterial.Muckearth, true),
             }),
             ("HOT", new[]
             {
-                Of("DUST", SurfaceMaterial.Dust),
-                Of("SAVANNA", SurfaceMaterial.Savanna),
-                Of("VERDURE", SurfaceMaterial.Verdure),
-                Of("FLOODPLAIN (BY WATER)", SurfaceMaterial.Floodplain),
+                Of("DUSTEARTH", SurfaceMaterial.Dustearth),
+                Of("YELLOWEARTH", SurfaceMaterial.Yellowearth),
+                Of("REDEARTH", SurfaceMaterial.Redearth),
+                Of("FLOODEARTH (BY WATER)", SurfaceMaterial.Floodearth),
             }),
             ("THE ENDS", new[]
             {

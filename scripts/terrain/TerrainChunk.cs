@@ -3,8 +3,8 @@ using Godot;
 namespace ProjectNikitin.Meshing;
 
 /// <summary>
-/// One 16 × 16-column tile of the island: a ground mesh, a liquid mesh (water and goo
-/// as two surfaces) and a trimesh collider over the ground. Rebuilt whole when any
+/// One 16 × 16-column tile of the island: a ground mesh, a liquid mesh (water, goo and
+/// falling water as three surfaces) and a trimesh collider over the ground. Rebuilt whole when any
 /// column in it changes, and its neighbours' tiles too where the change is on a
 /// border, since a side face depends on the column across it.
 /// </summary>
@@ -25,7 +25,7 @@ public partial class TerrainChunk : StaticBody3D
     }
 
     /// <summary>Replaces the tile's meshes and collider with the buffers' contents.</summary>
-    public void Apply(MeshBuffer ground, MeshBuffer water, MeshBuffer goo,
+    public void Apply(MeshBuffer ground, MeshBuffer water, MeshBuffer goo, MeshBuffer falls,
                       TerrainMaterials materials, bool collider, bool liquidVisible)
     {
         Ensure();
@@ -43,7 +43,7 @@ public partial class TerrainChunk : StaticBody3D
         }
         GroundTriangles = ground.Triangles;
 
-        if (water.IsEmpty && goo.IsEmpty)
+        if (water.IsEmpty && goo.IsEmpty && falls.IsEmpty)
         {
             _liquid!.Mesh = null;
         }
@@ -59,12 +59,17 @@ public partial class TerrainChunk : StaticBody3D
             if (!goo.IsEmpty)
             {
                 mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, goo.ToArrays());
-                mesh.SurfaceSetMaterial(surface, materials.Goo);
+                mesh.SurfaceSetMaterial(surface++, materials.Goo);
+            }
+            if (!falls.IsEmpty)
+            {
+                mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, falls.ToArrays());
+                mesh.SurfaceSetMaterial(surface, materials.Falls);
             }
             _liquid!.Mesh = mesh;
         }
         _liquid!.Visible = liquidVisible;
-        LiquidTriangles = water.Triangles + goo.Triangles;
+        LiquidTriangles = water.Triangles + goo.Triangles + falls.Triangles;
 
         _shape!.Shape = collider && !ground.IsEmpty
             ? new ConcavePolygonShape3D { Data = ground.ToFaces() }

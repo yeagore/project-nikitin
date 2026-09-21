@@ -196,9 +196,9 @@ public static class IslandGenerator
 
     /// <summary>
     /// Stage 1. The landmass should cover 55–85% of the grid, measured after the
-    /// bites, the islet filter and the linker (which shrinks every scattered
-    /// layout), so the whole mask stage runs inside the fit loop. Of the specks
-    /// the filter drops on the mask that ships, two or three stay as sea stacks.
+    /// bites, the fjords, the islet filter and the linker (which shrinks every
+    /// scattered layout), so the whole mask stage runs inside the fit loop. Of the
+    /// specks the filter drops on the mask that ships, two or three stay as sea stacks.
     /// </summary>
     private static void FitFootprint(Draft d)
     {
@@ -214,6 +214,9 @@ public static class IslandGenerator
                 int[,] draft = Regions.BuildRegions(d.Seed, d.P, d.Land, out int draftCount);
                 Footprint.BiteRegions(d.Seed, d.P, d.Land, draft, draftCount);
             }
+            // Fjords: inlets along the Domain's grain, into the largest landmass
+            // only, and never through it.
+            Fjords.Cut(d.Seed, d.P, d.Land, d.Data);
             Landmasses.CloseDiagonalJoins(d.Land);
 
             // Every arrangement but Single keeps its pieces, and then has to earn
@@ -318,7 +321,8 @@ public static class IslandGenerator
     /// Stage 4a. Lakes sink into the surface after every grammar pass (which they
     /// must not undo) and before the keel measures thickness. A patch a canyon or
     /// pass cuts through would fill to the bottom of the cut and pour out, so it
-    /// holds no water. Goo comes after the lakes so it can keep its distance.
+    /// holds no water. The deeps and the great lakes are written straight onto the
+    /// data. Goo comes after the lakes so it can keep its distance.
     /// </summary>
     private static void PlaceStandingWater(Draft d)
     {
@@ -331,7 +335,8 @@ public static class IslandGenerator
             for (int z = 0; z < n; z++)
                 drains[x, z] = d.Pass[x, z] || (d.Canyon != null && d.Canyon[x, z]);
         }
-        d.Water = Lakes.PlaceLakes(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, drains);
+        d.Water = Lakes.PlaceLakes(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, drains,
+                                   d.ToCoast, d.Data.Character, d.Data.Deeps, d.Data.GreatLakes);
         d.Fluid = new byte[n, n];
         Lakes.PlaceGoo(d.Seed, d.P, d.Land, d.Region, d.RegionCount, d.Plan, d.Surface, d.Water, d.Fluid);
 
@@ -393,7 +398,8 @@ public static class IslandGenerator
 
         Rivers.Carve(d.Seed, d.P, d.Land, d.Surface, d.Water, d.Data.River, d.Data.Navigable,
                      d.Data.Flow, d.Data.Falls, d.Span, form, keep, d.Fluid,
-                     d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs);
+                     d.Data.TerminalLakes, d.Data.Delta, d.Data.Deltas, d.Data.Springs,
+                     d.Data.Estuary, d.Data.Estuaries, d.Data.Deeps);
 
         // The valley and bank passes only lower; a cell can end up under the water beside it.
         Lakes.RaiseSunkenShores(d.Land, d.Surface, d.Water);

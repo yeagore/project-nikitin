@@ -46,7 +46,7 @@ mesh bench, and the Domains bench. The two commands that matter after touching
 the generator, and the two after touching the renderer:
 
 ```
-godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 446 islands moved?
+godot --path . --headless scenes/dev/generation_checksum.tscn     # 0 of 458 islands moved?
 godot --path . --headless --quit-after 2 scenes/dev/generation_audit.tscn   # the measured guarantees
 godot --path . --headless scenes/dev/mesh_bench.tscn              # triangles, times, the winding probe, the voxel oracle, the colliders
 godot --path . scenes/dev/domains_bench.tscn -- domains=20        # windowed: the frame rate with N Domains in view
@@ -63,6 +63,28 @@ shell and quits: `godot --path . scenes/dev/island_lab.tscn -- shot nopanel
 zoom=4` (windowed, since a screenshot needs a viewport; a window opens for a
 few seconds on the machine it runs on).
 
+### Delegating
+
+Not every chore needs the model in the chair. A subagent (the Agent tool)
+runs on the `model` it is given, and one given none inherits the parent's,
+the most capable and the costliest; so crude work goes out with the model
+named, and what comes back is read before it is trusted. Three tiers:
+
+| Tier | Model | What goes there |
+|---|---|---|
+| Mechanical | `haiku` | Run a command and report the verdict and the numbers (the build, the checksum, the audit, the benches); sweep the tree for every site that does something; count, list, tabulate; rename to a spec already settled. |
+| Bounded | `sonnet` | Work with a clear brief and a check on the result: a first draft of a doc passage for a change already made and understood; a refactor the checksum will police; a read-through of a stage to answer a stated question. |
+| The main model | | Design and decisions; anything that can move the checksum or the audit, or touches the determinism details listed under Island generation; the brief itself; the review of what a delegate returns; anything that needs the conversation, which a subagent does not see. |
+
+Two agents under `.claude/agents/` package the common cases and can be
+asked for by name: **`runner`** (haiku) builds, runs the dev scenes under a
+timeout and reports the verdict, not the transcript; **`scout`** (haiku)
+answers a question about the code by reading it, and changes nothing. For
+other chores, `Explore` or `general-purpose` with `model` set. A subagent
+sees this file, its own file and the brief, so the brief carries the paths,
+the seed, the command and what done looks like. Independent delegations go
+out in one message so they run at once. `docs/delegation.md` is the guide.
+
 ---
 
 ## Spatial model (from Notion → "The Ecumene")
@@ -74,11 +96,13 @@ few seconds on the machine it runs on).
 - The terrain unit is a **slab**: a square cell 1 wide and **1/4 as tall**
   (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The
   ratio is decided; the Notion wiki still says a tentative "8?".
-- **Traversal:** a one-slab step (0.25 u) is free; a face of two or more slabs
-  is an obstacle needing infrastructure. Terrain generated under a one-slab
-  slope limit is walkable by construction; every cliff is one some rule put there.
+- **Traversal:** a one-slab step (0.25 u) is free. A face of two or three slabs
+  is a **scarp**, which a ladder climbs; four or more is a **cliff**, which a
+  stair or an elevator climbs, up to 8 (`Traversal.FreeStep`, `Traversal.CliffFace`).
+  Both are walls to walking. Terrain generated under a one-slab slope limit is
+  walkable by construction; every scarp and cliff is one some rule put there.
   Walking is by king's moves: a corner is cut unless both cardinal cells beside
-  the diagonal are cliffs. Works, anchors and water stay cardinal.
+  the diagonal are more than a free step off. Works, anchors and water stay cardinal.
 - **Three supported footprints: 64², 96², 128²** (128² is the stress target;
   48² and 72² were dropped on 2026-09-05, 48² because the footprint constants
   measured in cells wreck the split shapes there, 72² with the ladder it sat
@@ -121,24 +145,24 @@ under `scripts/generation/`, in the order they run:
 
 | Stage | Class | What it settles |
 |---|---|---|
-| Footprint | `Footprint`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
+| Footprint | `Footprint`, `Fjords`, `Landmasses` | The land mask: lobes laid out per `IslandArrangement` (thirty shapes), bitten, cut with fjords (winding inlets of aether along one grain per Domain into the largest landmass, never through it; rifts were tried and removed), huddled within bridge reach, fitted to 55–85% of the grid; two or three of the specks dropped as too small kept as sea stacks (aether, an anchor list). |
 | Regions | `Regions`, `Landforms` | A warped Voronoi of patches; each gets a `LandformType` (ten of them, by quota from the `TerrainCharacter`) and a rung on the plateau ladder. |
 | Surface | `Relief`, `StepGrammar`, `Sculpting` | Relief under each landform's slope limit, settled to the free step; sculpted landforms, passes and canyons cut into it and exempted. |
-| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; goo puddles that never touch water. |
+| Standing water | `Lakes` | Lakes sunk into flat patches with their own rim as containment, shaped; each bed flat or a bathymetry (a bowl, a shelf with a drop-off, a plunge, to 20 slabs at 128²; the deepest cell a deep, the bed tiered by the water over it: shallow to two slabs, mid to eight, deep of ooze from nine); on about one Domain in ten a great lake, two to five patches on one rung flooded as one site; goo puddles that never touch water (off by default since 2026-09-15). |
 | Settle | `Beaches`, `Bridgeheads` | Beaches, then the lowering passes cycled until nothing moves. |
-| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; occasionally a lake that swallows a river, and a delta where a navigable river meets a gentle coast. |
-| Keel | `Keel` | The underside; the columns are packed into `IslandData`. |
-| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built), water bodies, ferry berths. Shelves are gone. |
+| Rivers | `Rivers` | Priority flood from the rim with noise-broken ties; beds, banks, valleys, navigable reaches as a stair of pools, fords spaced by the ground's relief, falls, springs; a plunge pool dug under most inner falls and a deep middle on half the long reaches (the bed, never the water); occasionally a lake that swallows a river; at a navigable mouth over gentle ground an estuary (the lower reach opened into a funnel four to six cells across, crossed nowhere) or a delta. |
+| Keel | `Keel` | The underside, a level hung under the surface; then a root pass brings every column to at least the edge thickness under the lowest ground beside it and tapers the push outward three slabs a cell, so a deep bed never hangs clear of the island (2026-09-19; the audit holds `hangingColumns` and `waterOpenBelow` at 0). The columns are packed into `IslandData`. |
+| Traversal | `Traversal` | Read-back: walk areas (a district — walk-connected, no works — is somewhere to build), reach areas (once built, by ladders, stairs and bridges), water bodies. Shelves are gone; so are ferries (2026-09-07: one island in sixty ever kept a berth). |
 | Gates | `GatePlacement` | Four hanging Gates chosen as a set, one per edge; then subtraction to what was asked for. Levels its landing strips, so traversal runs again. |
 | Roads | `Passages` | The least-works road from the Entry to each Exit. |
-| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column (a four-by-three climate grid with heath and verdure, bog on the cold-to-cool half and marsh on the warm-to-hot, tors in soft country, floodplain on a delta), names. |
+| Habitat | `Habitat`, `Surfaces`, `Names` | The six-byte habitat vector: moisture (the wind's rain shadow, damp sheltered gorges, the water strip), warmth (a lapse per mountain from its own foot, a rolled sun on the slopes, frost hollows, the milder lee), ruggedness, exposure, rim distance and water distance; the wind knob scales what exposure moves. On a cold Domain some springs and pools run hot, with a bloom of warmth round each. Then the feature anchors and a provisional material per column, named and coloured by the soil glossary (a four-by-three climate grid of plain soil names, frostearth to redearth, with murkearth on the cold-to-cool half and muckearth on the warm-to-hot, floodearth along hot water, tors in soft country, a delta's fan the wet ground of its row), names. |
 | Magicks | `Magicks` | The magickal density byte, grown rather than sampled: a Turing reaction (Gray–Scott) between the magick, which makes more of itself, and the inhibitor it feeds on, which is replenished everywhere and spreads faster — so the field breaks into spots, worms, mazes or lace instead of settling flat. Its coefficients are not knobs: the settings that pattern at all are islands in a sea of dead and flooded ones, so six of them are named as `MagickPattern` (motes, wells, veins, labyrinth, lace, hollows) and the stage shows two parameters — which pattern, and `MagickDensity`, how much magick the Domain holds. The reaction runs on its own lattice, three ground cells to the side, and is enlarged back onto the columns, so a feature is three cells across for every cell it would have been — magick is a place, not a texture. Read by nothing. |
 | Overhangs | `Overhangs` | The only stage that gives a column a second span; runs last because a lip is a roof, not ground. |
 
 Shared: `Grid` (neighbourhoods; their order is a tie-breaker everywhere),
 `SeedHash` (one mixer; the salt at each call site keeps rolls apart), `Flood`, `Terrain`, `FieldOps`, `Noise`.
 
-**Auto knobs.** The eleven 0–1 knobs in `IslandParams` (relief, hilliness, mix,
+**Auto knobs.** The twelve 0–1 knobs in `IslandParams` (fjords, relief, hilliness, mix,
 rivers, lakes, valleys, moisture, warmth, wind, overhang density, magick density)
 accept `IslandParams.Auto` (any negative value); `Roster.ResolveKnobs`
 then rolls them from the seed before anything runs, and the values used are
@@ -148,10 +172,10 @@ roll over a range. The preset leaves all of them on Auto, so the audit's default
 seeds sample the whole knob space; a sweep pins the knob it sweeps.
 
 **Two regression gates.** `generation_checksum.tscn` hashes every field of
-`IslandData` for 446 islands against `docs/checksum-baseline.txt`: a change
+`IslandData` for 458 islands against `docs/checksum-baseline.txt`: a change
 meant to leave generation alone must report zero moved; one meant to change it
 re-baselines with `-- accept` and says so. `generation_audit.tscn` prints the
-measured guarantees and diffs thirty headline numbers against
+measured guarantees and diffs its headline numbers (forty-six) against
 `docs/audit-baseline.json`. Determinism hangs on details a refactor can break
 silently: hash salts, `Noise` seed offsets, float expression order, scan and
 neighbour order, `List.Sort` (unstable) versus `OrderBy`, and dictionary
@@ -159,6 +183,11 @@ insertion order. When in doubt, run the checksum.
 
 Newer content ships behind a toggle that takes it out of `Auto`'s dice without
 taking it out of the code (`NewArrangements`, `NewLandforms`).
+
+**The knob matrix.** `generation_audit.tscn -- Seeds=1 KnobMatrix` steps every
+0–1 knob over the same seeds against twenty-six outcomes, paired per seed, and
+prints what each knob moves, whether it reverses and what else it moves. Run it
+after touching a knob; the 2026-09-07 reading is in the appendix.
 
 ---
 
@@ -171,19 +200,24 @@ would shadow the `Terrain` constants class for every file under
 
 `IslandRenderer` is the terrain renderer: a `Node3D` that draws an `IslandData`
 as `TerrainChunk`s of 16 × 16 columns, each a `StaticBody3D` holding a ground
-`ArrayMesh`, a liquid `ArrayMesh` (water and goo as two surfaces) and a trimesh
+`ArrayMesh`, a liquid `ArrayMesh` (water, goo and falling water as three surfaces) and a trimesh
 collider over the ground. `ChunkMesher` is the pure part: per column per span it
 emits the top at `Top + 1`, the underside at `Bottom` and a side wherever the
 neighbouring column's spans do not fill that slab range, merged over the range
 so a cliff is one quad; water gets its top at `WaterLevel + 1` and a wall
 wherever it meets anything that is neither solid nor the same water, which is
-what a fall and a cataract are. Nothing buried is emitted, and the bench's voxel
-oracle checks that to 0.000 m². Vertices are flat-shaded quads with a normal, a
+what the lip of a fall and a cataract are; the fall itself is a fourth surface,
+a sheet down the rock from the lip's bed to what it lands on, one per `Fall` and
+one per two-slab cataract (`FaceKind.Fall`, `TerrainMaterials.Falls`). Nothing
+buried is emitted, and the bench's voxel oracle checks that to 0.000 m², with a
+second oracle for the falling water. Vertices are flat-shaded quads with a normal, a
 UV in metres, UV2 = (material or fluid byte, `FaceKind`) for a shader to read,
 and a colour from an `IslandTint`: two callbacks the lab swaps per view and the
 game leaves at `IslandTint.Default` (the column's `SurfaceMaterial` through
 `SurfacePalette`, stone for a lip and every underside). `TerrainMaterials` holds
-the three materials; the lab's boxes use the same factories. In the renderer's
+the four materials; the lab's boxes use the same factories. The ground reads its
+vertex colour as sRGB (`VertexColorIsSrgb`), as the palettes are written, so a
+face draws its legend swatch's hex; the water still reads its tint as linear. In the renderer's
 local space cell (x, z) is centred on `(x · CellSize, ·, z · CellSize)`, the grid
 → world rule above. `Show(data)` builds everything; `RebuildAround(x, z)`
 remeshes the chunk holding a column and the neighbours its border faces depend
@@ -246,15 +280,15 @@ scripts/
     MeshBuffer.cs              Quads into ArrayMesh arrays and collider faces; the winding rule.
     IslandTint.cs, FaceKind.cs, SurfacePalette.cs, TerrainMaterials.cs
                                Colour per face, which side a face is, the provisional
-                               material palette, the materials.
+                               material palette (the soil glossary's colours), the materials.
   generation/                  Namespace ProjectNikitin.Generation
     IslandGenerator.cs         Generate(seed, params): the stages in order, the re-roll.
-    Footprint.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
+    Footprint.cs, Fjords.cs, Landmasses.cs, Bridgeheads.cs, Regions.cs, Landforms.cs,
     Relief.cs, StepGrammar.cs, Sculpting.cs, Beaches.cs, Lakes.cs, Keel.cs,
     Roster.cs                  The terrain stages (see the table above).
     Rivers*.cs                 Drainage routing, channels, valleys, profile, falls, fords,
                                deltas and springs, the lake that swallows a river.
-    Traversal*.cs, WalkArea.cs, Crossing.cs, Ferry.cs, BridgeEase.cs
+    Traversal*.cs, WalkArea.cs, Crossing.cs, BridgeEase.cs
                                The read-back analysis and its value types.
     Passage.cs, Works.cs       The roads between the Gates.
     Gate.cs, GatePlacement.cs, GateSites.cs
@@ -281,9 +315,13 @@ docs/
                                is the source); do keep it true when the generator
                                or the audit changes, in the same plain register.
   dev-scenes.md                The lab, audit, checksum and mesh bench manual.
+  delegation.md                Which chores go to which sibling model, and how; a guide for a newbie.
   audit-baseline.json          The last accepted audit numbers.
   checksum-baseline.txt        The last accepted island hashes.
 CLAUDE.md                      This file.
+.claude/agents/                The subagents the main model delegates chores to (see Delegating).
+  runner.md                    haiku: builds, runs the dev scenes under a timeout, reports the verdict.
+  scout.md                     haiku: answers a question about the code by reading it; changes nothing.
 ```
 
 Planned, create as needed and keep the tree shallow: `resources/` for biome,
@@ -312,6 +350,10 @@ archetype and goods data, `addons/` for plugins.
   the same kind. One Gate per edge: one Entry, one to three Exits.
 - **Slab**: the terrain unit, 1 × 1 × 0.25. **Biome**: a Domain's flora, fauna
   and climate.
+- **Free step / Scarp / Cliff**: a face of one slab is walked; of two or three
+  slabs, a scarp a ladder climbs; of four or more, a cliff a stair or an
+  elevator climbs. Two anchor triplets follow them: cliff brink, foot and ledge;
+  scarp brink, foot and ledge.
 - **Polity**: an NPC state ruling Domains. **Metropole**: the Polity the player
   answers to. **Cultural Archetype**: a people's template (Steelfolk, Lakefolk,
   Jadefolk), carrying Traits: School of Magicks, Societal Structure, Political
@@ -342,7 +384,9 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 | The Gameplay Loop → The First Hour | written | Best description of moment-to-moment play. |
 | Economy, Population and Settlements | draft | Settlements, classes, Needs, money. |
 | Generation → Island Generation | short | Requirements checklist for island generation. |
-| Terrain, Polities, Magicks, Lore, Content | stubs | |
+| Generation → Part 1: Terrain and Climate | written | The generator in plain words, with the audit's sheets. |
+| Terrain → [CLAUDE] The Soil Glossary | proposal | The surface materials' plain names, Latinate names, codes and colours; the code uses the plain names and the colours. |
+| Terrain, Polities, Magicks, Lore, Content | stubs | Terrain holds biome sketches in prose. |
 | Glossary | partial | |
 | Decision Log | DB, near-empty | Log firm decisions here, with the why and the alternatives. |
 | Open Questions | DB | Unresolved design questions. |
@@ -353,6 +397,10 @@ Consult the relevant page before non-trivial design work. When a decision gets
 made in a session, offer to add it to the Decision Log and to close the matching
 Open Question. Two decisions are made but not yet logged there: the slab's 1:4
 ratio, and the three supported footprints (the Ecumene page still says 16³–64³).
+
+When writing to Notion, create a new page whose title starts with "[CLAUDE]".
+Never edit an existing page unless I explicitly ask you to edit or check that
+specific page.
 
 ---
 
