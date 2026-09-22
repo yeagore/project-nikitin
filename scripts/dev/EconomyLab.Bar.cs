@@ -124,6 +124,14 @@ public partial class EconomyLab
 			ApplyTrace();
 		};
 		row.AddChild(trace);
+		var balance = new CheckBox { Text = "Balance", ButtonPressed = _showBalance, TooltipText = "Show on every node what flows through it in a day: what is supplied, made, wanted and taken, and where the web starves or piles up. Needs a population, wants and supplies; the web's inspector has them." };
+		balance.Toggled += on =>
+		{
+			_showBalance = on;
+			SavePrefs();
+			SyncGraph();
+		};
+		row.AddChild(balance);
 		row.AddChild(Press("Find…", "Go to a good, a recipe or a consumer of this web by name (Cmd/Ctrl+F).", Find));
 
 		row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
@@ -256,6 +264,14 @@ public partial class EconomyLab
 		  Variety (violet): what is particular. A slot marked "passes variety" (») stamps the
 		  variety tags of whatever fills it on the output, so one recipe makes every variety its
 		  inputs allow. A good's line on the canvas says how many; the inspector lists them.
+
+		NUMBERS AND THE BALANCE
+		  Every slot and output has an amount a run, every recipe a time in days, the land a supply
+		  at each source (units a day), the web a population, and each consumer what one head wants
+		  a day. From these the lab reads the balance: what flows where in a day. With Balance on,
+		  each good says what is supplied, made, wanted and taken (red where short, blue where it
+		  piles up), each recipe its runs a day, each consumer what its people get. The web's
+		  inspector has the whole sheet; the shell run "-- balance web=hearth" prints it.
 
 		DOCKS
 		  Left: this web's palette. Drag goods onto the canvas, or double-click. "With its chain"

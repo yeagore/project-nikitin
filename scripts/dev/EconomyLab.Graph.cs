@@ -165,11 +165,12 @@ public partial class EconomyLab
 			if (!_nodes.TryGetValue(key, out GraphNode? node)) node = AddNode(key);
 			else if (Web.Layout.TryGetValue(key, out Spot spot) && SpotOf(node) != spot) node.PositionOffset = new Vector2(spot.X, spot.Y);
 
+			WebBalance? balance = _showBalance && Balance.HasNumbers ? Balance : null;
 			switch (node)
 			{
-				case GoodNode good: good.Show(Palette.Find(key)!, IconOf(key), Analysis); break;
-				case RecipeNode recipe: recipe.Show(Web.Recipe(key)!, Palette, Analysis, Sprites); break;
-				case ConsumerNode consumer: consumer.Show(Web.Consumer(key)!, Analysis); break;
+				case GoodNode good: good.Show(Palette.Find(key)!, IconOf(key), Analysis, balance); break;
+				case RecipeNode recipe: recipe.Show(Web.Recipe(key)!, Palette, Analysis, Sprites, balance); break;
+				case ConsumerNode consumer: consumer.Show(Web.Consumer(key)!, Analysis, balance); break;
 			}
 		}
 

@@ -13,6 +13,13 @@ public sealed class RecipeInput
 {
 	public List<string> Accepts { get; set; } = new();
 
+	/// <summary>How many units one run of the recipe takes from this slot; null means one. Read through <see cref="Count"/>.</summary>
+	public double? Amount { get; set; }
+
+	/// <summary>The units one run takes, never null.</summary>
+	[JsonIgnore]
+	public double Count => Amount ?? 1;
+
 	/// <summary>An upgrade or a variant: the recipe runs without it.</summary>
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public bool Optional { get; set; }

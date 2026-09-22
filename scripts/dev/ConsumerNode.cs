@@ -38,17 +38,25 @@ public partial class ConsumerNode : GraphNode
 		SetSlot(0, true, LabLook.Stuff, LabLook.EatenPort, false, LabLook.Stuff, LabLook.EatenPort);
 	}
 
-	internal void Show(Consumer consumer, WebAnalysis analysis)
+	internal void Show(Consumer consumer, WebAnalysis analysis, WebBalance? balance = null)
 	{
 		ConsumerId = consumer.Id;
 		int goods = analysis.Links.Count(l => l.Kind == LinkKind.Consumed && l.To == consumer.Id);
 		string accepts = string.Join(", ", consumer.Accepts.Where(Acceptor.IsTag).Select(a => "#" + LabLook.Short(Acceptor.TagOf(a))));
 		string line = goods == 1 ? "consumes 1 good" : $"consumes {goods} goods";
 		if (accepts.Length > 0) line += "\n" + accepts;
+		Color ink = LabLook.Dim;
+		if (balance?.Consumer(consumer.Id) is { Demand: > 0 } flow)
+		{
+			// What the people get of what they want, a day.
+			line = $"{WebBalance.Num(flow.Got)} of {WebBalance.Num(flow.Demand)} a day · {WebBalance.Pct(flow.Coverage)}\n{accepts}";
+			ink = flow.Coverage < 0.995 ? LabLook.Error : LabLook.EatenPort;
+		}
 
-		string shown = consumer.Name + "|" + line + "|" + consumer.Note;
+		string shown = consumer.Name + "|" + line + "|" + ink.ToHtml() + "|" + consumer.Note;
 		if (shown == _shown) return;
 		_shown = shown;
+		_line.AddThemeColorOverride("font_color", ink);
 
 		_name = consumer.Name.Length > 0 ? consumer.Name : "Consumers";
 		_under = line;

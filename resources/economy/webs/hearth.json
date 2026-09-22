@@ -1,0 +1,1287 @@
+{
+  "format": 2,
+  "id": "hearth",
+  "name": "Hearth",
+  "note": "The first rung of the ladder of skeletal economies: a village that feeds, clothes and tools itself. Fifteen goods, ten recipes, three consumers, and numbers on all of them, so the balance sheet can be watched while they are changed. Made by tools/make_hearth.py, which is the baseline; this file is the experiment.",
+  "palette": {
+    "atlases": [
+      {
+        "id": "icons",
+        "file": "sprites/icons.png",
+        "cell": 16,
+        "columns": 16
+      },
+      {
+        "id": "signs",
+        "file": "sprites/signs.png",
+        "cell": 16,
+        "columns": 16
+      },
+      {
+        "id": "masks",
+        "file": "sprites/masks.png",
+        "cell": 16,
+        "columns": 16
+      },
+      {
+        "id": "tags",
+        "file": "sprites/tags.png",
+        "cell": 16,
+        "columns": 16
+      }
+    ],
+    "tagNamespaces": [
+      {
+        "id": "stage",
+        "note": "Production stage: raw, processed, compound, magistery, assembly, finished."
+      },
+      {
+        "id": "source",
+        "note": "For raw goods: mined, quarried, farmed, herded or magical."
+      },
+      {
+        "id": "group",
+        "note": "The shelf the good sits on in the ledger."
+      },
+      {
+        "id": "need",
+        "note": "Which population Need buys it: food, intoxicants-and-physic, clothing, wares, works-and-arms.",
+        "role": "core",
+        "sign": {
+          "atlas": "tags",
+          "index": 29
+        }
+      },
+      {
+        "id": "nature",
+        "note": "mundane, alchemical (mineral chemistry) or magical (Essence somewhere upstream)."
+      },
+      {
+        "id": "kind",
+        "note": "What sort of stuff it is: metal, acid, pigment, fibre and so on.",
+        "role": "core",
+        "sign": {
+          "atlas": "tags",
+          "index": 28
+        }
+      },
+      {
+        "id": "trait",
+        "note": "Gameplay-relevant properties: toxic, corrosive, explosive, perishable, luxury, staple, by-product, hub."
+      },
+      {
+        "id": "folk",
+        "note": "Association with one of your named archetypes. Only Lakefolk, Jadefolk and Steelfolk are used; other cultures get an origin tag instead."
+      },
+      {
+        "id": "origin",
+        "note": "Earth region the good is historically tied to, for mapping onto archetypes later."
+      },
+      {
+        "id": "grain",
+        "note": "Which grain: it travels to the flour, the malt, the loaf and the beer.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 1
+        }
+      },
+      {
+        "id": "cloth",
+        "note": "Which cloth: granted by the weaving recipe, it travels to the dyed cloth and the clothes.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 11
+        }
+      },
+      {
+        "id": "fleece",
+        "note": "Which animal a wool came from: it travels to the yarn and the cloth.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 4
+        }
+      },
+      {
+        "id": "wood",
+        "note": "Which timber: it travels to the planks, the hull, the ship and the lacquerware.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 3
+        }
+      },
+      {
+        "id": "metal",
+        "note": "Which metal a thing was made of, where several would do: bronze, iron or steel tools; gold or silver jewellery. The metals are goods of their own; this is the mark they leave.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 16
+        }
+      },
+      {
+        "id": "grade",
+        "note": "How good a thing is, as prices and the better classes will read it. A scale: a unit is as good as the least of what went into it, so fine wool in a common dye is common cloth.",
+        "role": "property",
+        "combine": "lowest",
+        "sign": {
+          "atlas": "tags",
+          "index": 24
+        }
+      }
+    ],
+    "tags": [
+      {
+        "id": "stage:raw",
+        "note": ""
+      },
+      {
+        "id": "source:mined",
+        "note": ""
+      },
+      {
+        "id": "group:mined",
+        "note": ""
+      },
+      {
+        "id": "nature:alchemical",
+        "note": ""
+      },
+      {
+        "id": "kind:ore",
+        "note": ""
+      },
+      {
+        "id": "origin:sub-saharan-africa",
+        "note": ""
+      },
+      {
+        "id": "kind:salt",
+        "note": ""
+      },
+      {
+        "id": "origin:europe",
+        "note": ""
+      },
+      {
+        "id": "kind:fuel",
+        "note": ""
+      },
+      {
+        "id": "source:farmed",
+        "note": ""
+      },
+      {
+        "id": "group:farmed",
+        "note": ""
+      },
+      {
+        "id": "nature:mundane",
+        "note": ""
+      },
+      {
+        "id": "kind:food",
+        "note": ""
+      },
+      {
+        "id": "trait:staple",
+        "note": ""
+      },
+      {
+        "id": "folk:steelfolk",
+        "note": ""
+      },
+      {
+        "id": "trait:perishable",
+        "note": ""
+      },
+      {
+        "id": "kind:fibre",
+        "note": ""
+      },
+      {
+        "id": "need:food",
+        "note": ""
+      },
+      {
+        "id": "source:herded",
+        "note": ""
+      },
+      {
+        "id": "group:herded-and-gathered",
+        "note": ""
+      },
+      {
+        "id": "kind:animal",
+        "note": ""
+      },
+      {
+        "id": "stage:processed",
+        "note": ""
+      },
+      {
+        "id": "group:metals",
+        "note": ""
+      },
+      {
+        "id": "kind:metal",
+        "note": ""
+      },
+      {
+        "id": "group:salts-and-earths",
+        "note": ""
+      },
+      {
+        "id": "kind:construction",
+        "note": ""
+      },
+      {
+        "id": "need:works-and-arms",
+        "note": ""
+      },
+      {
+        "id": "group:farm-and-herd-goods",
+        "note": ""
+      },
+      {
+        "id": "stage:compound",
+        "note": ""
+      },
+      {
+        "id": "group:materials",
+        "note": ""
+      },
+      {
+        "id": "kind:cloth",
+        "note": ""
+      },
+      {
+        "id": "need:clothing",
+        "note": ""
+      },
+      {
+        "id": "group:food-and-drink",
+        "note": ""
+      },
+      {
+        "id": "stage:finished",
+        "note": ""
+      },
+      {
+        "id": "group:clothing",
+        "note": ""
+      },
+      {
+        "id": "group:works-and-arms",
+        "note": ""
+      },
+      {
+        "id": "grade:coarse",
+        "note": "The poorest sort.",
+        "colour": "#8A7A6B",
+        "sign": {
+          "atlas": "tags",
+          "index": 38
+        }
+      },
+      {
+        "id": "grade:common",
+        "note": "The everyday sort.",
+        "colour": "#B9B9B9",
+        "sign": {
+          "atlas": "tags",
+          "index": 39
+        }
+      },
+      {
+        "id": "grade:fine",
+        "note": "Better than most can afford.",
+        "colour": "#6BB5E8",
+        "sign": {
+          "atlas": "tags",
+          "index": 40
+        }
+      },
+      {
+        "id": "grade:superb",
+        "note": "The best there is.",
+        "colour": "#F2C230",
+        "sign": {
+          "atlas": "tags",
+          "index": 41
+        }
+      },
+      {
+        "id": "grain:wheat",
+        "note": "",
+        "colour": "#E8C45A",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "grain:spelt",
+        "note": "",
+        "colour": "#D9A84E",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "grain:rye",
+        "note": "",
+        "colour": "#A9773F",
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "grain:barley",
+        "note": "",
+        "colour": "#D8D08A",
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "grain:oats",
+        "note": "",
+        "colour": "#EFE3B5",
+        "implies": [
+          "grade:coarse"
+        ]
+      },
+      {
+        "id": "grain:millet",
+        "note": "",
+        "colour": "#F0A93B",
+        "implies": [
+          "grade:coarse"
+        ]
+      },
+      {
+        "id": "wood:pine",
+        "note": "",
+        "colour": "#E0B26B",
+        "implies": [
+          "grade:coarse"
+        ]
+      },
+      {
+        "id": "wood:oak",
+        "note": "",
+        "colour": "#A97442",
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "wood:cedar",
+        "note": "",
+        "colour": "#B5533C",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "wood:teak",
+        "note": "",
+        "colour": "#8A5A2B",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "wood:ebony",
+        "note": "",
+        "colour": "#2E2622",
+        "implies": [
+          "grade:superb"
+        ]
+      },
+      {
+        "id": "fleece:sheep",
+        "note": "",
+        "colour": "#E6DFCF",
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "fleece:cashmere",
+        "note": "",
+        "colour": "#C8B59B",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "fleece:alpaca",
+        "note": "",
+        "colour": "#8B6B4F",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
+        "id": "cloth:wool",
+        "note": "Its grade is its fleece's.",
+        "colour": "#C9B79A"
+      },
+      {
+        "id": "metal:iron",
+        "note": "",
+        "colour": "#7D8790",
+        "sign": {
+          "atlas": "tags",
+          "index": 34
+        },
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "kind:tool-metal",
+        "note": "A metal that takes an edge. Which one marks the tool."
+      },
+      {
+        "id": "kind:gun-metal",
+        "note": "A metal a cannon can be cast from. Bronze bulges before it bursts; iron is cheaper."
+      }
+    ],
+    "goods": [
+      {
+        "id": "grain",
+        "name": "Grain",
+        "note": "Wheat, spelt, rye, barley, oats or millet, as the climate allows. Bread and beer both start here.",
+        "tags": [
+          "stage:raw",
+          "source:farmed",
+          "group:farmed",
+          "nature:mundane",
+          "kind:food",
+          "trait:staple",
+          "folk:steelfolk",
+          "origin:europe"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 332
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 34,
+          "source": "compound",
+          "reading": "grain or grass",
+          "parts": [
+            "GR",
+            "GR"
+          ]
+        },
+        "varieties": [
+          {
+            "id": "wheat",
+            "name": "Wheat",
+            "note": "The white loaf.",
+            "tags": [
+              "grain:wheat"
+            ]
+          },
+          {
+            "id": "spelt",
+            "name": "Spelt",
+            "note": "Old wheat, hardier.",
+            "tags": [
+              "grain:spelt"
+            ]
+          },
+          {
+            "id": "rye",
+            "name": "Rye",
+            "note": "The black loaf of cold country.",
+            "tags": [
+              "grain:rye"
+            ]
+          },
+          {
+            "id": "barley",
+            "name": "Barley",
+            "note": "The brewer's grain.",
+            "tags": [
+              "grain:barley"
+            ]
+          },
+          {
+            "id": "oats",
+            "name": "Oats",
+            "note": "Horse feed, and porridge for the poor.",
+            "tags": [
+              "grain:oats"
+            ]
+          },
+          {
+            "id": "millet",
+            "name": "Millet",
+            "note": "Dry country's grain.",
+            "tags": [
+              "grain:millet"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "flour",
+        "name": "Flour",
+        "note": "Ground grain. Keeps for months, where bread keeps for days.",
+        "tags": [
+          "stage:processed",
+          "group:farm-and-herd-goods",
+          "nature:mundane",
+          "kind:food",
+          "trait:staple"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 317
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 122,
+          "source": "compound",
+          "reading": "powder + grain or grass",
+          "parts": [
+            "PW",
+            "GR"
+          ]
+        }
+      },
+      {
+        "id": "bread",
+        "name": "Bread",
+        "note": "The staple. Its price is the first thing a population riots about.",
+        "tags": [
+          "stage:compound",
+          "group:food-and-drink",
+          "need:food",
+          "nature:mundane",
+          "kind:food",
+          "trait:perishable",
+          "trait:staple",
+          "folk:steelfolk"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 324
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 212,
+          "source": "compound",
+          "reading": "grain or grass + fire",
+          "parts": [
+            "GR",
+            "FI"
+          ]
+        }
+      },
+      {
+        "id": "slt",
+        "name": "Rock salt",
+        "note": "Mined in blocks, grey or pink. The same stuff as the sea, a few million years drier.",
+        "tags": [
+          "stage:raw",
+          "source:mined",
+          "group:mined",
+          "nature:alchemical",
+          "kind:salt",
+          "origin:sub-saharan-africa"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 8
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 8,
+          "source": "hand-drawn",
+          "reading": "salt family sign",
+          "parts": null
+        }
+      },
+      {
+        "id": "salt",
+        "name": "Salt",
+        "note": "Preserves meat, fish, hides and cheese. A settlement without salt cannot store food.",
+        "tags": [
+          "stage:processed",
+          "group:salts-and-earths",
+          "nature:alchemical",
+          "kind:salt",
+          "trait:staple"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 99
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 99,
+          "source": "hand-drawn",
+          "reading": "salt family sign",
+          "parts": null
+        }
+      },
+      {
+        "id": "timber",
+        "name": "Timber",
+        "note": "The universal input: fuel, ash, planks, charcoal. Forests set the ceiling on everything.",
+        "tags": [
+          "stage:raw",
+          "source:farmed",
+          "group:farmed",
+          "nature:mundane",
+          "kind:fuel"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 334
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 51,
+          "source": "compound",
+          "reading": "tree or wood",
+          "parts": [
+            "TR",
+            "TR"
+          ]
+        },
+        "varieties": [
+          {
+            "id": "pine",
+            "name": "Pine",
+            "note": "Soft, quick, resinous.",
+            "tags": [
+              "wood:pine"
+            ]
+          },
+          {
+            "id": "oak",
+            "name": "Oak",
+            "note": "The shipwright's and the cooper's wood.",
+            "tags": [
+              "wood:oak"
+            ]
+          },
+          {
+            "id": "cedar",
+            "name": "Cedar",
+            "note": "Fragrant and rot-proof.",
+            "tags": [
+              "wood:cedar"
+            ]
+          },
+          {
+            "id": "teak",
+            "name": "Teak",
+            "note": "Oily, heavy, and proof against the worm.",
+            "tags": [
+              "wood:teak"
+            ]
+          },
+          {
+            "id": "ebony",
+            "name": "Ebony",
+            "note": "Black, dense and scarce.",
+            "tags": [
+              "wood:ebony"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "planks",
+        "name": "Planks",
+        "note": "Sawn and seasoned timber. A sawmill turns a forest into a building material.",
+        "tags": [
+          "stage:processed",
+          "group:farm-and-herd-goods",
+          "need:works-and-arms",
+          "nature:mundane",
+          "kind:construction"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 309
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 133,
+          "source": "compound",
+          "reading": "tree or wood + cut or worked",
+          "parts": [
+            "TR",
+            "X"
+          ]
+        }
+      },
+      {
+        "id": "charcoal",
+        "name": "Charcoal",
+        "note": "Wood baked without air. Burns hotter and cleaner than wood; it is what gunpowder and steel really want.",
+        "tags": [
+          "stage:processed",
+          "group:farm-and-herd-goods",
+          "nature:mundane",
+          "kind:fuel"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 134
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 134,
+          "source": "compound",
+          "reading": "tree or wood + fire",
+          "parts": [
+            "TR",
+            "FI"
+          ]
+        }
+      },
+      {
+        "id": "fe",
+        "name": "Ironstone",
+        "note": "Red, heavy and everywhere. The cheapest ore and the hungriest for fuel.",
+        "tags": [
+          "stage:raw",
+          "source:mined",
+          "group:mined",
+          "nature:alchemical",
+          "kind:ore",
+          "origin:sub-saharan-africa"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 1
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 1,
+          "source": "hand-drawn",
+          "reading": "iron family sign",
+          "parts": null
+        }
+      },
+      {
+        "id": "ife",
+        "name": "Iron",
+        "note": "Wrought in a bloomery or cast from a blast furnace. Either way it eats forests or coal.",
+        "tags": [
+          "stage:processed",
+          "group:metals",
+          "nature:alchemical",
+          "kind:metal",
+          "kind:tool-metal",
+          "kind:gun-metal",
+          "metal:iron"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 291
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 92,
+          "source": "hand-drawn",
+          "reading": "iron family sign",
+          "parts": null
+        }
+      },
+      {
+        "id": "tools",
+        "name": "Tools",
+        "note": "An edge of bronze, iron or steel on a wooden handle. Every other workshop waits on these.",
+        "tags": [
+          "stage:finished",
+          "group:works-and-arms",
+          "need:works-and-arms",
+          "nature:mundane",
+          "trait:staple"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 280
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 280,
+          "source": "compound",
+          "reading": "tool + iron",
+          "parts": [
+            "TL",
+            "Fe"
+          ]
+        }
+      },
+      {
+        "id": "wool",
+        "name": "Wool",
+        "note": "Sheared yearly, so the sheep is a renewable mine. Takes dye better than any plant fibre.",
+        "tags": [
+          "stage:raw",
+          "source:herded",
+          "group:herded-and-gathered",
+          "nature:mundane",
+          "kind:fibre",
+          "kind:animal",
+          "folk:steelfolk",
+          "origin:europe"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 72
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 72,
+          "source": "compound",
+          "reading": "thread or fibre + beast",
+          "parts": [
+            "TH",
+            "BS"
+          ]
+        },
+        "varieties": [
+          {
+            "id": "sheep",
+            "name": "Sheep's wool",
+            "note": "",
+            "tags": [
+              "fleece:sheep"
+            ]
+          },
+          {
+            "id": "cashmere",
+            "name": "Cashmere",
+            "note": "Combed from mountain goats.",
+            "tags": [
+              "fleece:cashmere"
+            ]
+          },
+          {
+            "id": "alpaca",
+            "name": "Alpaca",
+            "note": "",
+            "tags": [
+              "fleece:alpaca"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "yarn",
+        "name": "Woollen yarn",
+        "note": "Carded and spun fleece. Every cottage can make it, which is what made wool a national industry.",
+        "tags": [
+          "stage:processed",
+          "group:farm-and-herd-goods",
+          "nature:mundane",
+          "kind:fibre",
+          "folk:steelfolk"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 302
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 139,
+          "source": "compound",
+          "reading": "thread or fibre + garment",
+          "parts": [
+            "TH",
+            "GT"
+          ]
+        }
+      },
+      {
+        "id": "cloth",
+        "name": "Cloth",
+        "note": "Woven and finished: linen, wool, cotton or silk. What it was woven from rides with it into whatever is cut from it.",
+        "tags": [
+          "stage:compound",
+          "group:materials",
+          "nature:mundane",
+          "kind:cloth",
+          "trait:staple"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 310
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 204,
+          "source": "compound",
+          "reading": "cloth + flower",
+          "parts": [
+            "CL",
+            "FL"
+          ]
+        },
+        "layers": [
+          {
+            "match": "cloth"
+          }
+        ]
+      },
+      {
+        "id": "clothes",
+        "name": "Everyday clothes",
+        "note": "What most people wear most days. Dull, steady, enormous demand.",
+        "tags": [
+          "stage:finished",
+          "group:clothing",
+          "need:clothing",
+          "nature:mundane",
+          "trait:staple"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 252
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 252,
+          "source": "compound",
+          "reading": "garment",
+          "parts": [
+            "GT",
+            "GT"
+          ]
+        },
+        "layers": [
+          {
+            "match": "cloth"
+          }
+        ]
+      }
+    ]
+  },
+  "goods": [
+    "grain",
+    "flour",
+    "bread",
+    "slt",
+    "salt",
+    "timber",
+    "planks",
+    "charcoal",
+    "fe",
+    "ife",
+    "tools",
+    "wool",
+    "yarn",
+    "cloth",
+    "clothes"
+  ],
+  "recipes": [
+    {
+      "id": "r.flour",
+      "name": "Mill",
+      "note": "Ten of grain to nine of flour: the bran stays with the miller.",
+      "element": "wind",
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ],
+          "amount": 10,
+          "passes": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "flour",
+          "amount": 9
+        }
+      ]
+    },
+    {
+      "id": "r.bread",
+      "name": "Bakery",
+      "note": "Two batches a day from one oven.",
+      "element": "fire",
+      "time": 0.5,
+      "inputs": [
+        {
+          "accepts": [
+            "flour"
+          ],
+          "amount": 5,
+          "passes": true
+        },
+        {
+          "accepts": [
+            "salt"
+          ],
+          "amount": 0.2
+        }
+      ],
+      "outputs": [
+        {
+          "good": "bread",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "r.salt",
+      "name": "Salt boiling",
+      "note": "Rock salt crushed and boiled clean.",
+      "element": "earth",
+      "inputs": [
+        {
+          "accepts": [
+            "slt"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "salt"
+        }
+      ]
+    },
+    {
+      "id": "r.planks",
+      "name": "Sawmill",
+      "note": "A quarter of the log is sawdust.",
+      "element": "wind",
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ],
+          "amount": 4,
+          "passes": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "planks",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "r.charcoal",
+      "name": "Charcoal clamp",
+      "note": "Three days under turf. Five of wood to two of charcoal.",
+      "element": "earth",
+      "time": 3,
+      "inputs": [
+        {
+          "accepts": [
+            "timber"
+          ],
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "good": "charcoal",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "r.ife",
+      "name": "Bloomery",
+      "note": "Two of ore and three of fuel for one of iron, over two days.",
+      "element": "fire",
+      "time": 2,
+      "inputs": [
+        {
+          "accepts": [
+            "fe"
+          ],
+          "amount": 2
+        },
+        {
+          "accepts": [
+            "#kind:fuel"
+          ],
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "good": "ife"
+        }
+      ]
+    },
+    {
+      "id": "r.tools",
+      "name": "Toolsmith",
+      "note": "One of metal and one of planks: two tools.",
+      "element": "fire",
+      "inputs": [
+        {
+          "accepts": [
+            "#kind:tool-metal"
+          ],
+          "passes": true
+        },
+        {
+          "accepts": [
+            "planks"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "tools",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "id": "r.yarn",
+      "name": "Spinning",
+      "note": "Slow. Two of fleece to one of yarn, two days.",
+      "element": "earth",
+      "time": 2,
+      "inputs": [
+        {
+          "accepts": [
+            "wool"
+          ],
+          "amount": 2,
+          "passes": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "yarn"
+        }
+      ]
+    },
+    {
+      "id": "r.cloth",
+      "name": "Weaving",
+      "note": "Three of yarn to a bolt, three days at the loom.",
+      "element": "water",
+      "time": 3,
+      "inputs": [
+        {
+          "accepts": [
+            "yarn"
+          ],
+          "amount": 3,
+          "passes": true,
+          "grants": [
+            "cloth:wool"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "r.clothes",
+      "name": "Tailor",
+      "note": "A bolt makes two garments.",
+      "element": "water",
+      "inputs": [
+        {
+          "accepts": [
+            "cloth"
+          ],
+          "passes": true
+        }
+      ],
+      "outputs": [
+        {
+          "good": "clothes",
+          "amount": 2
+        }
+      ]
+    }
+  ],
+  "consumers": [
+    {
+      "id": "c.food",
+      "name": "Food",
+      "note": "A loaf a head a day.",
+      "accepts": [
+        "#need:food"
+      ],
+      "wants": 1
+    },
+    {
+      "id": "c.clothing",
+      "name": "Clothing",
+      "note": "A garment every fifty days.",
+      "accepts": [
+        "#need:clothing"
+      ],
+      "wants": 0.02
+    },
+    {
+      "id": "c.works",
+      "name": "Works and arms",
+      "note": "Tools wear out and buildings eat planks.",
+      "accepts": [
+        "#need:works-and-arms"
+      ],
+      "wants": 0.05
+    }
+  ],
+  "heads": 120,
+  "supply": {
+    "fe": 10,
+    "grain": 100,
+    "slt": 5,
+    "timber": 60,
+    "wool": 8
+  },
+  "layout": {
+    "bread": [1180, 197],
+    "c.clothing": [2070, 268],
+    "c.food": [2070, 178],
+    "c.works": [2070, 70],
+    "charcoal": [590, 11],
+    "cloth": [1180, 304],
+    "clothes": [1770, 275],
+    "fe": [0, 0],
+    "flour": [590, 191],
+    "grain": [0, 205],
+    "ife": [1180, 46],
+    "planks": [590, 91],
+    "r.bread": [890, 200],
+    "r.charcoal": [300, 12],
+    "r.cloth": [890, 325],
+    "r.clothes": [1480, 280],
+    "r.flour": [300, 200],
+    "r.ife": [890, 13],
+    "r.planks": [300, 102],
+    "r.salt": [300, 290],
+    "r.tools": [1480, 49],
+    "r.yarn": [300, 381],
+    "salt": [590, 271],
+    "slt": [0, 295],
+    "timber": [0, 80],
+    "tools": [1770, 68],
+    "wool": [0, 386],
+    "yarn": [590, 362]
+  }
+}

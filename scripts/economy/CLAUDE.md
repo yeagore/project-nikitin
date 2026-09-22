@@ -67,8 +67,18 @@ load a web as it is and a test can run without the engine.
   change or bin it. `full-ledger-reference` is the big web as it was and
   `variety-ledger` the stretch test; both locked. Unlocking is an edit to the
   file, on purpose.
-- Sources, final goods, depth, hubs, links (drawn, and implied by tags), varieties
-  and issues are read off a web by `WebAnalysis` and **never stored**.
+- **Amounts, time and the balance** (stage two). `RecipeInput.Amount` and
+  `RecipeOutput.Amount` (per run, null = 1, read `Count`), `Recipe.Time` (days per
+  run, null = 1, read `Days`), `Consumer.Wants` (units a head a day, read `Rate`),
+  `EconomyWeb.Heads` and `EconomyWeb.Supply` (units a day the land gives by good;
+  `SupplyOf`, set through `EconomyEdit.SetSupply`). `WebBalance.Of(web, analysis)`
+  pulls the wants back from the consumers (equal shares across a slot's or a
+  consumer's fillers) and pushes what is there forward (rationing in proportion;
+  a recipe runs as far as its scarcest required slot allows and no further than
+  asked; optional slots never hold it back; extractions are unlimited); loops are
+  cut for the order. Hearth is the worked example and the self-test's arithmetic.
+- Sources, final goods, depth, hubs, links (drawn, and implied by tags), varieties,
+  issues and the balance are read off a web by `WebAnalysis` and `WebBalance` and **never stored**.
 
 ## Rules
 
@@ -98,13 +108,14 @@ Recipe.cs, RecipeInput.cs, RecipeOutput.cs, Consumer.cs, Acceptor.cs, Element.cs
 EconomyStore.cs            The JSON files: load, save, list, clone.
 WebAnalysis.cs, VarietySet.cs, WebLink.cs, LinkKind.cs, GoodRole.cs, WebIssue.cs, IssueLevel.cs
                            A web read back.
+WebBalance.cs              A web's day: what flows where, and where it starves or piles up.
 EconomyEdit.cs             Every change as a plain function.
 WebArrange.cs, LayeredLayout.cs
                            The left-to-right arrangement.
 ```
 
 Data: `resources/economy/webs/` (the locked `full-ledger-reference`, `starter`,
-`tagged-ledger`, the locked `variety-ledger`, and whatever Maxim has made),
+`tagged-ledger`, the locked `variety-ledger`, `hearth` from `tools/make_hearth.py`, and whatever Maxim has made),
 `resources/economy/sprites/` (`icons`, `signs`, `masks`, `tags`, `elements`).
 `tools/import_economy_export.py` made the full ledger from the chat export;
 `tools/make_tagged_ledger.py` derived the tagged one and `tools/make_variety_ledger.py`

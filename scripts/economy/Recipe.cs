@@ -6,8 +6,9 @@ namespace ProjectNikitin.Economy;
 
 /// <summary>
 /// One way of making something: every input slot filled, the outputs come out.
-/// A good made two ways has two recipes. Amounts, time, the building and the labour
-/// are not modelled yet; they will be fields here and on the slots.
+/// A good made two ways has two recipes. Each slot and output has an amount and the
+/// recipe a time, so a web can be balanced; the building and the labour are not modelled
+/// yet and will be fields here.
 /// </summary>
 public sealed class Recipe
 {
@@ -28,6 +29,12 @@ public sealed class Recipe
 	/// hauled or used up. Peat is cut where the ground is murkearth, so its recipe takes no soil.
 	/// </summary>
 	public List<string>? Site { get; set; }
+
+	/// <summary>How long one run takes, in days; null means one. Read through <see cref="Days"/>. A workshop runs one batch at a time, so runs a day times days is workshops busy.</summary>
+	public double? Time { get; set; }
+
+	[JsonIgnore]
+	public double Days => Time ?? 1;
 
 	public List<RecipeInput> Inputs { get; set; } = new();
 	public List<RecipeOutput> Outputs { get; set; } = new();

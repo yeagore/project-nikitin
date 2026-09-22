@@ -38,6 +38,20 @@ public sealed class EconomyWeb
 	public List<Recipe> Recipes { get; set; } = new();
 	public List<Consumer> Consumers { get; set; } = new();
 
+	/// <summary>How many people the consumers speak for; null means none, and then nothing is wanted.</summary>
+	public double? Heads { get; set; }
+
+	/// <summary>
+	/// What the land gives without a recipe, in units a day by good: the rate at a source (grain
+	/// from the farms, ore from the mine). Null when nothing is set. Read through <see cref="SupplyOf"/>;
+	/// set through <see cref="EconomyEdit.SetSupply"/>, which keeps the map tidy.
+	/// </summary>
+	[JsonConverter(typeof(SupplyConverter))]
+	public Dictionary<string, double>? Supply { get; set; }
+
+	/// <summary>Units a day of the good the land gives; 0 for a good with no supply set.</summary>
+	public double SupplyOf(string goodId) => Supply != null && Supply.TryGetValue(goodId, out double rate) ? rate : 0;
+
 	/// <summary>Canvas position by node key: a good's, a recipe's or a consumer's id, which never collide.</summary>
 	[JsonConverter(typeof(LayoutConverter))]
 	public Dictionary<string, Spot> Layout { get; set; } = new();
@@ -50,6 +64,30 @@ public sealed class EconomyWeb
 	public Recipe? Recipe(string id) => Recipes.FirstOrDefault(r => r.Id == id);
 
 	public Consumer? Consumer(string id) => Consumers.FirstOrDefault(c => c.Id == id);
+
+	/// <summary>Written sorted by good, so the same web reads the same and a changed rate is a one-line diff.</summary>
+	private sealed class SupplyConverter : JsonConverter<Dictionary<string, double>>
+	{
+		public override Dictionary<string, double> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+		{
+			var supply = new Dictionary<string, double>(StringComparer.Ordinal);
+			if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("A supply is an object of units a day by good.");
+			while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+			{
+				string key = reader.GetString()!;
+				reader.Read();
+				supply[key] = reader.GetDouble();
+			}
+			return supply;
+		}
+
+		public override void Write(Utf8JsonWriter writer, Dictionary<string, double> value, JsonSerializerOptions options)
+		{
+			writer.WriteStartObject();
+			foreach (string key in value.Keys.OrderBy(k => k, StringComparer.Ordinal)) writer.WriteNumber(key, value[key]);
+			writer.WriteEndObject();
+		}
+	}
 
 	/// <summary>Sorted by key and one node to a line, so a moved node is a one-line diff.</summary>
 	private sealed class LayoutConverter : JsonConverter<Dictionary<string, Spot>>

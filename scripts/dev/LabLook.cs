@@ -67,6 +67,29 @@ internal static class LabLook
 		return NoStage;
 	}
 
+	/// <summary>A good's day in a few words for the node: what is supplied or made, what is wanted, and the word for its state.</summary>
+	public static string FlowLine(WebBalance.GoodFlow flow)
+	{
+		var words = new System.Collections.Generic.List<string>();
+		if (flow.Supply > 0) words.Add($"{WebBalance.Num(flow.Supply)} supplied");
+		if (flow.Made > 0) words.Add($"{WebBalance.Num(flow.Made)} made");
+		words.Add($"{WebBalance.Num(flow.Wanted)} wanted");
+		words.Add(flow.State switch
+		{
+			WebBalance.FlowState.Short => $"short {WebBalance.Num(flow.Shortfall)}",
+			WebBalance.FlowState.Surplus => $"{WebBalance.Num(flow.Surplus)} to spare",
+			_ => "even",
+		});
+		return string.Join(" · ", words);
+	}
+
+	public static Color FlowColour(WebBalance.FlowState state) => state switch
+	{
+		WebBalance.FlowState.Short => Error,
+		WebBalance.FlowState.Surplus => Note,
+		_ => Dim,
+	};
+
 	public static Color IssueColour(IssueLevel level) => level switch
 	{
 		IssueLevel.Error => Error,

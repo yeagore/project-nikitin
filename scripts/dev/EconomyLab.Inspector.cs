@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Godot;
@@ -11,13 +12,19 @@ namespace ProjectNikitin.Dev;
 /// The right-hand dock: whatever is selected, laid out for editing. A good shows its name, its
 /// description, its tags, the varieties of it this web can make and the ones written by hand, the
 /// stacks those varieties come to when units stack by property and the same split by a namespace
-/// or two, each stack wearing the icon a unit of it would; then its two sprites and what makes,
-/// uses and eats it. A recipe shows its element, where the work has to stand, itself written out
-/// in signs as a formula, then its input slots — what each admits, whether it passes variety on
-/// and what it grants of its own — and its outputs; a consumer what reaches it; several nodes what
-/// can be done to them all; and with nothing selected, the web itself — its numbers, how its
-/// recipes fall among the elements, its hubs, what the analysis found wrong, and the legend of the
-/// canvas's colours.
+/// or two, each stack wearing the icon a unit of it would; then what the land gives of it a day,
+/// its two sprites and what makes, uses and eats it. A recipe shows its element, how long a run
+/// takes, where the work has to stand, itself written out in signs as a formula, then its input
+/// slots — what each admits and how much of it a run takes, whether it passes variety on and what
+/// it grants of its own — and its outputs with their amounts; a consumer what reaches it and what
+/// a head wants a day; several nodes what can be done to them all; and with nothing selected, the
+/// web itself — its population, its numbers, its balance, how its recipes fall among the elements,
+/// its hubs, what the analysis found wrong, and the legend of the canvas's colours.
+///
+/// Wherever the web has numbers to balance (<see cref="WebBalance.HasNumbers"/>) the same views
+/// carry the day's flow: what a good is supplied, made, wanted and taken and who asks for it, what
+/// a recipe manages of the runs asked of it and which slot holds it back, what reaches a consumer,
+/// and the whole sheet's notes on the web.
 ///
 /// Every field and button goes through <see cref="Change"/>, so everything here is a step to
 /// undo and a moment later a save. Typing merges into one step and leaves the dock standing;
@@ -207,6 +214,9 @@ public partial class EconomyLab
 			merge: "good.note:" + id, keepInspector: true);
 		rows.AddChild(note);
 
+		GoodSupply(rows, id);
+		GoodBalance(rows, id);
+
 		InspectorLook.Section(rows, "Tags");
 		HFlowContainer tags = InspectorLook.Flow();
 		rows.AddChild(tags);
@@ -254,6 +264,79 @@ public partial class EconomyLab
 			() => AskBinGood(id));
 		bin.AddThemeColorOverride("font_color", LabLook.Error);
 		rows.AddChild(bin);
+	}
+
+	// ---- a good's supply and its day -------------------------------------------
+
+	/// <summary>
+	/// What the land gives of this good in a day, with no recipe behind it: the rate at a source.
+	/// Written on the web rather than on the good, one palette being shared by no one, and set
+	/// through <see cref="EconomyEdit.SetSupply"/>, which drops the entry again at nothing.
+	/// </summary>
+	private void GoodSupply(VBoxContainer rows, string id)
+	{
+		const string tip = "Units a day the land gives of this good, with no recipe behind it. Blank or 0 for none.";
+		double rate = Web.SupplyOf(id);
+		double? supplied = rate > 0 ? rate : null;
+		InspectorLook.Section(rows, "Supply");
+		rows.AddChild(NumberRow("units a day the land gives", tip, NumberField(supplied, "none", tip, "good.supply:" + id,
+			now => now is { } set && set > 0
+				? $"the land gives {WebBalance.Num(set)} {NameOf(id)} a day"
+				: $"the land gives no {NameOf(id)}",
+			now => EconomyEdit.SetSupply(Web, id, now ?? 0))));
+		rows.AddChild(InspectorLook.Note(
+			Analysis.MakersOf(id).Count > 0 && rate <= 0
+				? "Made here, so it needs none; a rate set here would come on top of what the recipes make."
+				: "What comes from the land without a recipe: the farms' grain, the mine's ore. Set it on a source; a good that is also made adds this on top.",
+			LabLook.Faint, 12));
+	}
+
+	/// <summary>
+	/// The good's day, when the web has numbers to balance: its state in a line, the four rates
+	/// behind that line, and then everything that asks for it — every recipe with a slot this good
+	/// fills, and every consumer it reaches — each a step away. A slot that several goods can fill
+	/// is named and its share said, the sheet dividing such a slot's asking evenly among them.
+	/// </summary>
+	private void GoodBalance(VBoxContainer rows, string id)
+	{
+		if (!Balance.HasNumbers || Balance.Good(id) is not { } flow || flow.State == WebBalance.FlowState.Idle) return;
+		if (Palette.Find(id) is not { } good) return;
+
+		InspectorLook.Section(rows, "Balance");
+		rows.AddChild(InspectorLook.Note(LabLook.FlowLine(flow), LabLook.FlowColour(flow.State), 13));
+		rows.AddChild(InspectorLook.Note(
+			$"supplied {WebBalance.Num(flow.Supply)} · made {WebBalance.Num(flow.Made)} · " +
+			$"wanted {WebBalance.Num(flow.Wanted)} · taken {WebBalance.Num(flow.Taken)}", LabLook.Dim, 12));
+
+		var asked = false;
+		foreach (Recipe user in Analysis.UsersOf(id))
+		{
+			if (Balance.Recipe(user.Id) is not { } rf) continue;
+			for (int port = 0; port < user.Inputs.Count && port < rf.Slots.Count; port++)
+			{
+				if (!user.Inputs[port].Accepts.Any(acceptor => Acceptor.Admits(acceptor, good))) continue;
+				WebBalance.SlotFlow slot = rf.Slots[port];
+				if (slot.Wanted <= FlowTiny && slot.Got <= FlowTiny) continue;
+				int fillers = Analysis.FillersOf(user.Id, port).Count;
+				string which = fillers > 1 ? SlotName(user.Id, port) + " " : "";
+				string shared = fillers > 1 ? $", shared with {fillers - 1} other{(fillers > 2 ? "s" : "")}" : "";
+				rows.AddChild(InspectorJump(
+					$"→ {Analysis.TitleOf(user)}: {which}wants {WebBalance.Num(slot.Wanted)} a day, gets {WebBalance.Num(slot.Got)}{shared}",
+					user.Id, slot.Got + FlowTiny < slot.Wanted ? LabLook.Error : LabLook.Dim));
+				asked = true;
+			}
+		}
+		foreach (Consumer eater in Analysis.ConsumersOf(id))
+		{
+			if (Balance.Consumer(eater.Id) is not { } cf) continue;
+			double got = cf.ByGood.Where(by => by.Good == id).Sum(by => by.Got);
+			if (cf.Demand <= FlowTiny && got <= FlowTiny) continue;
+			rows.AddChild(InspectorJump(
+				$"→ {NameOf(eater.Id)}: {WebBalance.Num(got)} a day of the {WebBalance.Num(cf.Demand)} it wants",
+				eater.Id, cf.Coverage < 0.995 ? LabLook.Error : LabLook.EatenPort));
+			asked = true;
+		}
+		if (!asked) rows.AddChild(InspectorLook.Note("Nothing asks for it.", LabLook.Faint, 12));
 	}
 
 	// ---- a good's varieties ----------------------------------------------------
@@ -714,6 +797,7 @@ public partial class EconomyLab
 		Label title = LabLook.Text(Analysis.TitleOf(recipe), 17, LabLook.Ink, trim: true);
 		rows.AddChild(title);
 		rows.AddChild(LabLook.Text(rid, 12, LabLook.Faint));
+		if (RecipeBalanceLine(rid) is { } day) rows.AddChild(day);
 
 		rows.AddChild(InspectorLook.Caption("Label"));
 		LineEdit label = InspectorLook.Field(recipe.Name, "blank reads as → what it makes");
@@ -736,6 +820,16 @@ public partial class EconomyLab
 		element.TooltipText = "What kind of craft this is: violence or patience, putting together or taking apart. A classification by feel; nothing reads it yet.";
 		rows.AddChild(element);
 		rows.AddChild(ElementRow(rid, recipe.Element));
+
+		const string timeTip = "How long one run of this recipe takes, in days. Blank is one.";
+		rows.AddChild(NumberRow("Time · days a run", timeTip, NumberField(recipe.Time, "1", timeTip, "recipe.time:" + rid,
+			now => now is { } days
+				? $"a run of {NameOf(rid)} takes {WebBalance.Num(days)} days"
+				: $"a run of {NameOf(rid)} takes a day",
+			now => { if (Web.Recipe(rid) is { } live) live.Time = now; })));
+		rows.AddChild(InspectorLook.Note(
+			"How long one run takes. A workshop runs one batch at a time, so runs a day times days is workshops busy.",
+			LabLook.Faint, 12));
 
 		Label site = InspectorLook.Caption("Site");
 		site.MouseFilter = MouseFilterEnum.Stop;
@@ -786,8 +880,14 @@ public partial class EconomyLab
 			else
 			{
 				Label missing = InspectorLook.Note($"{made} is not in this web", LabLook.Error, 12);
+				missing.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 				row.AddChild(missing);
 			}
+			const string givesTip = "How many units one run gives of this good. Blank is one.";
+			row.AddChild(InspectorLook.Mark("×", givesTip, LabLook.Dim));
+			row.AddChild(NumberField(recipe.Outputs[o].Amount, "1", givesTip, $"output.amount:{rid}:{port}",
+				now => $"one run of {NameOf(rid)} gives {WebBalance.Num(now ?? 1)} {NameOf(made)}",
+				now => { if (Web.Recipe(rid) is { } live && port < live.Outputs.Count) live.Outputs[port].Amount = now; }));
 			row.AddChild(InspectorLook.Small("change…", "Make it something else instead.",
 				() => AskGood("What does it make?", gid => SetOutput(rid, port, gid))));
 			row.AddChild(InspectorLook.Cross("Stop making this.", () =>
@@ -805,6 +905,52 @@ public partial class EconomyLab
 			() => RemoveNodes(new List<string> { rid }));
 		bin.AddThemeColorOverride("font_color", LabLook.Error);
 		rows.AddChild(bin);
+	}
+
+	// ---- a recipe's day --------------------------------------------------------
+
+	/// <summary>
+	/// What the recipe manages in a day, when the web has numbers: the runs asked of it against the
+	/// runs it gets, how long one takes, how many of its workshops that keeps busy — each running one
+	/// batch at a time — and, where it fell short, the slot that held it back. Null when nothing is
+	/// asked of it, which is also the whole answer for a web with no numbers yet.
+	/// </summary>
+	private Control? RecipeBalanceLine(string rid)
+	{
+		if (!Balance.HasNumbers || Balance.Recipe(rid) is not { Desired: > FlowTiny } flow) return null;
+		bool held = flow.Runs + FlowTiny < flow.Desired;
+		string days = WebBalance.Num(flow.Days);
+		var words = new List<string>
+		{
+			held ? $"{WebBalance.Num(flow.Runs)} of {WebBalance.Num(flow.Desired)} runs a day" : $"{WebBalance.Num(flow.Runs)} runs a day",
+			days == "1" ? "1 day each" : $"{days} days each",
+			$"{WebBalance.Num(flow.Workshops)} workshops busy",
+		};
+		if (flow.LimitedBy is { } port)
+			words.Add(Analysis.FillersOf(rid, port).Count > 0
+				? $"held back by input {port + 1} ({Filling(rid, port)})"
+				: $"held back by input {port + 1}, which nothing fills");
+		return InspectorLook.Note(string.Join(" · ", words), held ? LabLook.Error : LabLook.Dim, 12);
+	}
+
+	/// <summary>One slot's day: what the runs asked of the recipe would take, what it was allotted, and what it uses.</summary>
+	private Control? SlotFlowLine(string rid, int port)
+	{
+		if (!Balance.HasNumbers || Balance.Recipe(rid) is not { Desired: > FlowTiny } flow || port >= flow.Slots.Count) return null;
+		WebBalance.SlotFlow slot = flow.Slots[port];
+		if (slot.Wanted <= FlowTiny && slot.Got <= FlowTiny) return null;
+		return InspectorLook.Note(
+			$"wants {WebBalance.Num(slot.Wanted)} a day · gets {WebBalance.Num(slot.Got)} · uses {WebBalance.Num(slot.Used)}",
+			slot.Got + FlowTiny < slot.Wanted ? LabLook.Error : LabLook.Dim, 12);
+	}
+
+	/// <summary>What fills one slot, in names, for a line with room for a few of them.</summary>
+	private string Filling(string rid, int port)
+	{
+		IReadOnlyList<string> fillers = Analysis.FillersOf(rid, port);
+		return fillers.Count <= 3
+			? string.Join(", ", fillers.Select(NameOf))
+			: string.Join(", ", fillers.Take(3).Select(NameOf)) + $" and {fillers.Count - 3} more";
 	}
 
 	// ---- a recipe's site -------------------------------------------------------
@@ -1019,11 +1165,19 @@ public partial class EconomyLab
 		Label caption = InspectorLook.Caption($"Input {port + 1}");
 		caption.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		head.AddChild(caption);
+		const string takesTip = "How many units one run of the recipe takes from this slot. Blank is one.";
+		head.AddChild(InspectorLook.Mark("×", takesTip, LabLook.Dim));
+		head.AddChild(NumberField(slot.Amount, "1", takesTip, $"input.amount:{rid}:{port}",
+			now => $"{SlotName(rid, port)} of {NameOf(rid)} takes {WebBalance.Num(now ?? 1)} a run",
+			now => { if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Amount = now; }));
+		head.AddChild(InspectorLook.Mark("a run", takesTip, LabLook.Faint));
 		head.AddChild(InspectorLook.Small("remove", "Take this slot off the recipe.", () =>
 			Change($"took input {port + 1} off {NameOf(rid)}", () =>
 			{
 				if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs.RemoveAt(port);
 			})));
+
+		if (SlotFlowLine(rid, port) is { } day) rows.AddChild(day);
 
 		// Two switches of their own row: the dock is too narrow to carry them beside the caption.
 		string named = SlotName(rid, port);
@@ -1302,6 +1456,18 @@ public partial class EconomyLab
 			merge: "consumer.note:" + cid, keepInspector: true);
 		rows.AddChild(note);
 
+		const string wantsTip = "Units one head wants a day, of whatever this consumer accepts, all told. Blank is none.";
+		rows.AddChild(NumberRow("Wants · units a head a day", wantsTip,
+			NumberField(consumer.Wants, "none", wantsTip, "consumer.wants:" + cid,
+				now => now is { } rate && rate > 0
+					? $"a head wants {WebBalance.Num(rate)} a day of {NameOf(cid)}"
+					: $"a head wants nothing of {NameOf(cid)}",
+				now => { if (Web.Consumer(cid) is { } live) live.Wants = now; })));
+		rows.AddChild(InspectorLook.Note(
+			"What one person wants a day of whatever this consumer accepts, all told; with the web's population that is the demand.",
+			LabLook.Faint, 12));
+		ConsumerBalance(rows, cid);
+
 		InspectorLook.Section(rows, "Accepts");
 		rows.AddChild(AcceptorChips(consumer.Accepts, cid, 0));
 		if (consumer.Accepts.Count == 0) rows.AddChild(InspectorLook.Note("accepts nothing", LabLook.Warning, 12));
@@ -1319,6 +1485,28 @@ public partial class EconomyLab
 			() => RemoveNodes(new List<string> { cid }));
 		bin.AddThemeColorOverride("font_color", LabLook.Error);
 		rows.AddChild(bin);
+	}
+
+	/// <summary>
+	/// What its people want in a day and what reaches them, and then which good it came as. The
+	/// demand is the web's population times the rate a head; what covers it is whatever the consumer
+	/// accepts, so a shortfall is the web's, not this line's.
+	/// </summary>
+	private void ConsumerBalance(VBoxContainer rows, string cid)
+	{
+		if (!Balance.HasNumbers || Balance.Consumer(cid) is not { Demand: > FlowTiny } flow) return;
+		InspectorLook.Section(rows, "Balance");
+		rows.AddChild(InspectorLook.Note(
+			$"{WebBalance.Num(flow.Demand)} a day wanted · {WebBalance.Num(flow.Got)} got · {WebBalance.Pct(flow.Coverage)}",
+			flow.Coverage < 0.995 ? LabLook.Error : LabLook.EatenPort, 13));
+		if (flow.ByGood.Count == 0)
+		{
+			rows.AddChild(InspectorLook.Note("Nothing reaches it.", LabLook.Error, 12));
+			return;
+		}
+		rows.AddChild(InspectorLook.Caption("by good"));
+		foreach ((string good, double got) in flow.ByGood)
+			rows.AddChild(InspectorJump($"{NameOf(good)} {WebBalance.Num(got)} a day", good, LabLook.EatenPort, IconOf(good)));
 	}
 
 	// ---- the web itself --------------------------------------------------------
@@ -1340,6 +1528,13 @@ public partial class EconomyLab
 		rows.AddChild(note);
 		rows.AddChild(InspectorLook.Note($"resources/economy/webs/{Web.Id}.json", LabLook.Faint, 12));
 
+		const string headsTip = "How many people this web's consumers speak for. Blank is none, and then nothing is wanted.";
+		InspectorLook.Section(rows, "People");
+		rows.AddChild(NumberRow("Heads", headsTip, NumberField(Web.Heads, "none", headsTip, "web.heads:" + Web.Id,
+			now => now is { } heads && heads > 0 ? $"the web is {WebBalance.Num(heads)} people" : "the web has no people",
+			now => Web.Heads = now)));
+		rows.AddChild(InspectorLook.Note("How many people the consumers speak for.", LabLook.Faint, 12));
+
 		InspectorLook.Section(rows, "Numbers");
 		int sources = 0, middles = 0, finals = 0, loose = 0;
 		foreach (string goodId in Web.Goods)
@@ -1360,6 +1555,8 @@ public partial class EconomyLab
 		if (deepest != null)
 			rows.AddChild(InspectorJump($"deepest: {NameOf(deepest)}, {Analysis.Depth(deepest)} steps from the ground",
 				deepest, LabLook.Dim, IconOf(deepest)));
+
+		WebBalanceBlock(rows);
 
 		InspectorLook.Section(rows, "Elements");
 		var elements = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -1405,6 +1602,47 @@ public partial class EconomyLab
 		rows.AddChild(InspectorLook.Swatch("a variety tag", LabLook.VarietyTag));
 		rows.AddChild(InspectorLook.Swatch("a core tag", LabLook.CoreTag));
 		foreach (Element element in Element.All) rows.AddChild(ElementLine(element, $"{element.Name}: {element.Gloss}", LabLook.Dim));
+	}
+
+	/// <summary>
+	/// The whole web's day at a glance: how much of what the people want reaches them, then every
+	/// note the sheet wrote, worst first and each in the colour of what it says; then each consumer
+	/// against its demand, a step away; then how many workshops of each recipe the day keeps busy.
+	/// A web with no population and no supply says so and offers the sheet's own first sentence.
+	/// </summary>
+	private void WebBalanceBlock(VBoxContainer rows)
+	{
+		InspectorLook.Section(rows, "Balance");
+		if (!Balance.HasNumbers)
+		{
+			rows.AddChild(InspectorLook.Note("No numbers yet.", LabLook.Dim, 13));
+			if (Balance.Notes.Count > 0) rows.AddChild(InspectorLook.Note(Balance.Notes[0], LabLook.Faint, 12));
+			return;
+		}
+
+		rows.AddChild(InspectorLook.Note(
+			$"{WebBalance.Pct(Balance.Coverage)} of what {WebBalance.Num(Balance.Heads)} people want reaches them",
+			Balance.Coverage < 0.995 ? LabLook.Error : LabLook.EatenPort, 13));
+		foreach (string note in Balance.Notes) rows.AddChild(InspectorLook.Note(note, BalanceNoteColour(note), 12));
+
+		List<WebBalance.ConsumerFlow> eaters = Balance.Consumers.Where(c => c.Demand > FlowTiny).ToList();
+		if (eaters.Count > 0)
+		{
+			rows.AddChild(InspectorLook.Caption("Consumers"));
+			foreach (WebBalance.ConsumerFlow flow in eaters)
+				rows.AddChild(InspectorJump(
+					$"{NameOf(flow.Id)}: {WebBalance.Num(flow.Got)} of {WebBalance.Num(flow.Demand)} a day · {WebBalance.Pct(flow.Coverage)}",
+					flow.Id, flow.Coverage < 0.995 ? LabLook.Error : LabLook.EatenPort));
+		}
+
+		// One wrapped line rather than a row each: a web of thirty recipes would push everything below it off the dock.
+		List<string> busy = Balance.Recipes.Where(r => r.Runs > FlowTiny)
+			.OrderByDescending(r => r.Workshops).ThenBy(r => r.Id, StringComparer.Ordinal)
+			.Select(r => $"{(Web.Recipe(r.Id) is { } made ? Analysis.TitleOf(made) : r.Id)} {WebBalance.Num(r.Workshops)}")
+			.ToList();
+		if (busy.Count == 0) return;
+		rows.AddChild(InspectorLook.Caption("Workshops busy"));
+		rows.AddChild(InspectorLook.Note(string.Join(" · ", busy), LabLook.Dim, 12));
 	}
 
 	/// <summary>An element's icon and a line about it; the icon is a blank square until the sheet is drawn.</summary>
@@ -1456,6 +1694,105 @@ public partial class EconomyLab
 	}
 
 	// ---- the small shared parts ------------------------------------------------
+
+	/// <summary>How wide a number field is: an amount, a time or a rate is never long.</summary>
+	private const int NumberWidth = 64;
+
+	/// <summary>Below this a rate counts as nothing; the same slack <see cref="WebBalance"/> works to.</summary>
+	private const double FlowTiny = 1e-9;
+
+	/// <summary>
+	/// A small field for one number of the balance: an amount a run, a time, a rate a head, a supply.
+	/// It shows what the web holds and takes what either machine writes — a point or a comma for the
+	/// decimal mark, the Windows box having a comma locale — with blank for the default. Text that is
+	/// not yet a number is left where it is: the ink goes red and nothing is written, so a half-typed
+	/// "0." or "1," costs nothing and the last good value stands. Every keystroke is one merged step
+	/// to undo and leaves the dock standing, so the caret keeps its place.
+	/// </summary>
+	private LineEdit NumberField(double? value, string placeholder, string tip, string merge,
+	                             Func<double?, string> said, Action<double?> write)
+	{
+		var field = new LineEdit
+		{
+			Text = NumberText(value),
+			PlaceholderText = placeholder,
+			TooltipText = tip,
+			Alignment = HorizontalAlignment.Right,
+			CustomMinimumSize = new Vector2(NumberWidth, 0),
+			SizeFlagsVertical = SizeFlags.ShrinkCenter,
+		};
+		field.AddThemeFontSizeOverride("font_size", 13);
+		field.TextChanged += text =>
+		{
+			if (!ReadNumber(text, out double? now))
+			{
+				field.AddThemeColorOverride("font_color", LabLook.Error);
+				return;
+			}
+			field.RemoveThemeColorOverride("font_color");
+			Change(said(now), () => write(now), merge: merge, keepInspector: true);
+		};
+		return field;
+	}
+
+	/// <summary>
+	/// A number as a field shows it: short, the way <see cref="WebBalance.Num"/> writes it, but
+	/// without the thousands' comma, which a comma locale would read back as a decimal mark. A value
+	/// the short form would round is written out in full instead, so a field never shows a number
+	/// other than the one the web holds.
+	/// </summary>
+	private static string NumberText(double? value)
+	{
+		if (value is not { } v) return "";
+		string said = WebBalance.Num(v).Replace(",", "");
+		return double.TryParse(said, NumberStyles.Float, CultureInfo.InvariantCulture, out double back) && Math.Abs(back - v) < FlowTiny
+			? said
+			: v.ToString("0.######", CultureInfo.InvariantCulture);
+	}
+
+	/// <summary>
+	/// Reads a number field. Blank is the default, null; a point or a comma is the decimal mark; and
+	/// anything else — half typed, negative, no number at all — is refused, and the caller keeps what
+	/// it had rather than complaining.
+	/// </summary>
+	private static bool ReadNumber(string text, out double? value)
+	{
+		value = null;
+		string tidy = text.Trim().Replace(',', '.');
+		if (tidy.Length == 0) return true;
+		if (!double.TryParse(tidy, NumberStyles.Float, CultureInfo.InvariantCulture, out double read)) return false;
+		if (read < 0 || double.IsNaN(read) || double.IsInfinity(read)) return false;
+		value = read;
+		return true;
+	}
+
+	/// <summary>A caption and a number field on one line: the words take the width, the field sits at the end.</summary>
+	private static Control NumberRow(string caption, string tip, LineEdit field)
+	{
+		var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		row.AddThemeConstantOverride("separation", 8);
+		Label words = InspectorLook.Caption(caption);
+		words.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		words.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+		words.MouseFilter = MouseFilterEnum.Stop;
+		words.TooltipText = tip;
+		row.AddChild(words);
+		row.AddChild(field);
+		return row;
+	}
+
+	/// <summary>
+	/// Which kind of balance note this is, read off the words it is written in: a consumer served in
+	/// full is neither good news nor bad, a supply nobody takes is worth knowing, and everything else
+	/// the sheet writes is a shortage. The shapes are written in <see cref="WebBalance"/>.
+	/// </summary>
+	private static Color BalanceNoteColour(string note) =>
+		note.Contains("served in full", StringComparison.Ordinal) ? LabLook.Dim
+		: note.Contains("a day supplied,", StringComparison.Ordinal) ? LabLook.Note
+		: note.Contains("a day wanted,", StringComparison.Ordinal)
+		  || note.Contains("of what ", StringComparison.Ordinal)
+		  || note.Contains("nothing to fill it", StringComparison.Ordinal) ? LabLook.Error
+		: LabLook.Dim;
 
 	/// <summary>A full-width action button of the dock, a shade smaller than the top bar's.</summary>
 	private static Button InspectorAct(string text, string tip, Action pressed)

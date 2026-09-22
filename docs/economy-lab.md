@@ -101,6 +101,28 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
   element's icon sits before the recipe's title, and leads its **formula**: the
   recipe written in the goods' alchemical signs, which is where all this is
   meant to end up.
+- **Amounts, time and rates** (stage two, begun 2026-09-23). Every slot and
+  every output has an **amount** per run (one when unsaid); every recipe a
+  **time** in days per run (one when unsaid). The land gives a **supply** at the
+  sources, in units a day per good. The web has a population (**heads**), and
+  each consumer says what one head **wants** a day of whatever it accepts. From
+  these the lab reads a **balance**: what flows where in a day. A workshop runs
+  one batch at a time, so runs a day times days is workshops busy.
+- **The balance** is two passes over the web with its loops cut. First the wants
+  are *pulled* back from the consumers to the ground: each consumer asks for its
+  people's due, each recipe asks its slots for enough runs to make what is asked
+  of it, and a slot or a consumer that accepts several goods asks each for an
+  equal share. Then what is there is *pushed* forward: a good that cannot cover
+  what is asked of it is rationed among its askers in proportion, and a recipe
+  runs as far as its scarcest required slot allows and no further than it is
+  asked. An optional slot uses what it gets and never holds a recipe back; an
+  extraction (a site, no inputs) runs as often as it is asked. The result is a
+  rate per good (supplied, made, wanted, taken), per recipe (runs asked, runs
+  managed, workshops busy, the slot that held it back) and per consumer (wanted,
+  got), and notes that say where the web starves and where it piles up. Two
+  simplifications, on purpose for now: a good short in one place is not made up
+  from another that has it to spare (the equal share is not revised), and
+  nothing caps a recipe but its inputs (buildings and labour will).
 - A web can be **locked**: a reference copy that the lab will open, cut from and
   import from, and will not change or bin. To work on one, make a copy of it.
 - Nothing about a good's place in the web is stored. A **source** is a good
@@ -113,6 +135,7 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
 
 | File | What |
 |---|---|
+| `resources/economy/webs/hearth.json` | **The first rung of the ladder of skeletal economies:** a village that feeds, clothes and tools itself. Fifteen goods, ten recipes, three consumers, and numbers on all of them: amounts, times, supplies, 120 heads and their wants. Unlocked, on purpose: it is the web to fiddle with while watching the balance. `tools/make_hearth.py` is its baseline and puts the numbers back. |
 | `resources/economy/webs/starter.json` | A small one to learn on: the golem with its three hearts and bronze joints, bread and beer. 48 goods on the canvas, 29 recipes, two consumers; the full 286-good palette, so there is plenty to drag in. Opens first. |
 | `resources/economy/webs/full-ledger-reference.json` | **Locked.** Everything from the 21 September 2026 brainstorm as it was: 286 goods, 197 recipes, four consumers (Food, Intoxicants and physic, Clothing, Wares). The map every other ledger was cut from; it cannot be changed or binned. (The unlocked copy, `full-ledger`, and the `test` web were removed on 2026-09-23: New… → a copy of this one does the same.) |
 | `resources/economy/webs/tagged-ledger.json` | The full ledger reworked as a worked example: its either-or slots turned into tag slots, and varieties switched on (see the findings below). Its own palette. |
@@ -346,6 +369,21 @@ is where history becomes effect, and the stack counts in the inspector and the
 census are the numbers to watch. Not built: the warehouse itself, blending, and
 readers of properties (prices, fashions, uses). Those come with the next stage.
 
+## Hearth, and the ladder
+
+Stage two is built against skeletal economies rather than the ledger, so that
+the numbers can be judged by hand. **Hearth** is the first: grain to flour to
+bread (with salt), timber to planks and to charcoal, ironstone and fuel to iron
+to tools, wool to yarn to cloth to clothes; Food, Clothing and Works and arms;
+120 people who want a loaf a day, a garment every fifty days and a tool or a
+plank every twenty. As it ships the village is short of grain: the farms give
+100 a day and the mill asks 111, so the mill manages 10 runs of 11.1, the
+bakery 18 of 20 with nine ovens busy, and the people get 108 of 120 loaves;
+timber and ore pile up. Every one of those numbers is in `tools/make_hearth.py`
+and meant to be moved. Next on the ladder, not yet made: a market town (about
+40 goods, all five Needs, one graded chain) and an alchemist's town (about 80,
+the acids, Essence and the golem), and the ledger last.
+
 ## From a shell
 
 ```
@@ -353,6 +391,7 @@ godot --path . --headless scenes/dev/economy_lab.tscn -- selftest
 godot --path . scenes/dev/economy_lab.tscn -- shot web=tagged-ledger select=r.golem zoom=1 out=/tmp/lab.png
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake
 godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger
+godot --path . --headless scenes/dev/economy_lab.tscn -- balance web=hearth
 godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference
 ```
 
@@ -368,7 +407,9 @@ arranges every web that has no layout and rewrites every file through the lab's
 own writer; run it after any script in `tools/`. `census` counts, for every good
 of a web, how many varieties the web can make of it and how many stacks those
 fall into by property, then does the same with every slot passing variety on, so
-"does this blow up" has a number. `bench` (windowed) measures the lab on the
+"does this blow up" has a number. `balance` prints a web's balance sheet: the
+notes, the consumers, the recipes with their runs and workshops, the goods with
+what is supplied, made, wanted and taken. `bench` (windowed) measures the lab on the
 machine it runs on: frame times idle, panning, zooming and hovering over the big
 web, the cost of a selection and of a change, and writes a table to
 `user://economy_bench.txt`; run it on a machine where the lab feels slow and
@@ -419,9 +460,14 @@ three kinds never collide and a layout key needs no prefix.
         { "accepts": [ "bronze" ], "optional": true, "grants": [ "fit:bronze-joints" ] }
       ],
       "outputs": [ { "good": "golem" } ] },
-    { "id": "r.peat", "name": "Peat cutting", "element": "earth", "site": [ "soil:murkearth" ], "inputs": [], "outputs": [ { "good": "peat" } ] }
+    { "id": "r.peat", "name": "Peat cutting", "element": "earth", "site": [ "soil:murkearth" ], "inputs": [], "outputs": [ { "good": "peat" } ] },
+    { "id": "r.bread", "name": "Bakery", "element": "fire", "time": 0.5,
+      "inputs": [ { "accepts": [ "flour" ], "amount": 5, "passes": true }, { "accepts": [ "salt" ], "amount": 0.2 } ],
+      "outputs": [ { "good": "bread", "amount": 6 } ] }
   ],
-  "consumers": [ { "id": "c.food", "name": "Food", "note": "", "accepts": [ "#need:food" ] } ],
+  "consumers": [ { "id": "c.food", "name": "Food", "note": "", "accepts": [ "#need:food" ], "wants": 1 } ],
+  "heads": 120,
+  "supply": { "grain": 100, "slt": 5 },
   "layout": { "h2": [0, 0], "r.golem": [1480, 310] }
 }
 ```
@@ -436,9 +482,11 @@ tags are listed. A recipe's `site` lists the tags of the ground or the place it
 must stand on, any one of which will do. A good's `layers` say which part of its
 icon each variety namespace (or one whole tag) tints, through a `mask` sprite,
 or the whole icon when there is none. Every one of these is omitted when empty,
-so a file from the tagged ledger's day reads unchanged. Inputs and outputs are
-objects so that amounts can join them (`"amount": 2`) without breaking a file; a
-recipe will likewise take `time`, a building and labour.
+so a file from the tagged ledger's day reads unchanged. An input's or an
+output's `amount` is per run and one when absent; a recipe's `time` is days per
+run and one when absent; a consumer's `wants` is units a head a day; the web's
+`heads` is its population and `supply` what the land gives a day by good,
+written sorted. A recipe will likewise take a building and labour.
 
 ## The code
 
@@ -450,9 +498,11 @@ the canvas follows it; a gesture becomes a change to the web through
 
 ## What is next
 
-Not done here, in rough order of how soon they will be wanted: amounts on slots
-and outputs, and a recipe's time, building and labour; rates at the sources and
-the consumers, and a balance sheet per web; property tags read by consumers (what
+Not done here, in rough order of how soon they will be wanted: a recipe's
+building and labour, which is what will cap a recipe besides its inputs; the
+balance revised so that a good short in one place is made up from another
+that has it to spare; the next rungs of the ladder (a market town, an
+alchemist's town); property tags read by consumers (what
 a fashion pays for) and by uses (what a grade or a kind of work is worth), and
 the warehouse that stacks by them; icons of their own shape for the goods that
 do not vary yet (the redraw covered the ones that do); whole chains written out

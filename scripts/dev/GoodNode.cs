@@ -41,8 +41,12 @@ public partial class GoodNode : GraphNode
 		AddChild(_line);
 	}
 
-	/// <summary>Brings the node into line with the good and the web's reading of it; does nothing if nothing it shows has changed.</summary>
-	internal void Show(Good good, Texture2D? icon, WebAnalysis analysis)
+	/// <summary>
+	/// Brings the node into line with the good and the web's reading of it; does nothing if nothing
+	/// it shows has changed. With a <paramref name="balance"/>, the line under the name is the good's
+	/// day instead (supplied, made, wanted, taken), coloured by whether it is short or piling up.
+	/// </summary>
+	internal void Show(Good good, Texture2D? icon, WebAnalysis analysis, WebBalance? balance = null)
 	{
 		GoodId = good.Id;
 		GoodRole role = analysis.RoleOf(good.Id);
@@ -56,14 +60,21 @@ public partial class GoodNode : GraphNode
 		VarietySet varieties = analysis.VarietiesOf(good.Id);
 		if (!varieties.IsPlain) words.Add(varieties.Capped ? $"~{varieties.Count} varieties" : varieties.Count == 1 ? LabLook.VarietyName(varieties.Sets[0]) : $"{varieties.Count} varieties");
 		string line = string.Join(" · ", words);
+		Color ink = LabLook.Dim;
+		if (balance?.Good(good.Id) is { } flow && flow.State != WebBalance.FlowState.Idle)
+		{
+			line = LabLook.FlowLine(flow);
+			ink = LabLook.FlowColour(flow.State);
+		}
 
 		Color stage = LabLook.StageColour(good);
-		string shown = $"{good.Name}|{line}|{stage.ToHtml()}|{icon?.GetInstanceId()}|{good.Note}";
+		string shown = $"{good.Name}|{line}|{ink.ToHtml()}|{stage.ToHtml()}|{icon?.GetInstanceId()}|{good.Note}";
 		if (shown == _shown) return;
 		_shown = shown;
 
 		_name = good.Name;
 		_under = line.Length > 0 ? line : " ";
+		_line.AddThemeColorOverride("font_color", ink);
 		if (!_quiet)
 		{
 			Title = _name;

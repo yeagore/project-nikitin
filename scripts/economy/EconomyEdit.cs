@@ -62,6 +62,7 @@ public static class EconomyEdit
 	{
 		web.Goods.Remove(goodId);
 		web.Layout.Remove(goodId);
+		SetSupply(web, goodId, 0);
 		foreach (Recipe recipe in web.Recipes.ToList())
 		{
 			bool madeIt = recipe.Makes(goodId);
@@ -115,6 +116,19 @@ public static class EconomyEdit
 	{
 		RemoveGood(web, goodId);
 		web.Palette.Remove(goodId);
+	}
+
+	/// <summary>Sets what the land gives of a good, in units a day; 0 or less takes the entry away, and an empty map is dropped.</summary>
+	public static void SetSupply(EconomyWeb web, string goodId, double unitsADay)
+	{
+		if (unitsADay > 0)
+		{
+			web.Supply ??= new Dictionary<string, double>(StringComparer.Ordinal);
+			web.Supply[goodId] = unitsADay;
+			return;
+		}
+		web.Supply?.Remove(goodId);
+		if (web.Supply is { Count: 0 }) web.Supply = null;
 	}
 
 	// ---- between webs ----------------------------------------------------------
@@ -197,7 +211,12 @@ public static class EconomyEdit
 			if (!walked.Add(goodId)) continue;
 			if (to.Palette.Find(goodId) == null) ImportGoods(from, to, new[] { goodId });
 			if (to.Palette.Find(goodId) == null) continue;
-			if (AddGood(to, goodId)) Place(goodId);
+			if (AddGood(to, goodId))
+			{
+				Place(goodId);
+				// A source brings its rate along, unless the web it lands in has its own idea.
+				if (to.SupplyOf(goodId) <= 0 && from.SupplyOf(goodId) > 0) SetSupply(to, goodId, from.SupplyOf(goodId));
+			}
 
 			foreach (Recipe recipe in from.Recipes.Where(r => r.Makes(goodId)))
 			{
@@ -227,7 +246,7 @@ public static class EconomyEdit
 	/// </summary>
 	public static EconomyWeb Cut(EconomyWeb from, IEnumerable<string> goodIds, string id, string name, bool withOptional, bool leanPalette)
 	{
-		var web = new EconomyWeb { Id = id, Name = name };
+		var web = new EconomyWeb { Id = id, Name = name, Heads = from.Heads };
 		if (!leanPalette) ImportPalette(from, web);
 		CopyChain(from, web, goodIds, withOptional);
 

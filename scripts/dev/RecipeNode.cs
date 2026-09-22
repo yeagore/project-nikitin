@@ -46,10 +46,17 @@ public partial class RecipeNode : GraphNode
 		}
 	}
 
-	internal void Show(Recipe recipe, Palette palette, WebAnalysis analysis, SpriteBank sprites)
+	internal void Show(Recipe recipe, Palette palette, WebAnalysis analysis, SpriteBank sprites, WebBalance? balance = null)
 	{
 		RecipeId = recipe.Id;
 		string title = analysis.TitleOf(recipe);
+		string day = "";
+		if (balance?.Recipe(recipe.Id) is { } flow && flow.Desired > 0)
+		{
+			// The runs it manages a day, and the runs asked of it when it falls short.
+			day = flow.Runs + 1e-9 < flow.Desired ? $"{WebBalance.Num(flow.Runs)} of {WebBalance.Num(flow.Desired)} runs" : $"{WebBalance.Num(flow.Runs)} runs";
+			title += " · " + day;
+		}
 
 		var shown = new StringBuilder(title).Append('|').Append(recipe.Note).Append('|').Append(recipe.Element);
 		foreach (RecipeInput slot in recipe.Inputs)
@@ -67,7 +74,8 @@ public partial class RecipeNode : GraphNode
 		Element? element = Element.Find(recipe.Element);
 		_element.Texture = sprites.Element(recipe.Element);
 		_element.Visible = !_quiet && _element.Texture != null;
-		TooltipText = title + (element == null ? "" : $"\n{element.Name}: {element.Gloss}") + (recipe.Note.Length > 0 ? "\n" + recipe.Note : "");
+		TooltipText = analysis.TitleOf(recipe) + (element == null ? "" : $"\n{element.Name}: {element.Gloss}") + (recipe.Note.Length > 0 ? "\n" + recipe.Note : "")
+		              + (balance?.Recipe(recipe.Id) is { Desired: > 0 } f ? $"\n{day} a day, {WebBalance.Num(f.Days)} days each: {WebBalance.Num(f.Workshops)} workshops busy" : "");
 		Inputs = recipe.Inputs.Count;
 		Outputs = recipe.Outputs.Count;
 

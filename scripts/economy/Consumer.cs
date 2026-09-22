@@ -18,6 +18,12 @@ public sealed class Consumer
 	public string Note { get; set; } = "";
 	public List<string> Accepts { get; set; } = new();
 
+	/// <summary>How many units one head wants a day, of whatever the consumer accepts, all told; null means none. Read through <see cref="Rate"/>.</summary>
+	public double? Wants { get; set; }
+
+	[JsonIgnore]
+	public double Rate => Wants ?? 0;
+
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }
 }

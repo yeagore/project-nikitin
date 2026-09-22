@@ -1033,10 +1033,11 @@ for the economy, where goods are boxes you drag about, recipes sit between
 them, and lines say what is made of what. It has its own plainly written
 manual, `docs/economy-lab.md`, and its own check, a self-test that makes the
 edits a hand would make and confirms the lab kept up; it never touches the
-generator, so the checksum and the audit do not care about it. Two more runs
-answer two questions from a shell: a census says how many kinds of each good a
-web can make (and how many the market would tell apart), and a bench measures
-how fast the lab runs on whichever machine it is run on.
+generator, so the checksum and the audit do not care about it. Three more runs
+answer three questions from a shell: a census says how many kinds of each good a
+web can make (and how many the market would tell apart), a balance says how much
+of what the people want actually reaches them in a day and where the chain runs
+short, and a bench measures how fast the lab runs on whichever machine it is run on.
 
 ---
 

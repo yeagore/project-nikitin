@@ -285,9 +285,11 @@ specific page.
 - **The economy lab**, branch `economy-lab`: stage one, the editor of production
   webs and the data model under it: a palette per web, tag slots, tag namespaces
   with roles, varieties that ride from inputs to outputs, property tags they imply
-  and units stack by, sites a recipe stands on, icons recoloured by variety. Next:
-  amounts, time, buildings and labour on the recipes, rates at the sources and
-  consumers, a balance per web, and property tags read by prices and uses.
+  and units stack by, sites a recipe stands on, icons recoloured by variety.
+  Stage two, begun 2026-09-23 on the skeletal web Hearth: amounts and time on
+  the recipes, supply at the sources, wants at the consumers, a balance per
+  web. Next: buildings and labour, the next rungs of the ladder, and property
+  tags read by prices and uses.
 - What comes after on the terrain side, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.

@@ -33,6 +33,12 @@ public partial class EconomyLab : Control
 	internal Palette Palette => Web.Palette;
 
 	internal WebAnalysis Analysis { get; private set; } = null!;
+
+	/// <summary>The web's balance sheet, read again with the analysis after every change: what flows where in a day.</summary>
+	internal WebBalance Balance { get; private set; } = null!;
+
+	/// <summary>Whether the canvas shows the balance on its nodes (rates and states) rather than their reading.</summary>
+	private bool _showBalance = true;
 	internal SpriteBank Sprites { get; private set; } = null!;
 
 	/// <summary>The key of the node the inspector shows: a good's, a recipe's or a consumer's id, or null for the web itself.</summary>
@@ -70,11 +76,18 @@ public partial class EconomyLab : Control
 			GetTree().Quit();
 			return;
 		}
+		if (args.Contains("balance"))
+		{
+			BalanceSheet(args);
+			GetTree().Quit();
+			return;
+		}
 
 		Sprites = new SpriteBank(Store, () => Web.Palette);
 		if (!selfTest) _prefs.Load(PrefsPath);
 		_autosave = _prefs.GetValue("lab", "autosave", true).AsBool();
 		_trace = _prefs.GetValue("lab", "trace", true).AsBool();
+		_showBalance = _prefs.GetValue("lab", "balance", true).AsBool();
 		_uiScale = _prefs.GetValue("lab", "ui_scale", 0f).AsSingle();
 		_fullscreen = _prefs.GetValue("lab", "fullscreen", false).AsBool();
 		GetTree().AutoAcceptQuit = false;
@@ -293,6 +306,7 @@ public partial class EconomyLab : Control
 		_webDirty = true;
 		_saveIn = AutosaveAfter;
 		Analysis = WebAnalysis.Of(Web);
+		Balance = WebBalance.Of(Web, Analysis);
 		if (rebuild) ResetGraph();
 		else SyncGraph();
 		if (SelectedKey != null && !Exists(SelectedKey)) SelectedKey = null;
@@ -384,6 +398,7 @@ public partial class EconomyLab : Control
 		_webDirty = arranged;
 		_saveIn = arranged ? AutosaveAfter : -1;
 		Analysis = WebAnalysis.Of(Web);
+		Balance = WebBalance.Of(Web, Analysis);
 		_prefs.SetValue("lab", "web", id);
 
 		ResetGraph();
@@ -534,6 +549,7 @@ public partial class EconomyLab : Control
 	{
 		_prefs.SetValue("lab", "autosave", _autosave);
 		_prefs.SetValue("lab", "trace", _trace);
+		_prefs.SetValue("lab", "balance", _showBalance);
 		_prefs.SetValue("lab", "ui_scale", _uiScale);
 		_prefs.SetValue("lab", "fullscreen", _fullscreen);
 		_prefs.Save(PrefsPath);
