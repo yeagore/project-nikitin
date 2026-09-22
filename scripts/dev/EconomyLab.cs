@@ -64,6 +64,12 @@ public partial class EconomyLab : Control
 			GetTree().Quit();
 			return;
 		}
+		if (args.Contains("census"))
+		{
+			Census(args);
+			GetTree().Quit();
+			return;
+		}
 
 		Sprites = new SpriteBank(Store, () => Web.Palette);
 		if (!selfTest) _prefs.Load(PrefsPath);
@@ -105,6 +111,7 @@ public partial class EconomyLab : Control
 		}
 		else if (!Store.HasWeb(wanted)) wanted = Store.HasWeb("starter") ? "starter" : webs[0].Id;
 		OpenWeb(wanted);
+		BenchStart(args);
 
 		if (Embedded && !_shooting) Say(EmbeddedHint);
 
@@ -119,6 +126,7 @@ public partial class EconomyLab : Control
 
 	public override void _Process(double delta)
 	{
+		BenchTick(delta);
 		if (_saveIn >= 0 && (_saveIn -= delta) < 0 && _autosave && !_shooting) Save();
 		TickBar();
 
@@ -134,6 +142,11 @@ public partial class EconomyLab : Control
 			GetTree().Quit();
 		}
 	}
+
+	// The bench (EconomyLab.Bench.cs) measures the lab from a shell; without that file these calls vanish.
+	partial void BenchStart(string[] args);
+
+	partial void BenchTick(double delta);
 
 	public override void _Notification(int what)
 	{

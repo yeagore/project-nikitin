@@ -469,12 +469,14 @@ numbers it found on the Mac are in `CLAUDE.md` under Rendering.
 
 Not a terrain scene: an editor of production webs (goods, recipes, tags,
 consumers). Its manual and its data format are **`docs/economy-lab.md`**. From a
-shell it takes three runs, all on the scene itself:
+shell it takes five runs, all on the scene itself:
 
 ```
 godot --path . --headless scenes/dev/economy_lab.tscn -- selftest
 godot --path . scenes/dev/economy_lab.tscn -- shot web=starter select=r.golem zoom=1 out=/tmp/lab.png
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake
+godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger
+godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference
 ```
 
 `selftest` copies `resources/economy/` to a scratch folder under `user://`,
@@ -483,4 +485,8 @@ calls), checks that the web, the canvas and undo agree after each, and exits 1
 if any check failed; it is the lab's regression gate and takes a few seconds.
 `shot` is windowed, saves a PNG and quits, and never writes to the data. `bake`
 arranges every web that has no layout and rewrites every file through the lab's
-writer.
+writer. `census` counts a web's varieties and the stacks they fall into, and
+what the count would be with every slot passing variety on. `bench` is windowed
+and measures the lab on the machine it runs on (frame times over the big web,
+the cost of a selection and of a change), writing a table to
+`user://economy_bench.txt`; it is how a machine where the lab feels slow reports.

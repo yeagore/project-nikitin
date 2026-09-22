@@ -25,7 +25,8 @@ public partial class RecipeNode : GraphNode
 	/// <summary>Output ports below this index are outputs; the port at it is the open one.</summary>
 	public int Outputs { get; private set; }
 
-	private string _shown = "";
+	private string _shown = "", _name = "";
+	private bool _quiet;
 	private readonly TextureRect _element;
 
 	public RecipeNode()
@@ -61,10 +62,11 @@ public partial class RecipeNode : GraphNode
 		if (shown.ToString() == _shown) return;
 		_shown = shown.ToString();
 
-		Title = title;
+		_name = title;
+		if (!_quiet) Title = title;
 		Element? element = Element.Find(recipe.Element);
 		_element.Texture = sprites.Element(recipe.Element);
-		_element.Visible = _element.Texture != null;
+		_element.Visible = !_quiet && _element.Texture != null;
 		TooltipText = title + (element == null ? "" : $"\n{element.Name}: {element.Gloss}") + (recipe.Note.Length > 0 ? "\n" + recipe.Note : "");
 		Inputs = recipe.Inputs.Count;
 		Outputs = recipe.Outputs.Count;
@@ -103,6 +105,35 @@ public partial class RecipeNode : GraphNode
 			else if (i == Outputs) row.AddChild(LabLook.Text("output +", 11, LabLook.Faint));
 
 			SetSlot(i, i <= Inputs, LabLook.Stuff, left, i <= Outputs, LabLook.Product, i < Outputs ? LabLook.ProductPort : LabLook.Faint);
+		}
+		if (_quiet) QuietRows();
+	}
+
+	/// <summary>
+	/// Zoomed far out none of this reads, so the rows empty out: their words and their icons stop
+	/// being drawn, and with them the greater part of the canvas's work. The rows themselves stay,
+	/// each held at its 20 pixels, because a row is where a port hangs: lose the row and the wires
+	/// on it jump. Zooming back in fills them again.
+	/// </summary>
+	internal void Quiet(bool on)
+	{
+		if (_quiet == on) return;
+		// Only a node that has been laid out knows the height its head must hold.
+		if (on && Size.Y <= 1f) return;
+		_quiet = on;
+		WebGraph.KeepHeight(GetTitlebarHBox());
+		Title = on ? "" : _name;
+		_element.Visible = !on && _element.Texture != null;
+		QuietRows();
+	}
+
+	private void QuietRows()
+	{
+		foreach (Node child in GetChildren())
+		{
+			if (child is not HBoxContainer row) continue;
+			foreach (Node inner in row.GetChildren())
+				if (inner is Control item) item.Visible = !_quiet;
 		}
 	}
 

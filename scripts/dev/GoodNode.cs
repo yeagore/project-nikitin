@@ -17,6 +17,8 @@ public partial class GoodNode : GraphNode
 	private readonly TextureRect _icon;
 	private readonly Label _line;
 	private string _shown = "";
+	private string _name = "", _under = " ";
+	private bool _quiet;
 
 	public GoodNode()
 	{
@@ -60,11 +62,35 @@ public partial class GoodNode : GraphNode
 		if (shown == _shown) return;
 		_shown = shown;
 
-		Title = good.Name;
+		_name = good.Name;
+		_under = line.Length > 0 ? line : " ";
+		if (!_quiet)
+		{
+			Title = _name;
+			_line.Text = _under;
+		}
 		_icon.Texture = icon;
-		_line.Text = line.Length > 0 ? line : " ";
 		TooltipText = good.Note.Length > 0 ? $"{good.Name}\n{good.Note}" : good.Name;
 		LabLook.Dress(this, role == GoodRole.Loose ? stage.Darkened(0.35f) : stage);
 		SetSlot(0, true, LabLook.Product, LabLook.ProductPort, true, LabLook.Stuff, stage.Lightened(0.35f));
+	}
+
+	/// <summary>
+	/// Zoomed far out the writing is a smudge, so the node goes quiet: no icon, no name, no line
+	/// under it. The head and the line keep the height they had, so the port and the node's box stay
+	/// exactly where they were and no wire moves; zooming back in puts every word back.
+	/// </summary>
+	internal void Quiet(bool on)
+	{
+		if (_quiet == on) return;
+		// Only a node that has been laid out knows the heights it must hold; one made a moment ago
+		// is left alone and quietened at the next turn of the zoom.
+		if (on && Size.Y <= 1f) return;
+		_quiet = on;
+		WebGraph.KeepHeight(GetTitlebarHBox());
+		WebGraph.KeepHeight(_line);
+		_icon.Visible = !on;
+		Title = on ? "" : _name;
+		_line.Text = on ? " " : _under;
 	}
 }

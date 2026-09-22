@@ -53,13 +53,18 @@ public sealed class VarietySet
 	internal sealed class Builder
 	{
 		private readonly Dictionary<string, IReadOnlyList<string>> _sets = new(StringComparer.Ordinal);
+		private readonly Func<IEnumerable<string>, IEnumerable<string>>? _shape;
 		private long _estimate;
 		private bool _capped;
+
+		/// <param name="shape">What every set of tags is turned into before it is kept: a view of the varieties (by property, by some namespaces), or null for the tags as they are.</param>
+		public Builder(Func<IEnumerable<string>, IEnumerable<string>>? shape = null) => _shape = shape;
 
 		public int Count => _sets.Count;
 
 		public void Add(IEnumerable<string> tags)
 		{
+			if (_shape != null) tags = _shape(tags);
 			List<string> sorted = tags.Distinct().OrderBy(t => t, StringComparer.Ordinal).ToList();
 			string key = string.Join("\n", sorted);
 			if (_sets.ContainsKey(key)) return;
@@ -80,7 +85,7 @@ public sealed class VarietySet
 		/// <summary>Every variety here joined with every variety there; past the cap, only their number.</summary>
 		public Builder Times(Builder other)
 		{
-			var product = new Builder();
+			var product = new Builder(_shape);
 			foreach (IReadOnlyList<string> a in _sets.Values)
 			{
 				foreach (IReadOnlyList<string> b in other._sets.Values)

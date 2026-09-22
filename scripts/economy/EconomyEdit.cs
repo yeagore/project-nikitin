@@ -252,7 +252,7 @@ public static class EconomyEdit
 
 	// ---- tags ----------------------------------------------------------------
 
-	/// <summary>Renames a tag everywhere in the web: on its goods and their varieties, in the tag list, and wherever a slot or a consumer accepts it.</summary>
+	/// <summary>Renames a tag everywhere in the web: on its goods and their varieties, in the tag list, wherever a slot or a consumer accepts it, and wherever a slot grants it, a recipe's site asks for it, a variety tag implies it or an icon layer answers to it.</summary>
 	public static void RenameTag(EconomyWeb web, string from, string to)
 	{
 		foreach (List<string> tags in TagLists(web.Palette)) Swap(tags, from, to);
@@ -263,7 +263,10 @@ public static class EconomyEdit
 			else def.Id = to;
 		}
 		foreach (List<string> accepts in AcceptLists(web)) Swap(accepts, Acceptor.ForTag(from), Acceptor.ForTag(to));
-		foreach (List<string> grants in GrantLists(web)) Swap(grants, from, to);
+		foreach (List<string> named in NamedLists(web)) Swap(named, from, to);
+		foreach (IconLayer layer in web.Palette.Goods.Where(g => g.Layers != null).SelectMany(g => g.Layers!))
+			if (layer.Match == from) layer.Match = to;
+		web.Palette.Reindex();
 	}
 
 	/// <summary>Takes a tag off every good and variety, out of the tag list, and out of every slot and consumer that accepted it.</summary>
@@ -277,6 +280,22 @@ public static class EconomyEdit
 			slot.Grants!.Remove(tag);
 			if (slot.Grants.Count == 0) slot.Grants = null;
 		}
+		foreach (Recipe recipe in web.Recipes.Where(r => r.Site != null))
+		{
+			recipe.Site!.Remove(tag);
+			if (recipe.Site.Count == 0) recipe.Site = null;
+		}
+		foreach (TagDef def in web.Palette.Tags.Where(t => t.Implies != null))
+		{
+			def.Implies!.Remove(tag);
+			if (def.Implies.Count == 0) def.Implies = null;
+		}
+		foreach (Good good in web.Palette.Goods.Where(g => g.Layers != null))
+		{
+			good.Layers!.RemoveAll(l => l.Match == tag);
+			if (good.Layers.Count == 0) good.Layers = null;
+		}
+		web.Palette.Reindex();
 	}
 
 	/// <summary>Renames a namespace: its entry, and the prefix of every tag in it, wherever the tag appears.</summary>
@@ -284,17 +303,21 @@ public static class EconomyEdit
 	{
 		if (from == to || to.Length == 0) return;
 		string prefix = from + ":";
-		List<string> tags = web.Palette.TagsInUse().Select(t => t.Tag).Concat(GrantLists(web).SelectMany(g => g)).Distinct()
+		List<string> tags = web.Palette.TagsInUse().Select(t => t.Tag).Concat(NamedLists(web).SelectMany(g => g)).Distinct()
 			.Where(t => t.StartsWith(prefix, StringComparison.Ordinal)).ToList();
 		foreach (string acceptor in AcceptLists(web).SelectMany(a => a).Where(Acceptor.IsTag).ToList())
 			if (Acceptor.TagOf(acceptor).StartsWith(prefix, StringComparison.Ordinal) && !tags.Contains(Acceptor.TagOf(acceptor)))
 				tags.Add(Acceptor.TagOf(acceptor));
 		foreach (string tag in tags) RenameTag(web, tag, to + ":" + tag[prefix.Length..]);
 
+		foreach (IconLayer layer in web.Palette.Goods.Where(g => g.Layers != null).SelectMany(g => g.Layers!))
+			if (layer.Match == from) layer.Match = to;
+
 		TagNamespace? ns = web.Palette.Namespace(from);
 		if (ns == null) return;
 		if (web.Palette.Namespace(to) != null) web.Palette.TagNamespaces.Remove(ns);
 		else ns.Id = to;
+		web.Palette.Reindex();
 	}
 
 	/// <summary>The namespace's entry, made if the palette has none yet.</summary>
@@ -317,6 +340,15 @@ public static class EconomyEdit
 
 	private static IEnumerable<List<string>> GrantLists(EconomyWeb web) =>
 		web.Recipes.SelectMany(r => r.Inputs).Where(i => i.Grants != null).Select(i => i.Grants!);
+
+	/// <summary>The lists that name tags plainly, without the acceptor's hash: what slots grant, where recipes must stand, what variety tags imply.</summary>
+	private static IEnumerable<List<string>> NamedLists(EconomyWeb web) =>
+		GrantLists(web)
+			.Concat(web.Recipes.Where(r => r.Site != null).Select(r => r.Site!))
+			.Concat(web.Palette.Tags.Where(t => t.Implies != null).Select(t => t.Implies!));
+
+	/// <summary>True if any recipe of the web must stand on the tag.</summary>
+	public static bool SitesTag(EconomyWeb web, string tag) => web.Recipes.Any(r => r.SiteList.Contains(tag));
 
 	/// <summary>True if any slot of the web grants the tag.</summary>
 	public static bool GrantsTag(EconomyWeb web, string tag) => GrantLists(web).Any(g => g.Contains(tag));

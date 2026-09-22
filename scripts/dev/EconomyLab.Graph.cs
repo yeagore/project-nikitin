@@ -24,17 +24,42 @@ public partial class EconomyLab
 	private readonly HashSet<(string From, int FromPort, string To, int ToPort)> _wired = new();
 	private int _serial, _cascade;
 
+	/// <summary>Below this zoom the writing inside a node is a smudge, so the nodes go quiet; 0 turns it off.</summary>
+	internal float LodZoom = DefaultLodZoom;
+
+	/// <summary>
+	/// Off. Quietening the nodes halves the canvas's draw calls when the whole ledger is in view
+	/// (5281 to 2478) and cuts what the renderer carries by two thirds, but on this Mac's Metal that
+	/// buys no milliseconds, and crossing the threshold costs a hitch of its own. It is the one lever
+	/// that should tell on Direct3D 12, where a draw call is dearer, and that is untested; to weigh
+	/// it there, run the bench twice with and without <c>lod=0.45</c> and set this to 0.45 if it wins.
+	/// </summary>
+	private const float DefaultLodZoom = 0f;
+
+	private bool _quietNodes;
+
 	/// <summary>Set while the lab itself marks the selection, so the canvas's signals are not taken for clicks.</summary>
 	private bool _quiet;
 
 	private WebGraph BuildGraph()
 	{
+		// An editor has no business redrawing a still picture sixty times a second, and this canvas is
+		// dear to draw: in this mode the engine draws only when something has changed, which is most of
+		// the lab's idle cost gone. A shot needs a frame drawn to grab and the self-test runs headless,
+		// so both keep it off; the bench sets it itself.
+		string[] args = OS.GetCmdlineUserArgs();
+		OS.LowProcessorUsageMode = !args.Contains("shot") && !args.Contains("selftest") && !args.Contains("bake") && !args.Contains("bench");
+
 		_graph = new WebGraph
 		{
 			SizeFlagsHorizontal = SizeFlags.ExpandFill,
 			SizeFlagsVertical = SizeFlags.ExpandFill,
 			RightDisconnects = true,
-			MinimapEnabled = true,
+			// The minimap is the dearest thing on the canvas by a street: it redraws the whole web,
+			// every node and every wire, on every scroll and every zoom, and on the full ledger that
+			// is nine draw calls in ten and half the time a pan costs. It is off, and GraphEdit's own
+			// button in the corner puts it back for whoever wants it on a small web.
+			MinimapEnabled = false,
 			ShowArrangeButton = false,
 			ZoomMin = 0.08f,
 			ZoomMax = 2f,
@@ -59,6 +84,7 @@ public partial class EconomyLab
 		_graph.PopupRequest += CanvasMenu;
 		_graph.EndNodeMove += NodesMoved;
 		_graph.GoodsDropped += DropGoods;
+		_graph.ZoomChanged += QuietNodes;
 		_graph.NodeSelected += node =>
 		{
 			if (!_quiet) Selected(KeyOf(node.Name));
@@ -167,12 +193,36 @@ public partial class EconomyLab
 		node.PositionOffset = new Vector2(spot.X, spot.Y);
 		node.GuiInput += @event => NodeInput(key, @event);
 		_graph.AddChild(node);
+		// A node cannot hold a height it has not been given yet, so it is quietened next frame.
+		if (_quietNodes) _graph.RestateZoom();
 		_nodes[key] = node;
 		_keyOfName[node.Name.ToString()] = key;
 		return node;
 	}
 
 	private static Spot SpotOf(GraphNode node) => new((int)MathF.Round(node.PositionOffset.X), (int)MathF.Round(node.PositionOffset.Y));
+
+	/// <summary>
+	/// Zoomed far enough out that no word in a node can be read, the nodes stop drawing their words
+	/// and their icons: the great majority of what the canvas puts on screen, for nothing anyone can
+	/// see. Each node holds its size while it is quiet, so nothing moves and no wire shifts; back
+	/// above the threshold every node fills itself in again.
+	/// </summary>
+	private void QuietNodes(float zoom)
+	{
+		_quietNodes = LodZoom > 0f && zoom < LodZoom;
+		foreach (GraphNode node in _nodes.Values) Quieten(node, _quietNodes);
+	}
+
+	private static void Quieten(GraphNode node, bool quiet)
+	{
+		switch (node)
+		{
+			case GoodNode good: good.Quiet(quiet); break;
+			case RecipeNode recipe: recipe.Quiet(quiet); break;
+			case ConsumerNode consumer: consumer.Quiet(quiet); break;
+		}
+	}
 
 	private void NodesMoved()
 	{

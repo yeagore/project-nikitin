@@ -29,6 +29,8 @@ EconomyLab.Palette.cs      Left dock: the web's palette, the Tags tab with names
 EconomyLab.Import.cs       Import goods or a whole palette from another web.
 EconomyLab.Inspector.cs    Right dock: the selected good, recipe, consumer, or the web.
 EconomyLab.SelfTest.cs     -- selftest.
+EconomyLab.Census.cs       -- census: varieties and stacks per good, and the same with every slot passing.
+EconomyLab.Bench.cs        -- bench: frame times and costs on this machine, for the laggy-on-Windows question.
 GoodNode.cs, RecipeNode.cs, ConsumerNode.cs, WebGraph.cs
                            The three node kinds and the canvas (a GraphEdit).
 PickPopup.cs, IconPickPopup.cs, PaletteTree.cs, InspectorLook.cs, LabLook.cs, SpriteBank.cs
@@ -57,11 +59,16 @@ House rules:
   the canvas and the inspector back; `Save` and Bin skip it.
 - A pop-up opened in the first frames of a shell run is closed again by the
   window's focus changes; `show=` waits (`ShowForShot`).
+- Icons follow the data: `SpriteBank.Compose(good, tags)` is the icon of a unit
+  carrying those tags (the good's layers tint their masks with the tags' colours,
+  the rest go to pips). A plain stack shows `Get(good.Icon)`, the same object.
 
 ```
 godot --path . --headless scenes/dev/economy_lab.tscn -- selftest    # the regression gate: links, tags, undo, palettes, import, varieties, files, canvas
 godot --path . scenes/dev/economy_lab.tscn -- shot web=tagged-ledger select=r.golem zoom=1 out=/tmp/lab.png   # windowed; never writes data
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake        # arrange webs with no layout, rewrite every file in the lab's format
+godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger   # how many varieties and stacks; never writes
+godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference        # windowed; writes user://economy_bench.txt only
 ```
 
 `shot` also takes `show=help|find|newweb|newgood|issues`, `tags`, `tags=ns:<namespace>`, `import` and `window=WxH`.

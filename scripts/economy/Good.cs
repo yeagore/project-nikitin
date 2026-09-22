@@ -32,6 +32,9 @@ public sealed class Good
 	/// <summary>Varieties authored by hand (rye and wheat of grain), or null for a good that has none. Read through <see cref="VarietyList"/>.</summary>
 	public List<Variety>? Varieties { get; set; }
 
+	/// <summary>How varieties show on the icon, first to last; null leaves it to the lab (the first variety namespace tints the whole icon).</summary>
+	public List<IconLayer>? Layers { get; set; }
+
 	/// <summary>Fields this build does not know, kept so a load and a save lose nothing.</summary>
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }

@@ -9,7 +9,9 @@ namespace ProjectNikitin.Dev;
 
 /// <summary>
 /// The left dock: the open web's palette of goods to drag onto the canvas, and a tab of its tags
-/// and their namespaces. Everything here belongs to the open web and to no other. Both tabs
+/// and their namespaces — the part each plays, the colour and symbol a tag wears, what a variety
+/// tag implies and what a property tag is implied by, and where a place tag is stood on.
+/// Everything here belongs to the open web and to no other. Both tabs
 /// read the model afresh on every <see cref="RefreshPalette"/>, but a tab only rebuilds its
 /// tree when a signature of what it shows has actually changed, so a keystroke anywhere else
 /// in the lab (the inspector included) costs this dock almost nothing.
@@ -39,15 +41,32 @@ public partial class EconomyLab
 	private TextEdit _palTagNote = null!;
 	private string? _palSelectedTag, _palPendingTagSelect;
 
+	// The colour, the symbol, and what a variety tag implies or a property tag is implied by.
+	private TextureRect _palTagSign = null!, _palNsSign = null!;
+	private ColorPickerButton _palTagColour = null!;
+	private Control _palTagImpliesBox = null!;
+	private HFlowContainer _palTagImplies = null!;
+	private Label _palTagImpliedBy = null!, _palTagScale = null!, _palTagSites = null!;
+
+	/// <summary>Set while the detail panes are being filled from the model, so a widget's own signal is not taken for an edit.</summary>
+	private bool _palTagQuiet;
+
 	/// <summary>A namespace row's metadata is its id behind this mark, which no tidy tag can start with.</summary>
 	private const char NsMark = '@';
 
-	private static readonly string[] RoleWords = { "describes (no role)", "core: what slots and consumers accept", "variety: rides from inputs to outputs" };
+	private static readonly string[] RoleWords =
+	{
+		"describes (no role)",
+		"core: what slots and consumers accept",
+		"variety: rides from inputs to outputs",
+		"property: what units stack by",
+	};
 
 	private Control _palNsDetail = null!;
 	private Label _palNsCaption = null!, _palNsInfo = null!;
 	private TextEdit _palNsNote = null!;
 	private OptionButton _palNsRole = null!, _palNewNsRole = null!;
+	private CheckBox _palNsScale = null!;
 	private Button _palNsDelete = null!;
 	private string? _palSelectedNs, _palPendingNsSelect;
 	private readonly Dictionary<string, TreeItem> _palNsItems = new(StringComparer.Ordinal);
@@ -75,7 +94,8 @@ public partial class EconomyLab
 		BuildImport();
 
 		// Standing hooks for looking at the dock from a shell: `tags` opens the Tags tab on a tag,
-		// `tags=ns:kind` on a namespace, `import` opens the Import dialog once the window has settled.
+		// `tags=ns:kind` on a namespace, `tags=heart:bismuth` on that tag, `import` opens the
+		// Import dialog once the window has settled.
 		foreach (string arg in OS.GetCmdlineUserArgs())
 		{
 			if (arg == "tags")
@@ -87,6 +107,11 @@ public partial class EconomyLab
 			{
 				tabs.CurrentTab = 1;
 				_palPendingNsSelect = arg["tags=ns:".Length..];
+			}
+			else if (arg.StartsWith("tags="))
+			{
+				tabs.CurrentTab = 1;
+				_palPendingTagSelect = arg["tags=".Length..];
 			}
 			else if (arg == "import") GetTree().CreateTimer(0.6).Timeout += AskImport;
 		}
@@ -220,8 +245,49 @@ public partial class EconomyLab
 		var box = new VBoxContainer { Visible = false };
 		box.AddThemeConstantOverride("separation", 4);
 
-		_palTagCaption = LabLook.Text("", 14, LabLook.Ink);
-		box.AddChild(_palTagCaption);
+		// The symbol beside the name: the tag's own, or its namespace's, in the tag's own colour.
+		var head = new HBoxContainer();
+		head.AddThemeConstantOverride("separation", 6);
+		box.AddChild(head);
+		_palTagSign = LabLook.Sprite(null, 16);
+		head.AddChild(_palTagSign);
+		_palTagCaption = LabLook.Text("", 14, LabLook.Ink, trim: true);
+		_palTagCaption.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		head.AddChild(_palTagCaption);
+
+		var colours = new HBoxContainer();
+		colours.AddThemeConstantOverride("separation", 4);
+		box.AddChild(colours);
+		_palTagColour = new ColorPickerButton
+		{
+			EditAlpha = false,
+			CustomMinimumSize = new Vector2(0, 22),
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			TooltipText = "The hue a unit of this variety takes: the tint of the tag's symbol, and of the part of an icon a layer gives it.",
+		};
+		_palTagColour.ColorChanged += colour =>
+		{
+			if (_palTagQuiet || _palSelectedTag == null) return;
+			string tag = _palSelectedTag, html = "#" + colour.ToHtml(false).ToUpperInvariant();
+			TagChange($"coloured {tag} {html}", () => EnsureTag(tag).Colour = html, merge: "tag.colour:" + tag, keepInspector: true);
+		};
+		// The icons are composed from the colours, so the other dock is only rebuilt once the picker
+		// is put away — and the pane itself is refilled then, since a locked web refused every
+		// change made while it was open and the swatch is still showing what was asked for.
+		_palTagColour.PopupClosed += () =>
+		{
+			RefreshTagDetail();
+			RefreshInspector();
+		};
+		colours.AddChild(_palTagColour);
+		colours.AddChild(InspectorLook.Small("no colour", "Take the tag's colour off: it tints nothing and shows no pip.", () =>
+		{
+			if (_palSelectedTag is not { } tag) return;
+			TagChange($"took the colour off {tag}", () =>
+			{
+				if (Palette.Tag(tag) is { } def) def.Colour = null;
+			});
+		}));
 
 		_palTagNote = new TextEdit
 		{
@@ -246,6 +312,30 @@ public partial class EconomyLab
 		_palTagCarriers.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		box.AddChild(_palTagCarriers);
 
+		// What a variety tag implies: the property tags every unit of it has, and so stacks by.
+		var implies = new VBoxContainer { Visible = false };
+		implies.AddThemeConstantOverride("separation", 2);
+		Label impliesCaption = InspectorLook.Caption("Implies");
+		impliesCaption.MouseFilter = MouseFilterEnum.Stop;
+		impliesCaption.TooltipText = "The property tags every unit of this variety carries. Units stack by them, so seventeen soils can come to five stacks.";
+		implies.AddChild(impliesCaption);
+		_palTagImplies = InspectorLook.Flow();
+		implies.AddChild(_palTagImplies);
+		_palTagImpliesBox = implies;
+		box.AddChild(implies);
+
+		_palTagImpliedBy = LabLook.Text("", 12, LabLook.Dim);
+		_palTagImpliedBy.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		box.AddChild(_palTagImpliedBy);
+
+		_palTagScale = LabLook.Text("", 12, LabLook.Dim);
+		_palTagScale.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		box.AddChild(_palTagScale);
+
+		_palTagSites = LabLook.Text("", 12, LabLook.Dim);
+		_palTagSites.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		box.AddChild(_palTagSites);
+
 		// A flow rather than a row: three buttons abreast made this tab wider than the other, and the dock jumped.
 		var buttons = new HFlowContainer();
 		buttons.AddThemeConstantOverride("h_separation", 4);
@@ -263,8 +353,14 @@ public partial class EconomyLab
 		var box = new VBoxContainer { Visible = false };
 		box.AddThemeConstantOverride("separation", 4);
 
-		_palNsCaption = LabLook.Text("", 14, LabLook.Ink);
-		box.AddChild(_palNsCaption);
+		var head = new HBoxContainer();
+		head.AddThemeConstantOverride("separation", 6);
+		box.AddChild(head);
+		_palNsSign = LabLook.Sprite(null, 16);
+		head.AddChild(_palNsSign);
+		_palNsCaption = LabLook.Text("", 14, LabLook.Ink, trim: true);
+		_palNsCaption.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		head.AddChild(_palNsCaption);
 
 		_palNsNote = new TextEdit
 		{
@@ -284,17 +380,35 @@ public partial class EconomyLab
 		{
 			FitToLongestItem = false,
 			ClipText = true,
-			TooltipText = "Core tags say what a good is: they are what slots and consumers accept. Variety tags say what is particular about it, and ride from an input to the output through any slot that passes variety on. The rest only describe.",
+			TooltipText = "Core tags say what a good is: they are what slots and consumers accept. Variety tags say what is particular about it, and ride from an input to the output through any slot that passes variety on. Property tags are what variety tags imply, and what units stack by. The rest only describe.",
 		};
 		foreach (string word in RoleWords) _palNsRole.AddItem(word);
 		_palNsRole.ItemSelected += index =>
 		{
-			if (_palSelectedNs == null) return;
+			if (_palTagQuiet || _palSelectedNs == null) return;
 			string id = _palSelectedNs;
 			string? role = RoleAt((int)index);
-			Change($"the namespace {id} is now {role ?? "plain"}", () => EconomyEdit.EnsureNamespace(Palette, id).Role = role);
+			TagChange($"the namespace {id} is now {role ?? "plain"}", () => EconomyEdit.EnsureNamespace(Palette, id).Role = role);
 		};
 		box.AddChild(_palNsRole);
+
+		// Only a property namespace can be a scale, so the switch shows only when one is selected.
+		_palNsScale = new CheckBox
+		{
+			Text = "a scale: a unit keeps the lowest",
+			FocusMode = FocusModeEnum.None,
+			Visible = false,
+			TooltipText = "The tags of this namespace are a scale, in the order the palette lists them, of which a unit keeps only the lowest it was given: fine wool in a common dye is common cloth.",
+		};
+		_palNsScale.AddThemeFontSizeOverride("font_size", 12);
+		_palNsScale.Toggled += on =>
+		{
+			if (_palTagQuiet || _palSelectedNs == null) return;
+			string id = _palSelectedNs;
+			TagChange(on ? $"the namespace {id} is a scale" : $"the namespace {id} is no longer a scale",
+				() => EconomyEdit.EnsureNamespace(Palette, id).Combine = on ? TagNamespace.Lowest : null);
+		};
+		box.AddChild(_palNsScale);
 
 		_palNsInfo = LabLook.Text("", 12, LabLook.Dim);
 		_palNsInfo.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -314,10 +428,12 @@ public partial class EconomyLab
 	{
 		1 => TagNamespace.Core,
 		2 => TagNamespace.Variety,
+		3 => TagNamespace.Property,
 		_ => null,
 	};
 
-	private static int RoleIndex(string? role) => role == TagNamespace.Core ? 1 : role == TagNamespace.Variety ? 2 : 0;
+	private static int RoleIndex(string? role) =>
+		role == TagNamespace.Core ? 1 : role == TagNamespace.Variety ? 2 : role == TagNamespace.Property ? 3 : 0;
 
 	private void BuildPaletteDialogs()
 	{
@@ -609,17 +725,40 @@ public partial class EconomyLab
 	{
 		var sb = new StringBuilder();
 		sb.Append(Web.Id).Append('|');
-		foreach (TagDef def in Palette.Tags) sb.Append(def.Id).Append('=').Append(def.Note).Append(';');
+		foreach (TagDef def in Palette.Tags)
+			sb.Append(def.Id).Append('=').Append(def.Note).Append('=').Append(def.Colour).Append('=').Append(IconKey(def.Sign))
+				.Append('=').Append(def.Implies == null ? "" : string.Join(" ", def.Implies)).Append(';');
 		sb.Append('|');
-		foreach (TagNamespace ns in Palette.TagNamespaces) sb.Append(ns.Id).Append('=').Append(ns.Note).Append('=').Append(ns.Role).Append(';');
+		foreach (TagNamespace ns in Palette.TagNamespaces)
+			sb.Append(ns.Id).Append('=').Append(ns.Note).Append('=').Append(ns.Role).Append('=').Append(ns.Combine)
+				.Append('=').Append(IconKey(ns.Sign)).Append(';');
 		sb.Append('|');
 		foreach (Good g in Palette.Goods) sb.Append(g.Id).Append('=').Append(g.Name).Append(':').Append(string.Join(" ", g.AllTags())).Append(';');
 		sb.Append('|');
 		foreach (Recipe r in Web.Recipes)
+		{
+			sb.Append(r.Id).Append('@').Append(string.Join(",", r.SiteList)).Append(';');
 			foreach (RecipeInput slot in r.Inputs)
 				sb.Append(string.Join(",", slot.Accepts)).Append(';');
+		}
 		foreach (Consumer c in Web.Consumers) sb.Append(string.Join(",", c.Accepts)).Append(';');
 		return sb.ToString();
+	}
+
+	/// <summary>A plain white square, modulated to a tag's colour to make a swatch in the tag tree.</summary>
+	private static ImageTexture? _swatch;
+
+	private static ImageTexture Swatch
+	{
+		get
+		{
+			if (_swatch != null) return _swatch;
+			// 16 px square, the size of everything else here: a tree scales an icon down to the
+			// width it is given but never up, so a single pixel would draw as a single pixel.
+			Image image = Image.CreateEmpty(16, 16, false, Image.Format.Rgba8);
+			image.Fill(Colors.White);
+			return _swatch = ImageTexture.CreateFromImage(image);
+		}
 	}
 
 	/// <summary>Rebuilds the tag tree, grouped by namespace, and restores the selection and the scroll.</summary>
@@ -652,12 +791,34 @@ public partial class EconomyLab
 			TreeItem item = _palTagTree.CreateItem(parent);
 			item.SetText(0, $"{LabLook.Short(tag)} ({count})");
 			item.SetMetadata(0, tag);
+
+			// A coloured tag wears its colour in front of its name: its symbol tinted, or a plain swatch.
+			bool tinted = SpriteBank.TryColour(Palette.ColourOf(tag), out Color hue);
+			Texture2D? symbol = Sprites.Get(Palette.SignOf(tag));
+			if (symbol != null)
+			{
+				item.SetIcon(0, symbol);
+				item.SetIconMaxWidth(0, 16);
+				if (tinted) item.SetIconModulate(0, hue);
+			}
+			else if (tinted)
+			{
+				item.SetIcon(0, Swatch);
+				item.SetIconMaxWidth(0, 10);
+				item.SetIconModulate(0, hue);
+			}
+
 			if (EconomyEdit.UsesTag(Web, tag))
 			{
 				item.SetCustomColor(0, LabLook.TagPort);
 				item.SetTooltipText(0, "← a slot takes it");
 			}
 			else if (Palette.IsVariety(tag)) item.SetCustomColor(0, LabLook.VarietyTag);
+			else if (Palette.IsProperty(tag))
+			{
+				item.SetCustomColor(0, PropertyTag);
+				item.SetTooltipText(0, "units stack by it");
+			}
 			_palTagItems[tag] = item;
 		}
 
@@ -672,10 +833,17 @@ public partial class EconomyLab
 			if (members.Count == 0 && (raw.Length > 0 || Palette.Namespace(ns) == null)) continue;
 			TagNamespace? entry = Palette.Namespace(ns);
 			TreeItem section = _palTagTree.CreateItem(root);
-			section.SetText(0, entry?.Role == null ? ns : $"{ns} — {entry.Role}");
+			bool scale = entry?.Combine == TagNamespace.Lowest;
+			section.SetText(0, entry?.Role == null ? ns : $"{ns} — {entry.Role}" + (scale ? " scale" : ""));
 			section.SetMetadata(0, NsMark + ns);
 			if (entry?.Role == TagNamespace.Variety) section.SetCustomColor(0, LabLook.VarietyTag);
 			else if (entry?.Role == TagNamespace.Core) section.SetCustomColor(0, LabLook.CoreTag);
+			else if (entry?.Role == TagNamespace.Property) section.SetCustomColor(0, PropertyTag);
+			if (Sprites.Get(entry?.Sign) is { } nsSign)
+			{
+				section.SetIcon(0, nsSign);
+				section.SetIconMaxWidth(0, 16);
+			}
 			section.SetTooltipText(0, entry?.Note ?? "");
 			section.Collapsed = _palTagFold.Contains(ns);
 			_palTagSections[section] = ns;
@@ -732,17 +900,40 @@ public partial class EconomyLab
 	/// </summary>
 	private void RefreshTagDetail()
 	{
-		if (_palTagNote.HasFocus() || _palNsNote.HasFocus()) return;
-		RefreshNamespaceDetail();
-		if (_palSelectedTag == null)
+		// A picker left open would be shut under the user's hand by a refill it does not need.
+		if (_palTagNote.HasFocus() || _palNsNote.HasFocus() || _palTagColour.GetPopup().Visible) return;
+		_palTagQuiet = true;
+		try
 		{
-			_palTagDetail.Visible = false;
-			return;
+			RefreshNamespaceDetail();
+			if (_palSelectedTag == null)
+			{
+				_palTagDetail.Visible = false;
+				return;
+			}
+			FillTagDetail(_palSelectedTag);
 		}
-		string tag = _palSelectedTag;
+		finally
+		{
+			_palTagQuiet = false;
+		}
+	}
+
+	/// <summary>
+	/// The selected tag written out: its symbol and colour, what it means, who carries it, what it
+	/// implies or is implied by, where it stands in a scale, and which recipes stand on it.
+	/// </summary>
+	private void FillTagDetail(string tag)
+	{
 		_palTagDetail.Visible = true;
 		_palTagCaption.Text = tag;
-		_palTagNote.Text = Palette.Tags.FirstOrDefault(t => t.Id == tag)?.Note ?? "";
+
+		bool tinted = SpriteBank.TryColour(Palette.ColourOf(tag), out Color hue);
+		_palTagSign.Texture = Sprites.Get(Palette.SignOf(tag));
+		_palTagSign.Visible = _palTagSign.Texture != null;
+		_palTagSign.Modulate = tinted ? hue : Colors.White;
+		if (_palTagColour.Color != hue) _palTagColour.Color = hue;
+		_palTagNote.Text = Palette.Tag(tag)?.Note ?? "";
 
 		List<string> names = Palette.GoodsWith(tag).Select(g => g.Name).ToList();
 		if (names.Count == 0) _palTagCarriers.Text = "0 goods carry it.";
@@ -752,7 +943,60 @@ public partial class EconomyLab
 			string more = names.Count > 12 ? $", and {names.Count - 12} more" : "";
 			_palTagCarriers.Text = head + string.Join(", ", names.Take(12)) + more + ".";
 		}
+
+		// A variety tag implies properties; a property tag is implied by varieties and may sit on a scale.
+		_palTagImpliesBox.Visible = Palette.IsVariety(tag);
+		foreach (Node old in _palTagImplies.GetChildren())
+		{
+			_palTagImplies.RemoveChild(old);
+			old.QueueFree();
+		}
+		if (_palTagImpliesBox.Visible)
+		{
+			foreach (string property in Palette.ImpliedBy(tag))
+			{
+				string held = property;
+				_palTagImplies.AddChild(TagChip(held, "every unit of this variety carries it", () => Unimply(tag, held)));
+			}
+			_palTagImplies.AddChild(InspectorLook.Small("+ property…", "A property tag every unit of this variety carries. Units stack by it.",
+				() => AskPropertyTag($"Every unit of {tag} is…", property => Implied(tag, property))));
+		}
+
+		List<string> from = Palette.Tags.Where(t => t.Implies?.Contains(tag) == true).Select(t => t.Id).ToList();
+		_palTagImpliedBy.Visible = from.Count > 0;
+		_palTagImpliedBy.Text = from.Count == 0 ? ""
+			: "Implied by: " + string.Join(", ", from.Take(12)) + (from.Count > 12 ? $", and {from.Count - 12} more" : "") + ".";
+
+		_palTagScale.Text = ScaleLine(tag);
+		_palTagScale.Visible = _palTagScale.Text.Length > 0;
+
+		List<string> sites = Web.Recipes.Where(r => r.SiteList.Contains(tag)).Select(Analysis.TitleOf).ToList();
+		bool place = sites.Count > 0 || Palette.NamespaceOf(tag) == SiteSpace;
+		_palTagSites.Visible = place;
+		_palTagSites.Text = !place ? ""
+			: sites.Count == 0 ? "A place, but no recipe of this web stands on it."
+			: "Site of: " + string.Join(", ", sites.Take(10)) + (sites.Count > 10 ? $", and {sites.Count - 10} more" : "") + ".";
 	}
+
+	/// <summary>Where a tag stands in its namespace's scale, in words; "" when the namespace is not one.</summary>
+	private string ScaleLine(string tag)
+	{
+		string space = Palette.NamespaceOf(tag);
+		if (Palette.Namespace(space)?.Combine != TagNamespace.Lowest) return "";
+		List<string> steps = Palette.Tags.Select(t => t.Id).Where(t => Palette.NamespaceOf(t) == space).ToList();
+		int at = steps.IndexOf(tag);
+		if (at < 0) return "In a scale, but not in the tag list, so it counts as the highest step.";
+		return $"{Ordinal(at + 1)} of {steps.Count} in the scale: a unit made of several keeps the lowest.";
+	}
+
+	/// <summary>1st, 2nd, 3rd, 4th: a step of a scale, counted from the lowest.</summary>
+	private static string Ordinal(int n) => n switch
+	{
+		1 => "1st",
+		2 => "2nd",
+		3 => "3rd",
+		_ => n + "th",
+	};
 
 	private void RefreshNamespaceDetail()
 	{
@@ -760,14 +1004,90 @@ public partial class EconomyLab
 		if (_palSelectedNs is not { } id) return;
 		TagNamespace? entry = Palette.Namespace(id);
 		_palNsCaption.Text = id + ":";
+		_palNsSign.Texture = Sprites.Get(entry?.Sign);
+		_palNsSign.Visible = _palNsSign.Texture != null;
 		_palNsNote.Text = entry?.Note ?? "";
 		_palNsRole.Select(RoleIndex(entry?.Role));
+		_palNsScale.Visible = entry?.Role == TagNamespace.Property;
+		_palNsScale.SetPressedNoSignal(entry?.Combine == TagNamespace.Lowest);
 
 		List<string> tags = Palette.TagsInUse().Select(t => t.Tag).Where(t => Palette.NamespaceOf(t) == id).ToList();
 		int carriers = Palette.Goods.Count(g => g.AllTags().Any(t => Palette.NamespaceOf(t) == id));
-		_palNsInfo.Text = tags.Count == 0 ? "No tags in it yet." : $"{tags.Count} tag{(tags.Count == 1 ? "" : "s")}, carried by {carriers} good{(carriers == 1 ? "" : "s")}.";
+		string counted = tags.Count == 0 ? "No tags in it yet." : $"{tags.Count} tag{(tags.Count == 1 ? "" : "s")}, carried by {carriers} good{(carriers == 1 ? "" : "s")}.";
+		_palNsInfo.Text = entry?.Combine == TagNamespace.Lowest ? counted + " A scale, lowest first as the palette lists them." : counted;
 		_palNsDelete.Disabled = tags.Count > 0;
 	}
+
+	// ---- the tag detail's own changes ------------------------------------------------
+
+	/// <summary>
+	/// A change made from this dock. A locked web refuses it at the door, as everywhere else, and
+	/// the widget that made it is put back to what the web still holds, so the pane never shows a
+	/// colour or a switch the data does not have.
+	/// </summary>
+	private void TagChange(string what, Action edit, string? merge = null, bool keepInspector = false)
+	{
+		if (Web.Locked)
+		{
+			Say(LockedHint);
+			RefreshTagDetail();
+			return;
+		}
+		Change(what, edit, merge, keepInspector);
+	}
+
+	/// <summary>The tag's entry in the palette's tag list, made if it is in use without one yet.</summary>
+	private TagDef EnsureTag(string tag)
+	{
+		TagDef? def = Palette.Tag(tag);
+		if (def != null) return def;
+		def = new TagDef { Id = tag };
+		Palette.Tags.Add(def);
+		return def;
+	}
+
+	/// <summary>Asks for a property tag: one of a property namespace, or a new one typed in as <c>ns:value</c>.</summary>
+	private void AskPropertyTag(string prompt, Action<string> then)
+	{
+		IEnumerable<(string, string, Texture2D?)> items = Palette.TagsInUse()
+			.Where(t => Palette.IsProperty(t.Tag))
+			.Select(t => (t.Tag, $"#{t.Tag}   ({t.Count})", Sprites.Get(Palette.SignOf(t.Tag))));
+		_picker.Ask(prompt, items, GetViewport().GetMousePosition(), then, typed => then(TidyTag(typed)));
+	}
+
+	/// <summary>
+	/// A property a variety tag implies. Only a property namespace's tags are stacked by, so one
+	/// that plays no part yet is made one in the same step and the status line says so: it is a
+	/// decision about every tag in that namespace.
+	/// </summary>
+	private void Implied(string tag, string property)
+	{
+		if (property.Length == 0 || property == tag) return;
+		if (Palette.ImpliedBy(tag).Contains(property))
+		{
+			Say($"{tag} implies {property} already.");
+			return;
+		}
+		string space = Palette.NamespaceOf(property);
+		bool teach = space.Length > 0 && Palette.Namespace(space)?.Role == null;
+		TagChange($"{tag} implies {property}", () =>
+		{
+			if (teach) EconomyEdit.EnsureNamespace(Palette, space).Role = TagNamespace.Property;
+			TagDef def = EnsureTag(tag);
+			def.Implies ??= new List<string>();
+			if (!def.Implies.Contains(property)) def.Implies.Add(property);
+		});
+		if (teach && !Web.Locked) Say($"{tag} implies {property}. {space}: is a property namespace now, so units stack by its tags.");
+	}
+
+	/// <summary>A property off a variety tag again; the list goes back to nothing when the last one leaves.</summary>
+	private void Unimply(string tag, string property) =>
+		TagChange($"{tag} no longer implies {property}", () =>
+		{
+			if (Palette.Tag(tag) is not { Implies: { } implies }) return;
+			implies.Remove(property);
+			if (implies.Count == 0) Palette.Tag(tag)!.Implies = null;
+		});
 
 	private void SelectTagCarriers()
 	{

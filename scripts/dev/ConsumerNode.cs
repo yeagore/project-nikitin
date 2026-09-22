@@ -13,7 +13,8 @@ public partial class ConsumerNode : GraphNode
 	public string ConsumerId { get; private set; } = "";
 
 	private readonly Label _line;
-	private string _shown = "";
+	private string _shown = "", _name = "", _under = "";
+	private bool _quiet;
 
 	public ConsumerNode()
 	{
@@ -49,8 +50,24 @@ public partial class ConsumerNode : GraphNode
 		if (shown == _shown) return;
 		_shown = shown;
 
-		Title = consumer.Name.Length > 0 ? consumer.Name : "Consumers";
-		_line.Text = line;
+		_name = consumer.Name.Length > 0 ? consumer.Name : "Consumers";
+		_under = line;
+		if (!_quiet)
+		{
+			Title = _name;
+			_line.Text = _under;
+		}
 		TooltipText = consumer.Note.Length > 0 ? consumer.Note : "Goods that lead here are consumables.";
+	}
+
+	/// <summary>Zoomed far out the blob keeps its shape and loses its words; its line is already held at 34 pixels, so the port stays put.</summary>
+	internal void Quiet(bool on)
+	{
+		if (_quiet == on) return;
+		if (on && Size.Y <= 1f) return;
+		_quiet = on;
+		WebGraph.KeepHeight(GetTitlebarHBox());
+		Title = on ? "" : _name;
+		_line.Text = on ? "" : _under;
 	}
 }

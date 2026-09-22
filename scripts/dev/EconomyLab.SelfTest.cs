@@ -19,7 +19,7 @@ public partial class EconomyLab
 	private int _checks, _failed;
 
 	/// <summary>The webs the repository ships, which the self-test holds to having no errors.</summary>
-	private static readonly string[] Shipped = { "starter", "full-ledger", "tagged-ledger", "full-ledger-reference" };
+	private static readonly string[] Shipped = { "starter", "tagged-ledger", "full-ledger-reference", "variety-ledger" };
 
 	/// <summary>The scratch copy of the economy folder the self-test works in.</summary>
 	private static string SelfTestRoot()
@@ -66,7 +66,7 @@ public partial class EconomyLab
 			WebAnalysis read = WebAnalysis.Of(web);
 			Check(!read.Issues.Any(i => i.Level == IssueLevel.Error), $"{id}: no errors ({read.Issues.Count} issues, {read.Links.Count} links)");
 		}
-		Check(Store.LoadWeb("full-ledger").Palette.Goods.All(g => g.Sign?.Extra?.ContainsKey("reading") == true), "the signs keep their readings (unknown fields survive)");
+		Check(Store.LoadWeb("full-ledger-reference").Palette.Goods.All(g => g.Sign?.Extra?.ContainsKey("reading") == true), "the signs keep their readings (unknown fields survive)");
 
 		// ---- the starter -------------------------------------------------------
 		OpenWeb("starter");
@@ -231,7 +231,7 @@ public partial class EconomyLab
 		Check(EconomyStore.ToJson(Store.LoadWeb("starter")) == saved, "a saved web reads back the same");
 
 		// ---- cutting and copying chains ----------------------------------------
-		OpenWeb("full-ledger");
+		OpenWeb("full-ledger-reference");
 		CheckCanvas("opening the full ledger");
 		EconomyWeb cut = EconomyEdit.Cut(Web, new[] { "enamelw", "bread" }, "cut", "Cut", withOptional: false, leanPalette: true);
 		WebAnalysis cutRead = WebAnalysis.Of(cut);
@@ -243,7 +243,7 @@ public partial class EconomyLab
 		Check(cut.Consumers.Any(c => c.Id == "c.food") && cut.Consumers.Any(c => c.Id == "c.wares") && cut.Consumers.All(c => c.Id != "c.clothing"), "it keeps the consumers it still reaches and no others");
 
 		OpenWeb("starter");
-		EconomyWeb ledger = Store.LoadWeb("full-ledger");
+		EconomyWeb ledger = Store.LoadWeb("full-ledger-reference");
 		Change("enamelware with its chain", () => EconomyEdit.CopyChain(ledger, Web, new[] { "enamelw" }, withOptional: true, new Spot(50, 50)));
 		Check(Web.Holds("enamelw") && Web.Recipe("r.enamelw") != null && !Analysis.Issues.Any(i => i.Level == IssueLevel.Error), $"a chain copied into the starter is whole ({Web.Goods.Count} goods now)");
 		CheckCanvas("copying a chain in");
@@ -252,7 +252,7 @@ public partial class EconomyLab
 		CheckCanvas("the last undo");
 
 		// ---- palettes are the web's own ------------------------------------------
-		string ledgerBefore = File.ReadAllText(Store.WebPath("full-ledger"));
+		string ledgerBefore = File.ReadAllText(Store.WebPath("full-ledger-reference"));
 		Change("an experiment in the starter", () =>
 		{
 			Palette.Find("brass")!.Name = "Brass, renamed here only";
@@ -260,7 +260,7 @@ public partial class EconomyLab
 			EconomyEdit.RenameTag(Web, "kind:metal", "kind:shiny");
 		});
 		Save();
-		Check(File.ReadAllText(Store.WebPath("full-ledger")) == ledgerBefore && Store.LoadWeb("full-ledger").Palette.Find("unobtanium") == null,
+		Check(File.ReadAllText(Store.WebPath("full-ledger-reference")) == ledgerBefore && Store.LoadWeb("full-ledger-reference").Palette.Find("unobtanium") == null,
 			"renaming, tagging and inventing goods in one web leaves another web's file untouched");
 		Undo();
 		Save();
@@ -311,7 +311,7 @@ public partial class EconomyLab
 		File.Delete(Store.WebPath("locked-test"));
 
 		// ---- what ships: elements on every recipe, in rough balance, and a locked reference ----
-		foreach (string id in new[] { "full-ledger", "tagged-ledger", "starter" })
+		foreach (string id in new[] { "full-ledger-reference", "tagged-ledger", "variety-ledger", "starter" })
 		{
 			if (!Store.HasWeb(id)) continue;
 			EconomyWeb shipped = Store.LoadWeb(id);
@@ -325,7 +325,7 @@ public partial class EconomyLab
 		if (Store.HasWeb("full-ledger-reference"))
 		{
 			EconomyWeb kept = Store.LoadWeb("full-ledger-reference");
-			Check(kept.Locked && kept.Recipes.Count == Store.LoadWeb("full-ledger").Recipes.Count, "the reference copy of the full ledger is locked and whole");
+			Check(kept.Locked && kept.Recipes.Count == 197 && kept.Goods.Count == 286, "the reference copy of the full ledger is locked and whole");
 		}
 
 		// ---- the tagged ledger: the worked example of tag slots and varieties ---------
@@ -342,6 +342,54 @@ public partial class EconomyLab
 				"three breads, three beers, three soaps, five jewels, each from one recipe");
 			Check(golem.Capped && golem.Count == 17 * 3 * 16, $"the golem: seventeen soils, three hearts, four optional fittings, about {golem.Count} varieties from one recipe");
 			Check(Analysis.VarietiesOf("icu").IsPlain, "and copper, which nothing marks, is plain");
+		}
+
+		// ---- the variety ledger: sites, folds, properties, stacks, and the icons that follow ----
+		if (Store.HasWeb("variety-ledger"))
+		{
+			OpenWeb("variety-ledger");
+			CheckCanvas("opening the variety ledger");
+			Check(Web.Locked, "the variety ledger is locked");
+			Recipe peat = Web.Recipe("r.peat")!;
+			Check(peat.Inputs.Count == 0 && peat.SiteList.SequenceEqual(new[] { "soil:murkearth" }) && !Analysis.Issues.Any(i => i.Node == "r.peat"),
+				"peat is cut on murkearth: a site, no slot, and no complaint that it takes nothing");
+			Check(!Analysis.Issues.Any(i => i.Text.Contains("a variety tag")), "no slot in it is gated by a variety tag");
+			Check(Palette.Find("dye") != null && Palette.Find("indigod") == null && Analysis.MakersOf("dye").Count == 6 && Analysis.VarietiesOf("dye").Count == 6,
+				"the five dyes are one good in six colours, one recipe each");
+			Check(Palette.Find("heart") != null && Analysis.VarietiesOf("heart").Count == 3 && Analysis.Links.Count(l => l.To == "r.golem" && l.From == "heart") == 1,
+				"the three hearts are one good in three metals, and the golem takes it by name");
+			Check(Analysis.MakersOf("iag").Any(r => r.Id == "r.litharge"), "cupellation yields silver");
+
+			VarietySet golem = Analysis.VarietiesOf("golem");
+			Check(golem.Count > 1000 && Analysis.StacksOf("golem").Count == 15, $"the golem: about {golem.Count} varieties, which stack by property into {Analysis.StacksOf("golem").Count} (five kinds of work by three grades of heart)");
+			Check(Analysis.VarietiesIn("golem", new[] { "heart" }).Count == 3 && Analysis.VarietiesIn("golem", new[] { "heart", "soil" }).Count == 51,
+				"split by heart they are three stacks; by heart and soil, fifty-one");
+			Check(Analysis.VarietiesOf("bread").Count == 6 && Analysis.StacksOf("bread").Count == 3, "six breads by grain, three by grade");
+			Check(Analysis.VarietiesOf("provis").IsPlain && Analysis.VarietiesOf("brandy").IsPlain, "provisions and brandy stay plain: their slots do not pass variety on");
+			Check(Palette.PropertiesOf(new[] { "cloth:silk", "colour:black" }).SequenceEqual(new[] { "grade:common" }), "a scale keeps the lowest: silk in a common dye is common cloth");
+			Check(Palette.PropertiesOf(new[] { "gem:jade", "metal:gold" }).SequenceEqual(new[] { "grade:superb", "prized:jadefolk", "prized:lakefolk" }), "and other properties add up: a jade-set gold jewel is superb and prized twice");
+			Check(Web.Recipes.SelectMany(r => r.Inputs).Where(i => i.Passes).All(i => i.Accepts.Count > 0), "every passing slot accepts something");
+
+			Good golemGood = Palette.Find("golem")!;
+			Texture2D? plain = Sprites.Compose(golemGood, Array.Empty<string>());
+			Texture2D? green = Sprites.Compose(golemGood, new[] { "heart:arsenic" });
+			Texture2D? again = Sprites.Compose(golemGood, new[] { "heart:arsenic" });
+			Check(plain == Sprites.Get(golemGood.Icon) && green != null && green != plain && again == green, "a plain stack shows the plain icon; a variety recolours it, once");
+			Check(Sprites.Compose(golemGood, new[] { "stage:assembly" }) == plain, "a tag with no colour changes nothing");
+
+			// The tag functions reach the new places a tag can be named.
+			EconomyWeb copy = EconomyStore.Clone(Web);
+			copy.Locked = false;
+			EconomyEdit.RenameTag(copy, "soil:murkearth", "soil:mire");
+			Check(copy.Recipe("r.peat")!.SiteList.SequenceEqual(new[] { "soil:mire" }) && copy.Palette.Tag("soil:mire")?.Implies?.Contains("work:water") == true
+			      && copy.Palette.Find("soil")!.VarietyList.Any(v => v.Tags.Contains("soil:mire")), "renaming a tag follows it into sites, implications and varieties");
+			EconomyEdit.RenameTag(copy, "work:water", "work:wet");
+			Check(copy.Palette.Tag("soil:mire")!.Implies!.Contains("work:wet"), "renaming a property tag follows it into what implies it");
+			EconomyEdit.RemoveTag(copy, "soil:mire");
+			Check(copy.Recipe("r.peat")!.SiteList.Count == 0 && copy.Palette.Tag("soil:mire") == null, "removing it clears the site");
+			EconomyEdit.RenameNamespace(copy, "soil", "ground");
+			Check(copy.Palette.Find("golem")!.Layers!.Any(l => l.Match == "ground") && copy.Palette.Tag("ground:sand") != null && copy.Recipe("r.sand")!.SiteList.SequenceEqual(new[] { "ground:sand" }),
+				"renaming a namespace follows it into icon layers, tag entries and sites");
 		}
 
 		GD.Print(_failed == 0 ? $"Economy lab self-test: all {_checks} checks passed." : $"Economy lab self-test: {_failed} of {_checks} checks FAILED.");

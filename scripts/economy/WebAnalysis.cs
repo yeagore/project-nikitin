@@ -27,9 +27,10 @@ public sealed class WebAnalysis
 	private readonly Dictionary<string, int> _depth = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, List<string>> _next = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, List<string>> _prev = new(StringComparer.Ordinal);
+	private readonly Dictionary<(string Recipe, int Port), List<string>> _fillers = new();
+	private static readonly List<string> NoFillers = new();
 	private readonly Palette _palette;
 	private readonly EconomyWeb _web;
-	private readonly Dictionary<string, VarietySet> _varieties = new(StringComparer.Ordinal);
 
 	private static readonly List<Recipe> NoRecipes = new();
 	private static readonly List<Consumer> NoConsumers = new();
@@ -102,7 +103,8 @@ public sealed class WebAnalysis
 		{
 			string title = TitleOf(recipe);
 			if (recipe.Outputs.Count == 0) _issues.Add(new WebIssue(IssueLevel.Error, recipe.Id, $"{title} makes nothing."));
-			if (recipe.Inputs.Count == 0) _issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} takes nothing."));
+			// A recipe that stands somewhere and takes nothing is an extraction: peat cut from murkearth ground.
+			if (recipe.Inputs.Count == 0 && recipe.SiteList.Count == 0) _issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} takes nothing."));
 
 			for (int o = 0; o < recipe.Outputs.Count; o++)
 			{
@@ -121,6 +123,9 @@ public sealed class WebAnalysis
 				RecipeInput slot = recipe.Inputs[i];
 				if (slot.Accepts.Count == 0)
 					_issues.Add(new WebIssue(IssueLevel.Error, recipe.Id, $"{title}: input {i + 1} accepts nothing."));
+				// The house rule: a variety never decides what fits where. A slot that asks for one is asking for a site, a core tag or a good of its own.
+				foreach (string acceptor in slot.Accepts.Where(a => Acceptor.IsTag(a) && _palette.IsVariety(Acceptor.TagOf(a))))
+					_issues.Add(new WebIssue(IssueLevel.Note, recipe.Id, $"{title}: input {i + 1} accepts {acceptor}, a variety tag. Varieties are not meant to gate a slot."));
 				foreach ((Good good, string via) in Admitted(slot.Accepts, goods, inWeb, recipe.Id, title))
 				{
 					Add(_users, good.Id, recipe);
@@ -182,9 +187,10 @@ public sealed class WebAnalysis
 		_links.Add(link);
 		Add(_next, link.From, link.To);
 		Add(_prev, link.To, link.From);
+		if (link.Kind == LinkKind.Input) Add(_fillers, (link.To, link.Port), link.From);
 	}
 
-	private static void Add<T>(Dictionary<string, List<T>> map, string key, T value)
+	private static void Add<TKey, T>(Dictionary<TKey, List<T>> map, TKey key, T value) where TKey : notnull
 	{
 		if (!map.TryGetValue(key, out List<T>? list)) map[key] = list = new List<T>();
 		if (!list.Contains(value)) list.Add(value);
@@ -207,9 +213,8 @@ public sealed class WebAnalysis
 			{
 				if (recipe.Inputs[i].Optional) continue;
 				int shallowest = Unreachable;
-				foreach (WebLink link in _links)
-					if (link.Kind == LinkKind.Input && link.To == recipe.Id && link.Port == i)
-						shallowest = Math.Min(shallowest, DepthOf(link.From, walking));
+				foreach (string filler in FillersOf(recipe.Id, i))
+					shallowest = Math.Min(shallowest, DepthOf(filler, walking));
 				// A slot nothing fills says nothing about depth; the issue list already names it.
 				if (shallowest < Unreachable || HasLink(recipe.Id, i)) deepest = Math.Max(deepest, shallowest);
 			}
@@ -220,8 +225,7 @@ public sealed class WebAnalysis
 		return _depth[goodId] = best;
 	}
 
-	private bool HasLink(string recipeId, int port) =>
-		_links.Exists(l => l.Kind == LinkKind.Input && l.To == recipeId && l.Port == port);
+	private bool HasLink(string recipeId, int port) => _fillers.ContainsKey((recipeId, port));
 
 	/// <summary>A note for each loop found (seeds from the crop that grew from seeds), five at most.</summary>
 	private void FindLoops()
@@ -264,15 +268,54 @@ public sealed class WebAnalysis
 	/// recipe with a three-heart slot and one optional fitting yields six golems from one node.
 	/// The list is capped at <see cref="VarietySet.Cap"/>; past it only the count is kept, as "at least".
 	/// </summary>
-	public VarietySet VarietiesOf(string goodId)
+	public VarietySet VarietiesOf(string goodId) => Varieties(goodId, new HashSet<string>(StringComparer.Ordinal), _all);
+
+	/// <summary>
+	/// The stacks a good's varieties fall into when units stack by property: each a set of property
+	/// tags, those the variety tags imply (<see cref="Palette.PropertiesOf"/>). Seventeen soils that
+	/// imply five kinds of work make five stacks. Worked out the way the varieties are, not from their
+	/// list, so it is exact where that list is cut short.
+	/// </summary>
+	public VarietySet StacksOf(string goodId) => VarietiesIn(goodId, null);
+
+	/// <summary>
+	/// The varieties seen through some namespaces only: variety namespaces keep their tags, property
+	/// namespaces keep what the tags imply, and everything else is let go, so golems split by
+	/// <c>heart</c> are three whatever their soils. Null is every property namespace and no variety one.
+	/// </summary>
+	public VarietySet VarietiesIn(string goodId, IReadOnlyCollection<string>? namespaces)
 	{
-		if (_varieties.TryGetValue(goodId, out VarietySet? known)) return known;
-		return Varieties(goodId, new HashSet<string>(StringComparer.Ordinal));
+		string key = namespaces == null ? "*" : string.Join("\n", namespaces.OrderBy(n => n, StringComparer.Ordinal));
+		if (!_views.TryGetValue(key, out View? view))
+		{
+			HashSet<string>? keep = namespaces == null ? null : new HashSet<string>(namespaces, StringComparer.Ordinal);
+			_views[key] = view = new View(tags =>
+			{
+				List<string> seen = tags.ToList();
+				IEnumerable<string> properties = _palette.PropertiesOf(seen);
+				if (keep == null) return properties;
+				return seen.Where(t => _palette.IsVariety(t) && keep.Contains(Palette.NamespaceOf(t)))
+					.Concat(properties.Where(t => keep.Contains(Palette.NamespaceOf(t))));
+			});
+		}
+		return Varieties(goodId, new HashSet<string>(StringComparer.Ordinal), view);
 	}
 
-	private VarietySet Varieties(string goodId, HashSet<string> walking)
+	/// <summary>One way of looking at varieties: what each set of tags is turned into, and what has been worked out that way.</summary>
+	private sealed class View
 	{
-		if (_varieties.TryGetValue(goodId, out VarietySet? known)) return known;
+		public readonly Func<IEnumerable<string>, IEnumerable<string>>? Shape;
+		public readonly Dictionary<string, VarietySet> Known = new(StringComparer.Ordinal);
+
+		public View(Func<IEnumerable<string>, IEnumerable<string>>? shape) => Shape = shape;
+	}
+
+	private readonly View _all = new(null);
+	private readonly Dictionary<string, View> _views = new(StringComparer.Ordinal);
+
+	private VarietySet Varieties(string goodId, HashSet<string> walking, View view)
+	{
+		if (view.Known.TryGetValue(goodId, out VarietySet? known)) return known;
 		Good? good = _palette.Find(goodId);
 		if (good == null) return VarietySet.Plain;
 		if (!walking.Add(goodId)) return VarietySet.Plain; // a loop: this way round adds nothing
@@ -288,14 +331,14 @@ public sealed class WebAnalysis
 				bases.Add(tags);
 			}
 
-		var builder = new VarietySet.Builder();
+		var builder = new VarietySet.Builder(view.Shape);
 		IReadOnlyList<Recipe> makers = MakersOf(goodId);
 		if (makers.Count == 0) foreach (SortedSet<string> b in bases) builder.Add(b);
 
 		foreach (Recipe recipe in makers)
 		{
 			// Start from the good's own varieties and multiply in each passing slot.
-			var product = new VarietySet.Builder();
+			var product = new VarietySet.Builder(view.Shape);
 			foreach (SortedSet<string> b in bases) product.Add(b);
 
 			for (int i = 0; i < recipe.Inputs.Count; i++)
@@ -303,21 +346,21 @@ public sealed class WebAnalysis
 				RecipeInput slot = recipe.Inputs[i];
 				List<string> grants = slot.GrantList.Where(_palette.IsVariety).ToList();
 				if (!slot.Passes && grants.Count == 0) continue;
-				List<string> fillers = FillersOf(recipe.Id, i).ToList();
+				IReadOnlyList<string> fillers = FillersOf(recipe.Id, i);
 				if (fillers.Count == 0) continue; // nothing fills it: the issue list says so
 
 				// Filled, the slot gives what its filler passes (if it passes) and what it grants itself.
-				var filled = new VarietySet.Builder();
-				if (slot.Passes) foreach (string filler in fillers) filled.Add(Varieties(filler, walking));
+				var filled = new VarietySet.Builder(view.Shape);
+				if (slot.Passes) foreach (string filler in fillers) filled.Add(Varieties(filler, walking, view));
 				else filled.Add(Array.Empty<string>());
 				if (grants.Count > 0)
 				{
-					var granted = new VarietySet.Builder();
+					var granted = new VarietySet.Builder(view.Shape);
 					granted.Add(grants);
 					filled = filled.Times(granted);
 				}
 
-				var choices = new VarietySet.Builder();
+				var choices = new VarietySet.Builder(view.Shape);
 				if (slot.Optional) choices.Add(Array.Empty<string>());
 				choices.Add(filled);
 				product = product.Times(choices);
@@ -328,13 +371,12 @@ public sealed class WebAnalysis
 		walking.Remove(goodId);
 		VarietySet result = builder.Build();
 		// A result reached through a loop is partial, so it is kept only when the walk is back at the top.
-		if (walking.Count == 0) _varieties[goodId] = result;
+		if (walking.Count == 0) view.Known[goodId] = result;
 		return result;
 	}
 
 	/// <summary>The goods that can fill a slot, in link order.</summary>
-	public IEnumerable<string> FillersOf(string recipeId, int port) =>
-		_links.Where(l => l.Kind == LinkKind.Input && l.To == recipeId && l.Port == port).Select(l => l.From);
+	public IReadOnlyList<string> FillersOf(string recipeId, int port) => _fillers.GetValueOrDefault((recipeId, port), NoFillers);
 
 	/// <summary>A recipe's label, or "→ what it makes" when it has none.</summary>
 	public string TitleOf(Recipe recipe)

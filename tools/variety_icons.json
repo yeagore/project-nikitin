@@ -1,0 +1,136 @@
+{
+  "iconAtlas": "icons",
+  "maskAtlas": "masks",
+  "atlases": [
+    {
+      "id": "masks",
+      "file": "sprites/masks.png",
+      "cell": 16,
+      "columns": 16
+    }
+  ],
+  "icons": {
+    "lampblk": 288,
+    "verm": 289,
+    "oil": 290,
+    "ife": 291,
+    "iag": 292,
+    "iau": 293,
+    "wax": 294,
+    "bronze": 295,
+    "steel": 296,
+    "soap": 297,
+    "palmoil": 298,
+    "dye": 299,
+    "glaze": 300,
+    "lacquer": 301,
+    "yarn": 302,
+    "blood": 303,
+    "perfume": 304,
+    "wine": 305,
+    "beer": 306,
+    "grapes": 307,
+    "milk": 308,
+    "planks": 309,
+    "cloth": 310,
+    "hull": 311,
+    "dyed": 312,
+    "batik": 313,
+    "obs": 314,
+    "amber": 315,
+    "spice": 316,
+    "flour": 317,
+    "malt": 318,
+    "lapis": 319,
+    "hides": 320,
+    "furs": 321,
+    "leather": 322,
+    "tallow": 323,
+    "bread": 324,
+    "sealwax": 325,
+    "glass": 326,
+    "winpane": 327,
+    "pottery": 328,
+    "porcel": 329,
+    "rockc": 330,
+    "jade": 331,
+    "grain": 332,
+    "body": 333,
+    "timber": 334,
+    "saltfish": 335,
+    "lacqw": 336,
+    "autom": 337,
+    "court": 338,
+    "heart": 339
+  },
+  "layers": {
+    "golem": [
+      {
+        "match": "heart",
+        "mask": 0
+      },
+      {
+        "match": "fit:smalt-eyes",
+        "mask": 1
+      },
+      {
+        "match": "soil",
+        "mask": 2
+      }
+    ],
+    "jewel": [
+      {
+        "match": "gem",
+        "mask": 3
+      },
+      {
+        "match": "metal",
+        "mask": 4
+      }
+    ],
+    "ship": [
+      {
+        "match": "wood",
+        "mask": 5
+      }
+    ],
+    "court": [
+      {
+        "match": "colour",
+        "mask": 7
+      },
+      {
+        "match": "fur",
+        "mask": 8
+      }
+    ],
+    "pottery": [
+      {
+        "match": "glaze",
+        "mask": 9
+      }
+    ],
+    "porcel": [
+      {
+        "match": "decor",
+        "mask": 10
+      }
+    ],
+    "lacqw": [
+      {
+        "match": "hue",
+        "mask": 11
+      },
+      {
+        "match": "wood",
+        "mask": null
+      }
+    ],
+    "autom": [
+      {
+        "match": "heart",
+        "mask": 12
+      }
+    ]
+  }
+}

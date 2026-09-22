@@ -9,12 +9,14 @@ namespace ProjectNikitin.Dev;
 
 /// <summary>
 /// The right-hand dock: whatever is selected, laid out for editing. A good shows its name, its
-/// description, its tags, the varieties of it this web can make and the ones written by hand,
-/// its two sprites and what makes, uses and eats it; a recipe its element, itself written out in
-/// signs as a formula, then its input slots — what each admits, whether it passes variety on and
-/// what it grants of its own — and its outputs; a consumer what reaches it; several nodes what can
-/// be done to them all; and with nothing selected, the web itself — its numbers, how its recipes
-/// fall among the elements, its hubs, what the analysis found wrong, and the legend of the
+/// description, its tags, the varieties of it this web can make and the ones written by hand, the
+/// stacks those varieties come to when units stack by property and the same split by a namespace
+/// or two, each stack wearing the icon a unit of it would; then its two sprites and what makes,
+/// uses and eats it. A recipe shows its element, where the work has to stand, itself written out
+/// in signs as a formula, then its input slots — what each admits, whether it passes variety on
+/// and what it grants of its own — and its outputs; a consumer what reaches it; several nodes what
+/// can be done to them all; and with nothing selected, the web itself — its numbers, how its
+/// recipes fall among the elements, its hubs, what the analysis found wrong, and the legend of the
 /// canvas's colours.
 ///
 /// Every field and button goes through <see cref="Change"/>, so everything here is a step to
@@ -44,6 +46,49 @@ public partial class EconomyLab
 
 	/// <summary>How many whole varieties the block lists before it counts the rest.</summary>
 	private const int VarietiesListed = 8;
+
+	/// <summary>How many stacks the split-by block lists before it counts the rest.</summary>
+	private const int StacksListed = 24;
+
+	/// <summary>
+	/// Which namespaces the selected good's varieties are being split by, and the good they were
+	/// chosen for. The dock is rebuilt on every change, so the choice lives here rather than on a
+	/// button; another good clears it.
+	/// </summary>
+	private readonly HashSet<string> _inspSplit = new(StringComparer.Ordinal);
+
+	private string? _inspSplitGood;
+
+	/// <summary>The namespace a <c>site:</c> tag belongs to: a place that is not a soil.</summary>
+	private const string SiteSpace = "site";
+
+	/// <summary>
+	/// A tag of a property namespace: what units stack by. <see cref="LabLook"/> holds the violet
+	/// of a variety tag and the amber of a core one; this third part of the tag system is newer
+	/// than that file, so its colour waits here until the look is next gathered up.
+	/// </summary>
+	private static readonly Color PropertyTag = new("6fc9d4");
+
+	/// <summary>
+	/// A shell run can open the dock already split: <c>split=heart</c>, <c>split=heart,soil</c>.
+	/// The shot arguments proper are read in <c>EconomyLab.cs</c>; this one belongs to the dock alone.
+	/// </summary>
+	private static string[]? _shotSplit;
+
+	private static string[] ShotSplit => _shotSplit ??= OS.GetCmdlineUserArgs()
+		.FirstOrDefault(arg => arg.StartsWith("split=", StringComparison.Ordinal))?["split=".Length..]
+		.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+		?? Array.Empty<string>();
+
+	/// <summary>
+	/// And <c>scroll=900</c> holds the dock that far down, so a picture can be taken of a block
+	/// that sits past the fold. Nothing but a shell run passes it.
+	/// </summary>
+	private static int _shotScroll = -1;
+
+	private static int ShotScroll => _shotScroll >= 0 ? _shotScroll : _shotScroll =
+		int.TryParse(OS.GetCmdlineUserArgs().FirstOrDefault(arg => arg.StartsWith("scroll=", StringComparison.Ordinal))?["scroll=".Length..],
+			out int at) ? at : 0;
 
 	private Control BuildInspector()
 	{
@@ -89,6 +134,7 @@ public partial class EconomyLab
 		bool many = selected.Count > 1;
 		string? key = many ? null : SelectedKey;
 		int keep = !many && !_inspShownMany && key == _inspShown ? _inspScroll.ScrollVertical : 0;
+		if (keep == 0) keep = ShotScroll;
 		_inspShown = key;
 		_inspShownMany = many;
 
@@ -220,6 +266,15 @@ public partial class EconomyLab
 	/// </summary>
 	private void GoodVarieties(VBoxContainer rows, string id)
 	{
+		Good? good = Palette.Find(id);
+		if (_inspSplitGood != id)
+		{
+			// Another good: the split starts over, seeded only by what a shell run asked for.
+			_inspSplitGood = id;
+			_inspSplit.Clear();
+			foreach (string space in ShotSplit) _inspSplit.Add(space);
+		}
+
 		InspectorLook.Section(rows, "Varieties");
 		VarietySet made = Analysis.VarietiesOf(id);
 		if (made.IsPlain)
@@ -231,16 +286,21 @@ public partial class EconomyLab
 			foreach ((string space, List<string> values) in made.ByNamespace()) rows.AddChild(VarietyValues(space, values));
 			if (made.Sets.Count > 1)
 			{
-				// One to a line, shortest first: a variety of five tags reads as a sentence, a dozen of them as a wall.
-				List<string> names = made.Sets.OrderBy(v => v.Count).Take(VarietiesListed).Select(v => "· " + LabLook.VarietyName(v)).ToList();
-				long more = made.Count - names.Count;
-				rows.AddChild(InspectorLook.Note(string.Join("\n", names) + (more > 0 ? $"\n  and {more} more" : ""), LabLook.Dim, 12));
+				// One to a line, shortest first, each wearing the icon a unit of it would: a variety of
+				// five tags reads as a sentence, a dozen of them as a wall.
+				foreach (IReadOnlyList<string> variety in made.Sets.OrderBy(v => v.Count).Take(VarietiesListed))
+					rows.AddChild(VarietyLine(good, variety, 20, LabLook.Dim, "· "));
+				long more = made.Count - Math.Min(made.Sets.Count, VarietiesListed);
+				if (more > 0) rows.AddChild(InspectorLook.Note($"  and {more} more", LabLook.Faint, 12));
 			}
+			GoodStacks(rows, id, good, made);
+			GoodSplit(rows, id, good);
 		}
+		if (LayerLine(good) is { } layers) rows.AddChild(layers);
 
 		rows.AddChild(InspectorLook.Caption("Authored varieties"));
 		rows.AddChild(InspectorLook.Note("Kinds of this good made by hand, like rye and wheat of grain. One node, the same slots; their variety tags travel downstream.", LabLook.Dim, 12));
-		if (Palette.Find(id) is { } good)
+		if (good != null)
 			foreach (Variety variety in good.VarietyList) rows.AddChild(VarietyBlock(id, variety));
 
 		var adding = new HBoxContainer();
@@ -264,6 +324,136 @@ public partial class EconomyLab
 		int more = tags.Count - shown.Count;
 		row.AddChild(InspectorLook.Note(string.Join(", ", shown) + (more > 0 ? $", and {more} more" : ""), LabLook.VarietyTag, 12));
 		return row;
+	}
+
+	/// <summary>
+	/// One variety, or one stack, in a line: the good's icon as a unit carrying those tags shows
+	/// it — the shape the good's, the hue the tags' — and the tags in words. Composing is cached,
+	/// so a list of two dozen of these costs one pass over a 16 px picture each.
+	/// </summary>
+	private Control VarietyLine(Good? good, IReadOnlyList<string> tags, int side, Color ink, string lead = "")
+	{
+		var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+		row.AddThemeConstantOverride("separation", 6);
+		row.AddChild(LabLook.Sprite(good == null ? null : Sprites.Compose(good, tags), side));
+		row.AddChild(InspectorLook.Note(lead + LabLook.VarietyName(tags), ink, 12));
+		return row;
+	}
+
+	/// <summary>
+	/// What the market tells apart. A unit stacks by the property tags its variety tags imply, so
+	/// seventeen soils that mean five kinds of work are five stacks and not seventeen piles. Worked
+	/// out the way the varieties are, so it is exact even where their list has been cut short.
+	/// </summary>
+	private void GoodStacks(VBoxContainer rows, string id, Good? good, VarietySet made)
+	{
+		VarietySet stacks = Analysis.StacksOf(id);
+		string count = stacks.Count == 1 ? "1 stack" : $"{(stacks.Capped ? "about " : "")}{stacks.Count} stacks";
+		rows.AddChild(LabLook.Text("Stack by property: " + count, 13, PropertyTag));
+		if (stacks.Count < made.Count)
+			rows.AddChild(InspectorLook.Note("what the market tells apart: the varieties above come to this many kinds of unit.", LabLook.Faint, 12));
+		foreach (IReadOnlyList<string> stack in stacks.Sets.OrderBy(s => s.Count).Take(VarietiesListed))
+			rows.AddChild(VarietyLine(good, stack, 24, LabLook.Dim));
+		long more = stacks.Count - Math.Min(stacks.Sets.Count, VarietiesListed);
+		if (more > 0) rows.AddChild(InspectorLook.Note($"  and {more} more", LabLook.Faint, 12));
+	}
+
+	/// <summary>
+	/// The same varieties seen through one namespace or two: a row of namespaces to switch on, and
+	/// under it what a unit would be told apart by if only those were read. A variety namespace
+	/// keeps its own tags, a property one what the varieties imply, and everything else is let go —
+	/// so golems split by heart are three, whatever their soils. Nothing chosen is one stack.
+	/// </summary>
+	private void GoodSplit(VBoxContainer rows, string id, Good? good)
+	{
+		var spaces = new List<string>();
+		foreach ((string space, _) in Analysis.VarietiesOf(id).ByNamespace())
+			if (space.Length > 0 && Palette.Namespace(space)?.Role == TagNamespace.Variety && !spaces.Contains(space)) spaces.Add(space);
+		foreach ((string space, _) in Analysis.StacksOf(id).ByNamespace())
+			if (space.Length > 0 && !spaces.Contains(space)) spaces.Add(space);
+		if (spaces.Count == 0) return;
+
+		rows.AddChild(InspectorLook.Caption("Split by"));
+		// A flow, not a row: the dock is a fixed width and a golem has five namespaces to offer.
+		HFlowContainer picks = InspectorLook.Flow();
+		rows.AddChild(picks);
+		foreach (string space in spaces)
+		{
+			string held = space;
+			bool property = Palette.Namespace(held)?.Role == TagNamespace.Property;
+			var pick = new Button
+			{
+				Text = held,
+				ToggleMode = true,
+				ButtonPressed = _inspSplit.Contains(held),
+				FocusMode = FocusModeEnum.None,
+				TooltipText = property
+					? $"{held}: a property namespace. Units stack by it."
+					: $"{held}: a variety namespace. It rides from inputs to outputs.",
+			};
+			// Quiet until it is on, and then in its own colour: the look of the lab's other small buttons.
+			Color ink = property ? PropertyTag : LabLook.VarietyTag;
+			pick.AddThemeFontSizeOverride("font_size", 12);
+			foreach (string state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color" })
+				pick.AddThemeColorOverride(state, ink);
+			pick.AddThemeStyleboxOverride("normal", LabLook.Box(new Color(1, 1, 1, 0.06f), 4, 4, marginX: 6, marginY: 2));
+			pick.AddThemeStyleboxOverride("hover", LabLook.Box(new Color(1, 1, 1, 0.14f), 4, 4, marginX: 6, marginY: 2));
+			pick.AddThemeStyleboxOverride("pressed", LabLook.Box(ink.Darkened(0.68f), 4, 4, ink, 1, 6, 2));
+			pick.AddThemeStyleboxOverride("hover_pressed", LabLook.Box(ink.Darkened(0.55f), 4, 4, ink, 1, 6, 2));
+			pick.Toggled += on =>
+			{
+				if (on) _inspSplit.Add(held);
+				else _inspSplit.Remove(held);
+				RefreshInspector();
+			};
+			picks.AddChild(pick);
+		}
+
+		List<string> chosen = spaces.Where(_inspSplit.Contains).ToList();
+		if (chosen.Count == 0)
+		{
+			rows.AddChild(VarietyLine(good, Array.Empty<string>(), 24, LabLook.Dim));
+			rows.AddChild(InspectorLook.Note("One stack: everything together. Switch a namespace on to see what it tells apart.", LabLook.Faint, 12));
+			return;
+		}
+
+		VarietySet split = Analysis.VarietiesIn(id, chosen);
+		string count = split.Count == 1 ? "1 stack" : $"{(split.Capped ? "about " : "")}{split.Count} stacks";
+		rows.AddChild(LabLook.Text($"Split by {Listed(chosen)}: {count}", 13, PropertyTag));
+		foreach (IReadOnlyList<string> set in split.Sets.OrderBy(s => s.Count).Take(StacksListed))
+			rows.AddChild(VarietyLine(good, set, 24, LabLook.Dim));
+		long more = split.Count - Math.Min(split.Sets.Count, StacksListed);
+		if (more > 0) rows.AddChild(InspectorLook.Note($"  and {more} more", LabLook.Faint, 12));
+	}
+
+	/// <summary>Words in a list, the last joined with "and": heart, soil and fit.</summary>
+	private static string Listed(IReadOnlyList<string> words) => words.Count switch
+	{
+		0 => "",
+		1 => words[0],
+		_ => string.Join(", ", words.Take(words.Count - 1)) + " and " + words[^1],
+	};
+
+	/// <summary>
+	/// How the good's icon answers to a variety, in one line: which namespace or tag tints which
+	/// part of the picture. A layer with no mask has the whole icon. Read from the data and not
+	/// editable here; the sprites are authored beside the sheets.
+	/// </summary>
+	private static Control? LayerLine(Good? good)
+	{
+		if (good?.Layers is not { Count: > 0 } layers) return null;
+		var said = new List<string>();
+		for (int i = 0; i < layers.Count; i++)
+			said.Add(layers[i].Match + (i == 0 ? " tints " : " ") + MaskName(layers[i].Mask));
+		return InspectorLook.Note("Icon: " + string.Join(", ", said) + ".", LabLook.Faint, 12);
+	}
+
+	/// <summary>What part of an icon a mask covers, in words: its file's name, or the whole picture for none.</summary>
+	private static string MaskName(SpriteRef? mask)
+	{
+		if (mask == null) return "the whole icon";
+		if (!string.IsNullOrEmpty(mask.File)) return "the " + Path.GetFileNameWithoutExtension(mask.File);
+		return $"a part ({mask.Atlas} #{mask.Index})";
 	}
 
 	/// <summary>
@@ -547,11 +737,23 @@ public partial class EconomyLab
 		rows.AddChild(element);
 		rows.AddChild(ElementRow(rid, recipe.Element));
 
+		Label site = InspectorLook.Caption("Site");
+		site.MouseFilter = MouseFilterEnum.Stop;
+		site.TooltipText = "The ground or the place the work stands on. Not a slot: nothing is hauled and nothing is used up.";
+		rows.AddChild(site);
+		rows.AddChild(SiteRow(rid, recipe.SiteList));
+		rows.AddChild(InspectorLook.Note(
+			"Where the work has to stand: tags of the ground or the place, any one of which will do. Nothing is hauled.",
+			LabLook.Faint, 12));
+
 		rows.AddChild(InspectorLook.Caption("Formula"));
 		rows.AddChild(Formula(recipe));
 
 		InspectorLook.Section(rows, "Inputs");
-		if (recipe.Inputs.Count == 0) rows.AddChild(InspectorLook.Note("It takes nothing.", LabLook.Warning, 12));
+		if (recipe.Inputs.Count == 0)
+			rows.AddChild(recipe.SiteList.Count > 0
+				? InspectorLook.Note("No inputs: an extraction, dug where it stands.", LabLook.Dim, 12)
+				: InspectorLook.Note("It takes nothing.", LabLook.Warning, 12));
 		for (int i = 0; i < recipe.Inputs.Count; i++) rows.AddChild(SlotBlock(rid, recipe.Inputs[i], i));
 
 		var adding = new HBoxContainer();
@@ -605,6 +807,92 @@ public partial class EconomyLab
 		rows.AddChild(bin);
 	}
 
+	// ---- a recipe's site -------------------------------------------------------
+
+	/// <summary>
+	/// Where the work stands: the tags of the ground or the place, any one of which will do. Not a
+	/// slot — nothing is hauled and nothing is used up — so it is written on the recipe, and peat
+	/// cut on murkearth takes no soil in at all.
+	/// </summary>
+	private Control SiteRow(string rid, IReadOnlyList<string> sites)
+	{
+		HFlowContainer flow = InspectorLook.Flow();
+		if (sites.Count == 0) flow.AddChild(LabLook.Text("anywhere", 12, LabLook.Faint));
+		foreach (string tag in sites)
+		{
+			string held = tag;
+			flow.AddChild(TagChip(held, "the work stands on it; nothing is hauled",
+				() => Change($"took the site off {NameOf(rid)}: {held}", () =>
+				{
+					if (Web.Recipe(rid) is not { } live) return;
+					live.Site?.Remove(held);
+					if (live.Site is { Count: 0 }) live.Site = null;
+				})));
+		}
+		flow.AddChild(InspectorLook.Small("+ site…", "A tag of the ground or the place this work has to stand on.",
+			() => AskSiteTag("Where does the work have to stand?", tag => Sited(rid, tag))));
+		return flow;
+	}
+
+	/// <summary>A tag added to where a recipe must stand; the list is made on the first one.</summary>
+	private void Sited(string rid, string tag)
+	{
+		if (tag.Length == 0) return;
+		if (Web.Recipe(rid) is not { } recipe) return;
+		if (recipe.SiteList.Contains(tag))
+		{
+			Say($"{NameOf(rid)} stands on {tag} already.");
+			return;
+		}
+		Change($"{NameOf(rid)} stands on {tag}", () =>
+		{
+			if (Web.Recipe(rid) is not { } live) return;
+			live.Site ??= new List<string>();
+			if (!live.Site.Contains(tag)) live.Site.Add(tag);
+		});
+	}
+
+	/// <summary>
+	/// Asks for a tag of the ground or the place: the variety namespaces, which is where the soils
+	/// are, and <c>site:</c>, which is where everything else is. A tag typed in that matches nothing
+	/// is taken as a new one, as the other pickers do.
+	/// </summary>
+	private void AskSiteTag(string prompt, Action<string> then)
+	{
+		IEnumerable<(string, string, Texture2D?)> items = Palette.TagsInUse()
+			.Where(t => Palette.IsVariety(t.Tag) || Palette.NamespaceOf(t.Tag) == SiteSpace)
+			.Select(t => (t.Tag, $"#{t.Tag}   ({t.Count})", Sprites.Get(Palette.SignOf(t.Tag))));
+		_picker.Ask(prompt, items, GetViewport().GetMousePosition(), then, typed => then(TidyTag(typed)));
+	}
+
+	/// <summary>
+	/// A tag as a chip that wears its own colour: its symbol tinted where the palette gives it one,
+	/// then the tag itself, then a × that takes it off. A tag with no colour falls back to the fill
+	/// its namespace's part in the web earns it.
+	/// </summary>
+	private Control TagChip(string tag, string what, Action remove)
+	{
+		bool tinted = SpriteBank.TryColour(Palette.ColourOf(tag), out Color hue);
+		Texture2D? symbol = Sprites.Get(Palette.SignOf(tag));
+		string tip = InspectorLook.Lines("#" + tag, Palette.NoteFor(tag), what);
+
+		var chip = new PanelContainer { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
+		chip.AddThemeStyleboxOverride("panel", LabLook.Box(
+			tinted ? hue.Darkened(0.68f) : InspectorLook.TagFill(Palette, tag), 9, 9, marginX: 6, marginY: 2));
+		var row = new HBoxContainer();
+		row.AddThemeConstantOverride("separation", 4);
+		chip.AddChild(row);
+		if (symbol != null)
+		{
+			TextureRect sprite = LabLook.Sprite(symbol, 16);
+			if (tinted) sprite.Modulate = hue;
+			row.AddChild(sprite);
+		}
+		row.AddChild(LabLook.Text(tag, 12, tinted ? hue : InspectorLook.TagInk(Palette, tag)));
+		row.AddChild(InspectorLook.Cross("Take it off", remove));
+		return chip;
+	}
+
 	// ---- a recipe's element and its formula ------------------------------------
 
 	/// <summary>
@@ -649,6 +937,17 @@ public partial class EconomyLab
 		if (Element.Find(recipe.Element) is { } element)
 			flow.AddChild(InspectorLook.Glyph(Sprites.Element(element.Id), 24, element.Name, $"{element.Name}: {element.Gloss}"));
 
+		// The site leads, straight after the element: the work stands somewhere before it takes anything.
+		if (recipe.SiteList.Count > 0)
+		{
+			flow.AddChild(InspectorLook.Mark("on", "where the work has to stand; nothing is hauled", LabLook.Dim));
+			for (int s = 0; s < recipe.SiteList.Count; s++)
+			{
+				if (s > 0) flow.AddChild(InspectorLook.Mark("/", "any one of them"));
+				flow.AddChild(AcceptorGlyph(Acceptor.ForTag(recipe.SiteList[s]), site: true));
+			}
+		}
+
 		for (int i = 0; i < recipe.Inputs.Count; i++)
 		{
 			if (i > 0) flow.AddChild(InspectorLook.Mark("+"));
@@ -675,15 +974,25 @@ public partial class EconomyLab
 
 	/// <summary>
 	/// One term of a formula: a good's sign, or its icon where it has no sign yet, or its name
-	/// where it has neither; a tag as the tag itself, dim, since a tag stands for many goods.
+	/// where it has neither. A tag shows the symbol its palette gives it — its own, or failing that
+	/// its namespace's — tinted with its colour; a tag with no symbol drawn yet stands as the tag
+	/// itself, in its colour where it has one and dim where it has none.
 	/// </summary>
-	private Control AcceptorGlyph(string acceptor)
+	private Control AcceptorGlyph(string acceptor, bool site = false)
 	{
 		if (Acceptor.IsTag(acceptor))
 		{
 			string tag = Acceptor.TagOf(acceptor);
-			return InspectorLook.Mark("#" + LabLook.Short(tag),
-				InspectorLook.Lines("#" + tag, Palette.NoteFor(tag), "anything in this web carrying it"), LabLook.Dim);
+			string tip = InspectorLook.Lines("#" + tag, Palette.NoteFor(tag),
+				site ? "the work stands on it; nothing is hauled" : "anything in this web carrying it");
+			bool tinted = SpriteBank.TryColour(Palette.ColourOf(tag), out Color hue);
+			if (Sprites.Get(Palette.SignOf(tag)) is { } symbol)
+			{
+				Control glyph = InspectorLook.Glyph(symbol, 24, "#" + LabLook.Short(tag), tip);
+				if (tinted) glyph.Modulate = hue;
+				return glyph;
+			}
+			return InspectorLook.Mark("#" + LabLook.Short(tag), tip, tinted ? hue : LabLook.Dim);
 		}
 		Good? good = Palette.Find(acceptor);
 		if (good == null) return InspectorLook.Mark(acceptor, $"{acceptor} is not in this web's palette.", LabLook.Error);
@@ -737,6 +1046,13 @@ public partial class EconomyLab
 		rows.AddChild(AcceptorChips(slot.Accepts, rid, port));
 		if (slot.Accepts.Count == 0) rows.AddChild(InspectorLook.Note("accepts nothing", LabLook.Error, 12));
 		else if (slot.Accepts.Count > 1) rows.AddChild(InspectorLook.Note("any one of these", LabLook.Faint, 12));
+
+		// A variety is meant to ride through a slot, not to stand at its door; the analysis says so too.
+		if (slot.Accepts.Where(Acceptor.IsTag).Select(Acceptor.TagOf).Any(Palette.IsVariety))
+			rows.AddChild(InspectorLook.Note(
+				"A variety tag gating a slot: varieties are meant to ride, not to gate. Ask for a site, a core tag or a good.",
+				LabLook.Warning, 12));
+
 		foreach (string acceptor in slot.Accepts.Where(Acceptor.IsTag)) rows.AddChild(AdmitsLine(rid, port, acceptor));
 		if (slot.Passes)
 			foreach (string filler in Analysis.FillersOf(rid, port).Distinct())
