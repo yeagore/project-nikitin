@@ -116,7 +116,7 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
 | `resources/economy/webs/starter.json` | A small one to learn on: the golem with its three hearts and bronze joints, bread and beer. 48 goods on the canvas, 29 recipes, two consumers; the full 286-good palette, so there is plenty to drag in. Opens first. |
 | `resources/economy/webs/full-ledger-reference.json` | **Locked.** Everything from the 21 September 2026 brainstorm as it was: 286 goods, 197 recipes, four consumers (Food, Intoxicants and physic, Clothing, Wares). The map every other ledger was cut from; it cannot be changed or binned. (The unlocked copy, `full-ledger`, and the `test` web were removed on 2026-09-23: New… → a copy of this one does the same.) |
 | `resources/economy/webs/tagged-ledger.json` | The full ledger reworked as a worked example: its either-or slots turned into tag slots, and varieties switched on (see the findings below). Its own palette. |
-| `resources/economy/webs/variety-ledger.json` | **Locked.** The tagged ledger taken further as a stretch test of varieties (the second findings section below): the recipes' mistakes mended, dye, cloth and the golem heart folded into one good each, many more varieties on raw goods and on what is made of them, property tags the varieties imply, a colour and a symbol for every tag, and icons of their own shape for every good that varies. `tools/make_variety_ledger.py` derives it. |
+| `resources/economy/webs/variety-ledger.json` | **Locked.** The tagged ledger taken further as a stretch test of varieties (the second findings section below): the recipes' mistakes mended, dye, cloth and the golem heart folded into one good each, many more varieties on raw goods and on what is made of them, property tags the varieties imply, a colour and a symbol for every tag, icons of their own shape for every good that varies, and a fifth consumer for works and arms. `tools/make_variety_ledger.py` derives it. |
 | `resources/economy/sprites/icons.png`, `signs.png` | 16 px cells, 16 columns. Cells 0 to 285 are the brainstorm's; cells from 288 on are the icons redrawn for the variety ledger, so the old webs keep their look. `sprites/custom/` takes PNGs imported through the lab, for a good's icon (`<id>.png`) and for its sign (`<id>.sign.png`). The sheets are files shared by every web; each palette names the sheets it uses. |
 | `resources/economy/sprites/masks.png`, `tags.png` | The masks that icon layers tint (the golem's heart, eyes and body, the jewel's stone and band, the ship's hull), and the symbols of the tag namespaces and of the tags that need their own. `tools/make_variety_icons.py` and `tools/make_tag_signs.py` draw them, from `tools/icon_pixels.json` and `tools/sign_vocab.json` (the marks). |
 | `resources/economy/sprites/elements.png` | The five element icons, 16 px, in a row: fire, wind, water, earth, quintessence. They belong to the system, not to a palette. `tools/make_element_icons.py` drew them. |
@@ -282,17 +282,21 @@ Cupellation now yields silver as well as litharge, as Silver's note said all
 along. Three kilns that said coal take any fuel. Court dress demanded silk and
 scarlet, which was a variety gating a slot: it now takes any dyed cloth and gold
 thread, with an optional fur trim, and silk-in-scarlet-with-ermine is simply the
-superb end of it. A second-opinion audit (Sonnet, 2026-09-23) added four small
-ones that are in: sugar is clarified with lime and blood as its note says;
-incense listed camphor twice; spirit varnish (shellac in spirit of wine) was
-promised by a note and missing; the madder vat is a red vat, since dyewood fills
-it too. Its other findings are left for Maxim: no consumer buys
-`need:works-and-arms` (deliberate so far: durables and works); eggs are never
-used though their note promises three uses; the betel quid has no leaf; kola is
-the one drug crop sold raw; the cosmetics recipe's aqua fortis is unexplained;
-the pigments recipe makes the rare pigments mandatory and the common ones
-optional; the indigo vat admits hartshorn as its alkali; oak galls tan as
-readily as bark; raw bamboo goes straight into the paper vat.
+superb end of it. A second-opinion audit (Sonnet, 2026-09-23) found sixteen
+more, and Maxim had all of them applied that could be: sugar is clarified with
+lime and blood as its note says; incense listed camphor twice; spirit varnish
+(shellac in spirit of wine) was promised by a note and missing; the madder vat
+is a red vat, since dyewood fills it too; a fifth consumer, **Works and arms**,
+buys `need:works-and-arms` (tools wear out, powder is spent, buildings eat
+planks), so those twelve goods are consumables after all; the betel quid has its
+leaf (a new good, with a borrowed icon until it has its own); wine takes eggs,
+optional, for fining; the automaton's and the cosmetics' notes now explain their
+heart slot and their aqua fortis; coir is no longer paper stock (coconut is off
+`kind:plant-fibre` and rope names it beside the tag); the pigments recipe has
+ochre as its base and the rare hues as choices; hartshorn, the volatile alkali,
+is off `kind:alkali`. Two were left as they were, with reasons: kola is sold
+raw (so are coconuts and eggs), and oak galls stay a tannin (gall tanning is
+real; their scarcity is a price's business).
 
 **Folds.** Five dyes became one Dye in six colours (a sixth recipe, green from
 weld over indigo, cost one line); four cloths became one Cloth; three hearts one
@@ -300,7 +304,7 @@ Golem heart. The rule that decided: fold when every recipe treats the members
 alike *and* a player would call them one thing in several flavours. Pottery and
 porcelain stay apart; linen and wool do not. Scarlet cloth and blue-and-white
 ware were varieties of Dyed cloth and Porcelain all along, so they and their
-recipes went. Eleven goods fewer (275), one recipe more (199).
+recipes went. Ten goods fewer (276), one recipe more (199), one consumer more (5).
 
 **Many more varieties.** Grain went from three to six; timber, wool, hides, furs,
 fish, milk, grapes and spices got varieties; the metals leave their mark on what
@@ -313,10 +317,10 @@ add (a blue glaze, a clear glass, an armed ship). 98 variety tags in 24 namespac
 and are listed in the script with their reasons: rations do not remember their
 bread, a spirit forgets its grape, ash is ash, nobody asks whose hide backs a book.
 The census shows what that buys: **as it is, 50 of 275 goods vary, and a warehouse
-holding one of everything would have 275 rows by good, 376 by property, about
+holding one of everything would have 276 rows by good, 377 by property, about
 2,400 by variety. With every slot passing, 133 goods vary and the count by variety
-is about forty thousand million** (the aethership alone, thirty thousand
-million). The system grows exponentially exactly where it is told to, and stays
+is about five hundred thousand million** (the aethership alone, tens of thousands
+of millions, and the fifth consumer's provisions now carry their wine's egg). The system grows exponentially exactly where it is told to, and stays
 flat where it is not; the leverage is the `passes` flag, and the count on the
 node is the warning light.
 

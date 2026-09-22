@@ -143,6 +143,7 @@ SOIL_WORK = {
     "quarry": ["stone", "scree"],
 }
 TAGS = {
+    "kind:alkali": ("#B9B9B9", "The fixed alkalis: potash, soda, lime, lye and wood ash. Not the volatile alkali, hartshorn.", []),
     # property tags first: the order of a scale is the order here
     "grade:coarse": ("#8A7A6B", "The poorest sort.", []),
     "grade:common": ("#B9B9B9", "The everyday sort.", []),
@@ -415,6 +416,36 @@ def main():
         "element": "water", "inputs": [{"accepts": ["shellac"]}, {"accepts": ["spirit"]}], "outputs": [{"good": "varnish"}]})
     recipes["r.varnish.2"] = next(r for r in web["recipes"] if r["id"] == "r.varnish.2")
     log.append("fix: Spirit of wine's note called it the solvent behind varnish and no recipe did; Spirit varnish (shellac + spirit) added")
+
+    # The rest of the audit, applied on Maxim's word of 2026-09-23. Kola stays sold raw (so are coconuts and eggs) and oak galls stay a
+    # tannin (gall tanning is real; scarcity is a price's business), so two findings are left as they were.
+    web["consumers"].append({"id": "c.works", "name": "Works and arms", "note": "Tools wear out, powder is spent, and buildings eat planks and bricks.",
+                             "accepts": ["#need:works-and-arms"]})
+    log.append("fix: a fifth consumer, Works and arms, buys #need:works-and-arms; twelve goods carried a Need nothing bought")
+    leaf = {"id": "betelleaf", "name": "Betel leaf", "note": "The leaf the quid is wrapped in, from a vine grown up the areca palm. (Icon and sign borrowed from the mulberry leaf until it has its own.)",
+            "tags": ["stage:raw", "source:farmed", "group:farmed", "nature:mundane", "origin:southeast-asia", "origin:south-asia"],
+            "icon": dict(goods["mulb"]["icon"]), "sign": dict(goods["mulb"]["sign"])}
+    palette["goods"].insert(palette["goods"].index(goods["areca"]) + 1, leaf)
+    web["goods"].insert(web["goods"].index("areca") + 1, "betelleaf")
+    goods["betelleaf"] = leaf
+    recipes["r.betel"]["inputs"].insert(1, {"accepts": ["betelleaf"]})
+    log.append("fix: the betel quid's note named a leaf the recipe lacked; Betel leaf is a good and a slot")
+    recipes["r.wine"]["inputs"].append({"accepts": ["eggs"], "optional": True})
+    goods["wine"]["note"] = "Grape juice left alone, fined with egg white if it is to be clear. Parent of vinegar, brandy and tartar."
+    log.append("fix: eggs were used by nothing though their note promised three uses; wine takes them, optional, for fining")
+    goods["autom"]["note"] = "A golem's clockwork cousin: no blood, no soil, and only as much wit as the cheap heart you give it."
+    goods["cosm"]["note"] = "Kohl from stibnite, ceruse from white lead, pearl white from bismuth dissolved in aqua fortis and thrown down with water."
+    log.append("fix: the automaton's note allowed for its heart slot and the cosmetics' note explains its aqua fortis")
+    goods["coconut"]["tags"].remove("kind:plant-fibre")
+    slot_of("r.rope", "#kind:plant-fibre")["accepts"] = ["#kind:plant-fibre", "coconut"]
+    goods["paper"]["note"] = "Rag or bamboo paper, sized with alum and glue."
+    log.append("fix: coir went into the paper vat as a plant fibre; coconut is off the tag and rope names it beside the tag")
+    for slot in recipes["r.pigm"]["inputs"]:
+        slot["optional"] = next(iter(slot["accepts"])) != "ochre"
+    goods["pigm"]["note"] = "The colourman's stock: ochre from the pit, and whatever rarer hue the trade brings, each with a different mine, plant or poison behind it."
+    log.append("fix: the pigments recipe made the rare hues mandatory and ochre optional; now ochre is the base and the rest are choices")
+    goods["harts"]["tags"].remove("kind:alkali")
+    log.append("fix: hartshorn, the volatile alkali, no longer counts as the vat's alkali; kind:alkali is the fixed alkalis")
 
     # ---- 2. folds ------------------------------------------------------------------------
     at = {g["id"]: i for i, g in enumerate(palette["goods"])}
