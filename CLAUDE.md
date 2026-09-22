@@ -242,6 +242,7 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 | Mechanics and Concepts | index | Parent of the mechanics pages. |
 | The Gameplay Loop → The First Hour | written | Best description of moment-to-moment play. |
 | Economy, Population and Settlements | draft | Settlements, classes, Needs, money. |
+| Economy → [CLAUDE] Alchemical Economy | written 2026-09-23 | The economy lab's design as it stands, with examples and pictures: webs, palettes, tags and roles, varieties, properties and stacks, sites, elements, signs and icons, the ledgers, the census. Proposal, not ruling. |
 | Generation → Island Generation | short | Requirements checklist for island generation. |
 | Generation → Part 1: Terrain and Climate | written | The generator in plain words, with the audit's sheets. |
 | Terrain → [CLAUDE] The Soil Glossary | proposal | The surface materials' plain names, Latinate names, codes and colours; the code uses the plain names and the colours. |
