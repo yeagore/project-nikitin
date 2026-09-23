@@ -833,7 +833,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 78
+          "index": 366
         },
         "sign": {
           "atlas": "signs",
@@ -846,7 +846,7 @@
       {
         "id": "slt",
         "name": "Rock salt",
-        "note": "Mined in blocks, grey or pink. The same stuff as the sea, a few million years drier.",
+        "note": "Mined in blocks, grey or pink. The same salt a salt lake leaves at its edge, a few million years drier.",
         "tags": [
           "stage:raw",
           "source:mined",
@@ -857,7 +857,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 8
+          "index": 423
         },
         "sign": {
           "atlas": "signs",
@@ -880,7 +880,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 99
+          "index": 411
         },
         "sign": {
           "atlas": "signs",
@@ -996,7 +996,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 134
+          "index": 482
         },
         "sign": {
           "atlas": "signs",
@@ -1023,7 +1023,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 1
+          "index": 414
         },
         "sign": {
           "atlas": "signs",
@@ -1048,7 +1048,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 291
+          "index": 408
         },
         "sign": {
           "atlas": "signs",
@@ -1152,7 +1152,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 302
+          "index": 454
         },
         "sign": {
           "atlas": "signs",

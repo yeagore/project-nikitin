@@ -108,7 +108,7 @@ public partial class RecipeNode : GraphNode
 			{
 				Good? made = palette.Find(recipe.Outputs[i].Good);
 				row.AddChild(LabLook.Text(made?.Name ?? recipe.Outputs[i].Good, 11, LabLook.ProductPort, trim: false));
-				row.AddChild(LabLook.Sprite(sprites.Get(made?.Icon), 16));
+				row.AddChild(LabLook.Sprite(sprites.Icon(made?.Icon), 16));
 			}
 			else if (i == Outputs) row.AddChild(LabLook.Text("output +", 11, LabLook.Faint));
 
@@ -161,7 +161,7 @@ public partial class RecipeNode : GraphNode
 		}
 
 		string? single = slot.Accepts.Count == 1 && !Acceptor.IsTag(slot.Accepts[0]) ? slot.Accepts[0] : null;
-		if (single != null) row.AddChild(LabLook.Sprite(sprites.Get(palette.Find(single)?.Icon), 16));
+		if (single != null) row.AddChild(LabLook.Sprite(sprites.Icon(palette.Find(single)?.Icon), 16));
 
 		var words = new List<string>();
 		foreach (string acceptor in slot.Accepts)

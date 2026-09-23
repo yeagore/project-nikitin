@@ -381,7 +381,7 @@ public partial class EconomyLab
 			Texture2D? plain = Sprites.Compose(golemGood, Array.Empty<string>());
 			Texture2D? green = Sprites.Compose(golemGood, new[] { "heart:arsenic" });
 			Texture2D? again = Sprites.Compose(golemGood, new[] { "heart:arsenic" });
-			Check(plain == Sprites.Get(golemGood.Icon) && green != null && green != plain && again == green, "a plain stack shows the plain icon; a variety recolours it, once");
+			Check(plain == Sprites.Icon(golemGood.Icon) && green != null && green != plain && again == green, "a plain stack shows the plain icon on its parchment; a variety recolours it, once");
 			Check(Sprites.Compose(golemGood, new[] { "stage:assembly" }) == plain, "a tag with no colour changes nothing");
 
 			// The tag functions reach the new places a tag can be named.

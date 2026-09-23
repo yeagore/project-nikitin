@@ -187,7 +187,7 @@ public partial class EconomyLab
 		var head = new HBoxContainer();
 		head.AddThemeConstantOverride("separation", 8);
 		rows.AddChild(head);
-		head.AddChild(LabLook.Sprite(Sprites.Get(good.Icon), 64));
+		head.AddChild(LabLook.Sprite(Sprites.Icon(good.Icon), 64));
 		head.AddChild(LabLook.Sprite(Sprites.Get(good.Sign), 48));
 		var titles = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
 		titles.AddThemeConstantOverride("separation", 2);
@@ -634,7 +634,7 @@ public partial class EconomyLab
 		Good? good = Palette.Find(id);
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 8);
-		row.AddChild(LabLook.Sprite(Sprites.Get(sign ? good?.Sign : good?.Icon), 32));
+		row.AddChild(LabLook.Sprite(sign ? Sprites.Get(good?.Sign) : Sprites.Icon(good?.Icon), 32));
 		Label what = LabLook.Text(sign ? "Sign" : "Icon", 13, LabLook.Dim);
 		what.SizeFlagsVertical = SizeFlags.ShrinkCenter;
 		row.AddChild(what);
@@ -1151,7 +1151,7 @@ public partial class EconomyLab
 		}
 		Good? good = Palette.Find(acceptor);
 		if (good == null) return InspectorLook.Mark(acceptor, $"{acceptor} is not in this web's palette.", LabLook.Error);
-		return InspectorLook.Glyph(Sprites.Get(good.Sign) ?? Sprites.Get(good.Icon), 24, good.Name, good.Name);
+		return InspectorLook.Glyph(Sprites.Get(good.Sign) ?? Sprites.Icon(good.Icon), 24, good.Name, good.Name);
 	}
 
 	/// <summary>

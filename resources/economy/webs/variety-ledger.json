@@ -827,7 +827,7 @@
       },
       {
         "id": "anchor:rim",
-        "note": "Land at the edge of the Domain, with aether beside it (CoastCells).",
+        "note": "Land at the edge of the Domain, with aether beside it (CoastCells). The coast faces the aether, never a sea: there is none.",
         "colour": "#8E7CC3"
       },
       {
@@ -836,18 +836,18 @@
         "colour": "#6A5ACD"
       },
       {
-        "id": "anchor:sea-stack",
-        "note": "An islet of rock standing off the rim (SeaStacks): bird colonies, guano, eggs, quills.",
+        "id": "anchor:aether-stack",
+        "note": "A stack of rock standing in the aether off the rim (the generator's SeaStacks, a name from before): bird colonies, guano, eggs, quills.",
         "colour": "#A58FD0"
       },
       {
         "id": "anchor:estuary",
-        "note": "The mouth of a navigable river at the rim (Estuaries): a port, a shipyard.",
+        "note": "Where a navigable river widens to the rim and pours off it into the aether (Estuaries): a port for aetherships, a yard.",
         "colour": "#5B8DB8"
       },
       {
         "id": "anchor:delta",
-        "note": "The apex of a delta's fan (Deltas): the richest wet ground there is.",
+        "note": "The apex of a delta's fan, where a river parts before it pours off the rim (Deltas): the richest wet ground there is.",
         "colour": "#86A86A"
       },
       {
@@ -1416,25 +1416,25 @@
         ]
       },
       {
-        "id": "fish:herring",
+        "id": "fish:perch",
         "note": "",
-        "colour": "#A9C3D6",
+        "colour": "#8FB26A",
         "implies": [
           "grade:coarse"
         ]
       },
       {
-        "id": "fish:cod",
+        "id": "fish:carp",
         "note": "",
-        "colour": "#C9C2A8",
+        "colour": "#C9A24A",
         "implies": [
           "grade:common"
         ]
       },
       {
-        "id": "fish:salmon",
+        "id": "fish:trout",
         "note": "",
-        "colour": "#F08A6B",
+        "colour": "#E88A8A",
         "implies": [
           "grade:fine"
         ]
@@ -1905,7 +1905,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 0
+          "index": 412
         },
         "sign": {
           "atlas": "signs",
@@ -1929,7 +1929,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 1
+          "index": 414
         },
         "sign": {
           "atlas": "signs",
@@ -1953,7 +1953,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 2
+          "index": 415
         },
         "sign": {
           "atlas": "signs",
@@ -2000,7 +2000,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 4
+          "index": 416
         },
         "sign": {
           "atlas": "signs",
@@ -2023,7 +2023,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 5
+          "index": 413
         },
         "sign": {
           "atlas": "signs",
@@ -2085,7 +2085,7 @@
       {
         "id": "slt",
         "name": "Rock salt",
-        "note": "Mined in blocks, grey or pink. The same stuff as the sea, a few million years drier.",
+        "note": "Mined in blocks, grey or pink. The same salt a salt lake leaves at its edge, a few million years drier.",
         "tags": [
           "stage:raw",
           "source:mined",
@@ -2096,7 +2096,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 8
+          "index": 423
         },
         "sign": {
           "atlas": "signs",
@@ -2165,7 +2165,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 11
+          "index": 369
         },
         "sign": {
           "atlas": "signs",
@@ -2235,7 +2235,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 14
+          "index": 417
         },
         "sign": {
           "atlas": "signs",
@@ -2259,7 +2259,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 15
+          "index": 424
         },
         "sign": {
           "atlas": "signs",
@@ -2284,7 +2284,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 16
+          "index": 477
         },
         "sign": {
           "atlas": "signs",
@@ -2307,7 +2307,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 17
+          "index": 425
         },
         "sign": {
           "atlas": "signs",
@@ -2331,7 +2331,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 18
+          "index": 418
         },
         "sign": {
           "atlas": "signs",
@@ -2384,7 +2384,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 20
+          "index": 368
         },
         "sign": {
           "atlas": "signs",
@@ -2407,7 +2407,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 21
+          "index": 419
         },
         "sign": {
           "atlas": "signs",
@@ -2433,7 +2433,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 22
+          "index": 422
         },
         "sign": {
           "atlas": "signs",
@@ -2449,7 +2449,7 @@
       {
         "id": "lode",
         "name": "Lodestone",
-        "note": "A natural magnet. The stone that made open-ocean navigation possible.",
+        "note": "A natural magnet. The stone that made navigation through the open aether possible.",
         "tags": [
           "stage:raw",
           "source:mined",
@@ -2460,7 +2460,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 23
+          "index": 420
         },
         "sign": {
           "atlas": "signs",
@@ -2484,7 +2484,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 24
+          "index": 421
         },
         "sign": {
           "atlas": "signs",
@@ -2672,7 +2672,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 26
+          "index": 426
         },
         "sign": {
           "atlas": "signs",
@@ -2697,7 +2697,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 27
+          "index": 428
         },
         "sign": {
           "atlas": "signs",
@@ -2725,7 +2725,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 28
+          "index": 429
         },
         "sign": {
           "atlas": "signs",
@@ -3095,7 +3095,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 38
+          "index": 441
         },
         "sign": {
           "atlas": "signs",
@@ -3150,7 +3150,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 40
+          "index": 447
         },
         "sign": {
           "atlas": "signs",
@@ -3204,7 +3204,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 42
+          "index": 446
         },
         "sign": {
           "atlas": "signs",
@@ -3220,7 +3220,7 @@
       {
         "id": "tea",
         "name": "Tea leaves",
-        "note": "Leaves of an evergreen bush. Worth an ocean voyage once people acquire the habit.",
+        "note": "Leaves of an evergreen bush. Worth a voyage through three Gates once people acquire the habit.",
         "tags": [
           "stage:raw",
           "source:farmed",
@@ -3231,7 +3231,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 43
+          "index": 435
         },
         "sign": {
           "atlas": "signs",
@@ -3258,7 +3258,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 44
+          "index": 445
         },
         "sign": {
           "atlas": "signs",
@@ -3284,7 +3284,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 45
+          "index": 443
         },
         "sign": {
           "atlas": "signs",
@@ -3312,7 +3312,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 46
+          "index": 448
         },
         "sign": {
           "atlas": "signs",
@@ -3339,7 +3339,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 47
+          "index": 437
         },
         "sign": {
           "atlas": "signs",
@@ -3395,7 +3395,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 49
+          "index": 439
         },
         "sign": {
           "atlas": "signs",
@@ -3421,7 +3421,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 50
+          "index": 449
         },
         "sign": {
           "atlas": "signs",
@@ -3516,7 +3516,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 52
+          "index": 444
         },
         "sign": {
           "atlas": "signs",
@@ -3571,7 +3571,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 54
+          "index": 430
         },
         "sign": {
           "atlas": "signs",
@@ -3597,7 +3597,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 55
+          "index": 436
         },
         "sign": {
           "atlas": "signs",
@@ -3683,8 +3683,8 @@
       },
       {
         "id": "kelp",
-        "name": "Kelp",
-        "note": "Seaweed burnt on the beach for its ash. A coast's answer to natron.",
+        "name": "Lake wrack",
+        "note": "Weed raked out of the lake shallows and burnt on the shore for its ash: a lake country's answer to natron.",
         "tags": [
           "stage:raw",
           "source:farmed",
@@ -3695,7 +3695,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 57
+          "index": 438
         },
         "sign": {
           "atlas": "signs",
@@ -3723,7 +3723,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 58
+          "index": 376
         },
         "sign": {
           "atlas": "signs",
@@ -3837,7 +3837,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 62
+          "index": 432
         },
         "sign": {
           "atlas": "signs",
@@ -3896,7 +3896,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 64
+          "index": 431
         },
         "sign": {
           "atlas": "signs",
@@ -3942,7 +3942,7 @@
       {
         "id": "coconut",
         "name": "Coconut",
-        "note": "Food, drink, oil and, from the husk, a rope that salt water cannot rot.",
+        "note": "Food, drink, oil and, from the husk, a rope that rain and river cannot rot.",
         "tags": [
           "stage:raw",
           "source:farmed",
@@ -3956,7 +3956,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 66
+          "index": 434
         },
         "sign": {
           "atlas": "signs",
@@ -4103,7 +4103,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 70
+          "index": 442
         },
         "sign": {
           "atlas": "signs",
@@ -4410,7 +4410,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 78
+          "index": 366
         },
         "sign": {
           "atlas": "signs",
@@ -4435,7 +4435,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 79
+          "index": 374
         },
         "sign": {
           "atlas": "signs",
@@ -4545,7 +4545,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 83
+          "index": 476
         },
         "sign": {
           "atlas": "signs",
@@ -4614,27 +4614,27 @@
         },
         "varieties": [
           {
-            "id": "herring",
-            "name": "Herring",
+            "id": "perch",
+            "name": "Perch",
             "note": "",
             "tags": [
-              "fish:herring"
+              "fish:perch"
             ]
           },
           {
-            "id": "cod",
-            "name": "Cod",
+            "id": "carp",
+            "name": "Carp",
             "note": "",
             "tags": [
-              "fish:cod"
+              "fish:carp"
             ]
           },
           {
-            "id": "salmon",
-            "name": "Salmon",
+            "id": "trout",
+            "name": "Trout",
             "note": "",
             "tags": [
-              "fish:salmon"
+              "fish:trout"
             ]
           }
         ]
@@ -4762,7 +4762,7 @@
       {
         "id": "shells",
         "name": "Shells",
-        "note": "Burn them and you have lime without a quarry. Small glossy ones have also passed as money across half the world.",
+        "note": "Freshwater mussel shells heaped on a lake's shore. Burn them and you have lime without a quarry.",
         "tags": [
           "stage:raw",
           "source:herded",
@@ -4821,7 +4821,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 91
+          "index": 402
         },
         "sign": {
           "atlas": "signs",
@@ -4846,7 +4846,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 291
+          "index": 408
         },
         "sign": {
           "atlas": "signs",
@@ -4892,7 +4892,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 94
+          "index": 403
         },
         "sign": {
           "atlas": "signs",
@@ -4915,7 +4915,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 95
+          "index": 404
         },
         "sign": {
           "atlas": "signs",
@@ -4964,7 +4964,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 293
+          "index": 409
         },
         "sign": {
           "atlas": "signs",
@@ -4987,7 +4987,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 98
+          "index": 481
         },
         "sign": {
           "atlas": "signs",
@@ -5010,7 +5010,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 99
+          "index": 411
         },
         "sign": {
           "atlas": "signs",
@@ -5054,7 +5054,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 101
+          "index": 379
         },
         "sign": {
           "atlas": "signs",
@@ -5098,7 +5098,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 103
+          "index": 474
         },
         "sign": {
           "atlas": "signs",
@@ -5188,7 +5188,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 107
+          "index": 433
         },
         "sign": {
           "atlas": "signs",
@@ -5238,7 +5238,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 109
+          "index": 480
         },
         "sign": {
           "atlas": "signs",
@@ -5261,7 +5261,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 110
+          "index": 364
         },
         "sign": {
           "atlas": "signs",
@@ -5301,7 +5301,7 @@
       {
         "id": "soda",
         "name": "Soda ash",
-        "note": "Or burn kelp for it.",
+        "note": "Soda from natron, or from burning lake wrack.",
         "tags": [
           "stage:processed",
           "group:salts-and-earths",
@@ -5310,7 +5310,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 112
+          "index": 353
         },
         "sign": {
           "atlas": "signs",
@@ -5333,7 +5333,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 113
+          "index": 354
         },
         "sign": {
           "atlas": "signs",
@@ -5380,7 +5380,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 115
+          "index": 473
         },
         "sign": {
           "atlas": "signs",
@@ -5405,7 +5405,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 116
+          "index": 427
         },
         "sign": {
           "atlas": "signs",
@@ -5452,7 +5452,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 118
+          "index": 355
         },
         "sign": {
           "atlas": "signs",
@@ -5476,7 +5476,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 119
+          "index": 356
         },
         "sign": {
           "atlas": "signs",
@@ -5655,7 +5655,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 126
+          "index": 450
         },
         "sign": {
           "atlas": "signs",
@@ -5679,7 +5679,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 127
+          "index": 384
         },
         "sign": {
           "atlas": "signs",
@@ -5703,7 +5703,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 128
+          "index": 452
         },
         "sign": {
           "atlas": "signs",
@@ -5730,7 +5730,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 129
+          "index": 451
         },
         "sign": {
           "atlas": "signs",
@@ -5815,7 +5815,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 132
+          "index": 484
         },
         "sign": {
           "atlas": "signs",
@@ -5866,7 +5866,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 134
+          "index": 482
         },
         "sign": {
           "atlas": "signs",
@@ -5882,7 +5882,7 @@
       {
         "id": "pitch",
         "name": "Pitch",
-        "note": "Resin or tar boiled thick. The black stuff that keeps the sea out of a hull.",
+        "note": "Resin or tar boiled thick. The black stuff that seals a hull's seams against rain and aether.",
         "tags": [
           "stage:processed",
           "group:farm-and-herd-goods",
@@ -5892,7 +5892,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 135
+          "index": 469
         },
         "sign": {
           "atlas": "signs",
@@ -5917,7 +5917,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 136
+          "index": 385
         },
         "sign": {
           "atlas": "signs",
@@ -5997,7 +5997,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 302
+          "index": 454
         },
         "sign": {
           "atlas": "signs",
@@ -6071,7 +6071,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 142
+          "index": 370
         },
         "sign": {
           "atlas": "signs",
@@ -6095,7 +6095,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 143
+          "index": 352
         },
         "sign": {
           "atlas": "signs",
@@ -6257,7 +6257,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 149
+          "index": 399
         },
         "sign": {
           "atlas": "signs",
@@ -6285,7 +6285,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 150
+          "index": 483
         },
         "sign": {
           "atlas": "signs",
@@ -6313,7 +6313,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 295
+          "index": 410
         },
         "sign": {
           "atlas": "signs",
@@ -6338,7 +6338,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 152
+          "index": 405
         },
         "sign": {
           "atlas": "signs",
@@ -6366,7 +6366,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 153
+          "index": 406
         },
         "sign": {
           "atlas": "signs",
@@ -6448,7 +6448,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 156
+          "index": 471
         },
         "sign": {
           "atlas": "signs",
@@ -6474,7 +6474,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 157
+          "index": 407
         },
         "sign": {
           "atlas": "signs",
@@ -6500,7 +6500,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 158
+          "index": 371
         },
         "sign": {
           "atlas": "signs",
@@ -6526,7 +6526,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 159
+          "index": 360
         },
         "sign": {
           "atlas": "signs",
@@ -6550,7 +6550,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 160
+          "index": 479
         },
         "sign": {
           "atlas": "signs",
@@ -6576,7 +6576,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 161
+          "index": 453
         },
         "sign": {
           "atlas": "signs",
@@ -6602,7 +6602,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 162
+          "index": 377
         },
         "sign": {
           "atlas": "signs",
@@ -6625,7 +6625,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 163
+          "index": 378
         },
         "sign": {
           "atlas": "signs",
@@ -6648,7 +6648,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 164
+          "index": 383
         },
         "sign": {
           "atlas": "signs",
@@ -6672,7 +6672,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 165
+          "index": 380
         },
         "sign": {
           "atlas": "signs",
@@ -6699,7 +6699,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 166
+          "index": 381
         },
         "sign": {
           "atlas": "signs",
@@ -6744,7 +6744,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 168
+          "index": 388
         },
         "sign": {
           "atlas": "signs",
@@ -6769,7 +6769,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 169
+          "index": 389
         },
         "sign": {
           "atlas": "signs",
@@ -6797,7 +6797,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 170
+          "index": 357
         },
         "sign": {
           "atlas": "signs",
@@ -6822,7 +6822,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 171
+          "index": 367
         },
         "sign": {
           "atlas": "signs",
@@ -6949,7 +6949,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 176
+          "index": 358
         },
         "sign": {
           "atlas": "signs",
@@ -6971,7 +6971,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 177
+          "index": 362
         },
         "sign": {
           "atlas": "signs",
@@ -6996,7 +6996,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 178
+          "index": 363
         },
         "sign": {
           "atlas": "signs",
@@ -7022,7 +7022,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 179
+          "index": 359
         },
         "sign": {
           "atlas": "signs",
@@ -7045,7 +7045,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 180
+          "index": 361
         },
         "sign": {
           "atlas": "signs",
@@ -7145,7 +7145,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 188
+          "index": 459
         },
         "sign": {
           "atlas": "signs",
@@ -7198,7 +7198,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 190
+          "index": 475
         },
         "sign": {
           "atlas": "signs",
@@ -7223,7 +7223,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 191
+          "index": 372
         },
         "sign": {
           "atlas": "signs",
@@ -7302,7 +7302,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 194
+          "index": 387
         },
         "sign": {
           "atlas": "signs",
@@ -7327,7 +7327,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 195
+          "index": 373
         },
         "sign": {
           "atlas": "signs",
@@ -7355,7 +7355,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 196
+          "index": 462
         },
         "sign": {
           "atlas": "signs",
@@ -7594,7 +7594,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 208
+          "index": 375
         },
         "sign": {
           "atlas": "signs",
@@ -7805,7 +7805,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 215
+          "index": 382
         },
         "sign": {
           "atlas": "signs",
@@ -7860,7 +7860,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 217
+          "index": 400
         },
         "sign": {
           "atlas": "signs",
@@ -7884,7 +7884,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 218
+          "index": 390
         },
         "sign": {
           "atlas": "signs",
@@ -7910,7 +7910,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 219
+          "index": 365
         },
         "sign": {
           "atlas": "signs",
@@ -7934,7 +7934,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 220
+          "index": 466
         },
         "sign": {
           "atlas": "signs",
@@ -7961,7 +7961,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 221
+          "index": 391
         },
         "sign": {
           "atlas": "signs",
@@ -7988,7 +7988,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 222
+          "index": 458
         },
         "sign": {
           "atlas": "signs",
@@ -8033,7 +8033,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 224
+          "index": 392
         },
         "sign": {
           "atlas": "signs",
@@ -8305,7 +8305,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 236
+          "index": 465
         },
         "sign": {
           "atlas": "signs",
@@ -8384,7 +8384,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 239
+          "index": 461
         },
         "sign": {
           "atlas": "signs",
@@ -8409,7 +8409,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 240
+          "index": 467
         },
         "sign": {
           "atlas": "signs",
@@ -8435,7 +8435,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 241
+          "index": 478
         },
         "sign": {
           "atlas": "signs",
@@ -8525,7 +8525,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 244
+          "index": 386
         },
         "sign": {
           "atlas": "signs",
@@ -8551,7 +8551,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 245
+          "index": 397
         },
         "sign": {
           "atlas": "signs",
@@ -8577,7 +8577,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 246
+          "index": 456
         },
         "sign": {
           "atlas": "signs",
@@ -8604,7 +8604,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 247
+          "index": 396
         },
         "sign": {
           "atlas": "signs",
@@ -8630,7 +8630,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 248
+          "index": 395
         },
         "sign": {
           "atlas": "signs",
@@ -8656,7 +8656,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 249
+          "index": 393
         },
         "sign": {
           "atlas": "signs",
@@ -8680,7 +8680,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 250
+          "index": 394
         },
         "sign": {
           "atlas": "signs",
@@ -8708,7 +8708,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 251
+          "index": 440
         },
         "sign": {
           "atlas": "signs",
@@ -8892,7 +8892,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 258
+          "index": 398
         },
         "sign": {
           "atlas": "signs",
@@ -9034,7 +9034,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 263
+          "index": 463
         },
         "sign": {
           "atlas": "signs",
@@ -9061,7 +9061,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 264
+          "index": 457
         },
         "sign": {
           "atlas": "signs",
@@ -9196,7 +9196,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 269
+          "index": 455
         },
         "sign": {
           "atlas": "signs",
@@ -9333,7 +9333,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 274
+          "index": 472
         },
         "sign": {
           "atlas": "signs",
@@ -9394,7 +9394,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 276
+          "index": 460
         },
         "sign": {
           "atlas": "signs",
@@ -9422,7 +9422,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 304
+          "index": 401
         },
         "sign": {
           "atlas": "signs",
@@ -9477,7 +9477,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 279
+          "index": 468
         },
         "sign": {
           "atlas": "signs",
@@ -9585,7 +9585,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 283
+          "index": 470
         },
         "sign": {
           "atlas": "signs",
@@ -9640,7 +9640,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 285
+          "index": 464
         },
         "sign": {
           "atlas": "signs",
@@ -15671,11 +15671,11 @@
     {
       "id": "r.x.coconut",
       "name": "Coconut growing",
-      "note": "Palms grown at the Domain's hot rim, aether beside them where a coastline would be.",
+      "note": "Palms on hot, wet ground; nothing to do with the rim, which faces the aether.",
       "element": "water",
       "site": [
-        "anchor:rim",
-        "warmth:hot"
+        "soil:redearth",
+        "soil:yellowearth"
       ],
       "inputs": [],
       "outputs": [
@@ -15837,10 +15837,11 @@
     },
     {
       "id": "r.x.kelp",
-      "name": "Kelp gathering",
-      "note": "Gathered off the lakeshore and burnt there for its ash.",
+      "name": "Wrack raking",
+      "note": "Weed raked out of the lake shallows and burnt on the shore for its ash.",
       "element": "earth",
       "site": [
+        "anchor:shallows",
         "anchor:lakeshore"
       ],
       "inputs": [],
@@ -16107,7 +16108,7 @@
     {
       "id": "r.x.fish",
       "name": "Fishing",
-      "note": "Netted and trapped in the shallows, where the lake bed is close under the water.",
+      "note": "Netted and trapped in the lakes and the pools under falls: shallows, deeps and the shore.",
       "element": "water",
       "site": [
         "anchor:shallows",
@@ -16170,8 +16171,8 @@
     },
     {
       "id": "r.x.shells",
-      "name": "Shell gathering",
-      "note": "Picked off the lakeshore after the water has done the work of sorting them by size.",
+      "name": "Mussel gathering",
+      "note": "Freshwater mussels picked off the lake bed and its shore; the meat eaten, the shells burnt for lime.",
       "element": "earth",
       "site": [
         "anchor:lakeshore"

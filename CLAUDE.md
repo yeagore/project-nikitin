@@ -127,7 +127,10 @@ about the code by reading it, and changes nothing. For other chores, `Explore` o
 
 - A **Domain** is a 3D landmass or archipelago of terrain units suspended in
   aether: flying islands, coarse scale (one unit's top face is an orchard or a
-  housing compound). Gravity points −Y. Each Domain sits in an invisible bounding
+  housing compound). Gravity points −Y. **There is no sea:** a coast, a beach, a
+  fjord or a "sea stack" faces the aether; the water is rivers, lakes and springs,
+  and every river pours off the rim. Nothing coastal in the sea's sense (sea salt,
+  sea fish, seaweed, shells, beach palms) belongs anywhere. Each Domain sits in an invisible bounding
   cube that keeps vessels in but does not block Gate travel.
 - The terrain unit is a **slab**: a square cell 1 wide and **1/4 as tall**
   (`SLAB_HEIGHT = CELL_SIZE / 4`). Terrain Y is an integer slab index. The

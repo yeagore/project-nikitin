@@ -61,7 +61,9 @@ load a web as it is and a test can run without the engine.
   by a river. The soils are the `soil` variety tags; `anchor:*` are the generator's
   feature anchors (each tag's note names its `IslandData` field); `warmth`,
   `moisture`, `exposure` are habitat bands, named only where the soil does not fix
-  them. **Ore deposits are not tags** (no one knows how much ore a Domain holds):
+  them. **The coasts face the aether, not a sea**: there is no sea in the Ecumene, so
+  no sea salt, sea fish, seaweed or beach palms; water is rivers, lakes, springs.
+  **Ore deposits are not tags** (no one knows how much ore a Domain holds):
   a mine stands on rock and names its deposit in its note. Nothing yet tests a
   site against a Domain.
 - **Colours, symbols, layers.** A `TagDef` has a `Colour` (`#RRGGBB`) and may have
@@ -143,5 +145,7 @@ the older webs keep their sources, and the analysis names them),
 the variety one (it stamps in `tools/variety_icons.json` and `tools/tag_signs.json`,
 which `make_variety_icons.py` and `make_tag_signs.py` draw); `tools/apply_recipe_elements.py`
 stamped `tools/recipe_elements.json` in place; `tools/make_element_icons.py` drew the
-element icons. One-offs kept as the record; re-running one overwrites lab edits to
-the web it writes. Icons and signs are 16 px placeholders: pre-production material.
+element icons; `tools/make_icon_fixes.py` and `tools/make_shape_pass.py` redrew icons
+after the sprite review (one shape per good), stamped in by `make_variety_ledger.py`.
+One-offs kept as the record; re-running one overwrites lab edits to the web it writes.
+Icons and signs are 16 px placeholders, drawn for a parchment ground: pre-production material.

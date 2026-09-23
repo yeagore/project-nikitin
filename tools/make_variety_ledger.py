@@ -204,9 +204,9 @@ TAGS = {
     "fur:beaver": ("#6B4A2F", "", ["grade:fine"]),
     "fur:sable": ("#2F2622", "", ["grade:superb"]),
     "fur:ermine": ("#F3F1EA", "", ["grade:superb"]),
-    "fish:herring": ("#A9C3D6", "", ["grade:coarse"]),
-    "fish:cod": ("#C9C2A8", "", ["grade:common"]),
-    "fish:salmon": ("#F08A6B", "", ["grade:fine"]),
+    "fish:perch": ("#8FB26A", "", ["grade:coarse"]),  # herring, cod and salmon until 2026-09-23: there is no sea
+    "fish:carp": ("#C9A24A", "", ["grade:common"]),
+    "fish:trout": ("#E88A8A", "", ["grade:fine"]),
     "milk:cow": ("#FFFFFF", "", ["grade:common"]),
     "milk:goat": ("#F1EBD8", "", ["grade:coarse"]),
     "milk:sheep": ("#F7E9B8", "", ["grade:fine"]),
@@ -260,7 +260,7 @@ AUTHORED = {
     "hides": ("hide", [("cattle", "Cattle hides", ""), ("goat", "Goatskins", ""), ("deer", "Deerskins", "")]),
     "furs": ("fur", [("fox", "Fox", ""), ("beaver", "Beaver", "Its barbed underfur felts better than any other."),
                      ("sable", "Sable", ""), ("ermine", "Ermine", "")]),
-    "fish": ("fish", [("herring", "Herring", ""), ("cod", "Cod", ""), ("salmon", "Salmon", "")]),
+    "fish": ("fish", [("perch", "Perch", ""), ("carp", "Carp", ""), ("trout", "Trout", "")]),
     "milk": ("milk", [("cow", "Cow's milk", ""), ("goat", "Goat's milk", ""), ("sheep", "Ewe's milk", "")]),
     "spice": ("spice", [("pepper", "Pepper", ""), ("clove", "Cloves", ""), ("nutmeg", "Nutmeg", ""), ("cinnamon", "Cinnamon", ""),
                         ("saffron", "Saffron", "")]),
@@ -352,11 +352,11 @@ SITE_TAGS = {
     "anchor:shallows": ("#7FB8B0", "Lake bed under two slabs of water or less (ShallowBedCells): reeds, fish traps, withies, bog iron."),
     "anchor:deep": ("#2F4F7F", "The deepest water of a lake or a plunge pool (Deeps, DeepBedCells): big fish, the ooze dredged up."),
     "anchor:salt-lake": ("#D9D2C0", "A lake no river leaves (TerminalLakes): the water turns brackish and dries to salt at the edge."),
-    "anchor:rim": ("#8E7CC3", "Land at the edge of the Domain, with aether beside it (CoastCells)."),
+    "anchor:rim": ("#8E7CC3", "Land at the edge of the Domain, with aether beside it (CoastCells). The coast faces the aether, never a sea: there is none."),
     "anchor:fjord": ("#6A5ACD", "The mouth of a winding inlet of aether (Fjords): a harbour sheltered from the open aether."),
-    "anchor:sea-stack": ("#A58FD0", "An islet of rock standing off the rim (SeaStacks): bird colonies, guano, eggs, quills."),
-    "anchor:estuary": ("#5B8DB8", "The mouth of a navigable river at the rim (Estuaries): a port, a shipyard."),
-    "anchor:delta": ("#86A86A", "The apex of a delta's fan (Deltas): the richest wet ground there is."),
+    "anchor:aether-stack": ("#A58FD0", "A stack of rock standing in the aether off the rim (the generator's SeaStacks, a name from before): bird colonies, guano, eggs, quills."),
+    "anchor:estuary": ("#5B8DB8", "Where a navigable river widens to the rim and pours off it into the aether (Estuaries): a port for aetherships, a yard."),
+    "anchor:delta": ("#86A86A", "The apex of a delta's fan, where a river parts before it pours off the rim (Deltas): the richest wet ground there is."),
     "anchor:cliff-foot": ("#7A6F63", "The foot of a cliff (CliffFootCells): bare strata to quarry, scree to pick over."),
     "anchor:cliff-brink": ("#9C9187", "The brink of a cliff (CliffCells): an eyrie, a lookout, a windmill's edge."),
     "anchor:scarp": ("#B3A796", "A scarp's brink or foot (ScarpCells, ScarpFootCells): a terrace, an adit."),
@@ -396,8 +396,25 @@ EXTRACTION_SITES = {  # recipe id -> site, where the review moved a draft: most 
     "r.x.hemp": ["soil:brownearth", "soil:blackearth"],
     "r.x.fish": ["anchor:shallows", "anchor:deep", "anchor:lakeshore"],
 }
-EXTRACTION_NAMES = {"r.x.fish": "Fishing"}
-EXTRACTION_NOTES = {"r.x.ess": "Provisional: where Essence is drawn is the magick schools' to say (they are being designed). Drawn at the rim, where the aether is nearest."}
+EXTRACTION_SITES["r.x.coconut"] = ["soil:redearth", "soil:yellowearth"]  # the draft put the palm on the rim, as on a beach; there is no sea
+EXTRACTION_SITES["r.x.kelp"] = ["anchor:shallows", "anchor:lakeshore"]
+EXTRACTION_NAMES = {"r.x.fish": "Fishing", "r.x.kelp": "Wrack raking", "r.x.shells": "Mussel gathering"}
+# The coasts face the aether, not a sea (Maxim, 2026-09-23): no beach stuff. good -> (new name or None, note)
+AETHER_NOT_SEA = {
+    "slt": (None, "Mined in blocks, grey or pink. The same salt a salt lake leaves at its edge, a few million years drier."),
+    "lode": (None, "A natural magnet. The stone that made navigation through the open aether possible."),
+    "tea": (None, "Leaves of an evergreen bush. Worth a voyage through three Gates once people acquire the habit."),
+    "kelp": ("Lake wrack", "Weed raked out of the lake shallows and burnt on the shore for its ash: a lake country's answer to natron."),
+    "coconut": (None, "Food, drink, oil and, from the husk, a rope that rain and river cannot rot."),
+    "soda": (None, "Soda from natron, or from burning lake wrack."),
+    "pitch": (None, "Resin or tar boiled thick. The black stuff that seals a hull's seams against rain and aether."),
+    "shells": (None, "Freshwater mussel shells heaped on a lake's shore. Burn them and you have lime without a quarry."),
+}
+EXTRACTION_NOTES = {"r.x.coconut": "Palms on hot, wet ground; nothing to do with the rim, which faces the aether.",
+                    "r.x.kelp": "Weed raked out of the lake shallows and burnt on the shore for its ash.",
+                    "r.x.fish": "Netted and trapped in the lakes and the pools under falls: shallows, deeps and the shore.",
+                    "r.x.shells": "Freshwater mussels picked off the lake bed and its shore; the meat eaten, the shells burnt for lime.",
+                    "r.x.ess": "Provisional: where Essence is drawn is the magick schools' to say (they are being designed). Drawn at the rim, where the aether is nearest."}
 # Workshops that stand on a feature of the terrain, where the history is plain. recipe -> (site, why)
 WORKSHOP_SITES = {
     "r.leather": (["anchor:river"], "A tannery stands on running water: hides soak for weeks and the pits are flushed."),
@@ -669,6 +686,10 @@ def main():
             recipes[r["id"]] = r
             added.append(r)
         log.append(f"stage two: {len(added)} extractions, one for every raw good that came out of nothing, from {table.name}")
+    for gid, (name, note) in AETHER_NOT_SEA.items():
+        goods[gid]["name"] = name or goods[gid]["name"]
+        goods[gid]["note"] = note
+    log.append(f"aether, not sea: {len(AETHER_NOT_SEA)} goods' notes no longer assume a sea; fish are perch, carp and trout")
     for rid, (site, why) in WORKSHOP_SITES.items():
         assert not recipes[rid].get("site"), rid
         recipes[rid]["site"] = list(site)
@@ -759,6 +780,14 @@ def stamp_art(web, goods, log):
             if gid in goods:
                 goods[gid]["icon"] = {"atlas": art["atlas"], "index": cell}
         log.append(f"art: {len(art['icons'])} icons redrawn after the sprite review, from {fixes.name}")
+
+    shapes = HERE / "icon_shapes.json"  # the shape pass (tools/make_shape_pass.py): one shape per good, over the fixes
+    if shapes.exists():
+        art = json.load(open(shapes))
+        for gid, cell in art["icons"].items():
+            assert gid in goods and not goods[gid].get("layers"), gid  # a good with mask layers keeps its drawing
+            goods[gid]["icon"] = {"atlas": art["atlas"], "index": cell}
+        log.append(f"art: {len(art['icons'])} icons redrawn in the shape pass, from {shapes.name}")
 
     signs = HERE / "tag_signs.json"
     if signs.exists():

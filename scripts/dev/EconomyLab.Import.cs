@@ -143,7 +143,7 @@ public partial class EconomyLab
 				bool here = Palette.Find(good.Id) != null;
 				TreeItem item = _impTree.CreateItem(section);
 				item.SetText(0, good.Name + (here ? "  ✓ here already" : ""));
-				if (Sprites.Get(good.Icon) is { } icon) item.SetIcon(0, icon);
+				if (Sprites.Icon(good.Icon) is { } icon) item.SetIcon(0, icon);
 				item.SetIconMaxWidth(0, 24);
 				item.SetMetadata(0, good.Id);
 				if (here) item.SetCustomColor(0, LabLook.Faint);

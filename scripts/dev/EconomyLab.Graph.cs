@@ -656,7 +656,7 @@ public partial class EconomyLab
 		IEnumerable<(string, string, Texture2D?)> items = Palette.Goods
 			.Where(g => !notInWeb || !Web.Holds(g.Id))
 			.OrderBy(g => Web.Holds(g.Id) ? 0 : 1).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
-			.Select(g => (g.Id, Web.Holds(g.Id) || notInWeb ? g.Name : g.Name + "   (not in this web)", Sprites.Get(g.Icon)));
+			.Select(g => (g.Id, Web.Holds(g.Id) || notInWeb ? g.Name : g.Name + "   (not in this web)", Sprites.Icon(g.Icon)));
 		_picker.Ask(prompt, items, GetViewport().GetMousePosition(), then);
 	}
 
@@ -679,7 +679,7 @@ public partial class EconomyLab
 	internal void Find()
 	{
 		IEnumerable<(string, string, Texture2D?)> items = Web.Goods.Select(id => Palette.Find(id)).Where(g => g != null)
-			.Select(g => (g!.Id, g.Name, Sprites.Get(g.Icon)))
+			.Select(g => (g!.Id, g.Name, Sprites.Icon(g.Icon)))
 			.Concat(Web.Recipes.Select(r => (r.Id, "recipe " + Analysis.TitleOf(r), (Texture2D?)null)))
 			.Concat(Web.Consumers.Select(c => (c.Id, "consumer " + c.Name, (Texture2D?)null)));
 		_picker.Ask("Go to…", items, _graph.GlobalPosition + new Vector2(_graph.Size.X / 2f - 160, 40), key => Select(key, focus: true));

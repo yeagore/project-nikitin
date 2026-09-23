@@ -22,6 +22,13 @@ internal sealed class SpriteBank
 	private readonly Dictionary<(string File, int Cell, int Index), Texture2D> _cells = new();
 	private readonly Dictionary<string, Godot.Image?> _pixels = new();
 	private readonly Dictionary<string, Texture2D> _composed = new();
+	private readonly Dictionary<string, Texture2D?> _plated = new();
+
+	/// <summary>
+	/// The parchment a good's icon sits on (Maxim, 2026-09-23: icons are drawn for a parchment
+	/// ground, as in the game's ledgers). Dark outlines read on it; the dark canvas of the lab does not.
+	/// </summary>
+	public static readonly Color Parchment = new(0.91f, 0.85f, 0.72f);
 
 	public SpriteBank(EconomyStore store, Func<Palette> palette)
 	{
@@ -77,6 +84,7 @@ internal sealed class SpriteBank
 		_images.Remove(file);
 		_pixels.Remove(file);
 		_composed.Clear();
+		_plated.Clear();
 	}
 
 	// ---- varieties on an icon ----------------------------------------------------
@@ -95,9 +103,31 @@ internal sealed class SpriteBank
 	public Texture2D? Compose(Good good, IEnumerable<string> tags)
 	{
 		(Godot.Image? canvas, string? key) = Composed(good, tags);
-		if (canvas == null || key == null) return Get(good.Icon);
+		if (canvas == null || key == null) return Icon(good.Icon);
 		if (_composed.TryGetValue(key, out Texture2D? known)) return known;
-		return _composed[key] = ImageTexture.CreateFromImage(canvas);
+		return _composed[key] = ImageTexture.CreateFromImage(OnParchment(canvas));
+	}
+
+	/// <summary>A good's plain icon on its parchment tile: what every list, node and row shows. Null when the good has none.</summary>
+	public Texture2D? Icon(SpriteRef? icon)
+	{
+		string key = RefKey(icon);
+		if (_plated.TryGetValue(key, out Texture2D? known)) return known;
+		Godot.Image? pixels = Pixels(icon);
+		return _plated[key] = pixels == null ? Get(icon) : ImageTexture.CreateFromImage(OnParchment(pixels));
+	}
+
+	/// <summary>The icon laid over a parchment tile of its own size, the tile's four corners cut round.</summary>
+	public static Godot.Image OnParchment(Godot.Image icon)
+	{
+		int w = icon.GetWidth(), h = icon.GetHeight();
+		var tile = Godot.Image.CreateEmpty(w, h, false, Godot.Image.Format.Rgba8);
+		tile.Fill(Parchment);
+		foreach ((int x, int y) in new[] { (0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1) }) tile.SetPixel(x, y, Colors.Transparent);
+		var top = (Godot.Image)icon.Duplicate();
+		top.Convert(Godot.Image.Format.Rgba8);
+		tile.BlendRect(top, new Rect2I(0, 0, w, h), Vector2I.Zero);
+		return tile;
 	}
 
 	/// <summary>

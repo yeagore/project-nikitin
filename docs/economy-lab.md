@@ -440,10 +440,19 @@ blackearth, by a river" (the formula in the inspector writes it that way).
 | Namespace | Tags | Read from (one day) |
 |---|---|---|
 | `soil` | the seventeen soils and `ooze` | `IslandData.Material` |
-| `anchor` | `river`, `falls`, `spring`, `hot-spring`, `lakeshore`, `shallows`, `deep`, `salt-lake`, `rim`, `fjord`, `sea-stack`, `estuary`, `delta`, `cliff-foot`, `cliff-brink`, `scarp`, `summit`, `overhang` | the generator's feature anchors; each tag's note names the field |
+| `anchor` | `river`, `falls`, `spring`, `hot-spring`, `lakeshore`, `shallows`, `deep`, `salt-lake`, `rim`, `fjord`, `aether-stack`, `estuary`, `delta`, `cliff-foot`, `cliff-brink`, `scarp`, `summit`, `overhang` | the generator's feature anchors; each tag's note names the field |
 | `warmth` | `frigid`, `cold`, `temperate`, `hot` | the habitat's warmth, in the soil grid's bands |
 | `moisture` | `dry`, `balanced`, `wet` | the habitat's moisture |
 | `exposure` | `sheltered`, `windswept` | the habitat's exposure, scaled by the Domain's wind |
+
+**The coasts face the aether, not a sea** (Maxim, 2026-09-23). There is no sea
+in the Ecumene. The rim, its beaches (a strand where gentle ground steps down a
+slab to the aether), the fjords (inlets of aether) and the stacks off the rim
+all face the aether; every river pours off the rim, and the estuaries and deltas
+are where it does. The water a recipe can stand by is inland: rivers, lakes,
+springs, falls and their pools. So no sea salt, sea fish, seaweed, sea shells or
+beach palms: salt comes from salt lakes and mines, fish from lakes and rivers,
+shells are freshwater mussels, and the ledger's kelp is lake wrack.
 
 Name a warmth or a moisture only where the soil does not already fix it (every
 soil is one cell of the warmth-by-moisture grid). Nothing tests a site against a
@@ -466,8 +475,8 @@ Counts are the audit's, over its default run of islands (`docs/audit-baseline.js
   (202), crossings (162), lakes (126), river and lake banks, cliff and scarp
   brinks and feet, summits.
 - **Rare:** deltas (6 in the whole run), terminal lakes (8, so salt lakes are
-  rare), great lakes (4), hot water (48 cells, cold Domains only), sea stacks (52
-  cells), estuaries (39), fjords (41).
+  rare), great lakes (4), hot water (48 cells, cold Domains only), aether stacks
+  (52 cells), estuaries (39), fjords (41).
 - **Written and never read by anything outside their own stage:** terminal
   lakes, great lakes, the river, lake, shallow, mid and deep bed cells, the passes
   (only the checksum hashes them); **geysers** are declared and never even
@@ -482,7 +491,7 @@ Exploration wants reasons to open a Link):
 - **Hot spring and geyser**: sulphur crusts and sal ammoniac (the alchemist's
   volatile salt), fulling and dyeing in warm vats, baths as physic; geysers are
   a hook the biome layer was meant to fill, and a steam or magick source.
-- **Sea stack**: bird colonies, so guano (nitre for gunpowder, and a boost for
+- **Aether stack** (the generator's "sea stacks": rock standing in the aether off the rim): bird colonies, so guano (nitre for gunpowder, and a boost for
   fields far stronger than dung), eggs, quills.
 - **Delta**: the richest wet ground: rice, sugar cane, two harvests a year (a
   larger limit or yield per field than anywhere else).
@@ -649,36 +658,40 @@ web as it is; `scripts/dev/EconomyLab*.cs` is the lab. Each folder has a
 the canvas follows it; a gesture becomes a change to the web through
 `EconomyLab.Change`, the web is analysed again, and the canvas is brought into line.
 
-## The sprite review (2026-09-23)
+## The sprite review and the shape pass (2026-09-23)
 
-`-- sprites web=variety-ledger` measured every icon of the ledger and every
-variety of it as the lab composes it. What it found, and what was done:
+**The rule** (Maxim): the same shape means varieties of one good. Two goods drawn
+alike read as varieties, even where the context says they are not, so every good
+has a shape of its own; its varieties share it and differ by hue. Icons are drawn
+for a **parchment ground**: the lab lays every good's icon on a parchment tile
+(`SpriteBank.Icon`, `Compose`), and the review measures against parchment. These
+are concept icons, to be redrawn by an artist; the rule is what carries over.
 
-- **Shared shapes: 8 pairs, now 0.** Sugar and camphor, dammar and gum arabic,
-  varnish and linseed oil, betel leaf and mulberry, shells and silk thread,
-  white lead and bone ash, red lead and ochre, cutch and peat were the same
-  pixels. One of each is redrawn (`tools/make_icon_fixes.py`, cells 340 to 351),
-  with Soil (it was the letters "Br"), Leather, Silver and Flour, which did not
-  read. The other webs keep their old icons.
-- **Faint: 33 icons** are dark on the dark canvas (coal, lampblack, pitch,
-  magnesia nigra, obsidian ware and the like). Not redrawn: the fix that serves
-  them all is a light rim drawn round dark icons by the lab, or a lighter plate
-  behind every icon. Maxim's call which.
-- **The shapes that repeat by family** are the larger legibility problem the
-  measure cannot see: some sixteen powders are one heap in sixteen colours (the
-  pigments, the ashes, sand, tartar), and the bottles, the cauldrons, the stalks
-  (hemp, sugar cane, bamboo), the leaves (tea, herbs, mulberry, kelp) and the
-  cups (tea, coffee) repeat the same way. With hue kept for varieties, those
-  goods have nothing left to tell them apart by. A redraw by family is the fix.
+- **The shape pass.** 145 icons redrawn: 12 after the first review (pairs that
+  were the same pixels, and Soil, which was the letters "Br"), then 133 in
+  `tools/make_shape_pass.py`, family by family: sixteen powders that were one
+  heap, the liquids in one square bottle or one round flask, the jars, the
+  cauldrons, the buckets, the metal bars, the ore lumps, the leaves, nuts,
+  stalks and flowers, the skeins, the goblets and gems, and a dozen pairs. Each
+  good became the thing as it was kept or traded (a carboy, a retort, a pig of
+  lead, a manilla, a marcasite sun, a tea brick, button lac); one of each family
+  kept the old drawing. Twelve goods whose varieties tint through a mask keep
+  theirs, since a new drawing would misplace the mask. The review now finds no
+  shared shapes; a likeness measure (each icon's normalised light and dark,
+  compared with every other's) and a look at the whole sheet found the rest.
+  The older webs keep their old icons.
+- **Faint on parchment: 7**, all pale goods (kaolin, wool, plaster, flour,
+  parchment, tinplate, cloth). Their outlines carry them; an artist would shade
+  pale goods darker inside.
 - **Varieties: the system works, the colours do not always.** Every mask lands
   on the icon (none broken). 40 of the 50 goods that vary show every variety
   apart. Where it fails, it is one of three things: variety colours too close to
-  tell apart (the four hides, the grains, oak and teak, silver and steel, cotton
-  and linen); a variety that shows only as a pip, which at 4 px in a pale colour
-  reads as nothing (the fibre on cloth, dyed cloth and court dress, the golem's
-  and the ship's fittings); or a mask too small (the golem's heart and eyes are
-  four and two pixels). The first is a data fix (spread the colours); the other
-  two want a second channel besides hue, a pattern or a symbol, which is design.
+  tell apart (the grains, oak and teak, silver and steel, cotton and linen); a
+  variety that shows only as a pip (the fibre on cloth, the golem's and the
+  ship's fittings); or a mask too small (the golem's heart and eyes). Maxim's
+  suggestion for the first is fantasy varieties, which can take hues no real
+  one has; the review's list and a first set of suggestions are in the review
+  document shared on 2026-09-23.
 
 ## What is next
 
@@ -691,6 +704,6 @@ is made up from another that has it to spare; the next rungs of the ladder (a
 market town, an alchemist's town); property tags read by consumers (what a
 fashion pays for) and by uses (what a grade or a kind of work is worth), and the
 warehouse that stacks by them; the by-products that need new goods, if wanted;
-the icon families redrawn and the faint icons given a rim; whole chains written
+fantasy varieties to spread the colours that sit too close; whole chains written
 out as formulae in signs end to end; webs compared side by side; a pixel editor
 for the sprites and the masks; frames to group a chain on the canvas.

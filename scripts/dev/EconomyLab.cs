@@ -354,7 +354,7 @@ public partial class EconomyLab : Control
 		ApplyTrace();
 	}
 
-	internal Texture2D? IconOf(string goodId) => Sprites.Get(Palette.Find(goodId)?.Icon);
+	internal Texture2D? IconOf(string goodId) => Sprites.Icon(Palette.Find(goodId)?.Icon);
 
 	// ---- files -----------------------------------------------------------------
 

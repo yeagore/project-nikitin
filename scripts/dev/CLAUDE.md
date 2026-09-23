@@ -66,7 +66,10 @@ House rules:
 - Icons follow the data: `SpriteBank.Compose(good, tags)` is the icon of a unit
   carrying those tags (the good's layers tint their masks with the tags' colours,
   the rest go to pips). A plain stack shows `Get(good.Icon)`, the same object.
-  `ComposeImage` gives the same pixels as an image, for a headless run.
+  `ComposeImage` gives the same pixels as an image, for a headless run. A good's
+  icon is shown on a parchment tile (`Sprites.Icon(good.Icon)`, and `Compose`
+  bakes it in): icons are drawn for parchment. Signs and tag symbols stay bare.
+- One shape per good: two goods never share a drawing (varieties share their good's).
 - Sprites are drawn only by the most advanced models (Fable 5.1, Opus 5.5 today):
   Maxim's preference. A delegate may write the tooling around them.
 

@@ -156,7 +156,7 @@ public partial class EconomyLab
 		_palTree.Lookup = id =>
 		{
 			Good? good = Palette.Find(id);
-			return (good?.Name ?? id, good == null ? null : Sprites.Get(good.Icon));
+			return (good?.Name ?? id, good == null ? null : Sprites.Icon(good.Icon));
 		};
 		_palTree.ItemActivated += ActivateGood;
 		_palTree.ItemMouseSelected += (position, mouseButton) =>
@@ -591,7 +591,7 @@ public partial class EconomyLab
 			bool inWeb = Web.Holds(good.Id);
 			TreeItem item = _palTree.CreateItem(parent);
 			item.SetText(0, good.Name + (inWeb ? " ✓" : ""));
-			Texture2D? icon = Sprites.Get(good.Icon);
+			Texture2D? icon = Sprites.Icon(good.Icon);
 			if (icon != null) item.SetIcon(0, icon);
 			item.SetIconMaxWidth(0, 24);
 			item.SetMetadata(0, good.Id);

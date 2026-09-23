@@ -215,12 +215,13 @@ public partial class EconomyLab
 
 	// ---- drawing a tile -----------------------------------------------------------
 
-	/// <summary>A tile on the node's own background: the sprite centred at ×4, a short label under it. Null draws a marked-out box.</summary>
+	/// <summary>A tile: the sprite centred at ×4 on its parchment, a short label under it. Null draws a marked-out box.</summary>
 	private static void DrawTile(Image page, Godot.Image? sprite, string label, int tx, int ty, int tileW, int tileH)
 	{
 		Fill(page, tx, ty, tileW, tileH, LabLook.Body);
 		Frame(page, tx, ty, tileW, tileH, LabLook.Edge);
 		int ix = tx + (tileW - SpritePx) / 2, iy = ty + 4;
+		Fill(page, ix, iy, SpritePx, SpritePx, SpriteBank.Parchment); // icons are drawn for a parchment ground
 		if (sprite == null)
 		{
 			Frame(page, ix, iy, SpritePx, SpritePx, LabLook.Error);
@@ -354,7 +355,7 @@ public partial class EconomyLab
 				missing.Add($"{good.Name}: no icon reads (a null reference, a cell out of range, or the sheet does not load).");
 				continue;
 			}
-			(int opaque, int differ) = IconStats(icon, LabLook.Body);
+			(int opaque, int differ) = IconStats(icon, SpriteBank.Parchment);
 			if (opaque == 0)
 			{
 				missing.Add($"{good.Name}: not one pixel above 5% alpha.");
