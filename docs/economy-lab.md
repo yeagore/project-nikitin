@@ -135,11 +135,11 @@ plainly on purpose: it is meant to be read by Maxim as much as by the model.
 
 | File | What |
 |---|---|
-| `resources/economy/webs/hearth.json` | **The first rung of the ladder of skeletal economies:** a village that feeds, clothes and tools itself. Fifteen goods, ten recipes, three consumers, and numbers on all of them: amounts, times, supplies, 120 heads and their wants. Unlocked, on purpose: it is the web to fiddle with while watching the balance. `tools/make_hearth.py` is its baseline and puts the numbers back. |
+| `resources/economy/webs/hearth.json` | **The first rung of the ladder of skeletal economies:** a village that feeds, clothes, tools and houses itself. Seventeen goods, sixteen recipes (five of them extractions standing on a site, with a limit), four consumers, and numbers on all of them: amounts, times, limits, 120 heads and their wants; and one loop, the byre's dung back on the fields. Unlocked, on purpose: it is the web to fiddle with while watching the balance. `tools/make_hearth.py` is its baseline and puts the numbers back. |
 | `resources/economy/webs/starter.json` | A small one to learn on: the golem with its three hearts and bronze joints, bread and beer. 48 goods on the canvas, 29 recipes, two consumers; the full 286-good palette, so there is plenty to drag in. Opens first. |
 | `resources/economy/webs/full-ledger-reference.json` | **Locked.** Everything from the 21 September 2026 brainstorm as it was: 286 goods, 197 recipes, four consumers (Food, Intoxicants and physic, Clothing, Wares). The map every other ledger was cut from; it cannot be changed or binned. (The unlocked copy, `full-ledger`, and the `test` web were removed on 2026-09-23: New… → a copy of this one does the same.) |
 | `resources/economy/webs/tagged-ledger.json` | The full ledger reworked as a worked example: its either-or slots turned into tag slots, and varieties switched on (see the findings below). Its own palette. |
-| `resources/economy/webs/variety-ledger.json` | **Locked.** The tagged ledger taken further as a stretch test of varieties (the second findings section below): the recipes' mistakes mended, dye, cloth and the golem heart folded into one good each, many more varieties on raw goods and on what is made of them, property tags the varieties imply, a colour and a symbol for every tag, icons of their own shape for every good that varies, and a fifth consumer for works and arms. `tools/make_variety_ledger.py` derives it. |
+| `resources/economy/webs/variety-ledger.json` | **Locked.** The tagged ledger taken further as a stretch test of varieties (the second findings section below): the recipes' mistakes mended, dye, cloth and the golem heart folded into one good each, many more varieties on raw goods and on what is made of them, property tags the varieties imply, a colour and a symbol for every tag, icons of their own shape for every good that varies, and a fifth consumer for works and arms. Since 2026-09-23: an extraction on a site for every raw good (92 of them), five workshops on a feature of the terrain, four by-products, and a sixth consumer, Building and upkeep. `tools/make_variety_ledger.py` derives it, from `tools/extractions.json` among others. |
 | `resources/economy/sprites/icons.png`, `signs.png` | 16 px cells, 16 columns. Cells 0 to 285 are the brainstorm's; cells from 288 on are the icons redrawn for the variety ledger, so the old webs keep their look. `sprites/custom/` takes PNGs imported through the lab, for a good's icon (`<id>.png`) and for its sign (`<id>.sign.png`). The sheets are files shared by every web; each palette names the sheets it uses. |
 | `resources/economy/sprites/masks.png`, `tags.png` | The masks that icon layers tint (the golem's heart, eyes and body, the jewel's stone and band, the ship's hull), and the symbols of the tag namespaces and of the tags that need their own. `tools/make_variety_icons.py` and `tools/make_tag_signs.py` draw them, from `tools/icon_pixels.json` and `tools/sign_vocab.json` (the marks). |
 | `resources/economy/sprites/elements.png` | The five element icons, 16 px, in a row: fire, wind, water, earth, quintessence. They belong to the system, not to a palette. `tools/make_element_icons.py` drew them. |
@@ -374,15 +374,151 @@ readers of properties (prices, fashions, uses). Those come with the next stage.
 Stage two is built against skeletal economies rather than the ledger, so that
 the numbers can be judged by hand. **Hearth** is the first: grain to flour to
 bread (with salt), timber to planks and to charcoal, ironstone and fuel to iron
-to tools, wool to yarn to cloth to clothes; Food, Clothing and Works and arms;
-120 people who want a loaf a day, a garment every fifty days and a tool or a
-plank every twenty. As it ships the village is short of grain: the farms give
-100 a day and the mill asks 111, so the mill manages 10 runs of 11.1, the
-bakery 18 of 20 with nine ovens busy, and the people get 108 of 120 loaves;
-timber and ore pile up. Every one of those numbers is in `tools/make_hearth.py`
-and meant to be moved. Next on the ladder, not yet made: a market town (about
-40 goods, all five Needs, one graded chain) and an alchemist's town (about 80,
-the acids, Essence and the golem), and the ledger last.
+to tools, wool to yarn to cloth to clothes, a byre for milk; Food, Clothing,
+Works and arms, and Building and upkeep; 120 people who want a loaf and a jug of
+milk a day, a garment every fifty days, a tool and a plank every forty.
+
+Since 2026-09-23 every good in it comes out of something. The raw goods come out
+of five **extractions**, each standing on its site with a **limit** (ten fields
+of brownearth or blackearth, twenty cows, eight flocks, ten stands of trees, an
+ore pit and a salt mine on rock), and the mill is a watermill on `anchor:river`.
+One **loop** closes: the byre is kept for its milk and eats a measure of grain a
+cow a day; its dung, and the flocks', come out as **by-products**, and go on the
+fields through an optional slot with a **boost** of three tenths.
+
+As it ships the village is just short of grain: the mill and the byre need 131
+a day, and the ten fields, fully manured, give 130. Mill and byre are rationed
+alike, and the people get 238 of the 240 loaves and jugs they want. Take the
+dung slot off the fields and they give 100: the people get 183. The herd eats 20
+grain and gives back 30 through the fields, and the milk on top. Every number is
+in `tools/make_hearth.py` and meant to be moved.
+
+Next on the ladder, not yet made: a market town (about 40 goods, all five Needs,
+one graded chain) and an alchemist's town (about 80, the acids, Essence and the
+golem), and the ledger last.
+
+## How the balance reads a day
+
+- **The pull.** Each consumer asks for its people's due, in equal shares among
+  the goods it accepts; each recipe asks its slots for the runs it can manage
+  (no more than its limit allows). A good asks its makers for equal shares too,
+  except that a maker at its limit is asked only for what it can make and the
+  rest goes to the others. Only a **firm** want raises a maker: a
+  required slot's or a consumer's. An optional slot is counted as wanted but
+  takes what is there; it never calls a maker into being (salt boiling stops if
+  the bakery's salt is made optional). A **by-product** never asks its recipe to
+  run: nobody keeps a byre for dung. If you want cattle kept for manure, say so
+  with a required slot or a want.
+- **The push.** A good short of what is asked serves, in turn and each in
+  proportion: the **seed corn** (a recipe whose own products lead back to the
+  good through required slots: the fields asking for seed grain, a bloomery
+  asking for the tools its iron becomes),
+  the other firm askers, then the optional ones. A recipe runs as far as its
+  scarcest required slot and its limit allow, and no further than it is asked.
+  A filled optional slot with a boost makes every output of the run that much
+  greater, in proportion to how full it is.
+- **Loops.** The push goes round from the most every recipe could make
+  downwards until nothing moves. Each pass can only lower what the last allowed,
+  so it settles on the most the loop can keep up and never swings; a seed loop
+  holds instead of starving itself. A loop of firm wants that asks more of itself
+  than it gives (two grain for one) is noted, not hung on.
+- **The plan is unboosted.** Recipes are asked for runs as if no boost came; a
+  boost that arrives shows as more than was asked, or covers a shortfall when
+  the limit binds, as on Hearth's fields.
+- The notes name the root of a shortage (a good whose makers are all at their
+  limit, that nothing makes, or that comes only as a by-product), what each
+  boost brought, and what piles up.
+
+## Sites, extractions and the terrain
+
+**Every good comes out of something** (Maxim, 2026-09-23). A raw good comes out of
+an extraction: a recipe with nothing it must be fed, standing on a site. A site
+is a list of tags; tags of one namespace are alternatives and namespaces add up,
+so `soil:brownearth, soil:blackearth, anchor:river` reads "brownearth or
+blackearth, by a river" (the formula in the inspector writes it that way).
+
+| Namespace | Tags | Read from (one day) |
+|---|---|---|
+| `soil` | the seventeen soils and `ooze` | `IslandData.Material` |
+| `anchor` | `river`, `falls`, `spring`, `hot-spring`, `lakeshore`, `shallows`, `deep`, `salt-lake`, `rim`, `fjord`, `sea-stack`, `estuary`, `delta`, `cliff-foot`, `cliff-brink`, `scarp`, `summit`, `overhang` | the generator's feature anchors; each tag's note names the field |
+| `warmth` | `frigid`, `cold`, `temperate`, `hot` | the habitat's warmth, in the soil grid's bands |
+| `moisture` | `dry`, `balanced`, `wet` | the habitat's moisture |
+| `exposure` | `sheltered`, `windswept` | the habitat's exposure, scaled by the Domain's wind |
+
+Name a warmth or a moisture only where the soil does not already fix it (every
+soil is one cell of the warmth-by-moisture grid). Nothing tests a site against a
+Domain yet: that is the missing reader, and until it exists a site is a promise.
+
+**Ore deposits are not tags.** A mine needs an ore body, and nobody knows yet how
+much ore a Domain will hold, so a mine stands on rock (`soil:stone`, `soil:scree`)
+and names its deposit in its note. The goods that want one: native copper,
+ironstone, cassiterite, galena, calamine, native silver, gold nuggets, cinnabar,
+rock salt, blue vitriol, realgar, stibnite, bismuth ore, alum stone, limestone,
+cobalt ore, tincal, coal, marcasite, lodestone and magnesia nigra. Native sulfur
+and sal ammoniac are the crusts of hot vents and natron the edge of a salt lake,
+so those three stand on anchors instead.
+
+### The feature anchors: which are underused
+
+Counts are the audit's, over its default run of islands (`docs/audit-baseline.json`).
+
+- **Plentiful:** falls (937), overhang columns (922), springs (216), plunge pools
+  (202), crossings (162), lakes (126), river and lake banks, cliff and scarp
+  brinks and feet, summits.
+- **Rare:** deltas (6 in the whole run), terminal lakes (8, so salt lakes are
+  rare), great lakes (4), hot water (48 cells, cold Domains only), sea stacks (52
+  cells), estuaries (39), fjords (41).
+- **Written and never read by anything outside their own stage:** terminal
+  lakes, great lakes, the river, lake, shallow, mid and deep bed cells, the passes
+  (only the checksum hashes them); **geysers** are declared and never even
+  written; the habitat's **magick** field is grown and read by nothing.
+
+How to fix that, from the economy's side, is to give each rare or unread anchor
+a trade only it allows, so a Domain that has one is worth finding (the Age of
+Exploration wants reasons to open a Link):
+
+- **Salt lake** (terminal lakes, unread till now): salt pans, natron for soda
+  and glass, bitterns (Epsom salt) for the physicians.
+- **Hot spring and geyser**: sulphur crusts and sal ammoniac (the alchemist's
+  volatile salt), fulling and dyeing in warm vats, baths as physic; geysers are
+  a hook the biome layer was meant to fill, and a steam or magick source.
+- **Sea stack**: bird colonies, so guano (nitre for gunpowder, and a boost for
+  fields far stronger than dung), eggs, quills.
+- **Delta**: the richest wet ground: rice, sugar cane, two harvests a year (a
+  larger limit or yield per field than anywhere else).
+- **Fjord and estuary**: sheltered harbours at the rim: the aethership yard,
+  skyfishing, a port.
+- **Shallows and deeps** (bed cells, unread): reeds for thatch (a building
+  material), withies, fish traps, bog iron (iron without a deposit), pearl
+  mussels, dredged ooze and marl for the fields.
+- **Overhang**: nitre beds (saltpetre from bat guano), cheese and wine cellars,
+  mushroom beds.
+- **Summit**: snow and ice for an ice house, a beacon.
+- **Pass and bridge**: tolls and a market; not production, but a settlement's
+  reason to stand there.
+- **Magick**: the Means of Extraction of Essence. Left for the magick schools,
+  which are being designed in parallel.
+
+From the generator's side, rarity can stay (a rare anchor makes a Domain
+special) but anything the economy leans on should appear on some Domain of every
+game: six deltas in the audit's whole run is closer to never than rare. That is a knob
+of the generator, not of the lab, and a question for Maxim.
+
+## By-products
+
+The review of 2026-09-23 (`tools/byproduct_candidates.py`, its table in
+`tools/byproduct_candidates.json`) went through all 199 recipes of the variety
+ledger: **44 candidates in 43 recipes**. Only eight land on a good the ledger
+already has, and four of those are sound history, now in the ledger: wax from
+pressing honey, glue from the parchment maker's scrapings, jeweller's rouge
+(colcothar) left in the retort after oil of vitriol, white arsenic caught in
+the flues of the zaffre roaster. The other 36 would each be a new good: slag
+(from four smelters), bran, pomace, tow, oil cake, molasses, sawdust, wood tar
+and wood vinegar, rosin, whey, spent grain, hair, fish oil, bittern and the rest.
+They are where the web would grow if by-products are wanted in earnest: each is a
+link into a trade (bran and spent grain to the byre, slag to the road-mender,
+tar to the shipyard, whey to the pigs), and each needs an icon. Maxim's call.
+In Hearth, dung is the by-product that matters: the byre's and the flock's.
 
 ## From a shell
 
@@ -392,6 +528,7 @@ godot --path . scenes/dev/economy_lab.tscn -- shot web=tagged-ledger select=r.go
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake
 godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger
 godot --path . --headless scenes/dev/economy_lab.tscn -- balance web=hearth
+godot --path . --headless scenes/dev/economy_lab.tscn -- sprites web=variety-ledger out=/tmp/sprite_review
 godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference
 ```
 
@@ -408,8 +545,12 @@ own writer; run it after any script in `tools/`. `census` counts, for every good
 of a web, how many varieties the web can make of it and how many stacks those
 fall into by property, then does the same with every slot passing variety on, so
 "does this blow up" has a number. `balance` prints a web's balance sheet: the
-notes, the consumers, the recipes with their runs and workshops, the goods with
-what is supplied, made, wanted and taken. `bench` (windowed) measures the lab on the
+notes, the consumers, the recipes with their runs, places at work, limits and
+boosts, the goods with what is made, wanted, firmly needed and taken. `sprites`
+puts every icon of a web on contact sheets at four times the size, every variety
+of it as the lab composes it beside it, and the masks and tag symbols, and
+prints what is wrong: missing or shared shapes, faint icons, masks that miss,
+varieties that look alike, tag colours too close to tell apart. `bench` (windowed) measures the lab on the
 machine it runs on: frame times idle, panning, zooming and hovering over the big
 web, the cost of a selection and of a change, and writes a table to
 `user://economy_bench.txt`; run it on a machine where the lab feels slow and
@@ -461,13 +602,18 @@ three kinds never collide and a layout key needs no prefix.
       ],
       "outputs": [ { "good": "golem" } ] },
     { "id": "r.peat", "name": "Peat cutting", "element": "earth", "site": [ "soil:murkearth" ], "inputs": [], "outputs": [ { "good": "peat" } ] },
+    { "id": "r.fields", "name": "Fields", "element": "earth", "site": [ "soil:brownearth", "soil:blackearth" ], "limit": 10,
+      "inputs": [ { "accepts": [ "dung" ], "amount": 3, "optional": true, "boost": 0.3 } ],
+      "outputs": [ { "good": "grain", "amount": 10 } ] },
+    { "id": "r.byre", "name": "Byre", "element": "water", "site": [ "soil:brownearth", "soil:blackearth", "soil:bleachearth" ], "limit": 20,
+      "inputs": [ { "accepts": [ "grain" ] } ],
+      "outputs": [ { "good": "milk", "amount": 6 }, { "good": "dung", "amount": 2, "byProduct": true } ] },
     { "id": "r.bread", "name": "Bakery", "element": "fire", "time": 0.5,
       "inputs": [ { "accepts": [ "flour" ], "amount": 5, "passes": true }, { "accepts": [ "salt" ], "amount": 0.2 } ],
       "outputs": [ { "good": "bread", "amount": 6 } ] }
   ],
   "consumers": [ { "id": "c.food", "name": "Food", "note": "", "accepts": [ "#need:food" ], "wants": 1 } ],
   "heads": 120,
-  "supply": { "grain": 100, "slt": 5 },
   "layout": { "h2": [0, 0], "r.golem": [1480, 310] }
 }
 ```
@@ -476,17 +622,24 @@ or `qe`. `goods` lists which of the palette's goods are on the canvas. A sprite 
 of an atlas (`atlas`, `index`) or a PNG of its own (`"file": "sprites/custom/h4.png"`).
 A tag may be in use without an entry under `tags`; the entry is where its note,
 its `colour` (`#RRGGBB`), its own `sign` and, for a variety tag, what it
-`implies` live. A namespace's `role` is `core`, `variety`, `property` or absent;
-a property namespace with `"combine": "lowest"` is a scale in the order its
-tags are listed. A recipe's `site` lists the tags of the ground or the place it
-must stand on, any one of which will do. A good's `layers` say which part of its
+`implies` live. A namespace's `role` is `core`, `variety`, `property`, `site` or
+absent; a property namespace with `"combine": "lowest"` is a scale in the order
+its tags are listed. A recipe's `site` lists the tags of the ground or the place
+it must stand on: tags of one namespace are alternatives, and namespaces add up.
+Its `limit` is how many can be at work at once (absent: no limit). An optional
+input's `boost` is how much more of every output a filled slot gives, as a
+fraction. An output's `byProduct` marks what comes out anyway and is never what
+the recipe is run for. A good's `layers` say which part of its
 icon each variety namespace (or one whole tag) tints, through a `mask` sprite,
 or the whole icon when there is none. Every one of these is omitted when empty,
 so a file from the tagged ledger's day reads unchanged. An input's or an
 output's `amount` is per run and one when absent; a recipe's `time` is days per
 run and one when absent; a consumer's `wants` is units a head a day; the web's
-`heads` is its population and `supply` what the land gives a day by good,
-written sorted. A recipe will likewise take a building and labour.
+`heads` is its population. A file from before 2026-09-23 may carry a `supply`
+(units a day by good, with no recipe behind it): the lab turns each rate into
+the extraction it stood for when it opens the file (a recipe `r.land.<good>`
+with that limit, standing nowhere until it is given a site) and never writes
+`supply` again. A recipe will likewise take a building and labour.
 
 ## The code
 
@@ -496,17 +649,48 @@ web as it is; `scripts/dev/EconomyLab*.cs` is the lab. Each folder has a
 the canvas follows it; a gesture becomes a change to the web through
 `EconomyLab.Change`, the web is analysed again, and the canvas is brought into line.
 
+## The sprite review (2026-09-23)
+
+`-- sprites web=variety-ledger` measured every icon of the ledger and every
+variety of it as the lab composes it. What it found, and what was done:
+
+- **Shared shapes: 8 pairs, now 0.** Sugar and camphor, dammar and gum arabic,
+  varnish and linseed oil, betel leaf and mulberry, shells and silk thread,
+  white lead and bone ash, red lead and ochre, cutch and peat were the same
+  pixels. One of each is redrawn (`tools/make_icon_fixes.py`, cells 340 to 351),
+  with Soil (it was the letters "Br"), Leather, Silver and Flour, which did not
+  read. The other webs keep their old icons.
+- **Faint: 33 icons** are dark on the dark canvas (coal, lampblack, pitch,
+  magnesia nigra, obsidian ware and the like). Not redrawn: the fix that serves
+  them all is a light rim drawn round dark icons by the lab, or a lighter plate
+  behind every icon. Maxim's call which.
+- **The shapes that repeat by family** are the larger legibility problem the
+  measure cannot see: some sixteen powders are one heap in sixteen colours (the
+  pigments, the ashes, sand, tartar), and the bottles, the cauldrons, the stalks
+  (hemp, sugar cane, bamboo), the leaves (tea, herbs, mulberry, kelp) and the
+  cups (tea, coffee) repeat the same way. With hue kept for varieties, those
+  goods have nothing left to tell them apart by. A redraw by family is the fix.
+- **Varieties: the system works, the colours do not always.** Every mask lands
+  on the icon (none broken). 40 of the 50 goods that vary show every variety
+  apart. Where it fails, it is one of three things: variety colours too close to
+  tell apart (the four hides, the grains, oak and teak, silver and steel, cotton
+  and linen); a variety that shows only as a pip, which at 4 px in a pale colour
+  reads as nothing (the fibre on cloth, dyed cloth and court dress, the golem's
+  and the ship's fittings); or a mask too small (the golem's heart and eyes are
+  four and two pixels). The first is a data fix (spread the colours); the other
+  two want a second channel besides hue, a pattern or a symbol, which is design.
+
 ## What is next
 
 Not done here, in rough order of how soon they will be wanted: a recipe's
-building and labour, which is what will cap a recipe besides its inputs; the
-balance revised so that a good short in one place is made up from another
-that has it to spare; the next rungs of the ladder (a market town, an
-alchemist's town); property tags read by consumers (what
-a fashion pays for) and by uses (what a grade or a kind of work is worth), and
-the warehouse that stacks by them; icons of their own shape for the goods that
-do not vary yet (the redraw covered the ones that do); whole chains written out
-as formulae in signs end to end; by-products used in earnest (the second output
-port is there); webs compared side by side; a pixel editor for the sprites and
-the masks; frames to group a chain on the canvas; the soil and climate a raw
-variety needs, which the site is the first half of.
+building and labour, which is what will cap a recipe besides its inputs (as a
+capacity like `limit`, not as a slot, so an extraction stays one); the site read
+against a real Domain, and the land as a capacity shared by the recipes that
+stand on the same ground; the balance revised so that a good short in one place
+is made up from another that has it to spare; the next rungs of the ladder (a
+market town, an alchemist's town); property tags read by consumers (what a
+fashion pays for) and by uses (what a grade or a kind of work is worth), and the
+warehouse that stacks by them; the by-products that need new goods, if wanted;
+the icon families redrawn and the faint icons given a rim; whole chains written
+out as formulae in signs end to end; webs compared side by side; a pixel editor
+for the sprites and the masks; frames to group a chain on the canvas.

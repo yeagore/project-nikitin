@@ -1,0 +1,1301 @@
+[
+  {
+    "id": "r.x.cu",
+    "name": "Copper mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "cu"
+      }
+    ],
+    "note": "Native copper broken out of the rock, green with verdigris until it is scoured. Wants a deposit of copper: deposits are not in the generator yet.",
+    "deposit": "copper"
+  },
+  {
+    "id": "r.x.fe",
+    "name": "Iron mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "fe"
+      }
+    ],
+    "note": "Ironstone broken from the rock, red and heavy and everywhere, if the fuel holds out. Wants a deposit of iron: deposits are not in the generator yet.",
+    "deposit": "iron"
+  },
+  {
+    "id": "r.x.sn",
+    "name": "Tin mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "sn"
+      }
+    ],
+    "note": "Cassiterite broken from veined rock: dark, heavy crystals rare enough to have built trade empires. Wants a deposit of tin: deposits are not in the generator yet.",
+    "deposit": "tin"
+  },
+  {
+    "id": "r.x.pb",
+    "name": "Lead mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "pb"
+      }
+    ],
+    "note": "Galena broken from the rock, usually carrying a little silver besides. Wants a deposit of lead: deposits are not in the generator yet.",
+    "deposit": "lead"
+  },
+  {
+    "id": "r.x.zn",
+    "name": "Calamine mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "zn"
+      }
+    ],
+    "note": "Calamine broken from the rock: unremarkable ore whose metal only shows itself in the furnace, as brass. Wants a deposit of zinc: deposits are not in the generator yet.",
+    "deposit": "zinc"
+  },
+  {
+    "id": "r.x.ag",
+    "name": "Silver mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "ag"
+      }
+    ],
+    "note": "Native silver broken from the rock, grown in wires and ferns, tarnishing black. Wants a deposit of silver: deposits are not in the generator yet.",
+    "deposit": "silver"
+  },
+  {
+    "id": "r.x.au",
+    "name": "Gold panning",
+    "element": "earth",
+    "site": [
+      "soil:scree",
+      "anchor:river"
+    ],
+    "outputs": [
+      {
+        "good": "au"
+      }
+    ],
+    "note": "Nuggets panned a few at a time from river gravel. Wants a deposit of gold: deposits are not in the generator yet.",
+    "deposit": "gold"
+  },
+  {
+    "id": "r.x.cin",
+    "name": "Cinnabar mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "cin"
+      }
+    ],
+    "note": "Heavy vermilion stone broken from the rock; heat turns its red to running silver elsewhere in the shop. Wants a deposit of cinnabar: deposits are not in the generator yet.",
+    "deposit": "cinnabar (mercury ore)"
+  },
+  {
+    "id": "r.x.slt",
+    "name": "Rock-salt mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "slt"
+      }
+    ],
+    "note": "Cut in blocks from a seam of salt in the rock, grey or pink. Wants a deposit of rock salt: deposits are not in the generator yet.",
+    "deposit": "rock salt"
+  },
+  {
+    "id": "r.x.sul",
+    "name": "Sulfur gathering",
+    "element": "earth",
+    "site": [
+      "soil:stone",
+      "anchor:hot-spring"
+    ],
+    "outputs": [
+      {
+        "good": "sul"
+      }
+    ],
+    "note": "Yellow crystals picked where the ground steams at a hot spring. Wants a deposit of sulfur: deposits are not in the generator yet.",
+    "deposit": "sulfur"
+  },
+  {
+    "id": "r.x.vit",
+    "name": "Vitriol gathering",
+    "element": "earth",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "vit"
+      }
+    ],
+    "note": "Blue crystals picked where water has wept them from a copper-bearing rock. Wants a deposit of blue vitriol: deposits are not in the generator yet.",
+    "deposit": "blue vitriol"
+  },
+  {
+    "id": "r.x.rea",
+    "name": "Realgar mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "rea"
+      }
+    ],
+    "note": "Red realgar and yellow orpiment broken from the same rock. Wants a deposit of arsenic ore: deposits are not in the generator yet.",
+    "deposit": "realgar and orpiment (arsenic ore)"
+  },
+  {
+    "id": "r.x.stb",
+    "name": "Stibnite mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "stb"
+      }
+    ],
+    "note": "Bundles of grey metallic blades broken from the rock; ground fine, it has lined eyes for four thousand years. Wants a deposit of antimony: deposits are not in the generator yet.",
+    "deposit": "antimony"
+  },
+  {
+    "id": "r.x.bis",
+    "name": "Bismuth mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "bis"
+      }
+    ],
+    "note": "Pink-tinged ore broken from the rock, long mistaken for tin or lead. Wants a deposit of bismuth: deposits are not in the generator yet.",
+    "deposit": "bismuth"
+  },
+  {
+    "id": "r.x.alu",
+    "name": "Alum mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "alu"
+      }
+    ],
+    "note": "A pale rock broken from the seam, worthless until it is roasted and leached. Wants a deposit of alum stone: deposits are not in the generator yet.",
+    "deposit": "alum stone"
+  },
+  {
+    "id": "r.x.sam",
+    "name": "Sal-ammoniac gathering",
+    "element": "earth",
+    "site": [
+      "soil:stone",
+      "anchor:hot-spring"
+    ],
+    "outputs": [
+      {
+        "good": "sam"
+      }
+    ],
+    "note": "A crust scraped from where a vent or a burning coal seam breathes. Wants a deposit of sal ammoniac: deposits are not in the generator yet.",
+    "deposit": "sal ammoniac"
+  },
+  {
+    "id": "r.x.lim",
+    "name": "Limestone quarry",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "lim"
+      }
+    ],
+    "note": "Old seabed broken from the rock in blocks; burnt, it becomes the tree's most useful white powder. Wants a deposit of limestone: deposits are not in the generator yet.",
+    "deposit": "limestone"
+  },
+  {
+    "id": "r.x.cob",
+    "name": "Cobalt mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "cob"
+      }
+    ],
+    "note": "The kobold ore broken from the rock, pink-blooming and stubborn to smelt. Wants a deposit of cobalt: deposits are not in the generator yet.",
+    "deposit": "cobalt"
+  },
+  {
+    "id": "r.x.tinc",
+    "name": "Tincal gathering",
+    "element": "earth",
+    "site": [
+      "anchor:salt-lake",
+      "soil:scree"
+    ],
+    "outputs": [
+      {
+        "good": "tinc"
+      }
+    ],
+    "note": "Raw borax scraped from the stony margin of a lake no river leaves. Wants a deposit of tincal: deposits are not in the generator yet.",
+    "deposit": "tincal (borax)"
+  },
+  {
+    "id": "r.x.nat",
+    "name": "Natron gathering",
+    "element": "earth",
+    "site": [
+      "anchor:salt-lake",
+      "soil:scree"
+    ],
+    "outputs": [
+      {
+        "good": "nat"
+      }
+    ],
+    "note": "A crust gathered from a dry salt lake's stony margin. Wants a deposit of natron: deposits are not in the generator yet.",
+    "deposit": "natron"
+  },
+  {
+    "id": "r.x.coal",
+    "name": "Coal mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "coal"
+      }
+    ],
+    "note": "Broken from a seam in the rock: hotter than wood, dirtier than charcoal. Wants a deposit of coal: deposits are not in the generator yet.",
+    "deposit": "coal"
+  },
+  {
+    "id": "r.x.pyr",
+    "name": "Marcasite mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "pyr"
+      }
+    ],
+    "note": "Broken from the rock; left in the open it weathers to green vitriol. Wants a deposit of marcasite: deposits are not in the generator yet.",
+    "deposit": "marcasite (fool's gold)"
+  },
+  {
+    "id": "r.x.lode",
+    "name": "Lodestone mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "lode"
+      }
+    ],
+    "note": "A natural magnet broken from the rock, the stone that lets a ship find its way over open aether. Wants a deposit of lodestone: deposits are not in the generator yet.",
+    "deposit": "lodestone"
+  },
+  {
+    "id": "r.x.mang",
+    "name": "Magnesia mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "mang"
+      }
+    ],
+    "note": "Broken from the rock: the glassmaker's soap, which takes the green out of glass. Wants a deposit of magnesia nigra: deposits are not in the generator yet.",
+    "deposit": "magnesia nigra (pyrolusite)"
+  },
+  {
+    "id": "r.x.soil",
+    "name": "Soil digging",
+    "element": "earth",
+    "site": [
+      "soil:stone",
+      "soil:scree",
+      "soil:snow",
+      "soil:sand",
+      "soil:silt",
+      "soil:frostearth",
+      "soil:bleachearth",
+      "soil:shadowearth",
+      "soil:murkearth",
+      "soil:dryearth",
+      "soil:blackearth",
+      "soil:brownearth",
+      "soil:muckearth",
+      "soil:dustearth",
+      "soil:yellowearth",
+      "soil:redearth",
+      "soil:floodearth"
+    ],
+    "outputs": [
+      {
+        "good": "soil"
+      }
+    ],
+    "note": "Dug wherever the ground allows: whichever of the seventeen soils is underfoot decides what a golem built from it is good at."
+  },
+  {
+    "id": "r.x.kaolin",
+    "name": "Kaolin pit",
+    "element": "earth",
+    "site": [
+      "soil:scree"
+    ],
+    "outputs": [
+      {
+        "good": "kaolin"
+      }
+    ],
+    "note": "Dug from crumbled granite, white as the china it will become."
+  },
+  {
+    "id": "r.x.gyps",
+    "name": "Gypsum quarry",
+    "element": "earth",
+    "site": [
+      "soil:scree"
+    ],
+    "outputs": [
+      {
+        "good": "gyps"
+      }
+    ],
+    "note": "Soft rock dug easily, scratched with a fingernail; gently burnt it becomes plaster."
+  },
+  {
+    "id": "r.x.bitu",
+    "name": "Bitumen seep",
+    "element": "earth",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "bitu"
+      }
+    ],
+    "note": "Gathered where it seeps black and sticky out of dry, cracked ground."
+  },
+  {
+    "id": "r.x.lapis",
+    "name": "Lapis mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "lapis"
+      }
+    ],
+    "note": "Cut from a single deep-blue vein flecked with fool's gold. Wants a deposit of lapis lazuli: deposits are not in the generator yet.",
+    "deposit": "lapis lazuli"
+  },
+  {
+    "id": "r.x.jade",
+    "name": "Jade picking",
+    "element": "earth",
+    "site": [
+      "soil:stone",
+      "anchor:river"
+    ],
+    "outputs": [
+      {
+        "good": "jade"
+      }
+    ],
+    "note": "Picked as water-worn boulders from a riverbed running off stony ground. Wants a deposit of jade: deposits are not in the generator yet.",
+    "deposit": "jade"
+  },
+  {
+    "id": "r.x.amber",
+    "name": "Amber picking",
+    "element": "earth",
+    "site": [
+      "anchor:cliff-foot"
+    ],
+    "outputs": [
+      {
+        "good": "amber"
+      }
+    ],
+    "note": "Picked out of the scree where old strata crumble at a cliff's foot, warm and light in the hand."
+  },
+  {
+    "id": "r.x.obs",
+    "name": "Obsidian quarry",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "obs"
+      }
+    ],
+    "note": "Broken from black volcanic glass, an edge sharper than steel and just as quick to shatter."
+  },
+  {
+    "id": "r.x.rockc",
+    "name": "Rock-crystal mine",
+    "element": "wind",
+    "site": [
+      "soil:stone"
+    ],
+    "outputs": [
+      {
+        "good": "rockc"
+      }
+    ],
+    "note": "Broken out of quartz-veined rock, clear as the ice the ancients took it for."
+  },
+  {
+    "id": "r.x.grain",
+    "name": "Grain farming",
+    "element": "water",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "grain"
+      }
+    ],
+    "note": "Sown and reaped on good wet ground: wheat, spelt, rye, barley, oats or millet, as the climate allows."
+  },
+  {
+    "id": "r.x.rice",
+    "name": "Rice farming",
+    "element": "water",
+    "site": [
+      "soil:muckearth"
+    ],
+    "outputs": [
+      {
+        "good": "rice"
+      }
+    ],
+    "note": "Grown standing in water on waterlogged ground: the wet-field staple."
+  },
+  {
+    "id": "r.x.maize",
+    "name": "Maize farming",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "maize"
+      }
+    ],
+    "note": "Grown on lush warm ground, away from the water it does not want standing."
+  },
+  {
+    "id": "r.x.grapes",
+    "name": "Vine growing",
+    "element": "water",
+    "site": [
+      "soil:dryearth"
+    ],
+    "outputs": [
+      {
+        "good": "grapes"
+      }
+    ],
+    "note": "Vines trained on thin, dry, well-drained ground."
+  },
+  {
+    "id": "r.x.olives",
+    "name": "Olive growing",
+    "element": "water",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "olives"
+      }
+    ],
+    "note": "Slow trees on hot, stony, dry ground; they outlive the farmer who plants them."
+  },
+  {
+    "id": "r.x.flax",
+    "name": "Flax growing",
+    "element": "water",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "flax"
+      }
+    ],
+    "note": "Grown on good wet ground for its fibre and its oil seed both."
+  },
+  {
+    "id": "r.x.hemp",
+    "name": "Hemp growing",
+    "element": "water",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "hemp"
+      }
+    ],
+    "note": "Grown coarse and tall on good wet ground: the ship's crop."
+  },
+  {
+    "id": "r.x.cotton",
+    "name": "Cotton growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "cotton"
+      }
+    ],
+    "note": "Grown on lush warm ground for the boll's soft fibre."
+  },
+  {
+    "id": "r.x.cane",
+    "name": "Cane growing",
+    "element": "water",
+    "site": [
+      "soil:floodearth"
+    ],
+    "outputs": [
+      {
+        "good": "cane"
+      }
+    ],
+    "note": "Grown hungry for heat and water on wet ground beside a river."
+  },
+  {
+    "id": "r.x.tea",
+    "name": "Tea growing",
+    "element": "water",
+    "site": [
+      "soil:brownearth",
+      "anchor:scarp"
+    ],
+    "outputs": [
+      {
+        "good": "tea"
+      }
+    ],
+    "note": "An evergreen bush grown in terraces on a scarp's good wet ground."
+  },
+  {
+    "id": "r.x.cacao",
+    "name": "Cacao growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "cacao"
+      }
+    ],
+    "note": "Pods grown in the shade of taller trees, on lush warm ground."
+  },
+  {
+    "id": "r.x.coffee",
+    "name": "Coffee growing",
+    "element": "water",
+    "site": [
+      "soil:yellowearth"
+    ],
+    "outputs": [
+      {
+        "good": "coffee"
+      }
+    ],
+    "note": "Red cherries grown on hot, well-balanced ground."
+  },
+  {
+    "id": "r.x.poppy",
+    "name": "Poppy growing",
+    "element": "water",
+    "site": [
+      "soil:blackearth"
+    ],
+    "outputs": [
+      {
+        "good": "poppy"
+      }
+    ],
+    "note": "Scored green pods grown on plain, balanced farmland."
+  },
+  {
+    "id": "r.x.agave",
+    "name": "Agave growing",
+    "element": "water",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "agave"
+      }
+    ],
+    "note": "A desert rosette grown on hot, dry, stony ground, taking a decade to mature."
+  },
+  {
+    "id": "r.x.madder",
+    "name": "Madder growing",
+    "element": "water",
+    "site": [
+      "soil:blackearth"
+    ],
+    "outputs": [
+      {
+        "good": "madder"
+      }
+    ],
+    "note": "A scrambling weed grown for its red roots, on plain farmland."
+  },
+  {
+    "id": "r.x.indigo",
+    "name": "Indigo growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "indigo"
+      }
+    ],
+    "note": "A shrub grown on lush warm ground; the blue is a foul business for later, not for the field."
+  },
+  {
+    "id": "r.x.weld",
+    "name": "Weld growing",
+    "element": "water",
+    "site": [
+      "soil:dryearth"
+    ],
+    "outputs": [
+      {
+        "good": "weld"
+      }
+    ],
+    "note": "A roadside weed that asks nothing of thin, dry ground and gives the clearest yellow for it."
+  },
+  {
+    "id": "r.x.bamboo",
+    "name": "Bamboo growing",
+    "element": "water",
+    "site": [
+      "soil:floodearth"
+    ],
+    "outputs": [
+      {
+        "good": "bamboo"
+      }
+    ],
+    "note": "A grass that grows a foot a day on wet ground beside a river."
+  },
+  {
+    "id": "r.x.coconut",
+    "name": "Coconut growing",
+    "element": "water",
+    "site": [
+      "anchor:rim",
+      "warmth:hot"
+    ],
+    "outputs": [
+      {
+        "good": "coconut"
+      }
+    ],
+    "note": "Palms grown at the Domain's hot rim, aether beside them where a coastline would be."
+  },
+  {
+    "id": "r.x.areca",
+    "name": "Areca growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "areca"
+      }
+    ],
+    "note": "A palm grown on lush warm ground for the nut at its heart."
+  },
+  {
+    "id": "r.x.betelleaf",
+    "name": "Betel growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "betelleaf"
+      }
+    ],
+    "note": "A vine grown up the areca palm in the same lush warm grove."
+  },
+  {
+    "id": "r.x.palmoil",
+    "name": "Palm growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "palmoil"
+      }
+    ],
+    "note": "Oil palms grown on lush warm ground, their fruit pressed red."
+  },
+  {
+    "id": "r.x.kola",
+    "name": "Kola growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "kola"
+      }
+    ],
+    "note": "A forest tree grown on lush warm ground for its bitter, stimulating nut."
+  },
+  {
+    "id": "r.x.mulb",
+    "name": "Mulberry growing",
+    "element": "water",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "mulb"
+      }
+    ],
+    "note": "Grown on good wet ground for its leaves alone: no mulberry, no silk."
+  },
+  {
+    "id": "r.x.herbs",
+    "name": "Herb growing",
+    "element": "water",
+    "site": [
+      "soil:brownearth",
+      "exposure:sheltered"
+    ],
+    "outputs": [
+      {
+        "good": "herbs"
+      }
+    ],
+    "note": "The physic garden and the brewer's basket, grown on good ground out of the wind."
+  },
+  {
+    "id": "r.x.spice",
+    "name": "Spice growing",
+    "element": "water",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "spice"
+      }
+    ],
+    "note": "Vines, buds, bark and pods grown on lush warm ground, light and dry and wildly overpriced once picked."
+  },
+  {
+    "id": "r.x.galls",
+    "name": "Gall gathering",
+    "element": "earth",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "galls"
+      }
+    ],
+    "note": "Picked off the oak where a wasp has made it grow a lump packed with tannin."
+  },
+  {
+    "id": "r.x.bark",
+    "name": "Bark stripping",
+    "element": "earth",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "bark"
+      }
+    ],
+    "note": "Stripped and ground from oak on good wet ground, for the hide that soaks in it a year."
+  },
+  {
+    "id": "r.x.resin",
+    "name": "Resin tapping",
+    "element": "earth",
+    "site": [
+      "soil:dryearth"
+    ],
+    "outputs": [
+      {
+        "good": "resin"
+      }
+    ],
+    "note": "Tapped from living pines on thin, dry ground."
+  },
+  {
+    "id": "r.x.kelp",
+    "name": "Kelp gathering",
+    "element": "earth",
+    "site": [
+      "anchor:lakeshore"
+    ],
+    "outputs": [
+      {
+        "good": "kelp"
+      }
+    ],
+    "note": "Gathered off the lakeshore and burnt there for its ash."
+  },
+  {
+    "id": "r.x.lacsap",
+    "name": "Lacquer tapping",
+    "element": "earth",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "lacsap"
+      }
+    ],
+    "note": "Milky sap tapped from the lacquer tree, on lush warm ground."
+  },
+  {
+    "id": "r.x.gum",
+    "name": "Gum tapping",
+    "element": "earth",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "gum"
+      }
+    ],
+    "note": "Hardened tears picked off the acacia, on hot, dry ground."
+  },
+  {
+    "id": "r.x.dammar",
+    "name": "Dammar tapping",
+    "element": "earth",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "dammar"
+      }
+    ],
+    "note": "Clear resin tapped from rainforest trees, on lush warm ground."
+  },
+  {
+    "id": "r.x.camphor",
+    "name": "Camphor distilling",
+    "element": "earth",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "camphor"
+      }
+    ],
+    "note": "Chipped and distilled from the wood of a giant tree, on lush warm ground."
+  },
+  {
+    "id": "r.x.benzoin",
+    "name": "Benzoin tapping",
+    "element": "earth",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "benzoin"
+      }
+    ],
+    "note": "A sweet gum cut from forest trees, on lush warm ground."
+  },
+  {
+    "id": "r.x.frank",
+    "name": "Frankincense tapping",
+    "element": "earth",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "frank"
+      }
+    ],
+    "note": "Tears cut from thorny trees on hot, dry ground; temples burn them by the ton."
+  },
+  {
+    "id": "r.x.timber",
+    "name": "Timber felling",
+    "element": "wind",
+    "site": [
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "timber"
+      }
+    ],
+    "note": "Felled in the forest on good wet ground: fuel, ash, planks and charcoal all start here."
+  },
+  {
+    "id": "r.x.dyewood",
+    "name": "Dyewood felling",
+    "element": "wind",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "dyewood"
+      }
+    ],
+    "note": "Felled on lush warm ground for a heartwood that bleeds red."
+  },
+  {
+    "id": "r.x.cutch",
+    "name": "Acacia felling",
+    "element": "wind",
+    "site": [
+      "soil:dustearth"
+    ],
+    "outputs": [
+      {
+        "good": "cutch"
+      }
+    ],
+    "note": "Acacia felled on hot, dry ground and its heartwood boiled down on the spot."
+  },
+  {
+    "id": "r.x.wool",
+    "name": "Flock shearing",
+    "element": "water",
+    "site": [
+      "soil:bleachearth"
+    ],
+    "outputs": [
+      {
+        "good": "wool"
+      }
+    ],
+    "note": "Sheared yearly off a flock at pasture on the rough grazing: a renewable mine."
+  },
+  {
+    "id": "r.x.milk",
+    "name": "Dairy herd",
+    "element": "water",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "milk"
+      },
+      {
+        "good": "dung",
+        "byProduct": true
+      },
+      {
+        "good": "urine",
+        "byProduct": true
+      }
+    ],
+    "note": "A dairy herd at pasture: milk for the pail, dung and urine along for free."
+  },
+  {
+    "id": "r.x.hides",
+    "name": "Herd culling",
+    "element": "water",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "hides"
+      },
+      {
+        "good": "tallow"
+      },
+      {
+        "good": "bone",
+        "byProduct": true
+      },
+      {
+        "good": "horn",
+        "byProduct": true
+      },
+      {
+        "good": "oxblood",
+        "byProduct": true
+      }
+    ],
+    "note": "Culling the herd: hides and tallow to show for it, with bone, horn and ox blood besides."
+  },
+  {
+    "id": "r.x.comb",
+    "name": "Beekeeping",
+    "element": "water",
+    "site": [
+      "soil:brownearth",
+      "exposure:sheltered"
+    ],
+    "outputs": [
+      {
+        "good": "comb"
+      }
+    ],
+    "note": "Hives kept out of the wind at the edge of good farmland, filled from whatever blooms nearby."
+  },
+  {
+    "id": "r.x.coch",
+    "name": "Cochineal farming",
+    "element": "water",
+    "site": [
+      "soil:dustearth",
+      "soil:dryearth"
+    ],
+    "outputs": [
+      {
+        "good": "coch"
+      }
+    ],
+    "note": "Scale insects farmed on cactus pads in dry country."
+  },
+  {
+    "id": "r.x.eggs",
+    "name": "Poultry keeping",
+    "element": "water",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "eggs"
+      }
+    ],
+    "note": "Hens kept in the yard of any farm on good ground.",
+    "could_take": "grain, to feed them"
+  },
+  {
+    "id": "r.x.fish",
+    "name": "Fish farming",
+    "element": "water",
+    "site": [
+      "anchor:shallows"
+    ],
+    "outputs": [
+      {
+        "good": "fish"
+      }
+    ],
+    "note": "Netted and trapped in the shallows, where the lake bed is close under the water."
+  },
+  {
+    "id": "r.x.quills",
+    "name": "Goose plucking",
+    "element": "water",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "quills"
+      }
+    ],
+    "note": "Flight feathers plucked from geese kept on any good farm.",
+    "could_take": "grain, to feed them"
+  },
+  {
+    "id": "r.x.furs",
+    "name": "Fur trapping",
+    "element": "earth",
+    "site": [
+      "anchor:river",
+      "soil:shadowearth"
+    ],
+    "outputs": [
+      {
+        "good": "furs"
+      }
+    ],
+    "note": "Trapped along a cold riverbank, beaver above all for its pelt."
+  },
+  {
+    "id": "r.x.lac",
+    "name": "Lac gathering",
+    "element": "earth",
+    "site": [
+      "soil:redearth"
+    ],
+    "outputs": [
+      {
+        "good": "lac"
+      }
+    ],
+    "note": "Scraped off twigs where scale insects have crusted them with resin, in the lush hot forest."
+  },
+  {
+    "id": "r.x.shells",
+    "name": "Shell gathering",
+    "element": "earth",
+    "site": [
+      "anchor:lakeshore"
+    ],
+    "outputs": [
+      {
+        "good": "shells"
+      }
+    ],
+    "note": "Picked off the lakeshore after the water has done the work of sorting them by size."
+  },
+  {
+    "id": "r.x.dung",
+    "name": "Manure gathering",
+    "element": "earth",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "dung"
+      },
+      {
+        "good": "urine"
+      }
+    ],
+    "note": "Mucked out of any stable or pasture, kept apart for the nitre bed and the alchemist's underrated jar: nobody keeps a herd for this, but the yard gives it up regardless."
+  },
+  {
+    "id": "r.x.bone",
+    "name": "Knacker's yard",
+    "element": "earth",
+    "site": [
+      "soil:blackearth",
+      "soil:brownearth"
+    ],
+    "outputs": [
+      {
+        "good": "bone"
+      },
+      {
+        "good": "horn"
+      },
+      {
+        "good": "oxblood"
+      }
+    ],
+    "note": "Fallen and spent stock rendered down for what the butcher's culling does not already give: bone for the ash pit, horn for the lantern-maker, blood for the sugar house."
+  },
+  {
+    "id": "r.x.ess",
+    "name": "Essence draw",
+    "element": "qe",
+    "site": [
+      "anchor:rim"
+    ],
+    "outputs": [
+      {
+        "good": "ess"
+      }
+    ],
+    "note": "Drawn at the Domain's rim, where aether runs closest. Every magistery and both great assemblies draw on it.",
+    "uncertain": "Essence's source is one of the open design questions (CLAUDE.md): rim is a guess at where aether sits closest to a Domain, not a ruling on how Essence is actually gathered."
+  }
+]

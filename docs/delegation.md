@@ -1,18 +1,24 @@
 # Delegating crude work to sibling models
 
-*A guide for a newbie. Set up 2026-09-17.*
+*A guide for a newbie. Set up 2026-09-17; the two peers since 2026-09-23.*
 
 ## The idea in one paragraph
 
-The Claude you talk to in this repo runs on Fable, the most capable and the
-most expensive model. It can spawn **subagents**: fresh copies of Claude that
-get a task, do it in their own context, and hand back a report. A subagent can
-run on a cheaper sibling: **Haiku** (fast, cheap, good at following a precise
-instruction) or **Sonnet** (the middle: solid on bounded work with a clear
-brief). The catch is that a subagent that is not told which model to use
-inherits the parent's, so until now every delegated chore was quietly running
-on Fable too. This setup names the model every time, and says which chores go
-out.
+The Claude you talk to in this repo runs on one of two models, each able to
+drive a session on its own: **Fable 5.1** or **Opus 5.5**. It can spawn
+**subagents**: fresh copies of Claude that get a task, do it in their own
+context, and hand back a report. A subagent can run on a cheaper sibling:
+**Haiku** (fast, cheap, good at following a precise instruction) or **Sonnet**
+(the middle: solid on bounded work with a clear brief). Or it can run on the
+*other* peer, as a **second opinion**: Opus asks Fable, Fable asks Opus. The
+catch is that a subagent that is not told which model to use inherits the
+parent's, so every delegation names its model.
+
+How much goes out depends on who is in the chair. Fable's use is capped at half
+of the plan, so a Fable session offloads a good share (35 to 45% of a task) and
+hands whole components to Opus. An Opus session sends out only the chores that
+would waste it: runs, sweeps and lookups to Haiku, bounded scripts to Sonnet.
+Sprites are the exception to all of it: only Fable or Opus draws them.
 
 Two reasons to do it. Cost: a 458-island checksum run on Haiku costs a
 fraction of the same run on Fable. Cleanliness: the checksum's transcript
@@ -23,11 +29,12 @@ the work.
 
 **1. The standing rule: `CLAUDE.md`, under Engine & tooling → Delegating.**
 This is what the main model reads at the start of every session. It holds the
-budget (in a task the main model starts, 35 to 45% of the work should be done by
-the cheaper siblings and 55 to 65% by the main model: a direction, not a hard
-limit, there so that sessions are interrupted by the usage limit less often), a
-table of four tiers (mechanical → Haiku, bounded → Sonnet, a whole component to
-a written spec → Opus, design, the core and the review → the main model), and
+two peers and what each does in the chair (Fable, on its capped share, aims for
+35 to 45% of a task done by others, a direction and not a hard limit; Opus sends
+out only what would waste it), the second opinion each asks of the other, the
+rule that only the peers draw sprites, a table of four tiers (mechanical →
+Haiku, bounded → Sonnet, the peer → a second opinion, or from Fable a whole
+component to a written spec; design, the core and the review → the main model), and
 what makes a delegation work: a brief that stands alone, a way for the delegate
 to check itself, files of its own, no more than two or three at once, and small
 enough that an interruption does not leave half-written work. It is checked in, so it follows the repo to the Windows box.
@@ -85,6 +92,8 @@ evidence gets asked again.
 | What a great lake *should* do | The main model | Design. |
 | Anything touching hash salts, `Noise` offsets, sort or scan order | The main model | Determinism. A delegate cannot tell "same" from "same by luck". |
 | Reading a delegate's diff before it is trusted | The main model | Review is not crude work. |
+| "Is this balance rule sound? Here is what I chose and why" | The other peer (Fable from Opus, Opus from Fable) | A second perspective on a choice that will last; weighed, not obeyed. |
+| Drawing or redrawing icons, signs, masks | The main model (Fable or Opus) | Maxim's preference: only the most advanced models draw sprites. |
 
 The economy lab (September 2026) is the worked example of the upper tiers: Sonnet
 wrote the data converter with its own assertions, the layout algorithm with a
@@ -101,7 +110,7 @@ model is supposed to redo it or send it to Sonnet, and say so.
 ## Knobs you can turn
 
 - **`model:`** in an agent's frontmatter: `haiku`, `sonnet`, `opus`, `fable`,
-  or a full model id. Change `scout` to `sonnet` if its answers are too
+  or a full model id (`claude-opus-5-5`, `claude-fable-5-1`). Change `scout` to `sonnet` if its answers are too
   shallow.
 - **`tools:`** is an allowlist. Leave Edit and Write off any agent that
   should not change files.
@@ -135,8 +144,8 @@ model is supposed to redo it or send it to Sonnet, and say so.
 
 ## What it costs
 
-Haiku is the cheapest and fastest of the three, Sonnet the middle, Fable the
-most capable and the costliest per token; the current numbers are on
+Haiku is the cheapest and fastest, Sonnet the middle, Opus and Fable the most
+capable and the costliest per token, and Fable's use is capped on its own; the current numbers are on
 Anthropic's pricing page. The saving is in the runs and sweeps, which are most
 of the tokens a session spends on tool output, not in the thinking, which
 stays where it was.

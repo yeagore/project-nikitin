@@ -74,7 +74,34 @@ public sealed class EconomyStore
 		EconomyWeb web = FromJson<EconomyWeb>(File.ReadAllText(WebPath(id)));
 		web.Id = id;
 		web.Format = Format;
+		MigrateSupply(web);
 		return web;
+	}
+
+	/// <summary>
+	/// A web saved before 2026-09-23 may give a raw good a supply, units a day from the land with no
+	/// recipe behind it. Every good comes out of something now, so each such rate becomes the
+	/// extraction it stood for: a recipe that makes one unit a run with that many at work, standing
+	/// nowhere yet (the issue list asks for a site). The old field is not written again.
+	/// </summary>
+	public static void MigrateSupply(EconomyWeb web)
+	{
+		if (web.Extra == null || !web.Extra.Remove("supply", out JsonElement supply) || supply.ValueKind != JsonValueKind.Object) return;
+		foreach (JsonProperty entry in supply.EnumerateObject().OrderBy(e => e.Name, StringComparer.Ordinal))
+		{
+			if (entry.Value.ValueKind != JsonValueKind.Number || entry.Value.GetDouble() <= 0 || !web.Holds(entry.Name)) continue;
+			string id = "r.land." + entry.Name;
+			if (web.Recipe(id) != null) continue;
+			web.Recipes.Add(new Recipe
+			{
+				Id = id,
+				Name = "The land",
+				Note = "Was a supply of so many a day with no recipe behind it. Give it a site, and an amount a run.",
+				Limit = entry.Value.GetDouble(),
+				Outputs = { new RecipeOutput { Good = entry.Name } },
+			});
+		}
+		if (web.Extra.Count == 0) web.Extra = null;
 	}
 
 	public void SaveWeb(EconomyWeb web)

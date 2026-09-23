@@ -10,11 +10,13 @@ namespace ProjectNikitin.Economy;
 /// place in the web. Variety tags say what is particular about it (<c>heart:arsenic</c>,
 /// <c>grain:rye</c>): they ride from an input to the output through any slot that passes
 /// variety on, so one recipe yields as many varieties as its inputs allow. Property tags are what
-/// variety tags imply (<c>grade:fine</c>): units stack by them. The rest describe.
+/// variety tags imply (<c>grade:fine</c>): units stack by them. Site tags name the ground or the
+/// place a recipe stands on (<c>anchor:river</c>, <c>exposure:windswept</c>), and are carried by no
+/// good. The rest describe.
 /// </summary>
 public sealed class TagNamespace
 {
-	public const string Core = "core", Variety = "variety", Property = "property";
+	public const string Core = "core", Variety = "variety", Property = "property", Site = "site";
 
 	/// <summary>The value of <see cref="Combine"/> for a namespace whose tags are a scale: a unit keeps only the lowest it was given.</summary>
 	public const string Lowest = "lowest";
@@ -22,7 +24,7 @@ public sealed class TagNamespace
 	public string Id { get; set; } = "";
 	public string Note { get; set; } = "";
 
-	/// <summary><see cref="Core"/>, <see cref="Variety"/>, <see cref="Property"/>, or null for a namespace that only describes.</summary>
+	/// <summary><see cref="Core"/>, <see cref="Variety"/>, <see cref="Property"/>, <see cref="Site"/>, or null for a namespace that only describes.</summary>
 	public string? Role { get; set; }
 
 	/// <summary>

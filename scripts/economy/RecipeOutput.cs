@@ -15,6 +15,14 @@ public sealed class RecipeOutput
 	[JsonIgnore]
 	public double Count => Amount ?? 1;
 
+	/// <summary>
+	/// What comes out anyway while the recipe makes something else: the mill's bran, the smelter's
+	/// slag. Nobody runs a mill for bran, so a want of it never asks the recipe to run; it takes
+	/// what comes.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool ByProduct { get; set; }
+
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement>? Extra { get; set; }
 }

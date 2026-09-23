@@ -245,6 +245,7 @@ internal static class InspectorLook
 	public static string RoleLine(Palette palette, string tag) =>
 		palette.IsVariety(tag) ? "a variety tag: it rides from inputs to outputs"
 		: palette.IsCore(tag) ? "a core tag: what slots accept"
+		: palette.IsSite(tag) ? "a site tag: ground or a place a recipe stands on"
 		: "";
 
 	/// <summary>A tooltip of as many lines as have something to say; the empty ones are left out.</summary>

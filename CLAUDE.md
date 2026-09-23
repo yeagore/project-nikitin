@@ -65,12 +65,27 @@ The Windows machine prints decimals with a comma. A windowed run from a shell
 
 ### Delegating
 
-Not every chore needs the model in the chair, and the model in the chair is the
-costliest: every token Fable spends on work a sibling could have done brings the
-usage limit, and an interrupted session, nearer. **The budget for a task Fable
-starts: 35 to 45% of the work done by Opus, Sonnet and Haiku, 55 to 65% by
-Fable.** Not a hard constraint, a direction (Maxim's, 2026-09-22): when planning
-a task, look first for the parts that can go out, and send them.
+**Two peers in the chair** (Maxim's, 2026-09-23): **Fable 5.1** and **Opus 5.5**
+are each an excellent main driver on their own, and each is the other's second
+opinion. Sonnet and Haiku take the chores. Expect this to change again as the
+models do (Sonnet, Haiku, Fable 5.5).
+
+- **Opus 5.5 in the chair** delegates only what would waste it: mechanical work to
+  Haiku, bounded work with a check to Sonnet. No budget share to meet.
+- **Fable 5.1 in the chair** is on a capped share of the plan (Fable is held to
+  half of the total use on Max plans), so it offloads more: **aim for 35 to 45% of
+  a task done by the others**, and a whole component to a written spec goes to
+  Opus 5.5. A direction, not a hard constraint (2026-09-22).
+- **A second opinion**, either way round (`model: "fable"` from Opus, `"opus"`
+  from Fable), where a second perspective pays: a choice with lasting
+  consequences (the data model, a balance rule, anything near determinism), a
+  large diff before it is committed, a judgement of pictures. The brief gives the
+  question, the options and the reasoning so far, and asks for disagreement, not
+  assent; the answer is weighed, not obeyed, and the report says what it changed.
+  A Fable opinion spends Fable's capped share: ask where it matters, not by habit.
+- **Sprites** (sample icons, signs, masks) are drawn only by the most advanced
+  models, Fable 5.1 and Opus 5.5 today (Maxim's preference). Sonnet may write the
+  tooling around them: packing a sheet, a measurement script.
 
 A subagent (the Agent tool) runs on the `model` it is given, and one given none
 inherits the parent's; so work goes out with the model named, and what comes back
@@ -79,9 +94,9 @@ is read before it is trusted. Four tiers:
 | Tier | Model | What goes there |
 |---|---|---|
 | Mechanical | `haiku` | Run a command and report the verdict and the numbers (the build, the checksum, the audit, the benches, a self-test); sweep the tree for every site that does something; count, list, tabulate; rename to a spec already settled; look a fact up in documentation or Notion. |
-| Bounded | `sonnet` | Work with a clear brief and a check on the result: a one-off data script with its own assertions; a classification or a first draft over a list; a small algorithm with a harness; pixel art to a written spec; a doc passage for a change already made; a refactor the checksum will police. |
-| Substantial | `opus` | A whole component to a written spec, where judgement about layout or structure is needed and the result can be looked at: a dock of a lab, a dialog, a view. Give it one file of its own and a way to see its work (a build, a self-test, a screenshot). |
-| The main model | | Design and decisions; the data model and the core others build on; anything that can move the checksum or the audit, or touches the determinism details in `scripts/generation/CLAUDE.md`; the brief itself; the review of what a delegate returns; anything that needs the conversation, which a subagent does not see. |
+| Bounded | `sonnet` | Work with a clear brief and a check on the result: a one-off data script with its own assertions; a classification or a first draft over a list; a small algorithm with a harness; a doc passage for a change already made; a refactor the checksum will police. |
+| Peer | `opus` / `fable` | The other of the two: a second opinion; from Fable, also a whole component to a written spec where judgement about layout or structure is needed and the result can be looked at (a dock of a lab, a dialog, a view), with one file of its own and a way to see its work. |
+| The main model | | Design and decisions; the data model and the core others build on; anything that can move the checksum or the audit, or touches the determinism details in `scripts/generation/CLAUDE.md`; the brief itself; the review of what a delegate returns; sprites; anything that needs the conversation, which a subagent does not see. |
 
 What makes a delegation work, learnt the hard way:
 
@@ -105,6 +120,7 @@ by name: **`runner`** (haiku) builds, runs the dev scenes under a timeout and
 reports the verdict, not the transcript; **`scout`** (haiku) answers a question
 about the code by reading it, and changes nothing. For other chores, `Explore` or
 `general-purpose` with `model` set. `docs/delegation.md` is the guide.
+
 ---
 
 ## Spatial model (from Notion → "The Ecumene")
@@ -287,9 +303,11 @@ specific page.
   with roles, varieties that ride from inputs to outputs, property tags they imply
   and units stack by, sites a recipe stands on, icons recoloured by variety.
   Stage two, begun 2026-09-23 on the skeletal web Hearth: amounts and time on
-  the recipes, supply at the sources, wants at the consumers, a balance per
-  web. Next: buildings and labour, the next rungs of the ladder, and property
-  tags read by prices and uses.
+  the recipes, wants at the consumers, a balance per web; every good comes out
+  of something (extractions on sites of soils and the terrain's feature
+  anchors, with limits), loops with boosts and by-products. Next: buildings and
+  labour, sites read against a Domain, the next rungs of the ladder, and
+  property tags read by prices and uses.
 - What comes after on the terrain side, in rough order, is in `docs/island-generation.md` §6:
   settlement placement, the biome layer above `Material` (which is also where
   the ground gets a look beyond flat colours), and span-aware pathing.

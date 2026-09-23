@@ -60,6 +60,7 @@ public partial class EconomyLab
 		"core: what slots and consumers accept",
 		"variety: rides from inputs to outputs",
 		"property: what units stack by",
+		"site: ground or a place a recipe stands on",
 	};
 
 	private Control _palNsDetail = null!;
@@ -429,11 +430,12 @@ public partial class EconomyLab
 		1 => TagNamespace.Core,
 		2 => TagNamespace.Variety,
 		3 => TagNamespace.Property,
+		4 => TagNamespace.Site,
 		_ => null,
 	};
 
 	private static int RoleIndex(string? role) =>
-		role == TagNamespace.Core ? 1 : role == TagNamespace.Variety ? 2 : role == TagNamespace.Property ? 3 : 0;
+		role == TagNamespace.Core ? 1 : role == TagNamespace.Variety ? 2 : role == TagNamespace.Property ? 3 : role == TagNamespace.Site ? 4 : 0;
 
 	private void BuildPaletteDialogs()
 	{
@@ -971,7 +973,7 @@ public partial class EconomyLab
 		_palTagScale.Visible = _palTagScale.Text.Length > 0;
 
 		List<string> sites = Web.Recipes.Where(r => r.SiteList.Contains(tag)).Select(Analysis.TitleOf).ToList();
-		bool place = sites.Count > 0 || Palette.NamespaceOf(tag) == SiteSpace;
+		bool place = sites.Count > 0 || Palette.IsSite(tag);
 		_palTagSites.Visible = place;
 		_palTagSites.Text = !place ? ""
 			: sites.Count == 0 ? "A place, but no recipe of this web stands on it."

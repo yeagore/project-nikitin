@@ -25,6 +25,18 @@ public sealed class RecipeInput
 	public bool Optional { get; set; }
 
 	/// <summary>
+	/// What an optional slot adds when it is filled: every output of the run comes out this much
+	/// greater, as a fraction (0.3 is three tenths more), in proportion to how full the slot is.
+	/// Dung on the fields. Null for none; read through <see cref="Bonus"/>. Meaningless on a
+	/// required slot, which is always filled: there the outputs themselves say it.
+	/// </summary>
+	public double? Boost { get; set; }
+
+	/// <summary>The boost, never null.</summary>
+	[JsonIgnore]
+	public double Bonus => Boost ?? 0;
+
+	/// <summary>
 	/// The variety of what fills this slot passes on to the output: its variety tags are stamped on
 	/// what the recipe makes, so the same recipe fed an arsenic heart makes an arsenic-hearted golem.
 	/// </summary>

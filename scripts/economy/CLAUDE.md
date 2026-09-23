@@ -27,7 +27,8 @@ load a web as it is and a test can run without the engine.
 - **Tag roles.** A namespace is `core` (what a good is: what slots and consumers
   are meant to accept; it decides a good's place in the web), `variety` (what is
   particular about it), `property` (what units stack by: what variety tags imply),
-  or plain (it only describes). `variety` and `property` have mechanics.
+  `site` (ground or a place a recipe stands on, carried by no good: `anchor`,
+  `warmth`, `moisture`, `exposure`), or plain (it only describes).
 - **Varieties.** A good's variety tags are on every unit of it. A good may also
   have **authored varieties** (`Variety`: rye and wheat of grain, the seventeen
   soils): one node, the same slots, extra tags each. And through every slot with
@@ -49,9 +50,20 @@ load a web as it is and a test can run without the engine.
   the way `VarietiesOf` counts its varieties; `VarietiesIn(good, namespaces)` is
   the view split by some namespaces only. The variety ledger's golem: ~1,600
   varieties, 15 stacks, 3 when split by heart.
-- **Sites.** `Recipe.Site` lists the tags of the ground or place the work stands on
-  (`soil:murkearth`, `site:coast`), any one of which will do; nothing is hauled. A
-  recipe with a site and no inputs is an extraction and gets no "takes nothing".
+- **Every good comes out of something** (Maxim, 2026-09-23). A raw good comes out
+  of an **extraction**: a recipe with no required input (`Recipe.IsExtraction`)
+  that stands on a site. The analysis warns on a good nothing makes and on an
+  extraction that stands nowhere. A good made only by extractions is still a
+  `Source`, at depth 0.
+- **Sites.** `Recipe.Site` lists the tags of the ground or place the work stands on;
+  nothing is hauled. Tags of one namespace are alternatives, namespaces add up
+  (`SiteGroups`): `soil:brownearth, soil:blackearth, anchor:river` is either soil,
+  by a river. The soils are the `soil` variety tags; `anchor:*` are the generator's
+  feature anchors (each tag's note names its `IslandData` field); `warmth`,
+  `moisture`, `exposure` are habitat bands, named only where the soil does not fix
+  them. **Ore deposits are not tags** (no one knows how much ore a Domain holds):
+  a mine stands on rock and names its deposit in its note. Nothing yet tests a
+  site against a Domain.
 - **Colours, symbols, layers.** A `TagDef` has a `Colour` (`#RRGGBB`) and may have
   a `Sign`; a namespace has a `Sign` its tags share (`Palette.SignOf`,
   `ColourOf`). A good's `Layers` (`IconLayer`: a `Match`, a namespace or a whole
@@ -69,14 +81,22 @@ load a web as it is and a test can run without the engine.
   file, on purpose.
 - **Amounts, time and the balance** (stage two). `RecipeInput.Amount` and
   `RecipeOutput.Amount` (per run, null = 1, read `Count`), `Recipe.Time` (days per
-  run, null = 1, read `Days`), `Consumer.Wants` (units a head a day, read `Rate`),
-  `EconomyWeb.Heads` and `EconomyWeb.Supply` (units a day the land gives by good;
-  `SupplyOf`, set through `EconomyEdit.SetSupply`). `WebBalance.Of(web, analysis)`
-  pulls the wants back from the consumers (equal shares across a slot's or a
-  consumer's fillers) and pushes what is there forward (rationing in proportion;
-  a recipe runs as far as its scarcest required slot allows and no further than
-  asked; optional slots never hold it back; extractions are unlimited); loops are
-  cut for the order. Hearth is the worked example and the self-test's arithmetic.
+  run, null = 1, read `Days`), `Recipe.Limit` (how many at work at once; runs a
+  day ≤ Limit ÷ Days; null none), `RecipeInput.Boost` (an optional slot's extra of
+  every output when filled, a fraction, read `Bonus`), `RecipeOutput.ByProduct`,
+  `Consumer.Wants` (units a head a day, read `Rate`), `EconomyWeb.Heads`. The old
+  `EconomyWeb.Supply` is gone: `EconomyStore.MigrateSupply` turns a file's
+  `supply` into extractions on load. `WebBalance.Of(web, analysis)` pulls the
+  wants back (equal shares across fillers, and across a good's makers except that
+  a capped maker is asked only for what it can make; only firm wants, from
+  required slots and consumers, raise a maker; a by-product never does) and pushes
+  forward (seed corn first: a firm asker whose main products lead back to the good
+  through required slots; then firm askers, then optional ones, each tier in proportion;
+  a recipe runs as far as its scarcest required slot and its limit allow; boosts
+  scale the outputs). The push goes round loops from the top down until nothing
+  moves: monotone, so it settles on the greatest flow the loop keeps up. Hearth
+  is the worked example and the self-test's arithmetic; docs/economy-lab.md has
+  the rules in plain words.
 - Sources, final goods, depth, hubs, links (drawn, and implied by tags), varieties,
   issues and the balance are read off a web by `WebAnalysis` and `WebBalance` and **never stored**.
 
@@ -115,7 +135,8 @@ WebArrange.cs, LayeredLayout.cs
 ```
 
 Data: `resources/economy/webs/` (the locked `full-ledger-reference`, `starter`,
-`tagged-ledger`, the locked `variety-ledger`, `hearth` from `tools/make_hearth.py`, and whatever Maxim has made),
+`tagged-ledger`, the locked `variety-ledger`, `hearth` from `tools/make_hearth.py`, and whatever Maxim has made;
+the older webs keep their sources, and the analysis names them),
 `resources/economy/sprites/` (`icons`, `signs`, `masks`, `tags`, `elements`).
 `tools/import_economy_export.py` made the full ledger from the chat export;
 `tools/make_tagged_ledger.py` derived the tagged one and `tools/make_variety_ledger.py`

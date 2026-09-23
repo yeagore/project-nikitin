@@ -1033,11 +1033,17 @@ for the economy, where goods are boxes you drag about, recipes sit between
 them, and lines say what is made of what. It has its own plainly written
 manual, `docs/economy-lab.md`, and its own check, a self-test that makes the
 edits a hand would make and confirms the lab kept up; it never touches the
-generator, so the checksum and the audit do not care about it. Three more runs
-answer three questions from a shell: a census says how many kinds of each good a
+generator, so the checksum and the audit do not care about it. Four more runs
+answer four questions from a shell: a census says how many kinds of each good a
 web can make (and how many the market would tell apart), a balance says how much
 of what the people want actually reaches them in a day and where the chain runs
-short, and a bench measures how fast the lab runs on whichever machine it is run on.
+short, a sprite review lays every icon out large beside its varieties and says
+which are hard to read, and a bench measures how fast the lab runs on whichever
+machine it is run on. The economy has begun to lean on the terrain: since
+September 23rd every raw good is dug, grown or caught somewhere, on a named kind
+of ground or beside one of the generator's features (a river for a watermill,
+a lake with no outlet for salt pans), though nothing yet checks a real island
+for them.
 
 ---
 

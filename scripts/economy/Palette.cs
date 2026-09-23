@@ -112,6 +112,9 @@ public sealed class Palette
 	/// <summary>True for a tag whose namespace is marked property: what variety tags imply, and what units stack by.</summary>
 	public bool IsProperty(string tag) => Namespace(NamespaceOf(tag))?.Role == TagNamespace.Property;
 
+	/// <summary>True when the tag's namespace names ground or a place a recipe stands on (<c>anchor:river</c>).</summary>
+	public bool IsSite(string tag) => Namespace(NamespaceOf(tag))?.Role == TagNamespace.Site;
+
 	/// <summary>The tag's entry in the tag list, or null for a tag that is in use without one. The index rebuilds itself when the list has changed length; <see cref="Reindex"/> after a rename.</summary>
 	public TagDef? Tag(string id)
 	{

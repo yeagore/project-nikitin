@@ -6,7 +6,7 @@ public enum GoodRole
 	/// <summary>Nothing here makes it, uses it or consumes it.</summary>
 	Loose,
 
-	/// <summary>Nothing here makes it: a raw input of this web, whatever it is elsewhere.</summary>
+	/// <summary>Nothing here makes it but the ground, through an extraction: a raw input of this web, whatever it is elsewhere.</summary>
 	Source,
 
 	/// <summary>Made here and used here.</summary>

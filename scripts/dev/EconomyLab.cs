@@ -82,6 +82,12 @@ public partial class EconomyLab : Control
 			GetTree().Quit();
 			return;
 		}
+		if (args.Contains("sprites"))
+		{
+			SpriteReview(args);
+			GetTree().Quit();
+			return;
+		}
 
 		Sprites = new SpriteBank(Store, () => Web.Palette);
 		if (!selfTest) _prefs.Load(PrefsPath);
@@ -160,6 +166,9 @@ public partial class EconomyLab : Control
 	partial void BenchStart(string[] args);
 
 	partial void BenchTick(double delta);
+
+	// The sprite review (EconomyLab.Sprites.cs): every icon and every variety of it on a sheet, and what is wrong with them.
+	partial void SpriteReview(string[] args);
 
 	public override void _Notification(int what)
 	{

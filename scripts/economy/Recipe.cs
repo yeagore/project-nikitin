@@ -25,10 +25,19 @@ public sealed class Recipe
 
 	/// <summary>
 	/// Where the work has to stand, as tags of the ground or the place (<c>soil:murkearth</c>,
-	/// <c>site:coast</c>), any one of which will do; null for anywhere. Not a slot: nothing is
-	/// hauled or used up. Peat is cut where the ground is murkearth, so its recipe takes no soil.
+	/// <c>anchor:river</c>, <c>exposure:windswept</c>); null for anywhere. Tags of one namespace are
+	/// alternatives and namespaces add up: <c>soil:brownearth, soil:blackearth, anchor:river</c> is
+	/// brownearth or blackearth, by a river (<see cref="SiteGroups"/>). Not a slot: nothing is hauled
+	/// or used up. Peat is cut where the ground is murkearth, so its recipe takes no soil.
 	/// </summary>
 	public List<string>? Site { get; set; }
+
+	/// <summary>
+	/// How many can be at work at once: the fields, pits or stands the site gives room for (later,
+	/// the buildings put up). A run takes <see cref="Days"/>, so the recipe manages at most
+	/// Limit ÷ Days runs a day. Null for no limit.
+	/// </summary>
+	public double? Limit { get; set; }
 
 	/// <summary>How long one run takes, in days; null means one. Read through <see cref="Days"/>. A workshop runs one batch at a time, so runs a day times days is workshops busy.</summary>
 	public double? Time { get; set; }
@@ -47,4 +56,25 @@ public sealed class Recipe
 	/// <summary>The site tags, never null.</summary>
 	[JsonIgnore]
 	public IReadOnlyList<string> SiteList => Site ?? (IReadOnlyList<string>)System.Array.Empty<string>();
+
+	/// <summary>
+	/// The site as conditions that must all hold, each a namespace and the tags of it any one of
+	/// which will do, in the order the namespaces first appear.
+	/// </summary>
+	public IReadOnlyList<(string Namespace, IReadOnlyList<string> Tags)> SiteGroups()
+	{
+		var groups = new List<(string, IReadOnlyList<string>)>();
+		foreach (string tag in SiteList)
+		{
+			string space = Palette.NamespaceOf(tag);
+			int at = groups.FindIndex(g => g.Item1 == space);
+			if (at < 0) groups.Add((space, new List<string> { tag }));
+			else ((List<string>)groups[at].Item2).Add(tag);
+		}
+		return groups;
+	}
+
+	/// <summary>An extraction: nothing it must be fed, so it draws on the ground it stands on. Every raw good comes out of one.</summary>
+	[JsonIgnore]
+	public bool IsExtraction => Inputs.TrueForAll(i => i.Optional);
 }

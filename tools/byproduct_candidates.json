@@ -1,0 +1,541 @@
+[
+  {
+    "recipe": "r.beer",
+    "recipe_name": "",
+    "byproduct": "new:spent-grain",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Mashing malt for beer leaves the spent grain (draff) once the wort is drained off, prime cattle feed and a baker's cheap flour stretcher.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.brick",
+    "recipe_name": "",
+    "byproduct": "new:brick-dust",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "A brick kiln always over- and under-fires part of the load; the broken bats are ground to dust and worked into mortar for a harder, pozzolanic set.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.charcoal",
+    "recipe_name": "",
+    "byproduct": "new:wood-tar",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Charring wood in a closed kiln condenses a tarry pyroligneous liquor; skimmed off, the tar waterproofs rope and timber like pine pitch.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.charcoal",
+    "recipe_name": "",
+    "byproduct": "new:pyroligneous-acid",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "The same condensate, once the tar is skimmed off, yields a sour crude wood-vinegar used to preserve and pickle.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.cheese",
+    "recipe_name": "",
+    "byproduct": "new:whey",
+    "in_palette": false,
+    "amount": 0.8,
+    "why": "Curdling milk for cheese leaves the watery whey behind, drunk, fed to pigs, or boiled down further for a soft whey cheese.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.choc",
+    "recipe_name": "",
+    "byproduct": "new:cacao-husk",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Winnowing the papery husk off roasted cacao beans before grinding leaves chaff, brewed thin as a cheap cacao tea or burned as kindling.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.clothes",
+    "recipe_name": "",
+    "byproduct": "new:rag-scraps",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Cutting cloth to a clothing pattern leaves scraps and offcuts, the ragman's stock and, pulped, the papermaker's best raw material.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.coffeeb",
+    "recipe_name": "",
+    "byproduct": "new:coffee-husk",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "Hulling and roasting coffee cherries leaves the dried husk and parchment skin, burned as fuel around the mill or steeped as a rough cherry tea at origin.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.copperas",
+    "recipe_name": "",
+    "byproduct": "brim",
+    "in_palette": true,
+    "amount": 0.2,
+    "why": "Roasting marcasite for green vitriol drives off sulfur, which condenses as a little brimstone alongside the vitriol.",
+    "used_by": [
+      "r.gunp",
+      "r.verm",
+      "r.wildfire"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.brim"
+    ]
+  },
+  {
+    "recipe": "r.cotthr",
+    "recipe_name": "",
+    "byproduct": "new:cottonseed",
+    "in_palette": false,
+    "amount": 0.5,
+    "why": "Ginning cotton separates out the seed, pressed in a small way for oil or fed to stock.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.flour",
+    "recipe_name": "",
+    "byproduct": "new:bran",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "Milling grain into flour sieves out the husk and germ as bran, kept for animal feed or coarse baking.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.giltw",
+    "recipe_name": "",
+    "byproduct": "hg",
+    "in_palette": true,
+    "amount": 0.2,
+    "why": "Heating a gilded piece to drive off the amalgam's mercury lets a careful gilder catch and condense some of the fume back to quicksilver under a hood.",
+    "used_by": [
+      "r.amalgam",
+      "r.verm",
+      "r.philm",
+      "r.blood",
+      "r.engine",
+      "r.ointm",
+      "r.hats",
+      "r.lookg"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.hg"
+    ]
+  },
+  {
+    "recipe": "r.glass",
+    "recipe_name": "",
+    "byproduct": "new:glass-gall",
+    "in_palette": false,
+    "amount": 0.1,
+    "why": "The scum skimmed off the top of a glass melt is sandiver (glass gall), alkaline salts some glassmakers saved as a coarse flux.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.glue",
+    "recipe_name": "",
+    "byproduct": "new:bone-grease",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Boiling bones and hide clippings down for glue skims a layer of fat off the pot, rendered like tallow for cheap soap or candles.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.harts",
+    "recipe_name": "",
+    "byproduct": "new:bone-black",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Roasting horn or bone for spirit of hartshorn chars the residue into bone black, a fine black pigment and the sugar-refiner's decolorising char.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.hats",
+    "recipe_name": "",
+    "byproduct": "new:hat-pelts",
+    "in_palette": false,
+    "amount": 0.5,
+    "why": "Felting only the barbed underfur off a beaver pelt leaves the skin itself, tanned into a coarse leather or boiled for glue.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.hempf",
+    "recipe_name": "",
+    "byproduct": "new:hemp-tow",
+    "in_palette": false,
+    "amount": 0.4,
+    "why": "Breaking and scutching hemp for fibre leaves short tow and the woody hurds, good for coarse cordage, paper stock or tinder.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.honey",
+    "recipe_name": "",
+    "byproduct": "wax",
+    "in_palette": true,
+    "amount": 0.3,
+    "why": "Rendering honeycomb for honey leaves the wax comb behind, melted down and strained separately -- the good's own note says one harvest gives two goods: honey to eat, wax to burn and seal.",
+    "used_by": [
+      "r.ultram",
+      "r.sealwax",
+      "r.candles",
+      "r.batik",
+      "r.castbrass"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.wax"
+    ]
+  },
+  {
+    "recipe": "r.ife",
+    "recipe_name": "",
+    "byproduct": "new:slag",
+    "in_palette": false,
+    "amount": 1.5,
+    "why": "Bloomery or blast-furnace smelting of ironstone throws heavy silicate slag; historically tipped, road-metalled, or spun into slag wool.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.ipb",
+    "recipe_name": "",
+    "byproduct": "new:slag",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Smelting galena to lead leaves a lead-silicate slag at the furnace foot, periodically re-run for the metal still locked in it.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.isn",
+    "recipe_name": "",
+    "byproduct": "new:slag",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Smelting cassiterite is a reduction like any other ore; it leaves a tin-rich slag valuable enough to be re-smelted rather than dumped.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.leather",
+    "recipe_name": "",
+    "byproduct": "new:hair",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "Hides are limed to loosen the hair before tanning; the scraped-off hair is swept up and worked into lime plaster as a binder.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.linseed",
+    "recipe_name": "",
+    "byproduct": "new:linseed-cake",
+    "in_palette": false,
+    "amount": 0.5,
+    "why": "Pressing flax seed for oil leaves a protein-rich cake, a valued cattle feed.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.linthr",
+    "recipe_name": "",
+    "byproduct": "new:tow",
+    "in_palette": false,
+    "amount": 0.4,
+    "why": "Scutching flax for fine linen thread leaves short broken fibre (tow), spun coarse or picked into oakum for caulking.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.masa",
+    "recipe_name": "",
+    "byproduct": "new:nejayote",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "Steeping maize in lime water to make nixtamal leaves an alkaline steep liquor, fed to animals or worked back into the fields.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.oil",
+    "recipe_name": "",
+    "byproduct": "new:olive-pomace",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Pressing olives leaves a pulp of skins and stones, burned as a poor fuel or re-pressed for coarse lamp oil.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.oov",
+    "recipe_name": "",
+    "byproduct": "rouge",
+    "in_palette": true,
+    "amount": 0.3,
+    "why": "Distilling vitriol for oil of vitriol leaves a calcined red iron-oxide residue (colcothar) in the retort -- the same stuff rouge is made from directly by roasting copperas.",
+    "used_by": [
+      "r.lens",
+      "r.obsw",
+      "r.telescope"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.rouge"
+    ]
+  },
+  {
+    "recipe": "r.opium",
+    "recipe_name": "",
+    "byproduct": "new:poppyseed",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "After the pod is scored for its latex the ripe seed is harvested too, pressed for a mild cooking oil.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.parch",
+    "recipe_name": "",
+    "byproduct": "glue",
+    "in_palette": true,
+    "amount": 0.2,
+    "why": "Scraping and trimming a limed skin to make parchment leaves clippings and shavings, boiled down into a fine glue used for gilding and bookbinding.",
+    "used_by": [
+      "r.paper"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.glue"
+    ]
+  },
+  {
+    "recipe": "r.planks",
+    "recipe_name": "",
+    "byproduct": "new:sawdust",
+    "in_palette": false,
+    "amount": 0.5,
+    "why": "Sawing timber square for planks throws off sawdust and edge offcuts, swept up for kindling or stable bedding.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.reg",
+    "recipe_name": "",
+    "byproduct": "new:slag",
+    "in_palette": false,
+    "amount": 0.5,
+    "why": "Reducing stibnite with iron to strike the star throws an iron-sulfide matte (liver of antimony) off the melt, skimmed away as dross.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.ricew",
+    "recipe_name": "",
+    "byproduct": "new:rice-lees",
+    "in_palette": false,
+    "amount": 0.4,
+    "why": "Pressing the fermented mash for rice wine leaves a sweet, boozy lees, used to pickle vegetables or flavour a dish, much as sake kasu is today.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.salt.sea",
+    "recipe_name": "Salt pans",
+    "byproduct": "new:bittern",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "The mother liquor left in the pans once salt has crystallised out is rich in magnesium and other salts -- bittern, an alchemist's curiosity and a source for Epsom-like salts.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.saltfish",
+    "recipe_name": "",
+    "byproduct": "new:fish-oil",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Gutting and splitting fish before salting yields a rank oil rendered from the trimmings, burned in poor lamps or dressed into leather.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.shellac",
+    "recipe_name": "",
+    "byproduct": "dye",
+    "in_palette": true,
+    "amount": 0.3,
+    "why": "Washing sticklac to melt out the shellac resin first rinses a red dye into the wash-water -- sticklac's own note says one harvest gives a varnish, a wax and a red dye.",
+    "used_by": [
+      "r.dyed",
+      "r.batik"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.madderl",
+      "r.indigod",
+      "r.weldd",
+      "r.dye.green",
+      "r.scarlet",
+      "r.ironblk"
+    ]
+  },
+  {
+    "recipe": "r.shoes",
+    "recipe_name": "",
+    "byproduct": "new:leather-scraps",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Cutting leather to a shoe pattern leaves offcuts too small for boots but big enough for a patch, a hinge, or the glue-pot.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.silkthr",
+    "recipe_name": "",
+    "byproduct": "new:pupae",
+    "in_palette": false,
+    "amount": 0.4,
+    "why": "Reeling silk in hot water kills and loosens the pupa inside each cocoon; scooped out, it is a cheap protein for fish, fowl or table.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.sugar",
+    "recipe_name": "",
+    "byproduct": "new:molasses",
+    "in_palette": false,
+    "amount": 0.8,
+    "why": "Boiling cane juice down to crystallised sugar leaves a thick mother liquor, molasses -- fermented into rum or sold as a cheap sweetener.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.turps",
+    "recipe_name": "",
+    "byproduct": "new:rosin",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Distilling raw resin for spirit of turpentine leaves solid rosin (colophony) behind in the still, used to varnish, seal casks and rosin a bow.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.ultram",
+    "recipe_name": "",
+    "byproduct": "new:ultramarine-ash",
+    "in_palette": false,
+    "amount": 0.3,
+    "why": "Kneading blue out of a lapis dough is done in several washes; the last, palest extraction is ultramarine ash, a cheaper grey-blue pigment sold on its own.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.was",
+    "recipe_name": "",
+    "byproduct": "kingsy",
+    "in_palette": true,
+    "amount": 0.3,
+    "why": "Roasting realgar to sublime white arsenic leaves an orpiment-like yellow sulfide residue behind, the same substance king's yellow is made from directly.",
+    "used_by": [
+      "r.pigm"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.kingsy"
+    ]
+  },
+  {
+    "recipe": "r.wine",
+    "recipe_name": "",
+    "byproduct": "new:pomace",
+    "in_palette": false,
+    "amount": 1.0,
+    "why": "Pressing grapes for wine leaves the skins, pips and stems (marc), fermented on their own into a rough spirit or spread as fertiliser.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.yarn",
+    "recipe_name": "",
+    "byproduct": "new:wool-grease",
+    "in_palette": false,
+    "amount": 0.2,
+    "why": "Scouring raw fleece before spinning renders a greasy skim off the wash water (wool grease/suint), used crudely in ointments and axle-grease.",
+    "used_by": [],
+    "consumed_by": [],
+    "also_made_by": []
+  },
+  {
+    "recipe": "r.zaf",
+    "recipe_name": "",
+    "byproduct": "was",
+    "in_palette": true,
+    "amount": 0.3,
+    "why": "Cobalt ores are typically arsenical; roasting them for zaffre volatilises arsenic trioxide, historically the main by-product of the Saxon cobalt works, condensed as a poor man's white arsenic.",
+    "used_by": [
+      "r.specm",
+      "r.shot",
+      "r.h1"
+    ],
+    "consumed_by": [],
+    "also_made_by": [
+      "r.was"
+    ]
+  }
+]

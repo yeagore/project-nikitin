@@ -469,7 +469,7 @@ numbers it found on the Mac are in `CLAUDE.md` under Rendering.
 
 Not a terrain scene: an editor of production webs (goods, recipes, tags,
 consumers). Its manual and its data format are **`docs/economy-lab.md`**. From a
-shell it takes six runs, all on the scene itself:
+shell it takes seven runs, all on the scene itself:
 
 ```
 godot --path . --headless scenes/dev/economy_lab.tscn -- selftest
@@ -477,6 +477,7 @@ godot --path . scenes/dev/economy_lab.tscn -- shot web=starter select=r.golem zo
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake
 godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger
 godot --path . --headless scenes/dev/economy_lab.tscn -- balance web=hearth
+godot --path . --headless scenes/dev/economy_lab.tscn -- sprites web=variety-ledger out=/tmp/sprite_review
 godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference
 ```
 
@@ -488,8 +489,10 @@ if any check failed; it is the lab's regression gate and takes a few seconds.
 arranges every web that has no layout and rewrites every file through the lab's
 writer. `census` counts a web's varieties and the stacks they fall into, and
 what the count would be with every slot passing variety on. `balance` prints a
-web's balance sheet: what flows where in a day given the supplies, the recipes'
-amounts and times, and the people's wants. `bench` is windowed
+web's balance sheet: what flows where in a day given the extractions' limits,
+the recipes' amounts and times, and the people's wants. `sprites` writes
+contact sheets of a web's icons and their varieties at four times the size, and
+reports what is illegible. `bench` is windowed
 and measures the lab on the machine it runs on (frame times over the big web,
 the cost of a selection and of a change), writing a table to
 `user://economy_bench.txt`; it is how a machine where the lab feels slow reports.

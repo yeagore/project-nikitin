@@ -323,12 +323,28 @@
         }
       },
       {
-        "id": "site",
-        "note": "A place a recipe has to stand that is not a soil: the coast, a river. Read from the Domain, not hauled.",
+        "id": "anchor",
+        "note": "A feature of the terrain the work has to stand at, as the island generator marks it (IslandData): a river, a fall, a spring, a cliff's foot.",
+        "role": "site",
         "sign": {
           "atlas": "tags",
           "index": 27
         }
+      },
+      {
+        "id": "warmth",
+        "note": "The warmth band of the ground, as the generator's habitat reads it: frigid, cold, temperate, hot. Name it only where the soil does not already say it.",
+        "role": "site"
+      },
+      {
+        "id": "moisture",
+        "note": "The moisture band of the ground: dry, balanced, wet. Name it only where the soil does not already say it.",
+        "role": "site"
+      },
+      {
+        "id": "exposure",
+        "note": "How open to the wind the ground is (the habitat's exposure, scaled by the Domain's wind): sheltered or windswept.",
+        "role": "site"
       }
     ],
     "tags": [
@@ -586,6 +602,10 @@
         "note": ""
       },
       {
+        "id": "need:building",
+        "note": "Building and upkeep: what goes into walls, roofs and floors, and what keeps them standing."
+      },
+      {
         "id": "group:farm-and-herd-goods",
         "note": ""
       },
@@ -762,13 +782,148 @@
         "note": "Clear enough to grind a lens from."
       },
       {
-        "id": "site:coast",
-        "note": "By the sea.",
+        "id": "anchor:river",
+        "note": "Beside running water: a river's bank (RiverBedCells, BankCells). A wheel, a vat that wants flowing water.",
         "colour": "#3F7FBF",
         "sign": {
           "atlas": "tags",
           "index": 49
         }
+      },
+      {
+        "id": "anchor:falls",
+        "note": "At a waterfall (Falls): a head of water for an overshot wheel, a trip hammer, a bellows.",
+        "colour": "#6FA8DC"
+      },
+      {
+        "id": "anchor:spring",
+        "note": "Where a stream rises (Springs): clean water for a brewer, a physician, a holy well.",
+        "colour": "#9FD3E6"
+      },
+      {
+        "id": "anchor:hot-spring",
+        "note": "Warm water on a cold Domain (HotWater): baths, a fuller's vat, sulphur crusts.",
+        "colour": "#E07B5A"
+      },
+      {
+        "id": "anchor:lakeshore",
+        "note": "Dry ground beside standing water (BankCells by a lake): the fisher's landing, the reed cutter's path.",
+        "colour": "#4F8FA8"
+      },
+      {
+        "id": "anchor:shallows",
+        "note": "Lake bed under two slabs of water or less (ShallowBedCells): reeds, fish traps, withies, bog iron.",
+        "colour": "#7FB8B0"
+      },
+      {
+        "id": "anchor:deep",
+        "note": "The deepest water of a lake or a plunge pool (Deeps, DeepBedCells): big fish, the ooze dredged up.",
+        "colour": "#2F4F7F"
+      },
+      {
+        "id": "anchor:salt-lake",
+        "note": "A lake no river leaves (TerminalLakes): the water turns brackish and dries to salt at the edge.",
+        "colour": "#D9D2C0"
+      },
+      {
+        "id": "anchor:rim",
+        "note": "Land at the edge of the Domain, with aether beside it (CoastCells).",
+        "colour": "#8E7CC3"
+      },
+      {
+        "id": "anchor:fjord",
+        "note": "The mouth of a winding inlet of aether (Fjords): a harbour sheltered from the open aether.",
+        "colour": "#6A5ACD"
+      },
+      {
+        "id": "anchor:sea-stack",
+        "note": "An islet of rock standing off the rim (SeaStacks): bird colonies, guano, eggs, quills.",
+        "colour": "#A58FD0"
+      },
+      {
+        "id": "anchor:estuary",
+        "note": "The mouth of a navigable river at the rim (Estuaries): a port, a shipyard.",
+        "colour": "#5B8DB8"
+      },
+      {
+        "id": "anchor:delta",
+        "note": "The apex of a delta's fan (Deltas): the richest wet ground there is.",
+        "colour": "#86A86A"
+      },
+      {
+        "id": "anchor:cliff-foot",
+        "note": "The foot of a cliff (CliffFootCells): bare strata to quarry, scree to pick over.",
+        "colour": "#7A6F63"
+      },
+      {
+        "id": "anchor:cliff-brink",
+        "note": "The brink of a cliff (CliffCells): an eyrie, a lookout, a windmill's edge.",
+        "colour": "#9C9187"
+      },
+      {
+        "id": "anchor:scarp",
+        "note": "A scarp's brink or foot (ScarpCells, ScarpFootCells): a terrace, an adit.",
+        "colour": "#B3A796"
+      },
+      {
+        "id": "anchor:summit",
+        "note": "The top of high country (Summits): a beacon, snow and ice, thin air.",
+        "colour": "#D0CBC4"
+      },
+      {
+        "id": "anchor:overhang",
+        "note": "Under an undercut cliff or an arch (Overhangs): a dry hollow for a cellar, a nitre bed, bats.",
+        "colour": "#5C5046"
+      },
+      {
+        "id": "soil:ooze",
+        "note": "The bed under deep water (Ooze): dark mud a dredge brings up. The eighteenth surface, and no soil a golem is made of.",
+        "colour": "#27404A"
+      },
+      {
+        "id": "warmth:frigid",
+        "note": "Frozen ground.",
+        "colour": "#E8F1F5"
+      },
+      {
+        "id": "warmth:cold",
+        "note": "The cold band.",
+        "colour": "#A9C6D6"
+      },
+      {
+        "id": "warmth:temperate",
+        "note": "The temperate band.",
+        "colour": "#9CC28A"
+      },
+      {
+        "id": "warmth:hot",
+        "note": "The hot band.",
+        "colour": "#E0A458"
+      },
+      {
+        "id": "moisture:dry",
+        "note": "Dry ground.",
+        "colour": "#E3C98F"
+      },
+      {
+        "id": "moisture:balanced",
+        "note": "Neither dry nor wet.",
+        "colour": "#A7B98A"
+      },
+      {
+        "id": "moisture:wet",
+        "note": "Wet ground.",
+        "colour": "#5E9C8F"
+      },
+      {
+        "id": "exposure:sheltered",
+        "note": "Out of the wind: an orchard, a hive, a drying loft.",
+        "colour": "#8FAF7F"
+      },
+      {
+        "id": "exposure:windswept",
+        "note": "Open to the wind: a windmill, a drying rack, a fish flake.",
+        "colour": "#B8C7D9"
       },
       {
         "id": "grade:coarse",
@@ -2354,7 +2509,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 25
+          "index": 343
         },
         "sign": {
           "atlas": "signs",
@@ -3650,7 +3805,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 61
+          "index": 345
         },
         "sign": {
           "atlas": "signs",
@@ -3856,7 +4011,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 59
+          "index": 347
         },
         "sign": {
           "atlas": "signs",
@@ -3977,7 +4132,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 71
+          "index": 351
         },
         "sign": {
           "atlas": "signs",
@@ -4619,7 +4774,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 89
+          "index": 348
         },
         "sign": {
           "atlas": "signs",
@@ -4784,7 +4939,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 292
+          "index": 340
         },
         "sign": {
           "atlas": "signs",
@@ -5078,7 +5233,8 @@
           "nature:alchemical",
           "kind:alkali",
           "kind:construction",
-          "trait:corrosive"
+          "trait:corrosive",
+          "need:building"
         ],
         "icon": {
           "atlas": "icons",
@@ -5218,7 +5374,7 @@
         "tags": [
           "stage:processed",
           "group:salts-and-earths",
-          "need:works-and-arms",
+          "need:building",
           "nature:alchemical",
           "kind:construction"
         ],
@@ -5393,7 +5549,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 317
+          "index": 341
         },
         "sign": {
           "atlas": "signs",
@@ -5602,7 +5758,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 130
+          "index": 344
         },
         "sign": {
           "atlas": "signs",
@@ -5679,7 +5835,7 @@
         "tags": [
           "stage:processed",
           "group:farm-and-herd-goods",
-          "need:works-and-arms",
+          "need:building",
           "nature:mundane",
           "kind:construction"
         ],
@@ -5989,7 +6145,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 322
+          "index": 342
         },
         "sign": {
           "atlas": "signs",
@@ -6741,7 +6897,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 174
+          "index": 349
         },
         "sign": {
           "atlas": "signs",
@@ -6768,7 +6924,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 175
+          "index": 350
         },
         "sign": {
           "atlas": "signs",
@@ -7009,7 +7165,7 @@
         "tags": [
           "stage:compound",
           "group:materials",
-          "need:works-and-arms",
+          "need:building",
           "nature:mundane",
           "kind:glass",
           "kind:construction"
@@ -7224,7 +7380,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 197
+          "index": 346
         },
         "sign": {
           "atlas": "signs",
@@ -7432,7 +7588,7 @@
         "tags": [
           "stage:compound",
           "group:materials",
-          "need:works-and-arms",
+          "need:building",
           "nature:mundane",
           "kind:construction"
         ],
@@ -7458,7 +7614,7 @@
         "tags": [
           "stage:compound",
           "group:materials",
-          "need:works-and-arms",
+          "need:building",
           "nature:mundane",
           "kind:ceramic",
           "kind:construction"
@@ -9990,10 +10146,10 @@
     {
       "id": "r.salt.sea",
       "name": "Salt pans",
-      "note": "Sea water let into shallow pans and left to the sun.",
+      "note": "Brine from a lake no river leaves, let into shallow pans and left to the sun.",
       "element": "earth",
       "site": [
-        "site:coast"
+        "anchor:salt-lake"
       ],
       "inputs": [],
       "outputs": [
@@ -10023,7 +10179,7 @@
     {
       "id": "r.oov",
       "name": "",
-      "note": "",
+      "note": "Vitriol distilled for its oil; the red colcothar left in the retort is jeweller's rouge.",
       "element": "wind",
       "inputs": [
         {
@@ -10035,6 +10191,10 @@
       "outputs": [
         {
           "good": "oov"
+        },
+        {
+          "good": "rouge",
+          "byProduct": true
         }
       ]
     },
@@ -10200,7 +10360,7 @@
     {
       "id": "r.zaf",
       "name": "",
-      "note": "",
+      "note": "Cobalt ore roasted for zaffre; the arsenic it drives off is caught in the flues as white arsenic.",
       "element": "fire",
       "inputs": [
         {
@@ -10212,6 +10372,10 @@
       "outputs": [
         {
           "good": "zaf"
+        },
+        {
+          "good": "was",
+          "byProduct": true
         }
       ]
     },
@@ -10390,8 +10554,11 @@
     {
       "id": "r.nitbed",
       "name": "",
-      "note": "",
+      "note": "A nitre bed wants shelter from the rain: under an overhang of rock, where bats have done half the work.",
       "element": "earth",
+      "site": [
+        "anchor:overhang"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -10769,7 +10936,7 @@
     {
       "id": "r.honey",
       "name": "",
-      "note": "",
+      "note": "Comb pressed for its honey; the pressed comb is rendered to wax on the side.",
       "element": "wind",
       "inputs": [
         {
@@ -10781,6 +10948,10 @@
       "outputs": [
         {
           "good": "honey"
+        },
+        {
+          "good": "wax",
+          "byProduct": true
         }
       ]
     },
@@ -10846,7 +11017,7 @@
     {
       "id": "r.parch",
       "name": "",
-      "note": "",
+      "note": "Hides limed, scraped and stretched; the scrapings boil down to glue.",
       "element": "wind",
       "inputs": [
         {
@@ -10863,14 +11034,21 @@
       "outputs": [
         {
           "good": "parch"
+        },
+        {
+          "good": "glue",
+          "byProduct": true
         }
       ]
     },
     {
       "id": "r.leather",
       "name": "",
-      "note": "",
+      "note": "A tannery stands on running water: hides soak for weeks and the pits are flushed.",
       "element": "earth",
+      "site": [
+        "anchor:river"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -12133,8 +12311,12 @@
     {
       "id": "r.paper",
       "name": "",
-      "note": "",
+      "note": "A paper mill's stampers are driven by a wheel, on a river or under a fall.",
       "element": "wind",
+      "site": [
+        "anchor:river",
+        "anchor:falls"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -13255,8 +13437,13 @@
     {
       "id": "r.hull",
       "name": "",
-      "note": "",
+      "note": "A hull is laid down at the edge of the Domain, best where an inlet shelters it from the open aether.",
       "element": "water",
+      "site": [
+        "anchor:rim",
+        "anchor:fjord",
+        "anchor:estuary"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -13784,8 +13971,11 @@
     {
       "id": "r.dyed",
       "name": "",
-      "note": "",
+      "note": "Dyers work on a river: the vats are filled and the cloth rinsed in running water.",
       "element": "water",
+      "site": [
+        "anchor:river"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -14683,6 +14873,1371 @@
           "good": "telescope"
         }
       ]
+    },
+    {
+      "id": "r.x.cu",
+      "name": "Copper mine",
+      "note": "Native copper broken out of the rock, green with verdigris until it is scoured. Wants a deposit of copper: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cu"
+        }
+      ]
+    },
+    {
+      "id": "r.x.fe",
+      "name": "Iron mine",
+      "note": "Ironstone broken from the rock, red and heavy and everywhere, if the fuel holds out. Wants a deposit of iron: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "fe"
+        }
+      ]
+    },
+    {
+      "id": "r.x.sn",
+      "name": "Tin mine",
+      "note": "Cassiterite broken from veined rock: dark, heavy crystals rare enough to have built trade empires. Wants a deposit of tin: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "sn"
+        }
+      ]
+    },
+    {
+      "id": "r.x.pb",
+      "name": "Lead mine",
+      "note": "Galena broken from the rock, usually carrying a little silver besides. Wants a deposit of lead: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "pb"
+        }
+      ]
+    },
+    {
+      "id": "r.x.zn",
+      "name": "Calamine mine",
+      "note": "Calamine broken from the rock: unremarkable ore whose metal only shows itself in the furnace, as brass. Wants a deposit of zinc: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "zn"
+        }
+      ]
+    },
+    {
+      "id": "r.x.ag",
+      "name": "Silver mine",
+      "note": "Native silver broken from the rock, grown in wires and ferns, tarnishing black. Wants a deposit of silver: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "ag"
+        }
+      ]
+    },
+    {
+      "id": "r.x.au",
+      "name": "Gold panning",
+      "note": "Nuggets panned a few at a time from river gravel. Wants a deposit of gold: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "soil:scree",
+        "anchor:river"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "au"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cin",
+      "name": "Cinnabar mine",
+      "note": "Heavy vermilion stone broken from the rock; heat turns its red to running silver elsewhere in the shop. Wants a deposit of cinnabar: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cin"
+        }
+      ]
+    },
+    {
+      "id": "r.x.slt",
+      "name": "Rock-salt mine",
+      "note": "Cut in blocks from a seam of salt in the rock, grey or pink. Wants a deposit of rock salt: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "slt"
+        }
+      ]
+    },
+    {
+      "id": "r.x.sul",
+      "name": "Sulfur gathering",
+      "note": "Yellow crystals picked where the ground steams at a hot spring. Wants a deposit of sulfur: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "anchor:hot-spring"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "sul"
+        }
+      ]
+    },
+    {
+      "id": "r.x.vit",
+      "name": "Vitriol gathering",
+      "note": "Blue crystals picked where water has wept them from a copper-bearing rock. Wants a deposit of blue vitriol: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "vit"
+        }
+      ]
+    },
+    {
+      "id": "r.x.rea",
+      "name": "Realgar mine",
+      "note": "Red realgar and yellow orpiment broken from the same rock. Wants a deposit of arsenic ore: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "rea"
+        }
+      ]
+    },
+    {
+      "id": "r.x.stb",
+      "name": "Stibnite mine",
+      "note": "Bundles of grey metallic blades broken from the rock; ground fine, it has lined eyes for four thousand years. Wants a deposit of antimony: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "stb"
+        }
+      ]
+    },
+    {
+      "id": "r.x.bis",
+      "name": "Bismuth mine",
+      "note": "Pink-tinged ore broken from the rock, long mistaken for tin or lead. Wants a deposit of bismuth: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "bis"
+        }
+      ]
+    },
+    {
+      "id": "r.x.alu",
+      "name": "Alum mine",
+      "note": "A pale rock broken from the seam, worthless until it is roasted and leached. Wants a deposit of alum stone: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "alu"
+        }
+      ]
+    },
+    {
+      "id": "r.x.sam",
+      "name": "Sal-ammoniac gathering",
+      "note": "A crust scraped from where a vent or a burning coal seam breathes. Wants a deposit of sal ammoniac: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "anchor:hot-spring"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "sam"
+        }
+      ]
+    },
+    {
+      "id": "r.x.lim",
+      "name": "Limestone quarry",
+      "note": "Old seabed broken from the rock in blocks; burnt, it becomes the tree's most useful white powder. Wants a deposit of limestone: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "lim"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cob",
+      "name": "Cobalt mine",
+      "note": "The kobold ore broken from the rock, pink-blooming and stubborn to smelt. Wants a deposit of cobalt: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cob"
+        }
+      ]
+    },
+    {
+      "id": "r.x.tinc",
+      "name": "Tincal gathering",
+      "note": "Raw borax scraped from the stony margin of a lake no river leaves. Wants a deposit of tincal: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "anchor:salt-lake",
+        "soil:scree"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "tinc"
+        }
+      ]
+    },
+    {
+      "id": "r.x.nat",
+      "name": "Natron gathering",
+      "note": "A crust gathered from a dry salt lake's stony margin. Wants a deposit of natron: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "anchor:salt-lake",
+        "soil:scree"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "nat"
+        }
+      ]
+    },
+    {
+      "id": "r.x.coal",
+      "name": "Coal mine",
+      "note": "Broken from a seam in the rock: hotter than wood, dirtier than charcoal. Wants a deposit of coal: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "coal"
+        }
+      ]
+    },
+    {
+      "id": "r.x.pyr",
+      "name": "Marcasite mine",
+      "note": "Broken from the rock; left in the open it weathers to green vitriol. Wants a deposit of marcasite: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "pyr"
+        }
+      ]
+    },
+    {
+      "id": "r.x.lode",
+      "name": "Lodestone mine",
+      "note": "A natural magnet broken from the rock, the stone that lets a ship find its way over open aether. Wants a deposit of lodestone: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "lode"
+        }
+      ]
+    },
+    {
+      "id": "r.x.mang",
+      "name": "Magnesia mine",
+      "note": "Broken from the rock: the glassmaker's soap, which takes the green out of glass. Wants a deposit of magnesia nigra: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "mang"
+        }
+      ]
+    },
+    {
+      "id": "r.x.soil",
+      "name": "Soil digging",
+      "note": "Dug wherever the ground allows: whichever of the seventeen soils is underfoot decides what a golem built from it is good at.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "soil:scree",
+        "soil:snow",
+        "soil:sand",
+        "soil:silt",
+        "soil:frostearth",
+        "soil:bleachearth",
+        "soil:shadowearth",
+        "soil:murkearth",
+        "soil:dryearth",
+        "soil:blackearth",
+        "soil:brownearth",
+        "soil:muckearth",
+        "soil:dustearth",
+        "soil:yellowearth",
+        "soil:redearth",
+        "soil:floodearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "soil"
+        }
+      ]
+    },
+    {
+      "id": "r.x.kaolin",
+      "name": "Kaolin pit",
+      "note": "Dug from crumbled granite, white as the china it will become.",
+      "element": "earth",
+      "site": [
+        "soil:scree"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "kaolin"
+        }
+      ]
+    },
+    {
+      "id": "r.x.gyps",
+      "name": "Gypsum quarry",
+      "note": "Soft rock dug easily, scratched with a fingernail; gently burnt it becomes plaster.",
+      "element": "earth",
+      "site": [
+        "soil:scree"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "gyps"
+        }
+      ]
+    },
+    {
+      "id": "r.x.bitu",
+      "name": "Bitumen seep",
+      "note": "Gathered where it seeps black and sticky out of dry, cracked ground.",
+      "element": "earth",
+      "site": [
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "bitu"
+        }
+      ]
+    },
+    {
+      "id": "r.x.lapis",
+      "name": "Lapis mine",
+      "note": "Cut from a single deep-blue vein flecked with fool's gold. Wants a deposit of lapis lazuli: deposits are not in the generator yet.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "lapis"
+        }
+      ]
+    },
+    {
+      "id": "r.x.jade",
+      "name": "Jade picking",
+      "note": "Picked as water-worn boulders from a riverbed running off stony ground. Wants a deposit of jade: deposits are not in the generator yet.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "anchor:river"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "jade"
+        }
+      ]
+    },
+    {
+      "id": "r.x.amber",
+      "name": "Amber picking",
+      "note": "Picked out of the scree where old strata crumble at a cliff's foot, warm and light in the hand.",
+      "element": "earth",
+      "site": [
+        "anchor:cliff-foot"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "amber"
+        }
+      ]
+    },
+    {
+      "id": "r.x.obs",
+      "name": "Obsidian quarry",
+      "note": "Broken from black volcanic glass, an edge sharper than steel and just as quick to shatter.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "obs"
+        }
+      ]
+    },
+    {
+      "id": "r.x.rockc",
+      "name": "Rock-crystal mine",
+      "note": "Broken out of quartz-veined rock, clear as the ice the ancients took it for.",
+      "element": "wind",
+      "site": [
+        "soil:stone"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "rockc"
+        }
+      ]
+    },
+    {
+      "id": "r.x.grain",
+      "name": "Grain farming",
+      "note": "Sown and reaped on good wet ground: wheat, spelt, rye, barley, oats or millet, as the climate allows.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "soil:blackearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "grain"
+        }
+      ]
+    },
+    {
+      "id": "r.x.rice",
+      "name": "Rice farming",
+      "note": "Grown standing in water on waterlogged ground: the wet-field staple.",
+      "element": "water",
+      "site": [
+        "soil:muckearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "rice"
+        }
+      ]
+    },
+    {
+      "id": "r.x.maize",
+      "name": "Maize farming",
+      "note": "Grown on lush warm ground, away from the water it does not want standing.",
+      "element": "water",
+      "site": [
+        "soil:blackearth",
+        "soil:yellowearth",
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "maize"
+        }
+      ]
+    },
+    {
+      "id": "r.x.grapes",
+      "name": "Vine growing",
+      "note": "Vines trained on thin, dry, well-drained ground.",
+      "element": "water",
+      "site": [
+        "soil:dryearth",
+        "soil:yellowearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "grapes"
+        }
+      ]
+    },
+    {
+      "id": "r.x.olives",
+      "name": "Olive growing",
+      "note": "Slow trees on hot, stony, dry ground; they outlive the farmer who plants them.",
+      "element": "water",
+      "site": [
+        "soil:dryearth",
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "olives"
+        }
+      ]
+    },
+    {
+      "id": "r.x.flax",
+      "name": "Flax growing",
+      "note": "Grown on good wet ground for its fibre and its oil seed both.",
+      "element": "water",
+      "site": [
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "flax"
+        }
+      ]
+    },
+    {
+      "id": "r.x.hemp",
+      "name": "Hemp growing",
+      "note": "Grown coarse and tall on good wet ground: the ship's crop.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "soil:blackearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "hemp"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cotton",
+      "name": "Cotton growing",
+      "note": "Grown on lush warm ground for the boll's soft fibre.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cotton"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cane",
+      "name": "Cane growing",
+      "note": "Grown hungry for heat and water on wet ground beside a river.",
+      "element": "water",
+      "site": [
+        "soil:floodearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cane"
+        }
+      ]
+    },
+    {
+      "id": "r.x.tea",
+      "name": "Tea growing",
+      "note": "An evergreen bush grown in terraces on a scarp's good wet ground.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "anchor:scarp"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "tea"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cacao",
+      "name": "Cacao growing",
+      "note": "Pods grown in the shade of taller trees, on lush warm ground.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cacao"
+        }
+      ]
+    },
+    {
+      "id": "r.x.coffee",
+      "name": "Coffee growing",
+      "note": "Red cherries grown on hot, well-balanced ground.",
+      "element": "water",
+      "site": [
+        "soil:yellowearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "coffee"
+        }
+      ]
+    },
+    {
+      "id": "r.x.poppy",
+      "name": "Poppy growing",
+      "note": "Scored green pods grown on plain, balanced farmland.",
+      "element": "water",
+      "site": [
+        "soil:blackearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "poppy"
+        }
+      ]
+    },
+    {
+      "id": "r.x.agave",
+      "name": "Agave growing",
+      "note": "A desert rosette grown on hot, dry, stony ground, taking a decade to mature.",
+      "element": "water",
+      "site": [
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "agave"
+        }
+      ]
+    },
+    {
+      "id": "r.x.madder",
+      "name": "Madder growing",
+      "note": "A scrambling weed grown for its red roots, on plain farmland.",
+      "element": "water",
+      "site": [
+        "soil:blackearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "madder"
+        }
+      ]
+    },
+    {
+      "id": "r.x.indigo",
+      "name": "Indigo growing",
+      "note": "A shrub grown on lush warm ground; the blue is a foul business for later, not for the field.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "indigo"
+        }
+      ]
+    },
+    {
+      "id": "r.x.weld",
+      "name": "Weld growing",
+      "note": "A roadside weed that asks nothing of thin, dry ground and gives the clearest yellow for it.",
+      "element": "water",
+      "site": [
+        "soil:dryearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "weld"
+        }
+      ]
+    },
+    {
+      "id": "r.x.bamboo",
+      "name": "Bamboo growing",
+      "note": "A grass that grows a foot a day on wet ground beside a river.",
+      "element": "water",
+      "site": [
+        "soil:floodearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "bamboo"
+        }
+      ]
+    },
+    {
+      "id": "r.x.coconut",
+      "name": "Coconut growing",
+      "note": "Palms grown at the Domain's hot rim, aether beside them where a coastline would be.",
+      "element": "water",
+      "site": [
+        "anchor:rim",
+        "warmth:hot"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "coconut"
+        }
+      ]
+    },
+    {
+      "id": "r.x.areca",
+      "name": "Areca growing",
+      "note": "A palm grown on lush warm ground for the nut at its heart.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "areca"
+        }
+      ]
+    },
+    {
+      "id": "r.x.betelleaf",
+      "name": "Betel growing",
+      "note": "A vine grown up the areca palm in the same lush warm grove.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "betelleaf"
+        }
+      ]
+    },
+    {
+      "id": "r.x.palmoil",
+      "name": "Palm growing",
+      "note": "Oil palms grown on lush warm ground, their fruit pressed red.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "palmoil"
+        }
+      ]
+    },
+    {
+      "id": "r.x.kola",
+      "name": "Kola growing",
+      "note": "A forest tree grown on lush warm ground for its bitter, stimulating nut.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "kola"
+        }
+      ]
+    },
+    {
+      "id": "r.x.mulb",
+      "name": "Mulberry growing",
+      "note": "Grown on good wet ground for its leaves alone: no mulberry, no silk.",
+      "element": "water",
+      "site": [
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "mulb"
+        }
+      ]
+    },
+    {
+      "id": "r.x.herbs",
+      "name": "Herb growing",
+      "note": "The physic garden and the brewer's basket, grown on good ground out of the wind.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "exposure:sheltered"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "herbs"
+        }
+      ]
+    },
+    {
+      "id": "r.x.spice",
+      "name": "Spice growing",
+      "note": "Vines, buds, bark and pods grown on lush warm ground, light and dry and wildly overpriced once picked.",
+      "element": "water",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "spice"
+        }
+      ]
+    },
+    {
+      "id": "r.x.galls",
+      "name": "Gall gathering",
+      "note": "Picked off the oak where a wasp has made it grow a lump packed with tannin.",
+      "element": "earth",
+      "site": [
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "galls"
+        }
+      ]
+    },
+    {
+      "id": "r.x.bark",
+      "name": "Bark stripping",
+      "note": "Stripped and ground from oak on good wet ground, for the hide that soaks in it a year.",
+      "element": "earth",
+      "site": [
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "bark"
+        }
+      ]
+    },
+    {
+      "id": "r.x.resin",
+      "name": "Resin tapping",
+      "note": "Tapped from living pines on thin, dry ground.",
+      "element": "earth",
+      "site": [
+        "soil:dryearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "resin"
+        }
+      ]
+    },
+    {
+      "id": "r.x.kelp",
+      "name": "Kelp gathering",
+      "note": "Gathered off the lakeshore and burnt there for its ash.",
+      "element": "earth",
+      "site": [
+        "anchor:lakeshore"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "kelp"
+        }
+      ]
+    },
+    {
+      "id": "r.x.lacsap",
+      "name": "Lacquer tapping",
+      "note": "Milky sap tapped from the lacquer tree, on lush warm ground.",
+      "element": "earth",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "lacsap"
+        }
+      ]
+    },
+    {
+      "id": "r.x.gum",
+      "name": "Gum tapping",
+      "note": "Hardened tears picked off the acacia, on hot, dry ground.",
+      "element": "earth",
+      "site": [
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "gum"
+        }
+      ]
+    },
+    {
+      "id": "r.x.dammar",
+      "name": "Dammar tapping",
+      "note": "Clear resin tapped from rainforest trees, on lush warm ground.",
+      "element": "earth",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "dammar"
+        }
+      ]
+    },
+    {
+      "id": "r.x.camphor",
+      "name": "Camphor distilling",
+      "note": "Chipped and distilled from the wood of a giant tree, on lush warm ground.",
+      "element": "earth",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "camphor"
+        }
+      ]
+    },
+    {
+      "id": "r.x.benzoin",
+      "name": "Benzoin tapping",
+      "note": "A sweet gum cut from forest trees, on lush warm ground.",
+      "element": "earth",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "benzoin"
+        }
+      ]
+    },
+    {
+      "id": "r.x.frank",
+      "name": "Frankincense tapping",
+      "note": "Tears cut from thorny trees on hot, dry ground; temples burn them by the ton.",
+      "element": "earth",
+      "site": [
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "frank"
+        }
+      ]
+    },
+    {
+      "id": "r.x.timber",
+      "name": "Timber felling",
+      "note": "Felled in the forest on good wet ground: fuel, ash, planks and charcoal all start here.",
+      "element": "wind",
+      "site": [
+        "moisture:balanced",
+        "moisture:wet"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "timber"
+        }
+      ]
+    },
+    {
+      "id": "r.x.dyewood",
+      "name": "Dyewood felling",
+      "note": "Felled on lush warm ground for a heartwood that bleeds red.",
+      "element": "wind",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "dyewood"
+        }
+      ]
+    },
+    {
+      "id": "r.x.cutch",
+      "name": "Acacia felling",
+      "note": "Acacia felled on hot, dry ground and its heartwood boiled down on the spot.",
+      "element": "wind",
+      "site": [
+        "soil:dustearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "cutch"
+        }
+      ]
+    },
+    {
+      "id": "r.x.wool",
+      "name": "Flock shearing",
+      "note": "Sheared yearly off a flock at pasture on the rough grazing: a renewable mine.",
+      "element": "water",
+      "site": [
+        "soil:bleachearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "wool"
+        }
+      ]
+    },
+    {
+      "id": "r.x.milk",
+      "name": "Dairy herd",
+      "note": "A dairy herd at pasture: milk for the pail, dung and urine along for free.",
+      "element": "water",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "milk"
+        },
+        {
+          "good": "dung",
+          "byProduct": true
+        },
+        {
+          "good": "urine",
+          "byProduct": true
+        }
+      ]
+    },
+    {
+      "id": "r.x.hides",
+      "name": "Herd culling",
+      "note": "Culling the herd: hides and tallow to show for it, with bone, horn and ox blood besides.",
+      "element": "water",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "hides"
+        },
+        {
+          "good": "tallow"
+        },
+        {
+          "good": "bone",
+          "byProduct": true
+        },
+        {
+          "good": "horn",
+          "byProduct": true
+        },
+        {
+          "good": "oxblood",
+          "byProduct": true
+        }
+      ]
+    },
+    {
+      "id": "r.x.comb",
+      "name": "Beekeeping",
+      "note": "Hives kept out of the wind at the edge of good farmland, filled from whatever blooms nearby.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "exposure:sheltered"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "comb"
+        }
+      ]
+    },
+    {
+      "id": "r.x.coch",
+      "name": "Cochineal farming",
+      "note": "Scale insects farmed on cactus pads in dry country.",
+      "element": "water",
+      "site": [
+        "soil:dustearth",
+        "soil:dryearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "coch"
+        }
+      ]
+    },
+    {
+      "id": "r.x.eggs",
+      "name": "Poultry keeping",
+      "note": "Hens kept in the yard of any farm on good ground.",
+      "element": "water",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "eggs"
+        }
+      ]
+    },
+    {
+      "id": "r.x.fish",
+      "name": "Fishing",
+      "note": "Netted and trapped in the shallows, where the lake bed is close under the water.",
+      "element": "water",
+      "site": [
+        "anchor:shallows",
+        "anchor:deep",
+        "anchor:lakeshore"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "fish"
+        }
+      ]
+    },
+    {
+      "id": "r.x.quills",
+      "name": "Goose plucking",
+      "note": "Flight feathers plucked from geese kept on any good farm.",
+      "element": "water",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "quills"
+        }
+      ]
+    },
+    {
+      "id": "r.x.furs",
+      "name": "Fur trapping",
+      "note": "Trapped along a cold riverbank, beaver above all for its pelt.",
+      "element": "earth",
+      "site": [
+        "anchor:river",
+        "soil:shadowearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "furs"
+        }
+      ]
+    },
+    {
+      "id": "r.x.lac",
+      "name": "Lac gathering",
+      "note": "Scraped off twigs where scale insects have crusted them with resin, in the lush hot forest.",
+      "element": "earth",
+      "site": [
+        "soil:redearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "lac"
+        }
+      ]
+    },
+    {
+      "id": "r.x.shells",
+      "name": "Shell gathering",
+      "note": "Picked off the lakeshore after the water has done the work of sorting them by size.",
+      "element": "earth",
+      "site": [
+        "anchor:lakeshore"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "shells"
+        }
+      ]
+    },
+    {
+      "id": "r.x.dung",
+      "name": "Manure gathering",
+      "note": "Mucked out of any stable or pasture, kept apart for the nitre bed and the alchemist's underrated jar: nobody keeps a herd for this, but the yard gives it up regardless.",
+      "element": "earth",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "dung"
+        },
+        {
+          "good": "urine"
+        }
+      ]
+    },
+    {
+      "id": "r.x.bone",
+      "name": "Knacker's yard",
+      "note": "Fallen and spent stock rendered down for what the butcher's culling does not already give: bone for the ash pit, horn for the lantern-maker, blood for the sugar house.",
+      "element": "earth",
+      "site": [
+        "soil:blackearth",
+        "soil:brownearth"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "bone"
+        },
+        {
+          "good": "horn"
+        },
+        {
+          "good": "oxblood"
+        }
+      ]
+    },
+    {
+      "id": "r.x.ess",
+      "name": "Essence draw",
+      "note": "Provisional: where Essence is drawn is the magick schools' to say (they are being designed). Drawn at the rim, where the aether is nearest.",
+      "element": "qe",
+      "site": [
+        "anchor:rim"
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "ess"
+        }
+      ]
     }
   ],
   "consumers": [
@@ -14721,492 +16276,587 @@
     {
       "id": "c.works",
       "name": "Works and arms",
-      "note": "Tools wear out, powder is spent, and buildings eat planks and bricks.",
+      "note": "Tools wear out, powder is spent, and a telescope's mirror tarnishes.",
       "accepts": [
         "#need:works-and-arms"
+      ]
+    },
+    {
+      "id": "c.building",
+      "name": "Building and upkeep",
+      "note": "Every house wants its planks, bricks, mortar, glass and plaster, new or mended.",
+      "accepts": [
+        "#need:building"
       ]
     }
   ],
   "layout": {
-    "ag": [0, 9689],
-    "agave": [0, 1895],
-    "alu": [0, 0],
-    "alum": [600, 2223],
-    "amalgam": [1190, 5020],
-    "amber": [0, 8330],
-    "antcup": [2370, 5216],
-    "aqf": [3550, 5820],
-    "aqr": [4140, 5748],
-    "areca": [0, 2680],
-    "ash": [600, 6890],
-    "au": [0, 6470],
-    "autom": [4730, 6093],
-    "bamboo": [0, 4940],
-    "bark": [0, 3570],
-    "batik": [2960, 4071],
-    "beer": [1190, 3618],
-    "benzoin": [0, 8080],
-    "betel": [1780, 3937],
-    "betelleaf": [0, 2760],
-    "bic": [600, 4770],
-    "bis": [0, 5180],
-    "bitu": [0, 5980],
-    "blood": [5320, 5279],
-    "body": [1190, 5340],
-    "bone": [0, 7920],
-    "boneash": [600, 6810],
-    "book": [2960, 4988],
-    "borax": [600, 6668],
-    "brandy": [1190, 4247],
-    "brass": [1780, 6417],
-    "bread": [1190, 4658],
-    "brick": [1190, 6760],
-    "brim": [600, 7249],
-    "bronze": [1190, 5740],
-    "c.clothing": [6210, 3934],
-    "c.food": [6210, 5043],
-    "c.intoxicants": [6210, 4073],
-    "c.wares": [6210, 6020],
-    "c.works": [6210, 6310],
-    "cacao": [0, 3010],
-    "camphor": [0, 7270],
-    "candles": [1190, 5500],
-    "cane": [0, 3970],
-    "cannon": [1780, 6257],
-    "canvas": [1190, 3259],
-    "castbrass": [2370, 6187],
-    "charcoal": [600, 7089],
-    "charge": [5320, 6163],
-    "charts": [4140, 4332],
-    "cheese": [1190, 5260],
-    "choc": [2370, 4597],
-    "cin": [0, 5020],
-    "clay": [300, 7792],
-    "clock": [2960, 6116],
-    "clockw": [2370, 6643],
-    "cloth": [1780, 3857],
-    "clothes": [2370, 3507],
-    "coal": [0, 8000],
-    "cob": [0, 9849],
-    "coch": [0, 2840],
-    "coconut": [0, 4130],
-    "cocoon": [600, 2303],
-    "coffee": [0, 2360],
-    "coffeeb": [600, 3436],
-    "comb": [0, 5420],
-    "compass": [2960, 5148],
-    "copperas": [600, 4850],
-    "cosm": [4140, 4534],
-    "cotthr": [600, 4264],
-    "cotton": [0, 3810],
-    "court": [3550, 3498],
-    "crystal": [2370, 5010],
-    "cu": [0, 6710],
-    "cutch": [0, 3250],
-    "dammar": [0, 6140],
-    "dung": [0, 6550],
-    "dye": [2370, 4093],
-    "dyed": [2960, 3457],
-    "dyewood": [0, 426],
-    "eggs": [0, 4620],
-    "elix": [5320, 4221],
-    "enamel": [2370, 6403],
-    "enamelw": [2960, 6196],
-    "engine": [2960, 5603],
-    "ess": [0, 4300],
-    "fe": [0, 7680],
-    "fearth": [300, 3090],
-    "firew": [4140, 5668],
-    "fish": [0, 4860],
-    "flax": [0, 4780],
-    "flour": [600, 4104],
-    "frank": [0, 8160],
-    "furs": [0, 1495],
-    "galls": [0, 3730],
-    "giltw": [1780, 4944],
-    "glass": [1780, 5264],
-    "glaze": [1780, 7058],
-    "glue": [600, 5250],
-    "goldthr": [1780, 4017],
-    "golem": [5910, 5796],
-    "grain": [0, 3090],
-    "grapes": [0, 3410],
-    "gum": [0, 5100],
-    "gunp": [3550, 6159],
-    "gyps": [0, 9929],
-    "harts": [1780, 5878],
-    "hats": [4140, 4412],
-    "heart": [2370, 6107],
-    "hemp": [0, 3170],
-    "hempf": [600, 4184],
-    "herbs": [0, 4460],
-    "hg": [600, 4674],
-    "hides": [0, 4380],
-    "honey": [600, 4930],
-    "horn": [0, 6870],
-    "hull": [1190, 5820],
-    "iag": [1190, 6680],
-    "iau": [600, 5754],
-    "icu": [600, 6033],
-    "ife": [1190, 6596],
-    "incense": [1190, 6516],
-    "indigo": [0, 1655],
-    "ink": [1190, 4578],
-    "ipb": [600, 6203],
-    "isn": [600, 6113],
-    "izn": [1190, 6356],
-    "jade": [0, 8819],
-    "jewel": [2960, 6613],
-    "kaolin": [0, 9769],
-    "kelp": [0, 3650],
-    "kingsy": [600, 6400],
-    "kola": [0, 3330],
-    "lac": [0, 3890],
-    "lacquer": [1780, 6017],
-    "lacqw": [2370, 6483],
-    "lacsap": [0, 8580],
-    "lamp": [2960, 6036],
-    "lampblk": [1190, 5580],
-    "lapis": [0, 7430],
-    "laud": [2370, 3427],
-    "leather": [1780, 4379],
-    "lens": [2960, 5269],
-    "lim": [0, 5580],
-    "linseed": [600, 4584],
-    "linthr": [600, 4504],
-    "litharge": [1190, 6436],
-    "lode": [0, 2280],
-    "lookg": [2960, 5443],
-    "lucent": [2960, 5363],
-    "lunar": [4140, 5924],
-    "lye": [1780, 6657],
-    "madder": [0, 506],
-    "maize": [0, 4700],
-    "malt": [600, 3676],
-    "mang": [0, 5340],
-    "masa": [1780, 5552],
-    "mead": [1190, 4860],
-    "milk": [0, 5660],
-    "mirror": [4730, 5648],
-    "mortar": [1780, 6337],
-    "mulb": [0, 85],
-    "musket": [2370, 6932],
-    "nat": [0, 2520],
-    "nit": [2370, 5947],
-    "nitbed": [1780, 6097],
-    "nitre": [2960, 6372],
-    "obs": [0, 8899],
-    "obsw": [1780, 5718],
-    "ochre": [300, 4665],
-    "oil": [600, 6283],
-    "oilpaint": [3550, 5073],
-    "ointm": [1190, 5180],
-    "olives": [0, 7510],
-    "oov": [1190, 5100],
-    "opium": [600, 3136],
-    "oxblood": [0, 4050],
-    "palmoil": [0, 7350],
-    "paper": [1190, 4087],
-    "parch": [1780, 5344],
-    "pb": [0, 7190],
-    "pearl": [1190, 6840],
-    "peat": [300, 7442],
-    "perfume": [2370, 5341],
-    "pewter": [1190, 5900],
-    "philm": [2960, 5068],
-    "phos": [1190, 6060],
-    "pigm": [2960, 5523],
-    "pitch": [600, 5170],
-    "planks": [600, 7009],
-    "plaster": [1190, 7264],
-    "plate": [4140, 5844],
-    "poppy": [0, 1575],
-    "porcel": [1190, 7344],
-    "potg": [4730, 5041],
-    "pottery": [2370, 7012],
-    "printink": [1780, 4864],
-    "provis": [1780, 3777],
-    "prussian": [1780, 5638],
-    "pulque": [600, 3356],
-    "pyr": [0, 5260],
-    "qlime": [1190, 6140],
-    "quills": [0, 6630],
-    "quint": [2370, 4013],
-    "r.alum": [300, 1069],
-    "r.amalgam": [900, 5191],
-    "r.antcup": [2080, 5294],
-    "r.aqf": [3260, 5919],
-    "r.aqr": [3850, 5804],
-    "r.ash": [300, 7522],
-    "r.autom": [4440, 6140],
-    "r.batik": [2670, 4194],
-    "r.beer": [900, 3421],
-    "r.betel": [1490, 3879],
-    "r.bic": [300, 5056],
-    "r.blood": [5030, 4747],
-    "r.body": [900, 5617],
-    "r.boneash": [300, 7201],
-    "r.book": [2670, 4517],
-    "r.borax": [300, 7106],
-    "r.brandy": [900, 3847],
-    "r.brass": [1490, 6748],
-    "r.bread": [900, 4653],
-    "r.brick": [900, 7453],
-    "r.brim": [300, 8673],
-    "r.bronze": [900, 6155],
-    "r.candles": [900, 5863],
-    "r.cannon": [1490, 6546],
-    "r.canvas": [900, 3331],
-    "r.castbrass": [2080, 6484],
-    "r.charcoal": [300, 7702],
-    "r.charge": [5030, 6025],
-    "r.charts": [3850, 4252],
-    "r.cheese": [900, 5505],
-    "r.choc": [2080, 4255],
-    "r.clay": [0, 8490],
-    "r.clock": [2670, 6214],
-    "r.clockw": [2080, 7329],
-    "r.clothes": [2080, 3517],
-    "r.cocoon": [300, 1159],
-    "r.coffeeb": [300, 2810],
-    "r.compass": [2670, 4807],
-    "r.copperas": [300, 5146],
-    "r.cosm": [3850, 4690],
-    "r.cotthr": [300, 3948],
-    "r.cottonc": [900, 3533],
-    "r.court": [3260, 3048],
-    "r.crystal": [2080, 5048],
-    "r.dye.green": [900, 2623],
-    "r.dyed": [2670, 3349],
-    "r.elix": [5030, 4374],
-    "r.enamel": [2080, 6730],
-    "r.enamelw": [2670, 6352],
-    "r.engine": [2670, 5759],
-    "r.fearth": [0, 2920],
-    "r.firew": [3850, 5604],
-    "r.flour": [300, 3548],
-    "r.giltw": [1490, 4751],
-    "r.glass": [1490, 5243],
-    "r.glaze": [1490, 7289],
-    "r.glue": [300, 5812],
-    "r.goldthr": [1490, 4035],
-    "r.golem": [5620, 5724],
-    "r.gunp": [3260, 6653],
-    "r.h1": [2080, 6998],
-    "r.h2": [2080, 6350],
-    "r.h3": [2080, 6104],
-    "r.harts": [300, 6254],
-    "r.harts.2": [1490, 6122],
-    "r.hats": [3850, 4386],
-    "r.hempf": [300, 3638],
-    "r.hg": [300, 4962],
-    "r.honey": [300, 5236],
-    "r.hull": [900, 6267],
-    "r.iag": [300, 8142],
-    "r.iau": [300, 6062],
-    "r.icu": [300, 6434],
-    "r.ife": [900, 7341],
-    "r.incense": [900, 7229],
-    "r.indigod": [2080, 4923],
-    "r.ink": [900, 4519],
-    "r.ipb": [300, 6615],
-    "r.ironblk": [900, 4117],
-    "r.isn": [300, 6525],
-    "r.izn": [900, 7005],
-    "r.jewel": [2670, 7170],
-    "r.kingsy": [300, 6924],
-    "r.lacquer": [1490, 6010],
-    "r.lacqw": [2080, 6886],
-    "r.lamp": [2670, 6064],
-    "r.lampblk": [900, 5953],
-    "r.laud": [2080, 3316],
-    "r.leather": [1490, 4259],
-    "r.lens": [2670, 5113],
-    "r.linen": [900, 4027],
-    "r.linseed": [300, 4835],
-    "r.linthr": [300, 4745],
-    "r.litharge": [900, 7117],
-    "r.lookg": [2670, 5359],
-    "r.lucent": [2670, 5225],
-    "r.lunar": [3850, 6172],
-    "r.lye": [1490, 7106],
-    "r.madderl": [900, 1749],
-    "r.malt": [300, 3295],
-    "r.masa": [1490, 5511],
-    "r.mead": [900, 4989],
-    "r.mirror": [4440, 5264],
-    "r.mortar": [1490, 6636],
-    "r.musket": [2080, 7441],
-    "r.nit.nitbed": [2080, 6014],
-    "r.nitbed": [1490, 6234],
-    "r.nitre": [2670, 6508],
-    "r.obsw": [1490, 5786],
-    "r.ochre": [0, 4210],
-    "r.oil": [300, 6725],
-    "r.oilpaint": [3260, 4908],
-    "r.ointm": [900, 5393],
-    "r.oov": [900, 5303],
-    "r.opium": [300, 2312],
-    "r.paper": [900, 3623],
-    "r.parch": [1490, 5399],
-    "r.pearl": [900, 7565],
-    "r.peat": [0, 8240],
-    "r.perfume": [2080, 5612],
-    "r.pewter": [900, 6401],
-    "r.philm": [2670, 4673],
-    "r.phos": [900, 6647],
-    "r.pigm": [2670, 5493],
-    "r.pitch": [300, 5617],
-    "r.planks": [300, 7612],
-    "r.plaster": [900, 8161],
-    "r.plate": [3850, 6060],
-    "r.porcel": [900, 8273],
-    "r.potg": [4440, 5130],
-    "r.pottery": [2080, 7674],
-    "r.printink": [1490, 4639],
-    "r.provis": [1490, 3589],
-    "r.prussian": [1490, 5623],
-    "r.pulque": [300, 2582],
-    "r.qlime": [900, 6781],
-    "r.quint": [2080, 3941],
-    "r.redlead": [1490, 7016],
-    "r.reg": [1490, 5898],
-    "r.ricew": [300, 2900],
-    "r.rigging": [1490, 4147],
-    "r.rope": [900, 4229],
-    "r.rouge": [900, 4765],
-    "r.ruby": [5030, 5497],
-    "r.sails": [1490, 3190],
-    "r.salt": [300, 5722],
-    "r.salt.sea": [0, 6300],
-    "r.saltfish": [900, 5079],
-    "r.sama": [300, 6344],
-    "r.sand": [0, 7590],
-    "r.scarlet": [1490, 3723],
-    "r.sealwax": [1490, 5109],
-    "r.shellac": [300, 4038],
-    "r.ship": [4440, 4799],
-    "r.shoes": [2080, 4165],
-    "r.shot": [900, 6893],
-    "r.silk": [1490, 3100],
-    "r.silkthr": [900, 2421],
-    "r.silverw": [1490, 7423],
-    "r.smalt": [2080, 6238],
-    "r.smell": [2080, 5790],
-    "r.soap": [2080, 6618],
-    "r.soda": [300, 3385],
-    "r.sos": [1490, 4863],
-    "r.specm": [900, 6513],
-    "r.spect": [3260, 5807],
-    "r.spirit": [1490, 3419],
-    "r.spyglass": [3260, 5601],
-    "r.steel": [1490, 7538],
-    "r.stone": [5030, 5341],
-    "r.sugar": [1490, 4505],
-    "r.tartar": [900, 3757],
-    "r.tealeaf": [300, 3000],
-    "r.telescope": [3260, 5420],
-    "r.theriac": [900, 4341],
-    "r.thun": [4440, 5752],
-    "r.tinct": [2080, 4053],
-    "r.tinplate": [1490, 6860],
-    "r.tools": [2080, 7190],
-    "r.tortilla": [2080, 4833],
-    "r.turps": [300, 5471],
-    "r.typem": [2080, 5880],
-    "r.ultram": [900, 5729],
-    "r.varnish": [900, 4855],
-    "r.varnish.2": [2080, 3829],
-    "r.verdi": [1490, 4393],
-    "r.verm": [900, 6043],
-    "r.vinegar": [900, 3937],
-    "r.was": [300, 7016],
-    "r.wax": [300, 5326],
-    "r.weldd": [900, 2511],
-    "r.whitelead": [1490, 4975],
-    "r.wildfire": [1490, 6390],
-    "r.wine": [300, 4128],
-    "r.winpane": [2080, 5182],
-    "r.woolc": [900, 3197],
-    "r.writing": [2080, 4637],
-    "r.yarn": [300, 2472],
-    "r.zaf": [300, 8465],
-    "rea": [0, 7760],
-    "redlead": [1780, 6577],
-    "reg": [1780, 5798],
-    "resin": [0, 5740],
-    "rice": [0, 2440],
-    "ricew": [600, 3516],
-    "rigging": [1780, 4299],
-    "rockc": [0, 7110],
-    "rope": [1190, 4418],
-    "rouge": [1190, 4780],
-    "ruby": [5320, 5765],
-    "sails": [1780, 3593],
-    "salt": [600, 5623],
-    "saltfish": [1190, 4940],
-    "sam": [0, 7030],
-    "sama": [600, 5953],
-    "sand": [300, 6815],
-    "sealwax": [1780, 5184],
-    "shellac": [600, 4344],
-    "shells": [0, 5500],
-    "ship": [4730, 4884],
-    "shoes": [2370, 4494],
-    "shot": [1190, 6238],
-    "silkthr": [1190, 3179],
-    "silverw": [1780, 7138],
-    "slt": [0, 5900],
-    "smalt": [2370, 6027],
-    "smell": [2370, 5421],
-    "sn": [0, 6950],
-    "soap": [2370, 6267],
-    "soda": [600, 4024],
-    "soil": [0, 6060],
-    "sos": [1780, 5024],
-    "specm": [1190, 5980],
-    "spect": [3550, 5740],
-    "spice": [0, 3490],
-    "spirit": [1780, 3673],
-    "spyglass": [3550, 5598],
-    "stb": [0, 4540],
-    "steel": [1780, 7517],
-    "stone": [5320, 5360],
-    "sugar": [1780, 4784],
-    "sul": [0, 10186],
-    "tallow": [0, 6790],
-    "tartar": [1190, 4167],
-    "tea": [0, 2600],
-    "tealeaf": [600, 3596],
-    "telescope": [3550, 5518],
-    "theriac": [1190, 4498],
-    "thun": [4730, 5899],
-    "timber": [0, 8410],
-    "tinc": [0, 7840],
-    "tinct": [2370, 4414],
-    "tinplate": [1780, 6497],
-    "tools": [2370, 6563],
-    "tortilla": [2370, 4930],
-    "turps": [600, 5090],
-    "typem": [2370, 5609],
-    "ultram": [1190, 5420],
-    "urine": [0, 5820],
-    "varnish": [2370, 4692],
-    "verdi": [1780, 4704],
-    "verm": [1190, 5660],
-    "vinegar": [1190, 4338],
-    "vit": [0, 6390],
-    "was": [600, 6588],
-    "wax": [600, 5010],
-    "weld": [0, 1735],
-    "whitelead": [1780, 5104],
-    "wildfire": [1780, 6177],
-    "wine": [600, 4424],
-    "winpane": [2370, 5136],
-    "wool": [0, 1815],
-    "writing": [2370, 4850],
-    "yarn": [600, 3216],
-    "zaf": [600, 7169],
-    "zn": [0, 6220]
+    "ag": [290, 6920],
+    "agave": [290, 1441],
+    "alu": [290, 91],
+    "alum": [880, 2314],
+    "amalgam": [1470, 4587],
+    "amber": [290, 6840],
+    "antcup": [2650, 5115],
+    "aqf": [3830, 5483],
+    "aqr": [4420, 5217],
+    "areca": [290, 1960],
+    "ash": [880, 6454],
+    "au": [290, 6200],
+    "autom": [5010, 5621],
+    "bamboo": [290, 2680],
+    "bark": [290, 3720],
+    "batik": [3240, 3648],
+    "beer": [1470, 3221],
+    "benzoin": [290, 6440],
+    "betel": [2060, 3630],
+    "betelleaf": [290, 2040],
+    "bic": [880, 4679],
+    "bis": [290, 4360],
+    "bitu": [290, 5000],
+    "blood": [5600, 4953],
+    "body": [1470, 4987],
+    "bone": [290, 5480],
+    "boneash": [880, 5281],
+    "book": [3240, 4562],
+    "borax": [880, 6294],
+    "brandy": [1470, 3461],
+    "brass": [2060, 6466],
+    "bread": [1470, 4131],
+    "brick": [1470, 6749],
+    "brim": [880, 6796],
+    "bronze": [1470, 5798],
+    "c.building": [6490, 6334],
+    "c.clothing": [6490, 3516],
+    "c.food": [6490, 4476],
+    "c.intoxicants": [6490, 3606],
+    "c.wares": [6490, 5323],
+    "c.works": [6490, 5791],
+    "cacao": [290, 2360],
+    "camphor": [290, 4920],
+    "candles": [1470, 4869],
+    "cane": [290, 3480],
+    "cannon": [2060, 6050],
+    "canvas": [1470, 2336],
+    "castbrass": [2650, 5771],
+    "charcoal": [880, 6636],
+    "charge": [5600, 5698],
+    "charts": [4420, 3993],
+    "cheese": [1470, 5147],
+    "choc": [2650, 4204],
+    "cin": [290, 3960],
+    "clay": [290, 8040],
+    "clock": [3240, 5960],
+    "clockw": [2650, 6300],
+    "cloth": [2060, 3710],
+    "clothes": [2650, 3166],
+    "coal": [290, 7800],
+    "cob": [290, 8280],
+    "coch": [290, 2280],
+    "coconut": [290, 2600],
+    "cocoon": [880, 2817],
+    "coffee": [290, 1601],
+    "coffeeb": [880, 2577],
+    "comb": [290, 4840],
+    "compass": [3240, 5131],
+    "copperas": [880, 5201],
+    "cosm": [4420, 4195],
+    "cotthr": [880, 3363],
+    "cotton": [290, 2760],
+    "court": [3830, 3155],
+    "crystal": [2650, 4658],
+    "cu": [290, 6760],
+    "cutch": [290, 3000],
+    "dammar": [290, 4600],
+    "dung": [290, 6600],
+    "dye": [2650, 3801],
+    "dyed": [3240, 3176],
+    "dyewood": [290, 355],
+    "eggs": [290, 3880],
+    "elix": [5600, 3822],
+    "enamel": [2650, 5035],
+    "enamelw": [3240, 5592],
+    "engine": [3240, 5251],
+    "ess": [290, 3800],
+    "fe": [290, 8200],
+    "fearth": [290, 3160],
+    "firew": [4420, 5137],
+    "fish": [290, 4040],
+    "flax": [290, 4120],
+    "flour": [880, 3203],
+    "frank": [290, 6680],
+    "furs": [290, 1241],
+    "galls": [290, 3400],
+    "giltw": [2060, 4444],
+    "glass": [2060, 5466],
+    "glaze": [2060, 6386],
+    "glue": [2060, 5004],
+    "goldthr": [2060, 3790],
+    "golem": [6190, 5527],
+    "grain": [290, 2440],
+    "grapes": [290, 3640],
+    "gum": [290, 4520],
+    "gunp": [3830, 5765],
+    "gyps": [290, 8120],
+    "harts": [2060, 5706],
+    "hats": [4420, 4073],
+    "heart": [2650, 5691],
+    "hemp": [290, 176],
+    "hempf": [880, 2394],
+    "herbs": [290, 3560],
+    "hg": [880, 4313],
+    "hides": [290, 5080],
+    "honey": [880, 4942],
+    "horn": [290, 5560],
+    "hull": [1470, 5398],
+    "iag": [1470, 5718],
+    "iau": [880, 5521],
+    "icu": [880, 5702],
+    "ife": [1470, 6909],
+    "incense": [1470, 5478],
+    "indigo": [290, 1361],
+    "ink": [1470, 4211],
+    "ipb": [880, 6374],
+    "isn": [880, 6197],
+    "izn": [1470, 7349],
+    "jade": [290, 7000],
+    "jewel": [3240, 5672],
+    "kaolin": [290, 7080],
+    "kelp": [290, 4440],
+    "kingsy": [880, 5441],
+    "kola": [290, 2200],
+    "lac": [290, 3240],
+    "lacquer": [2060, 4844],
+    "lacqw": [2650, 4756],
+    "lacsap": [290, 7560],
+    "lamp": [3240, 5880],
+    "lampblk": [1470, 5067],
+    "lapis": [290, 6360],
+    "laud": [2650, 3086],
+    "leather": [2060, 4098],
+    "lens": [3240, 4971],
+    "lim": [290, 5720],
+    "linseed": [880, 4599],
+    "linthr": [880, 4393],
+    "litharge": [1470, 5558],
+    "lode": [290, 1720],
+    "lookg": [3240, 5437],
+    "lucent": [3240, 5051],
+    "lunar": [4420, 5325],
+    "lye": [2060, 5946],
+    "madder": [290, 435],
+    "maize": [290, 4200],
+    "malt": [880, 3030],
+    "mang": [290, 5880],
+    "masa": [2060, 4604],
+    "mead": [1470, 4451],
+    "milk": [290, 6280],
+    "mirror": [5010, 5101],
+    "mortar": [2060, 6855],
+    "mulb": [290, 2120],
+    "musket": [2650, 6220],
+    "nat": [290, 2920],
+    "nit": [2650, 5476],
+    "nitbed": [2060, 5786],
+    "nitre": [3240, 5800],
+    "obs": [290, 7240],
+    "obsw": [2060, 5226],
+    "ochre": [290, 3080],
+    "oil": [880, 5782],
+    "oilpaint": [3830, 4581],
+    "ointm": [1470, 4291],
+    "olives": [290, 7160],
+    "oov": [1470, 5638],
+    "opium": [880, 3283],
+    "oxblood": [290, 5320],
+    "palmoil": [290, 6120],
+    "paper": [2650, 4124],
+    "parch": [2060, 5084],
+    "pb": [290, 7720],
+    "pearl": [1470, 6326],
+    "peat": [290, 7640],
+    "perfume": [2650, 4578],
+    "pewter": [1470, 6166],
+    "philm": [3240, 4642],
+    "phos": [1470, 6246],
+    "pigm": [3240, 4722],
+    "pitch": [880, 4839],
+    "planks": [880, 6534],
+    "plaster": [1470, 6829],
+    "plate": [4420, 5770],
+    "poppy": [290, 2520],
+    "porcel": [1470, 6512],
+    "potg": [5010, 4729],
+    "pottery": [2650, 6140],
+    "printink": [2060, 4018],
+    "provis": [2060, 3440],
+    "prussian": [2060, 5386],
+    "pulque": [880, 2497],
+    "pyr": [290, 5400],
+    "qlime": [1470, 5958],
+    "quills": [290, 4760],
+    "quint": [2650, 3721],
+    "r.alum": [590, 1171],
+    "r.amalgam": [1180, 4825],
+    "r.antcup": [2360, 5481],
+    "r.aqf": [3540, 5724],
+    "r.aqr": [4130, 5259],
+    "r.ash": [590, 6957],
+    "r.autom": [4720, 5892],
+    "r.batik": [2950, 3766],
+    "r.beer": [1180, 3109],
+    "r.betel": [1770, 3647],
+    "r.bic": [590, 4490],
+    "r.blood": [5310, 4381],
+    "r.body": [1180, 5251],
+    "r.boneash": [590, 5356],
+    "r.book": [2950, 4134],
+    "r.borax": [590, 6713],
+    "r.brandy": [1180, 3423],
+    "r.brass": [1770, 6978],
+    "r.bread": [1180, 3885],
+    "r.brick": [1180, 7379],
+    "r.brim": [590, 8001],
+    "r.bronze": [1180, 6147],
+    "r.candles": [1180, 5161],
+    "r.cannon": [1770, 6742],
+    "r.canvas": [1180, 2159],
+    "r.castbrass": [2360, 6131],
+    "r.charcoal": [590, 7137],
+    "r.charge": [5310, 5617],
+    "r.charts": [4130, 3956],
+    "r.cheese": [1180, 5453],
+    "r.choc": [2360, 3825],
+    "r.clay": [0, 8369],
+    "r.clock": [2950, 6225],
+    "r.clockw": [2360, 7003],
+    "r.clothes": [2360, 3092],
+    "r.cocoon": [590, 2439],
+    "r.coffeeb": [590, 2058],
+    "r.compass": [2950, 5007],
+    "r.copperas": [590, 5266],
+    "r.cosm": [4130, 4390],
+    "r.cotthr": [590, 3032],
+    "r.cottonc": [1180, 3019],
+    "r.court": [3540, 2779],
+    "r.crystal": [2360, 4967],
+    "r.dye.green": [1180, 2396],
+    "r.dyed": [2950, 3193],
+    "r.elix": [5310, 4042],
+    "r.enamel": [2360, 5325],
+    "r.enamelw": [2950, 5610],
+    "r.engine": [2950, 5320],
+    "r.fearth": [0, 2840],
+    "r.firew": [4130, 5017],
+    "r.flour": [590, 2789],
+    "r.giltw": [1770, 4463],
+    "r.glass": [1770, 5745],
+    "r.glaze": [1770, 6844],
+    "r.glue": [590, 5140],
+    "r.goldthr": [1770, 3803],
+    "r.golem": [5900, 5455],
+    "r.gunp": [3540, 6181],
+    "r.h1": [2360, 6511],
+    "r.h2": [2360, 6377],
+    "r.h3": [2360, 5571],
+    "r.harts": [590, 6173],
+    "r.harts.2": [1770, 6169],
+    "r.hats": [4130, 4090],
+    "r.hempf": [590, 1261],
+    "r.hg": [590, 4107],
+    "r.honey": [590, 4888],
+    "r.hull": [1180, 5677],
+    "r.iag": [590, 6443],
+    "r.iau": [590, 5985],
+    "r.icu": [590, 6353],
+    "r.ife": [1180, 7603],
+    "r.incense": [1180, 5811],
+    "r.indigod": [2360, 4855],
+    "r.ink": [1180, 4377],
+    "r.ipb": [590, 6832],
+    "r.ironblk": [1180, 4265],
+    "r.isn": [590, 6623],
+    "r.izn": [1180, 7715],
+    "r.jewel": [2950, 5823],
+    "r.kingsy": [590, 5681],
+    "r.lacquer": [1770, 5073],
+    "r.lacqw": [2360, 5101],
+    "r.lamp": [2950, 6091],
+    "r.lampblk": [1180, 5363],
+    "r.laud": [2360, 2911],
+    "r.leather": [1770, 4083],
+    "r.lens": [2950, 4761],
+    "r.linen": [1180, 3795],
+    "r.linseed": [590, 4330],
+    "r.linthr": [590, 4227],
+    "r.litharge": [1180, 5923],
+    "r.lookg": [2950, 5476],
+    "r.lucent": [2950, 4873],
+    "r.lunar": [4130, 5456],
+    "r.lye": [1770, 6593],
+    "r.madderl": [1180, 1676],
+    "r.malt": [590, 2699],
+    "r.masa": [1770, 4709],
+    "r.mead": [1180, 4735],
+    "r.mirror": [4720, 4868],
+    "r.mortar": [1770, 7147],
+    "r.musket": [2360, 6869],
+    "r.nit.nitbed": [2360, 5907],
+    "r.nitbed": [1770, 6281],
+    "r.nitre": [2950, 5979],
+    "r.obsw": [1770, 5409],
+    "r.ochre": [0, 2750],
+    "r.oil": [590, 6533],
+    "r.oilpaint": [3540, 4425],
+    "r.ointm": [1180, 4511],
+    "r.oov": [1180, 6035],
+    "r.opium": [590, 2879],
+    "r.paper": [2360, 3691],
+    "r.parch": [1770, 5297],
+    "r.pearl": [1180, 6863],
+    "r.peat": [0, 7919],
+    "r.perfume": [2360, 4677],
+    "r.pewter": [1180, 6617],
+    "r.philm": [2950, 4290],
+    "r.phos": [1180, 6729],
+    "r.pigm": [2950, 4424],
+    "r.pitch": [590, 4776],
+    "r.planks": [590, 7047],
+    "r.plaster": [1180, 7491],
+    "r.plate": [4130, 5855],
+    "r.porcel": [1180, 7223],
+    "r.potg": [4720, 4734],
+    "r.pottery": [2360, 6757],
+    "r.printink": [1770, 3971],
+    "r.provis": [1770, 3245],
+    "r.prussian": [1770, 5611],
+    "r.pulque": [590, 1938],
+    "r.qlime": [1180, 6393],
+    "r.quint": [2360, 3434],
+    "r.redlead": [1770, 4955],
+    "r.reg": [1770, 6057],
+    "r.ricew": [590, 2194],
+    "r.rigging": [1770, 3535],
+    "r.rope": [1180, 3221],
+    "r.rouge": [1180, 5071],
+    "r.ruby": [5310, 5369],
+    "r.sails": [1770, 2517],
+    "r.salt": [590, 5551],
+    "r.salt.sea": [0, 5852],
+    "r.saltfish": [1180, 4623],
+    "r.sama": [590, 6263],
+    "r.sand": [0, 8819],
+    "r.scarlet": [1770, 3379],
+    "r.sealwax": [1770, 4329],
+    "r.shellac": [590, 3347],
+    "r.ship": [4720, 4455],
+    "r.shoes": [2360, 3601],
+    "r.shot": [1180, 6505],
+    "r.silk": [1770, 2977],
+    "r.silkthr": [1180, 2687],
+    "r.silverw": [1770, 5521],
+    "r.smalt": [2360, 6265],
+    "r.smell": [2360, 5705],
+    "r.soap": [2360, 5213],
+    "r.soda": [590, 3786],
+    "r.sos": [1770, 5185],
+    "r.specm": [1180, 6259],
+    "r.spect": [3540, 5500],
+    "r.spirit": [1770, 3067],
+    "r.spyglass": [3540, 5612],
+    "r.steel": [1770, 7259],
+    "r.stone": [5310, 5003],
+    "r.sugar": [1770, 4575],
+    "r.tartar": [1180, 3333],
+    "r.tealeaf": [590, 2284],
+    "r.telescope": [3540, 5344],
+    "r.theriac": [1180, 3617],
+    "r.thun": [4720, 5431],
+    "r.tinct": [2360, 3322],
+    "r.tinplate": [1770, 6437],
+    "r.tools": [2360, 6645],
+    "r.tortilla": [2360, 4305],
+    "r.turps": [590, 4675],
+    "r.typem": [2360, 5997],
+    "r.ultram": [1180, 4937],
+    "r.varnish": [1180, 3997],
+    "r.varnish.2": [2360, 3210],
+    "r.verdi": [1770, 4217],
+    "r.verm": [1180, 5565],
+    "r.vinegar": [1180, 3527],
+    "r.was": [590, 5895],
+    "r.wax": [590, 5000],
+    "r.weldd": [1180, 2284],
+    "r.whitelead": [1770, 4821],
+    "r.wildfire": [1770, 5901],
+    "r.wine": [590, 3876],
+    "r.winpane": [2360, 5795],
+    "r.woolc": [1180, 4131],
+    "r.writing": [2950, 3978],
+    "r.x.ag": [0, 7109],
+    "r.x.agave": [0, 950],
+    "r.x.alu": [0, 0],
+    "r.x.amber": [0, 7019],
+    "r.x.areca": [0, 1490],
+    "r.x.au": [0, 6323],
+    "r.x.bamboo": [0, 2300],
+    "r.x.bark": [0, 3470],
+    "r.x.benzoin": [0, 6637],
+    "r.x.betelleaf": [0, 1580],
+    "r.x.bis": [0, 4190],
+    "r.x.bitu": [0, 4910],
+    "r.x.bone": [0, 5448],
+    "r.x.cacao": [0, 1940],
+    "r.x.camphor": [0, 4820],
+    "r.x.cane": [0, 3200],
+    "r.x.cin": [0, 3740],
+    "r.x.coal": [0, 8099],
+    "r.x.cob": [0, 8639],
+    "r.x.coch": [0, 1850],
+    "r.x.coconut": [0, 2210],
+    "r.x.coffee": [0, 1130],
+    "r.x.comb": [0, 4730],
+    "r.x.cotton": [0, 2390],
+    "r.x.cu": [0, 6817],
+    "r.x.cutch": [0, 2660],
+    "r.x.dammar": [0, 4460],
+    "r.x.dung": [0, 6907],
+    "r.x.dyewood": [0, 222],
+    "r.x.eggs": [0, 3650],
+    "r.x.ess": [0, 3560],
+    "r.x.fe": [0, 8549],
+    "r.x.fish": [0, 3830],
+    "r.x.flax": [0, 3920],
+    "r.x.frank": [0, 6727],
+    "r.x.furs": [0, 755],
+    "r.x.galls": [0, 3110],
+    "r.x.grain": [0, 2030],
+    "r.x.grapes": [0, 3380],
+    "r.x.gum": [0, 4370],
+    "r.x.gyps": [0, 8459],
+    "r.x.hemp": [0, 90],
+    "r.x.herbs": [0, 3290],
+    "r.x.hides": [0, 5000],
+    "r.x.indigo": [0, 860],
+    "r.x.jade": [0, 7199],
+    "r.x.kaolin": [0, 7289],
+    "r.x.kelp": [0, 4280],
+    "r.x.kola": [0, 1760],
+    "r.x.lac": [0, 2930],
+    "r.x.lacsap": [0, 7829],
+    "r.x.lapis": [0, 6547],
+    "r.x.lim": [0, 5582],
+    "r.x.lode": [0, 1220],
+    "r.x.madder": [0, 312],
+    "r.x.maize": [0, 4010],
+    "r.x.mang": [0, 5762],
+    "r.x.milk": [0, 6413],
+    "r.x.mulb": [0, 1670],
+    "r.x.nat": [0, 2570],
+    "r.x.obs": [0, 7469],
+    "r.x.olives": [0, 7379],
+    "r.x.palmoil": [0, 6233],
+    "r.x.pb": [0, 8009],
+    "r.x.poppy": [0, 2120],
+    "r.x.pyr": [0, 5268],
+    "r.x.quills": [0, 4640],
+    "r.x.rea": [0, 6143],
+    "r.x.resin": [0, 4550],
+    "r.x.rice": [0, 1310],
+    "r.x.rockc": [0, 6053],
+    "r.x.sam": [0, 7739],
+    "r.x.shells": [0, 5358],
+    "r.x.slt": [0, 5672],
+    "r.x.sn": [0, 7559],
+    "r.x.soil": [0, 5178],
+    "r.x.spice": [0, 2480],
+    "r.x.stb": [0, 4100],
+    "r.x.sul": [0, 9270],
+    "r.x.tea": [0, 1400],
+    "r.x.timber": [0, 8279],
+    "r.x.tinc": [0, 7649],
+    "r.x.vit": [0, 8189],
+    "r.x.weld": [0, 1040],
+    "r.x.wool": [0, 3020],
+    "r.x.zn": [0, 8729],
+    "r.yarn": [590, 3437],
+    "r.zaf": [590, 7227],
+    "rea": [290, 6040],
+    "redlead": [2060, 4764],
+    "reg": [2060, 5626],
+    "resin": [290, 4680],
+    "rice": [290, 1800],
+    "ricew": [880, 2657],
+    "rigging": [2060, 3550],
+    "rockc": [290, 5960],
+    "rope": [1470, 3301],
+    "rouge": [1470, 5227],
+    "ruby": [5600, 5352],
+    "sails": [2060, 3175],
+    "salt": [880, 5361],
+    "saltfish": [1470, 4371],
+    "sam": [290, 7480],
+    "sama": [880, 5622],
+    "sand": [290, 8440],
+    "sealwax": [2060, 4299],
+    "shellac": [880, 3523],
+    "shells": [290, 5640],
+    "ship": [5010, 4533],
+    "shoes": [2650, 3964],
+    "shot": [1470, 6086],
+    "silkthr": [1470, 3095],
+    "silverw": [2060, 5306],
+    "slt": [290, 5800],
+    "smalt": [2650, 5851],
+    "smell": [2650, 5211],
+    "sn": [290, 7320],
+    "soap": [2650, 4836],
+    "soda": [880, 4141],
+    "soil": [290, 5240],
+    "sos": [2060, 4924],
+    "specm": [1470, 5878],
+    "spect": [3830, 5323],
+    "spice": [290, 2840],
+    "spirit": [2060, 3255],
+    "spyglass": [3830, 5403],
+    "stb": [290, 4280],
+    "steel": [2060, 7004],
+    "stone": [5600, 5033],
+    "sugar": [2060, 4524],
+    "sul": [290, 9251],
+    "tallow": [290, 5160],
+    "tartar": [1470, 3381],
+    "tea": [290, 1880],
+    "tealeaf": [880, 2737],
+    "telescope": [3830, 5243],
+    "theriac": [1470, 3982],
+    "thun": [5010, 5533],
+    "timber": [290, 7960],
+    "tinc": [290, 7400],
+    "tinct": [2650, 3268],
+    "tinplate": [2060, 5866],
+    "tools": [2650, 6060],
+    "tortilla": [2650, 4415],
+    "turps": [880, 4759],
+    "typem": [2650, 5556],
+    "ultram": [1470, 4667],
+    "urine": [290, 6520],
+    "varnish": [2650, 4044],
+    "verdi": [2060, 4219],
+    "verm": [1470, 5307],
+    "vinegar": [1470, 3902],
+    "vit": [290, 7880],
+    "was": [880, 6117],
+    "wax": [880, 5121],
+    "weld": [290, 1521],
+    "whitelead": [2060, 4684],
+    "wildfire": [2060, 5546],
+    "wine": [880, 4221],
+    "winpane": [2650, 5389],
+    "wool": [290, 3320],
+    "writing": [3240, 4482],
+    "yarn": [880, 3603],
+    "zaf": [880, 6716],
+    "zn": [290, 8360]
   }
 }

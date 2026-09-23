@@ -356,6 +356,11 @@ public partial class EconomyLab
 			Check(peat.Inputs.Count == 0 && peat.SiteList.SequenceEqual(new[] { "soil:murkearth" }) && !Analysis.Issues.Any(i => i.Node == "r.peat"),
 				"peat is cut on murkearth: a site, no slot, and no complaint that it takes nothing");
 			Check(!Analysis.Issues.Any(i => i.Text.Contains("a variety tag")), "no slot in it is gated by a variety tag");
+			Check(Web.Goods.All(g => Analysis.MakersOf(g).Count > 0) && Web.Recipes.Where(r => r.IsExtraction).All(r => r.SiteList.Count > 0)
+			      && Web.Recipes.SelectMany(r => r.SiteList).All(t => Palette.IsSite(t) || Palette.IsVariety(t)),
+				$"every good of the ledger comes out of something: {Web.Recipes.Count(r => r.IsExtraction)} extractions, each on a site of site or soil tags");
+			Check(Web.Recipes.Any(r => r.Outputs.Any(o => o.ByProduct)) && Web.Consumers.Any(c => c.Accepts.Contains("#need:building")) && Palette.Find("planks")!.Tags.Contains("need:building"),
+				"it has by-products, and a consumer for building and upkeep that planks go to");
 			Check(Palette.Find("dye") != null && Palette.Find("indigod") == null && Analysis.MakersOf("dye").Count == 6 && Analysis.VarietiesOf("dye").Count == 6,
 				"the five dyes are one good in six colours, one recipe each");
 			Check(Palette.Find("heart") != null && Analysis.VarietiesOf("heart").Count == 3 && Analysis.Links.Count(l => l.To == "r.golem" && l.From == "heart") == 1,
@@ -401,56 +406,111 @@ public partial class EconomyLab
 			CheckCanvas("opening Hearth");
 			WebBalance sheet = WebBalance.Of(Web, Analysis);
 			Check(sheet.HasNumbers && Near(sheet.Heads, 120), "Hearth has numbers: 120 heads");
-			// 120 loaves wanted: 20 bakery runs want 100 flour, 11.1 mill runs want 111 grain, and the land gives 100.
-			Check(Near(sheet.Good("grain")!.Wanted, 111.11, 0.01) && Near(sheet.Good("grain")!.Taken, 100) && sheet.Good("grain")!.State == WebBalance.FlowState.Short,
-				"the pull reaches the ground: 111 grain a day wanted, 100 supplied");
-			Check(Near(sheet.Recipe("r.flour")!.Runs, 10) && sheet.Recipe("r.flour")!.LimitedBy == 0 && Near(sheet.Recipe("r.bread")!.Runs, 18) && Near(sheet.Recipe("r.bread")!.Workshops, 9),
-				"the push rations: the mill manages 10 runs of 11.1, the bakery 18 of 20, nine ovens busy");
-			Check(Near(sheet.Consumer("c.food")!.Got, 108) && Near(sheet.Consumer("c.food")!.Coverage, 0.9) && Near(sheet.Consumer("c.clothing")!.Coverage, 1),
-				"the people get 108 of 120 loaves and all their clothes");
-			Check(Near(sheet.Consumer("c.works")!.ByGood.Single(p => p.Good == "tools").Got, 3) && Near(sheet.Consumer("c.works")!.ByGood.Single(p => p.Good == "planks").Got, 3),
-				"a consumer that accepts two goods asks each for half");
-			Check(Near(sheet.Good("timber")!.Wanted, 13.875, 0.01) && sheet.Good("timber")!.State == WebBalance.FlowState.Surplus && Near(sheet.Good("salt")!.Taken, 3.6),
-				"fuel is asked of charcoal and timber alike, timber piles up, and salt is taken at the runs the bakery manages");
-			Check(sheet.Notes[0].StartsWith("Food: 90%") && sheet.Notes.Any(n => n.StartsWith("Grain: 111")), "the notes name the shortage and its root");
+			Check(Web.Goods.All(g => Analysis.MakersOf(g).Count > 0) && !Analysis.Issues.Any(i => i.Level != IssueLevel.Note),
+				"every good in Hearth comes out of something, and the analysis has nothing worse than a note");
+			Check(Analysis.RoleOf("grain") == GoodRole.Source && Analysis.Depth("grain") == 0 && Analysis.Depth("flour") == 1 && Web.Recipe("r.fields")!.IsExtraction,
+				"grain comes out of an extraction and is still a source at depth 0; flour is one step up");
+			// 240 wanted at Food: 120 loaves (20 bakery runs, 100 flour, 11.1 mill runs, 111 grain) and 120 milk (the byre's 20 runs eat 20 grain).
+			Check(Near(sheet.Good("grain")!.Needed, 131.11, 0.01) && Near(sheet.Recipe("r.fields")!.Desired, 13.11, 0.01) && sheet.Recipe("r.fields")!.AtLimit && Near(sheet.Recipe("r.fields")!.Runs, 10),
+				"the pull reaches the ground: 131 grain needed, and the fields are held at their limit of 10");
+			Check(Near(sheet.Good("dung")!.Wanted, 30) && Near(sheet.Good("dung")!.Needed, 0) && Near(sheet.Recipe("r.byre")!.Desired, 20) && Near(sheet.Recipe("r.sheep")!.Desired, 7.2),
+				"a by-product asks no one to run: the byre is kept for 120 milk, the flock for 7.2 wool, and the fields' 30 dung is only a wish");
+			Check(Near(sheet.Recipe("r.fields")!.Yield, 1.3) && Near(sheet.Good("grain")!.Made, 130) && Analysis.Issues.Any(i => i.Text.StartsWith("A loop")),
+				"the loop closes: the byre's and the flock's dung fill the fields' slot and every field gives 30% more, 130 grain");
+			double share = 130 / 131.111111;
+			Check(Near(sheet.Recipe("r.flour")!.Slots[0].Got / sheet.Recipe("r.flour")!.Slots[0].Wanted, share, 1e-6) && Near(sheet.Recipe("r.byre")!.Slots[0].Got / sheet.Recipe("r.byre")!.Slots[0].Wanted, share, 1e-6),
+				"the mill and the byre, short of the same grain, are rationed in the same proportion");
+			Check(Near(sheet.Consumer("c.food")!.Got, 240 * share, 0.01) && Near(sheet.Consumer("c.clothing")!.Coverage, 1) && Near(sheet.Consumer("c.building")!.Got, 3),
+				$"the people get {WebBalance.Num(sheet.Consumer("c.food")!.Got)} of 240 food, all their clothes, and 3 planks for their roofs");
+			Check(sheet.Notes.Any(n => n.StartsWith("Grain: 131 a day needed, 130 made; Fields is at its limit (10 at work)")) && sheet.Notes.Any(n => n.StartsWith("Fields: Dung filling 100% of its slot makes every run give 30% more")),
+				"the notes name the root of the shortage and what the boost brought");
 
-			// The rules, on purpose-built webs: rationing in proportion, an extraction unlimited, an optional slot not limiting, a loop not hanging.
-			EconomyWeb rules = EconomyStore.Clone(Web);
-			rules.Heads = 100;
-			EconomyEdit.SetSupply(rules, "grain", 50);
-			Recipe feed = EconomyEdit.NewRecipe(rules, "bread", "grain", new Spot());
-			feed.Inputs[0].Amount = 1;
-			feed.Outputs[0].Amount = 1;
-			WebBalance ration = WebBalance.Of(rules, WebAnalysis.Of(rules));
-			WebBalance.RecipeFlow mill = ration.Recipe("r.flour")!, direct = ration.Recipe(feed.Id)!;
-			Check(Near(mill.Slots[0].Got / mill.Slots[0].Wanted, direct.Slots[0].Got / direct.Slots[0].Wanted, 1e-6) && mill.Slots[0].Got < mill.Slots[0].Wanted,
-				"two recipes short of one good are rationed in the same proportion");
+			// Without the dung the loop is open: the fields give 100, and the byre's grain comes out of the bread.
+			EconomyWeb bare = EconomyStore.Clone(Web);
+			bare.Recipe("r.fields")!.Inputs.Clear();
+			WebBalance open = WebBalance.Of(bare, WebAnalysis.Of(bare));
+			Check(Near(open.Good("grain")!.Made, 100) && open.Consumer("c.food")!.Got < sheet.Consumer("c.food")!.Got - 20 && !WebAnalysis.Of(bare).Issues.Any(i => i.Text.StartsWith("A loop")),
+				$"without the dung the loop is open: 100 grain, {WebBalance.Num(open.Consumer("c.food")!.Got)} food instead of {WebBalance.Num(sheet.Consumer("c.food")!.Got)}");
 
+			// The rules, on purpose-built webs.
 			EconomyWeb pans = EconomyStore.Clone(Web);
-			EconomyEdit.SetSupply(pans, "slt", 0);
+			pans.Recipe("r.slt")!.Limit = null;
 			pans.Recipes.Remove(pans.Recipe("r.salt")!);
-			pans.Recipes.Add(new Recipe { Id = "r.pans", Name = "Salt pans", Site = new List<string> { "site:coast" }, Outputs = { new RecipeOutput { Good = "salt" } } });
-			WebBalance coast = WebBalance.Of(pans, WebAnalysis.Of(pans));
-			Check(Near(coast.Recipe("r.pans")!.Runs, 4) && coast.Good("salt")!.State == WebBalance.FlowState.Even, "an extraction with no inputs runs as often as it is asked");
+			pans.Recipes.Add(new Recipe { Id = "r.pans", Name = "Salt pans", Site = new List<string> { "anchor:salt-lake" }, Outputs = { new RecipeOutput { Good = "salt" } } });
+			WebBalance lake = WebBalance.Of(pans, WebAnalysis.Of(pans));
+			Check(Near(lake.Recipe("r.pans")!.Runs, 4) && lake.Good("salt")!.State == WebBalance.FlowState.Even && lake.Recipe("r.pans")!.Cap == null,
+				"an extraction with no limit runs as often as it is asked");
 
 			EconomyWeb spare = EconomyStore.Clone(Web);
 			spare.Recipe("r.bread")!.Inputs[1].Optional = true;
-			EconomyEdit.SetSupply(spare, "slt", 0.5);
+			spare.Recipe("r.slt")!.Limit = 0.5;
 			WebBalance optional = WebBalance.Of(spare, WebAnalysis.Of(spare));
-			Check(Near(optional.Recipe("r.bread")!.Runs, 18) && Near(optional.Recipe("r.bread")!.Slots[1].Used, 0.5) && optional.Good("salt")!.State != WebBalance.FlowState.Short && Near(optional.Good("salt")!.Wanted, 4),
-				"an optional slot short of its good does not hold the recipe back, uses what it gets, and does not call the good short");
+			Check(Near(optional.Recipe("r.bread")!.Runs, sheet.Recipe("r.bread")!.Runs) && Near(optional.Recipe("r.salt")!.Desired, 0) && Near(optional.Recipe("r.bread")!.Slots[1].Used, 0)
+			      && Near(optional.Good("salt")!.Wanted, sheet.Good("salt")!.Wanted, 0.1) && optional.Good("salt")!.State != WebBalance.FlowState.Short,
+				"an optional slot does not hold the recipe back, raises no maker (salt boiling stops), takes what is there, and does not call the good short");
 
-			EconomyWeb loop = EconomyStore.Clone(Web);
-			Recipe seed = EconomyEdit.NewRecipe(loop, "grain", "flour", new Spot());
-			WebBalance round = WebBalance.Of(loop, WebAnalysis.Of(loop));
-			Check(round.Good("grain") != null && round.Recipe(seed.Id)!.Runs >= 0, "a loop (grain from flour) does not hang the balance");
+			EconomyWeb seeded = EconomyStore.Clone(Web);
+			seeded.Recipe("r.fields")!.Inputs.Add(new RecipeInput { Accepts = { "grain" }, Amount = 1 });
+			WebBalance seeds = WebBalance.Of(seeded, WebAnalysis.Of(seeded));
+			Check(Near(seeds.Recipe("r.fields")!.Runs, 10) && Near(seeds.Recipe("r.fields")!.Slots[1].Used, 10) && Near(seeds.Good("grain")!.Made, 130),
+				"seed corn from the crop: the fields keep their seed first, and the loop settles on the most it can keep up, not on nothing");
+
+			// Seed corn two steps round: the bloomery needs a tool to make the iron the toolsmith turns into tools.
+			EconomyWeb forge = EconomyStore.Clone(Web);
+			forge.Recipe("r.ife")!.Inputs.Add(new RecipeInput { Accepts = { "tools" } });
+			forge.Recipe("r.tools")!.Limit = 2;
+			WebBalance tooled = WebBalance.Of(forge, WebAnalysis.Of(forge));
+			Check(Near(tooled.Recipe("r.ife")!.Runs, 2, 1e-6) && Near(tooled.Good("tools")!.Made, 4, 1e-6) && Near(tooled.Consumer("c.works")!.Got, 2, 1e-6)
+			      && tooled.Goods.All(g => g.Taken <= g.Made + 1e-6),
+				"a loop two steps round keeps its seed first: the bloomery gets its 2 tools of 4, the people the other 2, and the sheet adds up");
+
+			// A maker at its limit is asked no more than it can make; the rest goes to the other maker.
+			EconomyWeb terraced = EconomyStore.Clone(Web);
+			terraced.Recipe("r.fields")!.Limit = 5;
+			terraced.Recipes.Add(new Recipe { Id = "r.terraces", Name = "Terraces", Site = new List<string> { "anchor:scarp" }, Outputs = { new RecipeOutput { Good = "grain", Amount = 10 } } });
+			WebBalance terraces = WebBalance.Of(terraced, WebAnalysis.Of(terraced));
+			Check(Near(terraces.Recipe("r.fields")!.Runs, 5) && Near(terraces.Recipe("r.terraces")!.Desired, 8.111, 0.001) && terraces.Good("grain")!.State != WebBalance.FlowState.Short,
+				"the fields at their limit give 50 of the 131 grain wanted, and the terraces are asked for the other 81");
+
+			// A good that only comes as a by-product, and is firmly wanted, is named as such when short.
+			EconomyWeb mucky = EconomyStore.Clone(Web);
+			mucky.Recipe("r.fields")!.Inputs[0].Optional = false;
+			mucky.Recipe("r.fields")!.Inputs[0].Amount = 6;
+			mucky.Recipe("r.fields")!.Inputs[0].Boost = null;
+			WebBalance muck = WebBalance.Of(mucky, WebAnalysis.Of(mucky));
+			Check(muck.Good("dung")!.State == WebBalance.FlowState.Short && muck.Notes.Any(n => n.StartsWith("Dung:") && n.Contains("only as a by-product")),
+				"dung firmly wanted and short is named as a by-product nothing runs for");
+
+			EconomyWeb greedy = EconomyStore.Clone(Web);
+			Recipe waste = EconomyEdit.NewRecipe(greedy, "grain", "grain", new Spot());
+			waste.Inputs[0].Amount = 2;
+			greedy.Recipe("r.fields")!.Outputs[0].Amount = 0;
+			WebBalance runaway = WebBalance.Of(greedy, WebAnalysis.Of(greedy));
+			Check(runaway.Notes.Any(n => n.StartsWith("A loop asks more of itself")), "a loop that eats two for one says so rather than hang");
 
 			EconomyWeb blank = EconomyStore.Clone(Web);
 			blank.Heads = null;
-			blank.Supply = null;
-			Check(!WebBalance.Of(blank, WebAnalysis.Of(blank)).HasNumbers && EconomyStore.ToJson(blank).Contains("\"heads\"") == false, "a web without numbers says so, and writes no heads or supply");
-			Check(EconomyStore.FromJson<EconomyWeb>(EconomyStore.ToJson(Web)).Recipe("r.bread")!.Inputs[1].Count == 0.2 && Web.Recipe("r.salt")!.Inputs[0].Amount == null,
-				"amounts read back, and an amount of one is not written");
+			foreach (Recipe recipe in blank.Recipes) recipe.Limit = null;
+			Check(!WebBalance.Of(blank, WebAnalysis.Of(blank)).HasNumbers && EconomyStore.ToJson(blank).Contains("\"heads\"") == false && !EconomyStore.ToJson(blank).Contains("\"limit\""),
+				"a web without numbers says so, and writes no heads or limits");
+			Check(EconomyStore.FromJson<EconomyWeb>(EconomyStore.ToJson(Web)).Recipe("r.bread")!.Inputs[1].Count == 0.2 && Web.Recipe("r.salt")!.Inputs[0].Amount == null
+			      && EconomyStore.ToJson(Web).Contains("\"byProduct\": true") && EconomyStore.ToJson(Web).Contains("\"boost\": 0.3"),
+				"amounts, by-products and boosts read back, and an amount of one is not written");
+
+			// The old supply, from a file saved before extractions, becomes the extraction it stood for.
+			EconomyWeb old = EconomyStore.Clone(Web);
+			old.Recipes.Remove(old.Recipe("r.fields")!);
+			string json = EconomyStore.ToJson(old).Replace("\"heads\": 120,", "\"heads\": 120,\n  \"supply\": { \"grain\": 100, \"nothing\": 5 },");
+			EconomyWeb migrated = EconomyStore.FromJson<EconomyWeb>(json);
+			EconomyStore.MigrateSupply(migrated);
+			Check(migrated.Recipe("r.land.grain") is { Limit: 100 } land && land.IsExtraction && migrated.Recipe("r.land.nothing") == null && !EconomyStore.ToJson(migrated).Contains("\"supply\""),
+				"a supply in an old file becomes an extraction with that limit, and is not written again");
+			Check(WebAnalysis.Of(migrated).Issues.Any(i => i.Node == "r.land.grain" && i.Text.Contains("stands nowhere")) && WebAnalysis.Of(old).Issues.Any(i => i.Node == "grain" && i.Text.Contains("comes out of nothing")),
+				"an extraction with no site is told it needs one, and a good nothing makes is told every good comes out of something");
+
+			Recipe sited = new() { Site = new List<string> { "soil:brownearth", "anchor:river", "soil:blackearth" } };
+			Check(sited.SiteGroups().Count == 2 && sited.SiteGroups()[0].Tags.SequenceEqual(new[] { "soil:brownearth", "soil:blackearth" }) && Web.Palette.IsSite("anchor:river") && !Web.Palette.IsSite("soil:brownearth"),
+				"a site reads as conditions by namespace: brownearth or blackearth, and a river");
 		}
 
 		GD.Print(_failed == 0 ? $"Economy lab self-test: all {_checks} checks passed." : $"Economy lab self-test: {_failed} of {_checks} checks FAILED.");

@@ -1,0 +1,17 @@
+{
+ "atlas": "icons",
+ "icons": {
+  "iag": 340,
+  "flour": 341,
+  "leather": 342,
+  "soil": 343,
+  "sugar": 344,
+  "dammar": 345,
+  "varnish": 346,
+  "betelleaf": 347,
+  "shells": 348,
+  "whitelead": 349,
+  "redlead": 350,
+  "cutch": 351
+ }
+}

@@ -67,7 +67,6 @@ public partial class EconomyLab
 	private string? _inspSplitGood;
 
 	/// <summary>The namespace a <c>site:</c> tag belongs to: a place that is not a soil.</summary>
-	private const string SiteSpace = "site";
 
 	/// <summary>
 	/// A tag of a property namespace: what units stack by. <see cref="LabLook"/> holds the violet
@@ -214,7 +213,6 @@ public partial class EconomyLab
 			merge: "good.note:" + id, keepInspector: true);
 		rows.AddChild(note);
 
-		GoodSupply(rows, id);
 		GoodBalance(rows, id);
 
 		InspectorLook.Section(rows, "Tags");
@@ -269,29 +267,6 @@ public partial class EconomyLab
 	// ---- a good's supply and its day -------------------------------------------
 
 	/// <summary>
-	/// What the land gives of this good in a day, with no recipe behind it: the rate at a source.
-	/// Written on the web rather than on the good, one palette being shared by no one, and set
-	/// through <see cref="EconomyEdit.SetSupply"/>, which drops the entry again at nothing.
-	/// </summary>
-	private void GoodSupply(VBoxContainer rows, string id)
-	{
-		const string tip = "Units a day the land gives of this good, with no recipe behind it. Blank or 0 for none.";
-		double rate = Web.SupplyOf(id);
-		double? supplied = rate > 0 ? rate : null;
-		InspectorLook.Section(rows, "Supply");
-		rows.AddChild(NumberRow("units a day the land gives", tip, NumberField(supplied, "none", tip, "good.supply:" + id,
-			now => now is { } set && set > 0
-				? $"the land gives {WebBalance.Num(set)} {NameOf(id)} a day"
-				: $"the land gives no {NameOf(id)}",
-			now => EconomyEdit.SetSupply(Web, id, now ?? 0))));
-		rows.AddChild(InspectorLook.Note(
-			Analysis.MakersOf(id).Count > 0 && rate <= 0
-				? "Made here, so it needs none; a rate set here would come on top of what the recipes make."
-				: "What comes from the land without a recipe: the farms' grain, the mine's ore. Set it on a source; a good that is also made adds this on top.",
-			LabLook.Faint, 12));
-	}
-
-	/// <summary>
 	/// The good's day, when the web has numbers to balance: its state in a line, the four rates
 	/// behind that line, and then everything that asks for it — every recipe with a slot this good
 	/// fills, and every consumer it reaches — each a step away. A slot that several goods can fill
@@ -305,7 +280,7 @@ public partial class EconomyLab
 		InspectorLook.Section(rows, "Balance");
 		rows.AddChild(InspectorLook.Note(LabLook.FlowLine(flow), LabLook.FlowColour(flow.State), 13));
 		rows.AddChild(InspectorLook.Note(
-			$"supplied {WebBalance.Num(flow.Supply)} · made {WebBalance.Num(flow.Made)} · " +
+			$"made {WebBalance.Num(flow.Made)} · needed {WebBalance.Num(flow.Needed)} · " +
 			$"wanted {WebBalance.Num(flow.Wanted)} · taken {WebBalance.Num(flow.Taken)}", LabLook.Dim, 12));
 
 		var asked = false;
@@ -837,17 +812,29 @@ public partial class EconomyLab
 		rows.AddChild(site);
 		rows.AddChild(SiteRow(rid, recipe.SiteList));
 		rows.AddChild(InspectorLook.Note(
-			"Where the work has to stand: tags of the ground or the place, any one of which will do. Nothing is hauled.",
+			"Where the work has to stand: tags of the ground or the place. Tags of one namespace are alternatives, and namespaces add up: brownearth or blackearth, and by a river. Nothing is hauled.",
+			LabLook.Faint, 12));
+
+		const string limitTip = "How many can be at work at once: the fields, pits or stands the site gives room for. Blank is no limit.";
+		rows.AddChild(NumberRow("Limit · at work at once", limitTip, NumberField(recipe.Limit, "none", limitTip, "recipe.limit:" + rid,
+			now => now is { } limit
+				? $"at most {WebBalance.Num(limit)} of {NameOf(rid)} at work"
+				: $"{NameOf(rid)} has no limit",
+			now => { if (Web.Recipe(rid) is { } live) live.Limit = now; })));
+		rows.AddChild(InspectorLook.Note(
+			recipe.IsExtraction
+				? "An extraction runs only as far as it is asked and its limit allows: the land it stands on is only so big."
+				: "Most workshops need none yet; buildings will set it one day.",
 			LabLook.Faint, 12));
 
 		rows.AddChild(InspectorLook.Caption("Formula"));
 		rows.AddChild(Formula(recipe));
 
 		InspectorLook.Section(rows, "Inputs");
-		if (recipe.Inputs.Count == 0)
+		if (recipe.IsExtraction)
 			rows.AddChild(recipe.SiteList.Count > 0
-				? InspectorLook.Note("No inputs: an extraction, dug where it stands.", LabLook.Dim, 12)
-				: InspectorLook.Note("It takes nothing.", LabLook.Warning, 12));
+				? InspectorLook.Note(recipe.Inputs.Count == 0 ? "No inputs: an extraction, drawn from where it stands." : "Nothing it must be fed: an extraction, drawn from where it stands.", LabLook.Dim, 12)
+				: InspectorLook.Note("It takes nothing and stands nowhere: an extraction needs a site.", LabLook.Warning, 12));
 		for (int i = 0; i < recipe.Inputs.Count; i++) rows.AddChild(SlotBlock(rid, recipe.Inputs[i], i));
 
 		var adding = new HBoxContainer();
@@ -888,6 +875,14 @@ public partial class EconomyLab
 			row.AddChild(NumberField(recipe.Outputs[o].Amount, "1", givesTip, $"output.amount:{rid}:{port}",
 				now => $"one run of {NameOf(rid)} gives {WebBalance.Num(now ?? 1)} {NameOf(made)}",
 				now => { if (Web.Recipe(rid) is { } live && port < live.Outputs.Count) live.Outputs[port].Amount = now; }));
+			bool by = recipe.Outputs[o].ByProduct;
+			row.AddChild(InspectorLook.Small(by ? "by-product" : "main", by
+					? "A by-product: it comes out anyway, and a want of it never asks this recipe to run. Click to make it a main product."
+					: "A main product: a want of it asks this recipe to run. Click to make it a by-product, which comes out anyway.",
+				() => Change($"{NameOf(made)} is {(by ? "a main product" : "a by-product")} of {NameOf(rid)}", () =>
+				{
+					if (Web.Recipe(rid) is { } live && port < live.Outputs.Count) live.Outputs[port].ByProduct = !by;
+				})));
 			row.AddChild(InspectorLook.Small("change…", "Make it something else instead.",
 				() => AskGood("What does it make?", gid => SetOutput(rid, port, gid))));
 			row.AddChild(InspectorLook.Cross("Stop making this.", () =>
@@ -924,9 +919,11 @@ public partial class EconomyLab
 		{
 			held ? $"{WebBalance.Num(flow.Runs)} of {WebBalance.Num(flow.Desired)} runs a day" : $"{WebBalance.Num(flow.Runs)} runs a day",
 			days == "1" ? "1 day each" : $"{days} days each",
-			$"{WebBalance.Num(flow.Workshops)} workshops busy",
+			flow.Cap is { } ? $"{WebBalance.Num(flow.Workshops)} of {WebBalance.Num(Web.Recipe(rid)?.Limit ?? 0)} at work" : $"{WebBalance.Num(flow.Workshops)} workshops busy",
 		};
-		if (flow.LimitedBy is { } port)
+		if (flow.Yield > 1 + FlowTiny) words.Add($"every run {WebBalance.Pct(flow.Yield - 1)} richer for its boosts");
+		if (flow.AtLimit) words.Add("held back by its limit");
+		else if (flow.LimitedBy is { } port)
 			words.Add(Analysis.FillersOf(rid, port).Count > 0
 				? $"held back by input {port + 1} ({Filling(rid, port)})"
 				: $"held back by input {port + 1}, which nothing fills");
@@ -999,14 +996,15 @@ public partial class EconomyLab
 	}
 
 	/// <summary>
-	/// Asks for a tag of the ground or the place: the variety namespaces, which is where the soils
-	/// are, and <c>site:</c>, which is where everything else is. A tag typed in that matches nothing
-	/// is taken as a new one, as the other pickers do.
+	/// Asks for a tag of the ground or the place: the site namespaces (anchors, warmth, moisture,
+	/// exposure) first, then the variety namespaces, which is where the soils are. A tag typed in
+	/// that matches nothing is taken as a new one, as the other pickers do.
 	/// </summary>
 	private void AskSiteTag(string prompt, Action<string> then)
 	{
 		IEnumerable<(string, string, Texture2D?)> items = Palette.TagsInUse()
-			.Where(t => Palette.IsVariety(t.Tag) || Palette.NamespaceOf(t.Tag) == SiteSpace)
+			.Where(t => Palette.IsSite(t.Tag) || Palette.IsVariety(t.Tag))
+			.OrderBy(t => Palette.IsSite(t.Tag) ? 0 : 1)
 			.Select(t => (t.Tag, $"#{t.Tag}   ({t.Count})", Sprites.Get(Palette.SignOf(t.Tag))));
 		_picker.Ask(prompt, items, GetViewport().GetMousePosition(), then, typed => then(TidyTag(typed)));
 	}
@@ -1087,10 +1085,18 @@ public partial class EconomyLab
 		if (recipe.SiteList.Count > 0)
 		{
 			flow.AddChild(InspectorLook.Mark("on", "where the work has to stand; nothing is hauled", LabLook.Dim));
-			for (int s = 0; s < recipe.SiteList.Count; s++)
+			IReadOnlyList<(string Namespace, IReadOnlyList<string> Tags)> groups = recipe.SiteGroups();
+			for (int g = 0; g < groups.Count; g++)
 			{
-				if (s > 0) flow.AddChild(InspectorLook.Mark("/", "any one of them"));
-				flow.AddChild(AcceptorGlyph(Acceptor.ForTag(recipe.SiteList[s]), site: true));
+				if (g > 0) flow.AddChild(InspectorLook.Mark("&", "and also"));
+				bool several = groups[g].Tags.Count > 1 && groups.Count > 1;
+				if (several) flow.AddChild(InspectorLook.Mark("(", "any one of them"));
+				for (int s = 0; s < groups[g].Tags.Count; s++)
+				{
+					if (s > 0) flow.AddChild(InspectorLook.Mark("/", "any one of them"));
+					flow.AddChild(AcceptorGlyph(Acceptor.ForTag(groups[g].Tags[s]), site: true));
+				}
+				if (several) flow.AddChild(InspectorLook.Mark(")", "any one of them"));
 			}
 		}
 
@@ -1105,7 +1111,8 @@ public partial class EconomyLab
 				if (a > 0) flow.AddChild(InspectorLook.Mark("/", "any one of them"));
 				flow.AddChild(AcceptorGlyph(slot.Accepts[a]));
 			}
-			if (slot.Optional) flow.AddChild(InspectorLook.Mark(")", "the recipe runs without it"));
+			if (slot.Optional) flow.AddChild(InspectorLook.Mark(slot.Bonus > 0 ? $")+{WebBalance.Pct(slot.Bonus)}" : ")",
+				slot.Bonus > 0 ? $"the recipe runs without it; filled, every output comes out {WebBalance.Pct(slot.Bonus)} greater" : "the recipe runs without it"));
 		}
 
 		flow.AddChild(InspectorLook.Mark("→", "makes", LabLook.Dim));
@@ -1113,7 +1120,9 @@ public partial class EconomyLab
 		for (int o = 0; o < recipe.Outputs.Count; o++)
 		{
 			if (o > 0) flow.AddChild(InspectorLook.Mark("+"));
+			if (recipe.Outputs[o].ByProduct) flow.AddChild(InspectorLook.Mark("[", "a by-product: it comes out anyway, and nobody runs the recipe for it", LabLook.Dim));
 			flow.AddChild(AcceptorGlyph(recipe.Outputs[o].Good));
+			if (recipe.Outputs[o].ByProduct) flow.AddChild(InspectorLook.Mark("]", "a by-product: it comes out anyway, and nobody runs the recipe for it", LabLook.Dim));
 		}
 		return flow;
 	}
@@ -1196,6 +1205,16 @@ public partial class EconomyLab
 			{
 				if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Passes = on;
 			})));
+
+		if (slot.Optional || slot.Boost != null)
+		{
+			const string boostTip = "Filled, this slot makes every output of the run this much greater: 0.3 is three tenths more, in proportion to how full the slot is. Blank for none.";
+			rows.AddChild(NumberRow("boost · more of every output", boostTip, NumberField(slot.Boost, "none", boostTip, $"input.boost:{rid}:{port}",
+				now => now is { } boost
+					? $"{named} of {NameOf(rid)} makes every run give {WebBalance.Pct(boost)} more"
+					: $"{named} of {NameOf(rid)} boosts nothing",
+				now => { if (Web.Recipe(rid) is { } live && port < live.Inputs.Count) live.Inputs[port].Boost = now; })));
+		}
 
 		rows.AddChild(AcceptorChips(slot.Accepts, rid, port));
 		if (slot.Accepts.Count == 0) rows.AddChild(InspectorLook.Note("accepts nothing", LabLook.Error, 12));

@@ -58,16 +58,21 @@ public sealed class WebAnalysis
 
 	public bool IsHub(string goodId) => UsersOf(goodId).Count >= HubUses;
 
+	/// <summary>
+	/// A good made only by extractions, or by nothing, is a source: it comes from the ground. One made
+	/// by a recipe with something to be fed is made.
+	/// </summary>
 	public GoodRole RoleOf(string goodId)
 	{
-		bool made = MakersOf(goodId).Count > 0, used = UsersOf(goodId).Count > 0;
+		bool made = MakersOf(goodId).Any(r => !r.IsExtraction), used = UsersOf(goodId).Count > 0;
 		if (made) return used ? GoodRole.Intermediate : GoodRole.Final;
-		return used || IsConsumed(goodId) ? GoodRole.Source : GoodRole.Loose;
+		return used || IsConsumed(goodId) || MakersOf(goodId).Count > 0 ? GoodRole.Source : GoodRole.Loose;
 	}
 
 	/// <summary>
-	/// Steps from the ground by the shortest way: a source is 0; a made good is one more than
-	/// the deepest required slot of its shallowest recipe, each slot counted by its shallowest acceptor.
+	/// Steps from the ground by the shortest way: a source is 0, and so is a good an extraction
+	/// makes; a made good is one more than the deepest required slot of its shallowest recipe, each
+	/// slot counted by its shallowest acceptor.
 	/// </summary>
 	public int Depth(string goodId) => _depth.GetValueOrDefault(goodId);
 
@@ -103,8 +108,15 @@ public sealed class WebAnalysis
 		{
 			string title = TitleOf(recipe);
 			if (recipe.Outputs.Count == 0) _issues.Add(new WebIssue(IssueLevel.Error, recipe.Id, $"{title} makes nothing."));
-			// A recipe that stands somewhere and takes nothing is an extraction: peat cut from murkearth ground.
-			if (recipe.Inputs.Count == 0 && recipe.SiteList.Count == 0) _issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} takes nothing."));
+			// A recipe that must be fed nothing is an extraction, and draws on the ground it stands on: peat cut from murkearth.
+			if (recipe.IsExtraction && recipe.SiteList.Count == 0)
+				_issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} takes nothing and stands nowhere. An extraction needs a site: the ground or the place it draws on."));
+			foreach (string tag in recipe.SiteList.Where(t => !_palette.IsSite(t) && !_palette.IsVariety(t)))
+				_issues.Add(new WebIssue(IssueLevel.Note, recipe.Id, $"{title} stands on {tag}, which is neither a site tag nor a variety of the ground."));
+			if (recipe.Outputs.Count > 0 && recipe.Outputs.TrueForAll(o => o.ByProduct))
+				_issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} makes only by-products, so nothing will ever ask it to run."));
+			if (recipe.Limit is <= 0)
+				_issues.Add(new WebIssue(IssueLevel.Warning, recipe.Id, $"{title} has a limit of {recipe.Limit}: nothing can be at work."));
 
 			for (int o = 0; o < recipe.Outputs.Count; o++)
 			{
@@ -123,6 +135,10 @@ public sealed class WebAnalysis
 				RecipeInput slot = recipe.Inputs[i];
 				if (slot.Accepts.Count == 0)
 					_issues.Add(new WebIssue(IssueLevel.Error, recipe.Id, $"{title}: input {i + 1} accepts nothing."));
+				if (slot.Boost is { } boost && (!slot.Optional || boost < 0))
+					_issues.Add(new WebIssue(IssueLevel.Note, recipe.Id, !slot.Optional
+						? $"{title}: input {i + 1} has a boost, but it is required and so always filled; say it in the outputs instead."
+						: $"{title}: input {i + 1} has a negative boost."));
 				// The house rule: a variety never decides what fits where. A slot that asks for one is asking for a site, a core tag or a good of its own.
 				foreach (string acceptor in slot.Accepts.Where(a => Acceptor.IsTag(a) && _palette.IsVariety(Acceptor.TagOf(a))))
 					_issues.Add(new WebIssue(IssueLevel.Note, recipe.Id, $"{title}: input {i + 1} accepts {acceptor}, a variety tag. Varieties are not meant to gate a slot."));
@@ -149,6 +165,9 @@ public sealed class WebAnalysis
 		foreach (Good good in goods)
 			if (RoleOf(good.Id) == GoodRole.Loose)
 				_issues.Add(new WebIssue(IssueLevel.Note, good.Id, $"{good.Name} is not linked to anything."));
+			// The rule of 2026-09-23: every good comes out of something. A raw good comes out of an extraction.
+			else if (MakersOf(good.Id).Count == 0)
+				_issues.Add(new WebIssue(IssueLevel.Warning, good.Id, $"{good.Name} comes out of nothing. Every good comes out of something: a raw good out of an extraction, a recipe that stands on a site."));
 	}
 
 	/// <summary>
@@ -208,6 +227,11 @@ public sealed class WebAnalysis
 		int best = Unreachable;
 		foreach (Recipe recipe in makers)
 		{
+			if (recipe.IsExtraction)
+			{
+				best = 0;
+				break;
+			}
 			int deepest = 0;
 			for (int i = 0; i < recipe.Inputs.Count && deepest < Unreachable; i++)
 			{

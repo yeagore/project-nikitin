@@ -31,6 +31,7 @@ EconomyLab.Inspector.cs    Right dock: the selected good, recipe, consumer, or t
 EconomyLab.SelfTest.cs     -- selftest.
 EconomyLab.Census.cs       -- census: varieties and stacks per good, and the same with every slot passing; -- balance: the sheet.
 EconomyLab.Bench.cs        -- bench: frame times and costs on this machine, for the laggy-on-Windows question.
+EconomyLab.Sprites.cs      -- sprites: every icon and variety on contact sheets, and what is wrong with them.
 GoodNode.cs, RecipeNode.cs, ConsumerNode.cs, WebGraph.cs
                            The three node kinds and the canvas (a GraphEdit).
 PickPopup.cs, IconPickPopup.cs, PaletteTree.cs, InspectorLook.cs, LabLook.cs, SpriteBank.cs
@@ -65,6 +66,9 @@ House rules:
 - Icons follow the data: `SpriteBank.Compose(good, tags)` is the icon of a unit
   carrying those tags (the good's layers tint their masks with the tags' colours,
   the rest go to pips). A plain stack shows `Get(good.Icon)`, the same object.
+  `ComposeImage` gives the same pixels as an image, for a headless run.
+- Sprites are drawn only by the most advanced models (Fable 5.1, Opus 5.5 today):
+  Maxim's preference. A delegate may write the tooling around them.
 
 ```
 godot --path . --headless scenes/dev/economy_lab.tscn -- selftest    # the regression gate: links, tags, undo, palettes, import, varieties, files, canvas
@@ -72,6 +76,7 @@ godot --path . scenes/dev/economy_lab.tscn -- shot web=tagged-ledger select=r.go
 godot --path . --headless scenes/dev/economy_lab.tscn -- bake        # arrange webs with no layout, rewrite every file in the lab's format
 godot --path . --headless scenes/dev/economy_lab.tscn -- census web=variety-ledger   # how many varieties and stacks; never writes
 godot --path . --headless scenes/dev/economy_lab.tscn -- balance web=hearth           # the balance sheet; never writes
+godot --path . --headless scenes/dev/economy_lab.tscn -- sprites web=variety-ledger out=/tmp/sprite_review   # contact sheets and a legibility report; writes only to out
 godot --path . scenes/dev/economy_lab.tscn -- bench web=full-ledger-reference        # windowed; writes user://economy_bench.txt only
 ```
 

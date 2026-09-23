@@ -94,11 +94,30 @@ internal sealed class SpriteBank
 	/// </summary>
 	public Texture2D? Compose(Good good, IEnumerable<string> tags)
 	{
+		(Godot.Image? canvas, string? key) = Composed(good, tags);
+		if (canvas == null || key == null) return Get(good.Icon);
+		if (_composed.TryGetValue(key, out Texture2D? known)) return known;
+		return _composed[key] = ImageTexture.CreateFromImage(canvas);
+	}
+
+	/// <summary>
+	/// The pixels <see cref="Compose"/> draws, as an image a shell run can measure or save (a headless
+	/// run has no textures to read back). The plain icon's own pixels when no tag is coloured; null
+	/// when the good has no icon.
+	/// </summary>
+	public Godot.Image? ComposeImage(Good good, IEnumerable<string> tags) => Composed(good, tags).Canvas ?? Pixels(good.Icon);
+
+	/// <summary>A sprite's own pixels, cut out of its sheet (a copy is not made: do not draw on it).</summary>
+	public Godot.Image? PixelsOf(SpriteRef? sprite) => Pixels(sprite);
+
+	/// <summary>The composed pixels and the key they cache under; both null when the plain icon will do.</summary>
+	private (Godot.Image? Canvas, string? Key) Composed(Good good, IEnumerable<string> tags)
+	{
 		Palette palette = _palette();
 		List<string> coloured = tags.Where(t => TryColour(palette.ColourOf(t), out _)).ToList();
-		if (coloured.Count == 0) return Get(good.Icon);
+		if (coloured.Count == 0) return (null, null);
 		Godot.Image? icon = Pixels(good.Icon);
-		if (icon == null) return Get(good.Icon);
+		if (icon == null) return (null, null);
 
 		var tints = new List<(Godot.Image? Mask, Color Hue, string Key)>();
 		var pips = new List<Color>();
@@ -128,8 +147,6 @@ internal sealed class SpriteBank
 		}
 
 		string key = RefKey(good.Icon) + "|" + string.Join(",", tints.Select(t => t.Key)) + "|" + string.Join(",", pips.Select(c => c.ToHtml(false)));
-		if (_composed.TryGetValue(key, out Texture2D? known)) return known;
-
 		var canvas = (Godot.Image)icon.Duplicate();
 		canvas.Convert(Godot.Image.Format.Rgba8);
 		int w = canvas.GetWidth(), h = canvas.GetHeight();
@@ -153,7 +170,7 @@ internal sealed class SpriteBank
 					if (left + x < w && top + y < h) canvas.SetPixel(left + x, top + y, edge ? outline : pips[i]);
 				}
 		}
-		return _composed[key] = ImageTexture.CreateFromImage(canvas);
+		return (canvas, key);
 	}
 
 	/// <summary>Reads a tag's <c>#RRGGBB</c>; false, and white, for none or for nonsense.</summary>

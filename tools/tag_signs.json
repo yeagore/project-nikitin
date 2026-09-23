@@ -36,7 +36,7 @@
   "grade": 24,
   "work": 25,
   "prized": 26,
-  "site": 27,
+  "anchor": 27,
   "kind": 28,
   "need": 29
  },
@@ -60,7 +60,7 @@
   "prized:jadefolk": 46,
   "prized:lakefolk": 47,
   "prized:steelfolk": 48,
-  "site:coast": 49,
+  "anchor:river": 49,
   "fit:bronze-joints": 50,
   "fit:smalt-eyes": 51,
   "fit:caustic-nerves": 52,

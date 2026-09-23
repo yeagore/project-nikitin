@@ -2,7 +2,7 @@
   "format": 2,
   "id": "hearth",
   "name": "Hearth",
-  "note": "The first rung of the ladder of skeletal economies: a village that feeds, clothes and tools itself. Fifteen goods, ten recipes, three consumers, and numbers on all of them, so the balance sheet can be watched while they are changed. Made by tools/make_hearth.py, which is the baseline; this file is the experiment.",
+  "note": "The first rung of the ladder of skeletal economies: a village that feeds, clothes, tools and houses itself. Seventeen goods, sixteen recipes (five of them extractions on a site, with a limit), four consumers, and numbers on all of them, so the balance sheet can be watched while they are changed. One loop: the byre eats grain, and its dung goes back on the fields. Made by tools/make_hearth.py, which is the baseline; this file is the experiment.",
   "palette": {
     "atlases": [
       {
@@ -78,6 +78,15 @@
         "note": "Earth region the good is historically tied to, for mapping onto archetypes later."
       },
       {
+        "id": "soil",
+        "note": "Which of the seventeen soils: the ground itself, as the terrain generator lays it. It is a recipe's site (peat is cut on murkearth) and the variety of dug soil, which travels to the golem's body and the golem.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 0
+        }
+      },
+      {
         "id": "grain",
         "note": "Which grain: it travels to the flour, the malt, the loaf and the beer.",
         "role": "variety",
@@ -114,6 +123,15 @@
         }
       },
       {
+        "id": "milk",
+        "note": "Whose milk a cheese was made from.",
+        "role": "variety",
+        "sign": {
+          "atlas": "tags",
+          "index": 8
+        }
+      },
+      {
         "id": "metal",
         "note": "Which metal a thing was made of, where several would do: bronze, iron or steel tools; gold or silver jewellery. The metals are goods of their own; this is the mark they leave.",
         "role": "variety",
@@ -131,6 +149,29 @@
           "atlas": "tags",
           "index": 24
         }
+      },
+      {
+        "id": "work",
+        "note": "What a golem is good at, from the soil of its body. Seventeen soils, five kinds of work.",
+        "role": "property",
+        "sign": {
+          "atlas": "tags",
+          "index": 25
+        }
+      },
+      {
+        "id": "anchor",
+        "note": "A feature of the terrain the work has to stand at, as the island generator marks it (IslandData): a river, a fall, a spring, a cliff's foot.",
+        "role": "site",
+        "sign": {
+          "atlas": "tags",
+          "index": 27
+        }
+      },
+      {
+        "id": "moisture",
+        "note": "The moisture band of the ground: dry, balanced, wet. Name it only where the soil does not already say it.",
+        "role": "site"
       }
     ],
     "tags": [
@@ -219,6 +260,10 @@
         "note": ""
       },
       {
+        "id": "trait:by-product",
+        "note": ""
+      },
+      {
         "id": "stage:processed",
         "note": ""
       },
@@ -241,6 +286,10 @@
       {
         "id": "need:works-and-arms",
         "note": ""
+      },
+      {
+        "id": "need:building",
+        "note": "Building and upkeep: what goes into walls, roofs and floors, and what keeps them standing."
       },
       {
         "id": "group:farm-and-herd-goods",
@@ -279,6 +328,29 @@
         "note": ""
       },
       {
+        "id": "kind:ammonia-source",
+        "note": "Anything the ammonia salts and spirits can be got from."
+      },
+      {
+        "id": "anchor:river",
+        "note": "Beside running water: a river's bank (RiverBedCells, BankCells). A wheel, a vat that wants flowing water.",
+        "colour": "#3F7FBF",
+        "sign": {
+          "atlas": "tags",
+          "index": 49
+        }
+      },
+      {
+        "id": "moisture:balanced",
+        "note": "Neither dry nor wet.",
+        "colour": "#A7B98A"
+      },
+      {
+        "id": "moisture:wet",
+        "note": "Wet ground.",
+        "colour": "#5E9C8F"
+      },
+      {
         "id": "grade:coarse",
         "note": "The poorest sort.",
         "colour": "#8A7A6B",
@@ -313,6 +385,38 @@
           "atlas": "tags",
           "index": 41
         }
+      },
+      {
+        "id": "work:field",
+        "note": "Tilling, sowing, reaping.",
+        "colour": "#6B8F3B",
+        "sign": {
+          "atlas": "tags",
+          "index": 42
+        }
+      },
+      {
+        "id": "work:quarry",
+        "note": "Rock: mines and quarries.",
+        "colour": "#8A8F94",
+        "sign": {
+          "atlas": "tags",
+          "index": 44
+        }
+      },
+      {
+        "id": "work:cold",
+        "note": "Work where men freeze.",
+        "colour": "#BFD9E8",
+        "sign": {
+          "atlas": "tags",
+          "index": 45
+        }
+      },
+      {
+        "id": "work:heat",
+        "note": "Work where men burn: forges, kilns, deserts.",
+        "colour": "#E0662B"
       },
       {
         "id": "grain:wheat",
@@ -432,6 +536,30 @@
         "colour": "#C9B79A"
       },
       {
+        "id": "milk:cow",
+        "note": "",
+        "colour": "#FFFFFF",
+        "implies": [
+          "grade:common"
+        ]
+      },
+      {
+        "id": "milk:goat",
+        "note": "",
+        "colour": "#F1EBD8",
+        "implies": [
+          "grade:coarse"
+        ]
+      },
+      {
+        "id": "milk:sheep",
+        "note": "",
+        "colour": "#F7E9B8",
+        "implies": [
+          "grade:fine"
+        ]
+      },
+      {
         "id": "metal:iron",
         "note": "",
         "colour": "#7D8790",
@@ -441,6 +569,54 @@
         },
         "implies": [
           "grade:common"
+        ]
+      },
+      {
+        "id": "soil:stone",
+        "note": "",
+        "colour": "#62676B",
+        "implies": [
+          "work:quarry"
+        ]
+      },
+      {
+        "id": "soil:scree",
+        "note": "",
+        "colour": "#ABA498",
+        "implies": [
+          "work:quarry"
+        ]
+      },
+      {
+        "id": "soil:bleachearth",
+        "note": "",
+        "colour": "#C3A2B8",
+        "implies": [
+          "work:cold"
+        ]
+      },
+      {
+        "id": "soil:dryearth",
+        "note": "",
+        "colour": "#D8A86E",
+        "implies": [
+          "work:heat"
+        ]
+      },
+      {
+        "id": "soil:blackearth",
+        "note": "",
+        "colour": "#443A31",
+        "implies": [
+          "work:field"
+        ]
+      },
+      {
+        "id": "soil:brownearth",
+        "note": "",
+        "colour": "#74483F",
+        "implies": [
+          "work:field"
         ]
       },
       {
@@ -545,7 +721,7 @@
         ],
         "icon": {
           "atlas": "icons",
-          "index": 317
+          "index": 341
         },
         "sign": {
           "atlas": "signs",
@@ -585,6 +761,86 @@
             "GR",
             "FI"
           ]
+        }
+      },
+      {
+        "id": "milk",
+        "name": "Milk",
+        "note": "Spoils by evening. Everything done with it is a way of making it keep.",
+        "tags": [
+          "stage:raw",
+          "source:herded",
+          "group:herded-and-gathered",
+          "nature:mundane",
+          "kind:food",
+          "kind:animal",
+          "trait:perishable",
+          "need:food"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 308
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 77,
+          "source": "compound",
+          "reading": "liquid + beast",
+          "parts": [
+            "DP",
+            "BS"
+          ]
+        },
+        "varieties": [
+          {
+            "id": "cow",
+            "name": "Cow's milk",
+            "note": "",
+            "tags": [
+              "milk:cow"
+            ]
+          },
+          {
+            "id": "goat",
+            "name": "Goat's milk",
+            "note": "",
+            "tags": [
+              "milk:goat"
+            ]
+          },
+          {
+            "id": "sheep",
+            "name": "Ewe's milk",
+            "note": "",
+            "tags": [
+              "milk:sheep"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "dung",
+        "name": "Dung",
+        "note": "A gentle, steady heat as it rots, and the base of a nitre bed.",
+        "tags": [
+          "stage:raw",
+          "source:herded",
+          "group:herded-and-gathered",
+          "nature:mundane",
+          "kind:animal",
+          "trait:by-product",
+          "kind:ammonia-source"
+        ],
+        "icon": {
+          "atlas": "icons",
+          "index": 78
+        },
+        "sign": {
+          "atlas": "signs",
+          "index": 78,
+          "source": "historical",
+          "reading": "horse dung (U+1F756)",
+          "parts": null
         }
       },
       {
@@ -709,7 +965,7 @@
         "tags": [
           "stage:processed",
           "group:farm-and-herd-goods",
-          "need:works-and-arms",
+          "need:building",
           "nature:mundane",
           "kind:construction"
         ],
@@ -977,6 +1233,8 @@
     "grain",
     "flour",
     "bread",
+    "milk",
+    "dung",
     "slt",
     "salt",
     "timber",
@@ -992,10 +1250,143 @@
   ],
   "recipes": [
     {
-      "id": "r.flour",
-      "name": "Mill",
-      "note": "Ten of grain to nine of flour: the bran stays with the miller.",
+      "id": "r.fields",
+      "name": "Fields",
+      "note": "Ten fields of temperate ground, ten of grain a day each. Three of dung on a field makes it give three tenths more.",
+      "element": "earth",
+      "site": [
+        "soil:brownearth",
+        "soil:blackearth"
+      ],
+      "limit": 10,
+      "inputs": [
+        {
+          "accepts": [
+            "dung"
+          ],
+          "amount": 3,
+          "optional": true,
+          "boost": 0.3
+        }
+      ],
+      "outputs": [
+        {
+          "good": "grain",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "id": "r.byre",
+      "name": "Byre",
+      "note": "Twenty cows on the pasture, each fed a measure of grain a day: six of milk, and two of dung that nobody keeps them for.",
+      "element": "water",
+      "site": [
+        "soil:brownearth",
+        "soil:blackearth",
+        "soil:bleachearth"
+      ],
+      "limit": 20,
+      "inputs": [
+        {
+          "accepts": [
+            "grain"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "good": "milk",
+          "amount": 6
+        },
+        {
+          "good": "dung",
+          "amount": 2,
+          "byProduct": true
+        }
+      ]
+    },
+    {
+      "id": "r.sheep",
+      "name": "Sheep walk",
+      "note": "Rough grazing: a fleece's worth of wool a flock a day, and the flock's dung on the side.",
+      "element": "earth",
+      "site": [
+        "soil:bleachearth",
+        "soil:dryearth"
+      ],
+      "limit": 8,
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "wool"
+        },
+        {
+          "good": "dung",
+          "byProduct": true
+        }
+      ]
+    },
+    {
+      "id": "r.woods",
+      "name": "Woodcutting",
+      "note": "Ten stands of trees, six of timber a day each.",
       "element": "wind",
+      "site": [
+        "moisture:balanced",
+        "moisture:wet"
+      ],
+      "limit": 10,
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "timber",
+          "amount": 6
+        }
+      ]
+    },
+    {
+      "id": "r.fe",
+      "name": "Ore pit",
+      "note": "Wants a deposit of ironstone: deposits are not in the generator yet, so the site is only the rock it would be under.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "soil:scree"
+      ],
+      "limit": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "fe"
+        }
+      ]
+    },
+    {
+      "id": "r.slt",
+      "name": "Salt mine",
+      "note": "Wants a deposit of rock salt: deposits are not in the generator yet, so the site is only the rock it would be under.",
+      "element": "earth",
+      "site": [
+        "soil:stone",
+        "soil:scree"
+      ],
+      "limit": 5,
+      "inputs": [],
+      "outputs": [
+        {
+          "good": "slt"
+        }
+      ]
+    },
+    {
+      "id": "r.flour",
+      "name": "Watermill",
+      "note": "Ten of grain to nine of flour, on a river that turns the wheel: the bran stays with the miller.",
+      "element": "wind",
+      "site": [
+        "anchor:river"
+      ],
       "inputs": [
         {
           "accepts": [
@@ -1221,11 +1612,11 @@
     {
       "id": "c.food",
       "name": "Food",
-      "note": "A loaf a head a day.",
+      "note": "A loaf and a jug of milk a head a day: the consumer asks bread and milk for equal shares.",
       "accepts": [
         "#need:food"
       ],
-      "wants": 1
+      "wants": 2
     },
     {
       "id": "c.clothing",
@@ -1239,49 +1630,60 @@
     {
       "id": "c.works",
       "name": "Works and arms",
-      "note": "Tools wear out and buildings eat planks.",
+      "note": "A tool every forty days: they wear out.",
       "accepts": [
         "#need:works-and-arms"
       ],
-      "wants": 0.05
+      "wants": 0.025
+    },
+    {
+      "id": "c.building",
+      "name": "Building and upkeep",
+      "note": "A plank every forty days a head: new roofs and mended floors.",
+      "accepts": [
+        "#need:building"
+      ],
+      "wants": 0.025
     }
   ],
   "heads": 120,
-  "supply": {
-    "fe": 10,
-    "grain": 100,
-    "slt": 5,
-    "timber": 60,
-    "wool": 8
-  },
   "layout": {
-    "bread": [1180, 197],
-    "c.clothing": [2070, 268],
-    "c.food": [2070, 178],
-    "c.works": [2070, 70],
-    "charcoal": [590, 11],
-    "cloth": [1180, 304],
-    "clothes": [1770, 275],
-    "fe": [0, 0],
-    "flour": [590, 191],
-    "grain": [0, 205],
-    "ife": [1180, 46],
-    "planks": [590, 91],
-    "r.bread": [890, 200],
-    "r.charcoal": [300, 12],
-    "r.cloth": [890, 325],
-    "r.clothes": [1480, 280],
-    "r.flour": [300, 200],
-    "r.ife": [890, 13],
-    "r.planks": [300, 102],
-    "r.salt": [300, 290],
-    "r.tools": [1480, 49],
-    "r.yarn": [300, 381],
-    "salt": [590, 271],
-    "slt": [0, 295],
-    "timber": [0, 80],
-    "tools": [1770, 68],
-    "wool": [0, 386],
-    "yarn": [590, 362]
+    "bread": [1490, 313],
+    "c.building": [2380, 366],
+    "c.clothing": [2380, 460],
+    "c.food": [2380, 257],
+    "c.works": [2380, 167],
+    "charcoal": [900, 271],
+    "cloth": [1490, 457],
+    "clothes": [2080, 454],
+    "dung": [600, 218],
+    "fe": [300, 388],
+    "flour": [600, 58],
+    "grain": [0, 56],
+    "ife": [1490, 233],
+    "milk": [600, 138],
+    "planks": [900, 351],
+    "r.bread": [1200, 324],
+    "r.byre": [300, 90],
+    "r.charcoal": [600, 298],
+    "r.cloth": [1200, 462],
+    "r.clothes": [1790, 447],
+    "r.fe": [0, 397],
+    "r.fields": [900, 181],
+    "r.flour": [300, 0],
+    "r.ife": [1200, 212],
+    "r.planks": [600, 388],
+    "r.salt": [600, 622],
+    "r.sheep": [0, 274],
+    "r.slt": [0, 615],
+    "r.tools": [1790, 249],
+    "r.woods": [0, 184],
+    "r.yarn": [600, 479],
+    "salt": [900, 518],
+    "slt": [300, 620],
+    "timber": [300, 215],
+    "tools": [2080, 217],
+    "wool": [300, 308],
+    "yarn": [900, 438]
   }
 }

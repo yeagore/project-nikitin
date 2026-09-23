@@ -30,7 +30,8 @@ public partial class EconomyLab
 		WebBalance balance = WebBalance.Of(web, analysis);
 		string N(double v) => WebBalance.Num(v);
 
-		GD.Print($"BALANCE of {web.Name} ({id}): {N(balance.Heads)} heads; {WebBalance.Pct(balance.Coverage)} of what they want reaches them.");
+		GD.Print($"BALANCE of {web.Name} ({id}): {N(balance.Heads)} heads; {WebBalance.Pct(balance.Coverage)} of what they want reaches them" +
+			(balance.Rounds > 1 ? $"; a loop settled in {balance.Rounds} rounds." : "."));
 		foreach (string note in balance.Notes) GD.Print("  " + note);
 
 		GD.Print("\nConsumers (want a day; get; by good):");
@@ -41,17 +42,19 @@ public partial class EconomyLab
 			GD.Print($"  {(consumer.Name.Length > 0 ? consumer.Name : consumer.Id),-24} {N(flow.Demand),8} {N(flow.Got),8}  {WebBalance.Pct(flow.Coverage),4}   {by}");
 		}
 
-		GD.Print("\nRecipes (runs asked a day; runs managed; days a run; workshops busy; held back by):");
+		GD.Print("\nRecipes (runs asked a day; runs managed; days a run; at work; of a limit; yield; held back by):");
 		foreach (WebBalance.RecipeFlow flow in balance.Recipes)
 		{
 			Recipe recipe = web.Recipe(flow.Id)!;
-			string held = flow.LimitedBy is { } i ? "input " + (i + 1) + " (" + string.Join("/", recipe.Inputs[i].Accepts) + ")" : "";
-			GD.Print($"  {analysis.TitleOf(recipe),-24} {N(flow.Desired),8} {N(flow.Runs),8} {N(flow.Days),6} {N(flow.Workshops),8}   {held}");
+			string held = flow.LimitedBy is { } i ? "input " + (i + 1) + " (" + string.Join("/", recipe.Inputs[i].Accepts) + ")" : flow.AtLimit ? "its limit" : "";
+			string limit = recipe.Limit is { } l ? N(l) : "-";
+			string yield = flow.Yield > 1 + 1e-6 ? "+" + WebBalance.Pct(flow.Yield - 1) : "";
+			GD.Print($"  {analysis.TitleOf(recipe),-24} {N(flow.Desired),8} {N(flow.Runs),8} {N(flow.Days),6} {N(flow.Workshops),8} {limit,6} {yield,6}   {held}");
 		}
 
-		GD.Print("\nGoods (supplied a day; made; wanted; taken; state):");
+		GD.Print("\nGoods (made a day; wanted; needed firmly; taken; state):");
 		foreach (WebBalance.GoodFlow flow in balance.Goods)
-			GD.Print($"  {web.Palette.Find(flow.Id)?.Name ?? flow.Id,-24} {N(flow.Supply),8} {N(flow.Made),8} {N(flow.Wanted),8} {N(flow.Taken),8}   {flow.State.ToString().ToLowerInvariant()}");
+			GD.Print($"  {web.Palette.Find(flow.Id)?.Name ?? flow.Id,-24} {N(flow.Made),8} {N(flow.Wanted),8} {N(flow.Needed),8} {N(flow.Taken),8}   {flow.State.ToString().ToLowerInvariant()}");
 	}
 
 	private void Census(string[] args)

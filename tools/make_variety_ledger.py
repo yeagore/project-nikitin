@@ -126,7 +126,6 @@ PROPERTY_NAMESPACES = {
     "work": ("What a golem is good at, from the soil of its body. Seventeen soils, five kinds of work.", None),
     "prized": ("Which people prize it. A jewel set with jade sells to the Jadefolk.", None),
 }
-SITE_NAMESPACE = ("site", "A place a recipe has to stand that is not a soil: the coast, a river. Read from the Domain, not hauled.")
 
 # tag -> (colour, note, [implied property tags])
 SOIL_COLOURS = {  # scripts/terrain/SurfacePalette.cs: the colour on the ground is the colour on the golem
@@ -330,6 +329,86 @@ LAYERS = {
 }
 
 
+# ---------------------------------------------------------------------------------------
+# 6. Stage two, Maxim's rulings of 2026-09-23: every good comes out of something; a site is more
+#    than a soil (the terrain's feature anchors, the climate); ore deposits are needed but are not
+#    tags yet; building materials have a consumer of their own.
+# ---------------------------------------------------------------------------------------
+# Site namespaces: read off the Domain where the work stands, never carried by a good. Tags of one
+# namespace are alternatives; namespaces add up (brownearth or blackearth, and by a river).
+SITE_NAMESPACES = {
+    "anchor": "A feature of the terrain the work has to stand at, as the island generator marks it (IslandData): a river, a fall, a spring, a cliff's foot.",
+    "warmth": "The warmth band of the ground, as the generator's habitat reads it: frigid, cold, temperate, hot. Name it only where the soil does not already say it.",
+    "moisture": "The moisture band of the ground: dry, balanced, wet. Name it only where the soil does not already say it.",
+    "exposure": "How open to the wind the ground is (the habitat's exposure, scaled by the Domain's wind): sheltered or windswept.",
+}
+# tag -> (colour, note). The note names the IslandData field a site test would read.
+SITE_TAGS = {
+    "anchor:river": ("#3F7FBF", "Beside running water: a river's bank (RiverBedCells, BankCells). A wheel, a vat that wants flowing water."),
+    "anchor:falls": ("#6FA8DC", "At a waterfall (Falls): a head of water for an overshot wheel, a trip hammer, a bellows."),
+    "anchor:spring": ("#9FD3E6", "Where a stream rises (Springs): clean water for a brewer, a physician, a holy well."),
+    "anchor:hot-spring": ("#E07B5A", "Warm water on a cold Domain (HotWater): baths, a fuller's vat, sulphur crusts."),
+    "anchor:lakeshore": ("#4F8FA8", "Dry ground beside standing water (BankCells by a lake): the fisher's landing, the reed cutter's path."),
+    "anchor:shallows": ("#7FB8B0", "Lake bed under two slabs of water or less (ShallowBedCells): reeds, fish traps, withies, bog iron."),
+    "anchor:deep": ("#2F4F7F", "The deepest water of a lake or a plunge pool (Deeps, DeepBedCells): big fish, the ooze dredged up."),
+    "anchor:salt-lake": ("#D9D2C0", "A lake no river leaves (TerminalLakes): the water turns brackish and dries to salt at the edge."),
+    "anchor:rim": ("#8E7CC3", "Land at the edge of the Domain, with aether beside it (CoastCells)."),
+    "anchor:fjord": ("#6A5ACD", "The mouth of a winding inlet of aether (Fjords): a harbour sheltered from the open aether."),
+    "anchor:sea-stack": ("#A58FD0", "An islet of rock standing off the rim (SeaStacks): bird colonies, guano, eggs, quills."),
+    "anchor:estuary": ("#5B8DB8", "The mouth of a navigable river at the rim (Estuaries): a port, a shipyard."),
+    "anchor:delta": ("#86A86A", "The apex of a delta's fan (Deltas): the richest wet ground there is."),
+    "anchor:cliff-foot": ("#7A6F63", "The foot of a cliff (CliffFootCells): bare strata to quarry, scree to pick over."),
+    "anchor:cliff-brink": ("#9C9187", "The brink of a cliff (CliffCells): an eyrie, a lookout, a windmill's edge."),
+    "anchor:scarp": ("#B3A796", "A scarp's brink or foot (ScarpCells, ScarpFootCells): a terrace, an adit."),
+    "anchor:summit": ("#D0CBC4", "The top of high country (Summits): a beacon, snow and ice, thin air."),
+    "anchor:overhang": ("#5C5046", "Under an undercut cliff or an arch (Overhangs): a dry hollow for a cellar, a nitre bed, bats."),
+    "soil:ooze": ("#27404A", "The bed under deep water (Ooze): dark mud a dredge brings up. The eighteenth surface, and no soil a golem is made of."),
+    "warmth:frigid": ("#E8F1F5", "Frozen ground."),
+    "warmth:cold": ("#A9C6D6", "The cold band."),
+    "warmth:temperate": ("#9CC28A", "The temperate band."),
+    "warmth:hot": ("#E0A458", "The hot band."),
+    "moisture:dry": ("#E3C98F", "Dry ground."),
+    "moisture:balanced": ("#A7B98A", "Neither dry nor wet."),
+    "moisture:wet": ("#5E9C8F", "Wet ground."),
+    "exposure:sheltered": ("#8FAF7F", "Out of the wind: an orchard, a hive, a drying loft."),
+    "exposure:windswept": ("#B8C7D9", "Open to the wind: a windmill, a drying rack, a fish flake."),
+}
+# The goods that need an ore body under the ground. Deposits are not in the generator yet and nobody
+# knows how much ore a Domain will hold, so they are not tags: a mine stands on rock and says in its
+# note which deposit it wants (Maxim, 2026-09-23). The list is also in docs/economy-lab.md.
+DEPOSIT_GOODS = "the goods of the ledger tagged source:mined"
+# By-products from the review of 2026-09-23 (tools/byproduct_candidates.py lists all 44 candidates): the four that are
+# sound history and land on a good the ledger already has. recipe -> (by-product, note)
+BYPRODUCTS = {
+    "r.honey": ("wax", "Comb pressed for its honey; the pressed comb is rendered to wax on the side."),
+    "r.parch": ("glue", "Hides limed, scraped and stretched; the scrapings boil down to glue."),
+    "r.oov": ("rouge", "Vitriol distilled for its oil; the red colcothar left in the retort is jeweller's rouge."),
+    "r.zaf": ("was", "Cobalt ore roasted for zaffre; the arsenic it drives off is caught in the flues as white arsenic."),
+}
+# The extractions: one recipe on a site for every raw good, from tools/extractions.json (drafted by a delegate against
+# the site vocabulary above, reviewed; the overrides below are the review's).
+EXTRACTION_SITES = {  # recipe id -> site, where the review moved a draft: most drafts named one soil where several will do
+    "r.x.grain": ["soil:brownearth", "soil:blackearth"],
+    "r.x.timber": ["moisture:balanced", "moisture:wet"],
+    "r.x.grapes": ["soil:dryearth", "soil:yellowearth"],
+    "r.x.olives": ["soil:dryearth", "soil:dustearth"],
+    "r.x.maize": ["soil:blackearth", "soil:yellowearth", "soil:redearth"],
+    "r.x.hemp": ["soil:brownearth", "soil:blackearth"],
+    "r.x.fish": ["anchor:shallows", "anchor:deep", "anchor:lakeshore"],
+}
+EXTRACTION_NAMES = {"r.x.fish": "Fishing"}
+EXTRACTION_NOTES = {"r.x.ess": "Provisional: where Essence is drawn is the magick schools' to say (they are being designed). Drawn at the rim, where the aether is nearest."}
+# Workshops that stand on a feature of the terrain, where the history is plain. recipe -> (site, why)
+WORKSHOP_SITES = {
+    "r.leather": (["anchor:river"], "A tannery stands on running water: hides soak for weeks and the pits are flushed."),
+    "r.dyed": (["anchor:river"], "Dyers work on a river: the vats are filled and the cloth rinsed in running water."),
+    "r.paper": (["anchor:river", "anchor:falls"], "A paper mill's stampers are driven by a wheel, on a river or under a fall."),
+    "r.nitbed": (["anchor:overhang"], "A nitre bed wants shelter from the rain: under an overhang of rock, where bats have done half the work."),
+    "r.hull": (["anchor:rim", "anchor:fjord", "anchor:estuary"], "A hull is laid down at the edge of the Domain, best where an inlet shelters it from the open aether."),
+}
+BUILDING = ("need:building", "Building and upkeep: what goes into walls, roofs and floors, and what keeps them standing.",
+            "c.building", "Building and upkeep", "Every house wants its planks, bricks, mortar, glass and plaster, new or mended.")
+
 def main():
     web = copy.deepcopy(json.load(open(ROOT / "tagged-ledger.json")))
     web["id"] = "variety-ledger"
@@ -385,10 +464,10 @@ def main():
                              "Which soil decides what the golem is good at. The earths that want one soil only "
                              "(clay, sand, ochre, fuller's earth, peat) are dug on their site instead.")
     web["recipes"].insert(web["recipes"].index(recipes["r.salt"]) + 1, {
-        "id": "r.salt.sea", "name": "Salt pans", "note": "Sea water let into shallow pans and left to the sun.",
-        "element": "earth", "site": ["site:coast"], "inputs": [], "outputs": [{"good": "salt"}]})
+        "id": "r.salt.sea", "name": "Salt pans", "note": "Brine from a lake no river leaves, let into shallow pans and left to the sun.",
+        "element": "earth", "site": ["anchor:salt-lake"], "inputs": [], "outputs": [{"good": "salt"}]})
     recipes["r.salt.sea"] = web["recipes"][web["recipes"].index(recipes["r.salt"]) + 1]
-    log.append("site: a second way to salt, Salt pans, stands on site:coast (a site that is not a soil)")
+    log.append("site: a second way to salt, Salt pans, stands on anchor:salt-lake (a site that is not a soil; there is no sea in the Ecumene)")
 
     cup = recipes["r.litharge"]
     assert [o["good"] for o in cup["outputs"]] == ["litharge"]
@@ -422,6 +501,16 @@ def main():
     web["consumers"].append({"id": "c.works", "name": "Works and arms", "note": "Tools wear out, powder is spent, and buildings eat planks and bricks.",
                              "accepts": ["#need:works-and-arms"]})
     log.append("fix: a fifth consumer, Works and arms, buys #need:works-and-arms; twelve goods carried a Need nothing bought")
+    tag, tag_note, cid, cname, cnote = BUILDING
+    builders = [g for g in palette["goods"] if "kind:construction" in g["tags"]]
+    for g in builders:
+        g["tags"] = [tag if t == "need:works-and-arms" else t for t in g["tags"]]
+        if tag not in g["tags"]:
+            g["tags"].append(tag)
+    palette["tags"].insert(next(i for i, t in enumerate(palette["tags"]) if t["id"] == "need:works-and-arms") + 1, {"id": tag, "note": tag_note})
+    web["consumers"].append({"id": cid, "name": cname, "note": cnote, "accepts": ["#" + tag]})
+    web["consumers"][-2]["note"] = "Tools wear out, powder is spent, and a telescope's mirror tarnishes."
+    log.append(f"stage two: a sixth consumer, {cname}, buys #{tag}: {', '.join(g['name'] for g in builders)} leave Works and arms for it")
     leaf = {"id": "betelleaf", "name": "Betel leaf", "note": "The leaf the quid is wrapped in, from a vine grown up the areca palm. (Icon and sign borrowed from the mulberry leaf until it has its own.)",
             "tags": ["stage:raw", "source:farmed", "group:farmed", "nature:mundane", "origin:southeast-asia", "origin:south-asia"],
             "icon": dict(goods["mulb"]["icon"]), "sign": dict(goods["mulb"]["sign"])}
@@ -506,8 +595,10 @@ def main():
         if combine:
             entry["combine"] = combine
         palette["tagNamespaces"].append(entry)
-    palette["tagNamespaces"].append({"id": SITE_NAMESPACE[0], "note": SITE_NAMESPACE[1]})
-    palette["tags"].append({"id": "site:coast", "note": "By the sea.", "colour": "#3F7FBF"})
+    for ns, note in SITE_NAMESPACES.items():
+        palette["tagNamespaces"].append({"id": ns, "note": note, "role": "site"})
+    for tag, (colour, note) in SITE_TAGS.items():
+        palette["tags"].append({"id": tag, "note": note, "colour": colour})
 
     defs = {t["id"]: t for t in palette["tags"]}
     for tag, (colour, note, implies) in TAGS.items():
@@ -555,6 +646,38 @@ def main():
 
     for gid, spaces_shown in LAYERS.items():
         goods[gid]["layers"] = [{"match": ns} for ns in spaces_shown]
+
+    # ---- 6. stage two ------------------------------------------------------------------------
+    for rid, (good, note) in BYPRODUCTS.items():
+        r = recipes[rid]
+        assert good in goods and all(o["good"] != good for o in r["outputs"]), (rid, good)
+        r["outputs"].append({"good": good, "byProduct": True})
+        r["note"] = note
+        log.append(f"by-product: {rid} gives {goods[good]['name']} on the side")
+    table = HERE / "extractions.json"
+    if table.exists():
+        made = {o["good"] for r in web["recipes"] for o in r["outputs"] if not o.get("byProduct")}
+        added = []
+        for e in json.load(open(table)):
+            assert e["id"] not in recipes, e["id"]
+            for o in e["outputs"]:
+                assert o["good"] in goods and o["good"] not in made, (e["id"], o)
+            r = {"id": e["id"], "name": EXTRACTION_NAMES.get(e["id"], e["name"]), "note": EXTRACTION_NOTES.get(e["id"], e["note"]), "element": e["element"],
+                 "site": list(EXTRACTION_SITES.get(e["id"], e["site"])), "inputs": [],
+                 "outputs": [{"good": o["good"], **({"byProduct": True} if o.get("byProduct") else {})} for o in e["outputs"]]}
+            web["recipes"].append(r)
+            recipes[r["id"]] = r
+            added.append(r)
+        log.append(f"stage two: {len(added)} extractions, one for every raw good that came out of nothing, from {table.name}")
+    for rid, (site, why) in WORKSHOP_SITES.items():
+        assert not recipes[rid].get("site"), rid
+        recipes[rid]["site"] = list(site)
+        recipes[rid]["note"] = why
+        log.append(f"site: {rid} stands on {', '.join(site)}")
+    made = {o["good"] for r in web["recipes"] for o in r["outputs"]}
+    orphans = [g for g in web["goods"] if g not in made]
+    if orphans:
+        log.append(f"stage two: {len(orphans)} goods still come out of nothing: {', '.join(orphans[:12])}")
 
     stamp_art(web, goods, log)
 
@@ -628,6 +751,14 @@ def stamp_art(web, goods, log):
                 goods[gid]["layers"] = [{"match": l["match"], **({"mask": {"atlas": art["maskAtlas"], "index": l["mask"]}} if l.get("mask") is not None else {})}
                                         for l in layers]
         log.append(f"art: {len(art.get('icons', {}))} icons and {sum(len(l) for l in art.get('layers', {}).values())} layers from {icons.name}")
+
+    fixes = HERE / "icon_fixes.json"  # the sprite review's redraws (tools/make_icon_fixes.py), over whatever came before
+    if fixes.exists():
+        art = json.load(open(fixes))
+        for gid, cell in art["icons"].items():
+            if gid in goods:
+                goods[gid]["icon"] = {"atlas": art["atlas"], "index": cell}
+        log.append(f"art: {len(art['icons'])} icons redrawn after the sprite review, from {fixes.name}")
 
     signs = HERE / "tag_signs.json"
     if signs.exists():
