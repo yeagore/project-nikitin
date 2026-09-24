@@ -260,8 +260,8 @@ Wiki database **"🪙 Project Nikitin"** (Notion MCP connector).
 | The Ecumene | written | Domains, slabs, Links, Gates, scale. Read before terrain work. |
 | Mechanics and Concepts | index | Parent of the mechanics pages. |
 | The Gameplay Loop → The First Hour | written | Best description of moment-to-moment play. |
-| Economy, Population and Settlements | draft | Settlements, classes, Needs, money. |
-| Economy → [CLAUDE] Alchemical Economy | written 2026-09-23 | The economy lab's design as it stands, with examples and pictures: webs, palettes, tags and roles, varieties, properties and stacks, sites, elements, signs and icons, the ledgers, the census. Proposal, not ruling. |
+| [ARCHIVED] Economy, Population and Settlements | archived | The old draft: settlements, classes, Needs, money. The Alchemical Economy page sits under it. |
+| → [CLAUDE] Alchemical Economy | Claude's, kept current | The economy lab's design as it stands, with examples and pictures: webs, palettes, tags and roles, varieties, properties and stacks, sites and extractions, a web's day (amounts, the balance, loops), elements, signs and icons, the ledgers, open questions. Proposals, with what Maxim has ruled marked. Updated 2026-09-24. |
 | Generation → Island Generation | short | Requirements checklist for island generation. |
 | Generation → Part 1: Terrain and Climate | written | The generator in plain words, with the audit's sheets. |
 | Terrain → [CLAUDE] The Soil Glossary | proposal | The surface materials' plain names, Latinate names, codes and colours; the code uses the plain names and the colours. |
@@ -278,8 +278,14 @@ Open Question. Two decisions are made but not yet logged there: the slab's 1:4
 ratio, and the three supported footprints (the Ecumene page still says 16³–64³).
 
 When writing to Notion, create a new page whose title starts with "[CLAUDE]".
-Never edit an existing page unless I explicitly ask you to edit or check that
-specific page.
+**A `[CLAUDE]` page is Claude's own** (Maxim, 2026-09-24): keep it up to date
+whenever what it describes changes, without being asked, and say so in the
+report. Today that is **[CLAUDE] Alchemical Economy**, for anything that changes
+the economy model, the webs or the lab, and **[CLAUDE] The Soil Glossary**, for
+the soils. Edit such a page section by section (`update_content`), never by
+replacing it whole: a whole replacement drops the comment threads on it, and
+other people comment there. Never edit any other existing page unless I
+explicitly ask you to edit or check that specific page.
 
 ---
 

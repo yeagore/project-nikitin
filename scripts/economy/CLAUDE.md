@@ -1,7 +1,11 @@
 # The economy model: working notes
 
 Loaded when you work under `scripts/economy/`. Manual, data format and the
-findings of the tagging pass: **`docs/economy-lab.md`**. The lab that edits this
+findings of the tagging pass: **`docs/economy-lab.md`**. The design in plain words,
+for Maxim and whoever reads the wiki: the Notion page **[CLAUDE] Alchemical
+Economy**, which is Claude's to keep current: after any change here, in the webs or
+in the lab that alters what it says, update it in the same session, section by
+section (see the root `CLAUDE.md`, Design source of truth). The lab that edits this
 data is `scripts/dev/EconomyLab*.cs`; its house rules are in `scripts/dev/CLAUDE.md`.
 
 Namespace `ProjectNikitin.Economy`. **No Godot types in here**, so the game can
@@ -116,6 +120,9 @@ load a web as it is and a test can run without the engine.
   Layout is written one sorted line per node, so a moved node is a one-line diff.
 - Determinism as elsewhere: ordinal compares, stable sorts, no dictionary order
   deciding anything (`LayeredLayout` is written to that rule).
+- **Keep the Notion page current.** A change that alters the model, a web's
+  numbers, a ruling or an open question is not finished until [CLAUDE] Alchemical
+  Economy says so too (numbers, rulings, open questions, pictures where they moved).
 - The regression gate is the lab's self-test (it exercises this model through the
   lab's handlers): `godot --path . --headless scenes/dev/economy_lab.tscn -- selftest`.
   Run it after any change here; it works on a scratch copy and exits non-zero on a failure.

@@ -3,11 +3,14 @@
 `scenes/dev/economy_lab.tscn` (F6 in the editor) is an editor of production webs:
 goods as draggable nodes, recipes between them, links drawn by hand or implied by
 a tag, and consumer blobs that mark the consumables. It is the first stage of an
-economy constructor. Amounts, proportions and time are not modelled yet; the
-point of this stage is the lab's shape and the principle of the data.
+economy constructor. Stage one was the lab's shape and the principle of the
+data; stage two, begun on 23 September, adds amounts, time and a balance
+(*Hearth, and the ladder* and *How the balance reads a day*, below).
 
 This file is the manual, the data format, and the findings so far. Written
 plainly on purpose: it is meant to be read by Maxim as much as by the model.
+The design itself, in plain words and pictures, is the Notion page **[CLAUDE]
+Alchemical Economy**, which Claude keeps current with every change here.
 
 ## The idea
 

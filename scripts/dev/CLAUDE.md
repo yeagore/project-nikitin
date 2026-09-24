@@ -21,6 +21,10 @@ regression gates, determinism) or `scripts/terrain/CLAUDE.md` (the benches).
 
 ## The economy lab (manual: `docs/economy-lab.md`; model: `scripts/economy/CLAUDE.md`)
 
+The lab's design page is the Notion page [CLAUDE] Alchemical Economy, Claude's to
+keep current: a change to the lab that alters what the page says (a run, a
+panel, a number, a picture) is finished only when the page says it too.
+
 ```
 EconomyLab.cs              The core: what is open, Change (the one door), undo, save, the window, shell modes.
 EconomyLab.Graph.cs        The canvas: SyncGraph, gestures into changes, menus, pickers, trace, find.
